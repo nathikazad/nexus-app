@@ -332,7 +332,7 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
     return CachedNetworkImage(
       imageUrl: entry.url,
       cacheManager: imageCacheManager,
-      httpHeaders: imageHeaders(userId),
+      httpHeaders: ref.watch(nexusRequestHeadersProvider).value ?? const {},
       fit: BoxFit.contain,
       placeholder: (context, url) => const Center(
         child: CircularProgressIndicator(),

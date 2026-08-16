@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:nx_cards/browser/browser.dart';
-import 'package:nx_db/nx_db.dart';
 
 class HttpCardAudioRepository implements CardAudioRepository {
   const HttpCardAudioRepository({
@@ -26,10 +25,7 @@ class HttpCardAudioRepository implements CardAudioRepository {
     final client = httpClient ?? http.Client();
     final closeClient = httpClient == null;
     try {
-      final response = await client.get(
-        _resolve(audioUrl),
-        headers: imageHeaders(userId),
-      );
+      final response = await client.get(_resolve(audioUrl));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw CardAudioFetchException(
           'Audio download failed: HTTP ${response.statusCode}',

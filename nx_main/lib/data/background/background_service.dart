@@ -15,6 +15,7 @@ import 'package:nexus_voice_assistant/data/telemetry/telemetry_upload_manager.da
 import 'package:nexus_voice_assistant/domain/ble/ble_connection_state.dart';
 import 'package:nx_observability/nx_observability.dart';
 import 'package:http/http.dart' as http;
+import 'package:nx_db/auth.dart';
 
 int _opusBytesFromNrfAudioPayload(Uint8List data) {
   if (data.length >= 6 && data[0] == 0x01 && data[1] == 0x00) {
@@ -81,9 +82,9 @@ class BleBackgroundService {
     final socketClient = SocketClient();
     TelemetryUploadManager? telemetryUploadManager;
     GpsUploadManager? gpsUploadManager;
+    http.Client? authenticatedHttpClient;
     bool appIsForeground = true;
     String? gpsHttpBaseUrl;
-    Map<String, String> gpsHeaders = {};
     String? gpsTimezoneLabel;
 
     // ============================================================================
@@ -106,16 +107,15 @@ class BleBackgroundService {
 
     Future<void> printServerClockDrift(
       String httpBaseUrl,
-      Map<String, String> headers,
+      http.Client client,
     ) async {
       final base = httpBaseUrl.replaceAll(RegExp(r'/+$'), '');
       final uri = Uri.parse('$base/time');
       final localSend = DateTime.now().toUtc();
       final sw = Stopwatch()..start();
       try {
-        final response = await http
-            .get(uri, headers: headers)
-            .timeout(const Duration(seconds: 5));
+        final response =
+            await client.get(uri).timeout(const Duration(seconds: 5));
         final localReceive = DateTime.now().toUtc();
         sw.stop();
         if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -161,13 +161,14 @@ class BleBackgroundService {
         return;
       }
       final base = gpsHttpBaseUrl;
-      if (base == null || base.isEmpty || gpsHeaders.isEmpty) {
+      final client = authenticatedHttpClient;
+      if (base == null || base.isEmpty || client == null) {
         debugPrint('[GPS Upload] not starting: missing upload session');
         return;
       }
       gpsUploadManager ??= GpsUploadManager(
         httpBaseUrl: base,
-        headers: gpsHeaders,
+        client: client,
         flushInterval: const Duration(minutes: 10),
         timezoneLabel: gpsTimezoneLabel,
       );
@@ -489,8 +490,16 @@ class BleBackgroundService {
       final url = event?['url'] as String?;
       final userId = event?['userId'] as String?;
       final telemetryHttpBaseUrl = event?['telemetryHttpBaseUrl'] as String?;
+      final preset = BackendPreset.fromKey(event?['preset'] as String?);
+      final clientAppId = event?['clientAppId'] as String?;
 
-      if (url == null || url.isEmpty || userId == null || userId.isEmpty) {
+      if (url == null ||
+          url.isEmpty ||
+          userId == null ||
+          userId.isEmpty ||
+          preset == null ||
+          clientAppId == null ||
+          clientAppId.isEmpty) {
         debugPrint(
           '[Socket] Ignoring connect without complete auth session '
           '(url=${url != null && url.isNotEmpty}, '
@@ -500,42 +509,67 @@ class BleBackgroundService {
         return;
       }
 
-      final headers = <String, String>{
-        'X-User-Id': userId,
+      await gpsUploadManager?.stop(flushPending: true);
+      gpsUploadManager = null;
+      authenticatedHttpClient?.close();
+
+      final oidc = NexusOidcService();
+      if (preset.requiresOidc) {
+        final identity = await oidc.restore(preset, clientAppId);
+        if (identity == null || identity.userId != userId) {
+          debugPrint('[Socket] Background auth session is unavailable');
+          await socketClient.disconnect();
+          return;
+        }
+      }
+      Future<Map<String, String>> authHeaders(bool forceRefresh) async {
+        if (!preset.requiresOidc) {
+          return nexusAuthHeaders(preset, userId);
+        }
+        final token = await oidc.accessToken(forceRefresh: forceRefresh);
+        return {'authorization': 'Bearer $token'};
+      }
+
+      final client = NexusAuthenticatedClient(
+        preset: preset,
+        userId: userId,
+        authHeaders: authHeaders,
+      );
+      authenticatedHttpClient = client;
+      final socketMetadata = <String, String>{
         'X-Client-App': 'nx_main',
         'X-Agent-Id': 'nx_main',
       };
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
           ? telemetryHttpBaseUrl!
           : httpBaseFromSocketUrl(url);
-      final uploadHeaders = {
-        'X-User-Id': userId,
-      };
-      unawaited(printServerClockDrift(uploadBase, uploadHeaders));
+      unawaited(printServerClockDrift(uploadBase, client));
       telemetryUploadManager = TelemetryUploadManager(
         httpBaseUrl: uploadBase,
-        headers: uploadHeaders,
+        client: client,
         onCommitted: (transferId) async {
           await bleClient.writeFileRx(telemetryCommittedAck(transferId));
           debugPrint('Telemetry upload committed transfer=$transferId');
         },
       );
-      await gpsUploadManager?.stop(flushPending: true);
-      gpsUploadManager = null;
       gpsHttpBaseUrl = uploadBase;
-      gpsHeaders = uploadHeaders;
       gpsTimezoneLabel = localTimezoneOffsetLabel();
       await startGpsIfBackground('socket.connect');
-      await socketClient.connect(url, headers: headers);
+      await socketClient.connect(
+        url,
+        headers: socketMetadata,
+        authHeaders: authHeaders,
+      );
     });
 
     service.on('socket.disconnect').listen((event) async {
       await gpsUploadManager?.stop(flushPending: true);
       gpsUploadManager = null;
       gpsHttpBaseUrl = null;
-      gpsHeaders = {};
       gpsTimezoneLabel = null;
       await socketClient.disconnect();
+      authenticatedHttpClient?.close();
+      authenticatedHttpClient = null;
     });
 
     service.on('gps.flush').listen((event) async {
@@ -588,10 +622,11 @@ class BleBackgroundService {
       await gpsUploadManager?.stop(flushPending: true);
       gpsUploadManager = null;
       gpsHttpBaseUrl = null;
-      gpsHeaders = {};
       gpsTimezoneLabel = null;
       await bleClient.disconnect(intentional: true);
       await socketClient.disconnect();
+      authenticatedHttpClient?.close();
+      authenticatedHttpClient = null;
       service.stopSelf();
     });
 
@@ -904,12 +939,16 @@ class BleBackgroundService {
     required String url,
     required String telemetryHttpBaseUrl,
     required String userId,
+    required BackendPreset preset,
+    required String clientAppId,
   }) {
     _fileTxLogUserId = userId;
     _service.invoke('socket.connect', {
       'url': url,
       'telemetryHttpBaseUrl': telemetryHttpBaseUrl,
       'userId': userId,
+      'preset': preset.key,
+      'clientAppId': clientAppId,
     });
   }
 

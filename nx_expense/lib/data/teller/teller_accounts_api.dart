@@ -13,7 +13,7 @@ Map<String, String> _headers(
   String userId, {
   bool jsonBody = false,
 }) {
-  final headers = <String, String>{'x-user-id': userId};
+  final headers = <String, String>{};
   if (jsonBody) headers['content-type'] = 'application/json';
   return headers;
 }

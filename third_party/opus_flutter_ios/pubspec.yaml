@@ -1,0 +1,20 @@
+name: opus_flutter_ios
+description: Nexus-maintained iOS implementation of opus_flutter with arm64 simulator support.
+repository: https://github.com/EPNW/opus_flutter/tree/master/opus_flutter_ios
+version: 3.0.1+nx1
+
+environment:
+  sdk: ">=2.12.0 <4.0.0"
+  flutter: ">=2.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  opus_flutter_platform_interface: ^3.0.0
+
+flutter:
+  plugin:
+    implements: opus_flutter
+    platforms:
+      ios:
+        pluginClass: OpusFlutterIosPlugin

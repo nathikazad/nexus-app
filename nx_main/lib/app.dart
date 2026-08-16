@@ -56,7 +56,11 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
           _activeSocketSessionKey = null;
           service.disconnectSocket();
         }
-        watchRelay?.configure(socketUrl: null, userId: null);
+        watchRelay?.configure(
+          socketUrl: null,
+          userId: null,
+          authHeaders: null,
+        );
         return;
       }
 
@@ -72,12 +76,22 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
       }
       _activeSocketSessionKey = sessionKey;
       watchRelay
-        ?..configure(socketUrl: urls.sockWs, userId: user.userId)
+        ?..configure(
+          socketUrl: urls.sockWs,
+          userId: user.userId,
+          authHeaders: (forceRefresh) => nexusAuthHeaders(
+            user.preset,
+            user.userId,
+            forceRefresh: forceRefresh,
+          ),
+        )
         ..start();
       service.connectSocket(
         url: urls.sockWs,
         telemetryHttpBaseUrl: urls.imageHttp,
         userId: user.userId,
+        preset: user.preset,
+        clientAppId: ref.read(nexusClientAppIdProvider),
       );
     });
 

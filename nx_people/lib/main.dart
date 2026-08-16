@@ -12,6 +12,7 @@ void main() {
       overrides: [
         authProvider.overrideWith(PeopleAuthController.new),
         dbAuditSourceKindProvider.overrideWithValue('nx_people'),
+        nexusClientAppIdProvider.overrideWithValue('nx_people'),
       ],
       child: const NexusPeopleApp(),
     ),

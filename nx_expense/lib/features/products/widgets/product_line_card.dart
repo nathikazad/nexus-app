@@ -178,12 +178,12 @@ class ProductThumbnail extends ConsumerWidget {
     if (base == null || userId == null || path == null || path.isEmpty) {
       return _ProductThumbnailFallback(size: size);
     }
-    final normalizedBase = normalizeSuggestionHttpBase(base);
+    final headers = ref.watch(nexusRequestHeadersProvider).value ?? const {};
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Image.network(
         resolveSuggestionAssetUrl(base, path),
-        headers: suggestionHttpHeaders(normalizedBase, userId),
+        headers: headers,
         width: size,
         height: size,
         fit: BoxFit.cover,

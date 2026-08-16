@@ -10,7 +10,6 @@ void main() {
     late http.Request seen;
     final service = MirrorPublishTriggerService(
       baseUrl: 'http://100.108.43.37:8001',
-      userId: '7',
       client: MockClient((request) async {
         seen = request;
         return http.Response('{"ok":true}', 200);
@@ -28,7 +27,7 @@ void main() {
       seen.url.toString(),
       'http://100.108.43.37:8001/mirror/publish/trigger',
     );
-    expect(seen.headers['X-User-Id'], '7');
+    expect(seen.headers['X-User-Id'], isNull);
     expect(jsonDecode(seen.body), {
       'reason': 'publish_click',
       'document_id': 3245,
@@ -40,7 +39,6 @@ void main() {
     final requests = <String>[];
     final service = MirrorPublishTriggerService(
       baseUrl: 'http://127.0.0.1:8001',
-      userId: '1',
       client: MockClient((request) async {
         requests.add('${request.method} ${request.url.path}');
         if (request.url.path.endsWith('/trigger')) {
@@ -79,7 +77,6 @@ void main() {
   test('throws when mirror publish status fails', () async {
     final service = MirrorPublishTriggerService(
       baseUrl: 'http://127.0.0.1:8001',
-      userId: '1',
       client: MockClient((request) async {
         if (request.url.path.endsWith('/trigger')) {
           return http.Response('{"ok":true}', 200);
@@ -106,7 +103,6 @@ void main() {
   test('throws on rejected trigger', () async {
     final service = MirrorPublishTriggerService(
       baseUrl: 'http://127.0.0.1:8001',
-      userId: '1',
       client: MockClient((request) async => http.Response('disabled', 503)),
     );
 

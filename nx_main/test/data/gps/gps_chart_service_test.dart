@@ -12,7 +12,7 @@ void main() {
       '7',
       httpClient: MockClient((request) async {
         expect(request.url.toString(), 'https://example.test/gps/dates');
-        expect(request.headers['X-User-Id'], '7');
+        expect(request.headers['X-User-Id'], isNull);
         return http.Response(
           jsonEncode({
             'dates': ['2026-05-14', 'bad', '2026-05-15'],

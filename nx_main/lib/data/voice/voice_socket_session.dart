@@ -9,12 +9,14 @@ class VoiceSocketSessionConfig {
     required this.userId,
     required this.clientApp,
     required this.agentId,
+    required this.authHeaders,
   });
 
   final String socketUrl;
   final String userId;
   final String clientApp;
   final String agentId;
+  final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
   String get key => '$socketUrl|$userId|$clientApp|$agentId';
 }
@@ -123,6 +125,7 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
     final connected = await _socket.connect(
       config.socketUrl,
       headers: _headersFor(config),
+      authHeaders: config.authHeaders,
     );
     if (!connected) {
       throw StateError('Could not connect to voice socket.');
@@ -206,7 +209,6 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
 
   Map<String, String> _headersFor(VoiceSocketSessionConfig config) {
     return <String, String>{
-      'X-User-Id': config.userId,
       'X-Client-App': config.clientApp,
       'X-Agent-Id': config.agentId,
     };

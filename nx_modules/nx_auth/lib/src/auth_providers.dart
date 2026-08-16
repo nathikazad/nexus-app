@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_controller.dart';
 import 'authenticated_http_client.dart';
 import 'backend_presets.dart';
+import 'oidc_service.dart';
 
 final userIdProvider = Provider<String?>((ref) {
   return ref.watch(authProvider).value?.userId;
@@ -33,6 +34,14 @@ final nexusHttpClientProvider = Provider<NexusAuthenticatedClient?>((ref) {
   ref.onDispose(client.close);
   return client;
 }, name: 'nexusHttpClientProvider');
+
+/// Current identity headers for APIs that cannot accept an authenticated HTTP
+/// client, such as Flutter's network image provider.
+final nexusRequestHeadersProvider = FutureProvider<Map<String, String>>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (user == null) return Future.value(const {});
+  return nexusAuthHeaders(user.preset, user.userId);
+}, name: 'nexusRequestHeadersProvider');
 
 enum AppStatus { initializing, authenticated, unauthenticated }
 

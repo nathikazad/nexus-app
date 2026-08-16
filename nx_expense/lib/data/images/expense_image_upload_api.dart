@@ -37,6 +37,7 @@ Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
   required List<int> bytes,
   required String filename,
   required MediaType imageContentType,
+  required http.Client httpClient,
 }) async {
   final trimmed = imageBaseUrl.endsWith('/')
       ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
@@ -44,7 +45,6 @@ Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
   final base = _normalizeImageBase(trimmed);
   final uri = Uri.parse('$base/snapshots');
   final req = http.MultipartRequest('POST', uri);
-  req.headers['x-user-id'] = userId;
   req.fields['timestamp'] = expenseSnapshotTimestamp12Digits();
   req.fields['source'] = 'expense_app';
   final tz = DateTime.now().timeZoneName;
@@ -57,7 +57,7 @@ Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
       contentType: imageContentType,
     ),
   );
-  final streamed = await req.send();
+  final streamed = await httpClient.send(req);
   final resp = await http.Response.fromStream(streamed);
   if (resp.statusCode < 200 || resp.statusCode >= 300) {
     throw StateError('Upload failed (${resp.statusCode}): ${resp.body}');

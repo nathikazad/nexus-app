@@ -31,6 +31,7 @@ class SocketClient {
   WebSocketChannel? _channel;
   String? _url;
   Map<String, String>? _accessHeaders;
+  Future<Map<String, String>> Function(bool forceRefresh)? _authHeaders;
   bool _isConnected = false;
   Future<bool>? _connectFuture;
   bool _audioReceiveActive = false;
@@ -63,8 +64,13 @@ class SocketClient {
 
   int get queuedPacketCount => _packetQueue.length;
 
-  Future<bool> connect(String url, {Map<String, String>? headers}) async {
+  Future<bool> connect(
+    String url, {
+    Map<String, String>? headers,
+    Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
+  }) async {
     _accessHeaders = headers;
+    _authHeaders = authHeaders;
     if (_isConnected && _url == url) {
       debugPrint("[Socket] Already connected to $url");
       return true;
@@ -96,7 +102,7 @@ class SocketClient {
     });
   }
 
-  Future<bool> _connect() async {
+  Future<bool> _connect({bool forceRefresh = false}) async {
     if (_url == null) {
       debugPrint("[Socket] No URL provided");
       return false;
@@ -105,9 +111,13 @@ class SocketClient {
     try {
       debugPrint("[Socket] Connecting to $_url...");
 
+      final headers = <String, String>{
+        ...?_accessHeaders,
+        ...?await _authHeaders?.call(forceRefresh),
+      };
       _channel = IOWebSocketChannel.connect(
         _url!,
-        headers: _accessHeaders,
+        headers: headers,
         pingInterval: const Duration(seconds: 20),
         connectTimeout: const Duration(seconds: 10),
       );
@@ -155,6 +165,10 @@ class SocketClient {
 
       return true;
     } catch (e) {
+      if (!forceRefresh && _authHeaders != null) {
+        debugPrint('[Socket] Initial connection failed; refreshing session');
+        return _connect(forceRefresh: true);
+      }
       debugPrint("[Socket] Connection failed: $e");
       _isConnected = false;
       _channel = null;

@@ -38,6 +38,8 @@ class _FakeSocket implements NoteAiSocketPort {
   Future<bool> connect(
     String url, {
     required Map<String, String> headers,
+    required Future<Map<String, String>> Function(bool forceRefresh)
+    authHeaders,
   }) async {
     connected = true;
     return true;
@@ -113,10 +115,7 @@ void main() {
       documentId: 4450,
       socketUrl: 'wss://socket.example',
       userId: '1',
-      audioService: DocumentAudioService(
-        baseUrl: 'https://notes.example',
-        userId: '1',
-      ),
+      audioService: DocumentAudioService(baseUrl: 'https://notes.example'),
       transcriptLoader: _FakeTranscriptLoader(),
       session: NoteAiSession(socket: socket),
     );
@@ -171,10 +170,7 @@ void main() {
       documentId: 4450,
       socketUrl: 'wss://socket.example',
       userId: '1',
-      audioService: DocumentAudioService(
-        baseUrl: 'https://notes.example',
-        userId: '1',
-      ),
+      audioService: DocumentAudioService(baseUrl: 'https://notes.example'),
       transcriptLoader: _FakeTranscriptLoader(
         NoteTranscript(id: 91, messages: storedMessages),
       ),
@@ -202,10 +198,7 @@ void main() {
       documentId: 4450,
       socketUrl: 'wss://socket.example',
       userId: '1',
-      audioService: DocumentAudioService(
-        baseUrl: 'https://notes.example',
-        userId: '1',
-      ),
+      audioService: DocumentAudioService(baseUrl: 'https://notes.example'),
       transcriptLoader: _FakeTranscriptLoader(),
       session: NoteAiSession(socket: _FakeSocket()),
       noteAudioPlayer: _FakeStoredAudioPlayer(),
@@ -241,10 +234,7 @@ void main() {
         documentId: 4450,
         socketUrl: 'wss://socket.example',
         userId: '1',
-        audioService: DocumentAudioService(
-          baseUrl: 'https://notes.example',
-          userId: '1',
-        ),
+        audioService: DocumentAudioService(baseUrl: 'https://notes.example'),
         transcriptLoader: _FakeTranscriptLoader(),
         session: NoteAiSession(socket: _FakeSocket()),
         noteAudioPlayer: notePlayer,

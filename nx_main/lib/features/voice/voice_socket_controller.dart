@@ -358,7 +358,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
   }) async {
     final httpBaseUrl =
         ref.read(imageBaseUrlProvider) ?? httpBaseFromSocketUrl(socketUrl);
-    _configureAppLogUploader(httpBaseUrl: httpBaseUrl, userId: userId);
+    _configureAppLogUploader(httpBaseUrl: httpBaseUrl);
     final existing = _voiceSession;
     if (existing != null) {
       await existing.connect(
@@ -367,6 +367,11 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
           userId: userId,
           clientApp: 'nx_main',
           agentId: 'nx_main',
+          authHeaders: (forceRefresh) => nexusAuthHeaders(
+            ref.read(authProvider).value!.preset,
+            userId,
+            forceRefresh: forceRefresh,
+          ),
         ),
       );
       return existing;
@@ -428,6 +433,11 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         userId: userId,
         clientApp: 'nx_main',
         agentId: 'nx_main',
+        authHeaders: (forceRefresh) => nexusAuthHeaders(
+          ref.read(authProvider).value!.preset,
+          userId,
+          forceRefresh: forceRefresh,
+        ),
       ),
     );
 
@@ -607,14 +617,11 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
 
   void _configureAppLogUploader({
     required String httpBaseUrl,
-    required String userId,
   }) {
     _appLogUploader = NxAppLogUploader(
       httpBaseUrl: httpBaseUrl,
       origin: 'nx_main',
-      headers: {
-        'X-User-Id': userId,
-      },
+      httpClient: ref.read(nexusHttpClientProvider),
     );
   }
 

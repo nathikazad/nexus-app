@@ -5,10 +5,6 @@ import 'package:nx_views/gps/domain/gps_point.dart';
 
 String _normalizeBase(String baseUrl) => baseUrl.replaceAll(RegExp(r'/+$'), '');
 
-Map<String, String> _headers(String userId) => {
-      'X-User-Id': userId,
-    };
-
 String _dateString(DateTime day) {
   return '${day.year.toString().padLeft(4, '0')}-'
       '${day.month.toString().padLeft(2, '0')}-'
@@ -24,10 +20,7 @@ Future<List<DateTime>> fetchGpsDates(
   final closeClient = httpClient == null;
   try {
     final base = _normalizeBase(baseUrl);
-    final response = await client.get(
-      Uri.parse('$base/gps/dates'),
-      headers: _headers(userId),
-    );
+    final response = await client.get(Uri.parse('$base/gps/dates'));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw GpsChartException(
         'GET /gps/dates failed: ${response.statusCode} ${response.body}',
@@ -67,7 +60,6 @@ Future<List<GpsPoint>> fetchGpsDay(
       Uri.parse(
         '$base/gps/day',
       ).replace(queryParameters: {'date': _dateString(day)}),
-      headers: _headers(userId),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw GpsChartException(

@@ -89,7 +89,7 @@ void main() {
         expect(request.url.path, '/suggestions');
         expect(request.url.queryParameters['status'], 'open');
         expect(request.url.queryParameters['kind'], 'transaction_expense');
-        expect(request.headers['x-user-id'], '1');
+        expect(request.headers['x-user-id'], isNull);
         return http.Response(
           jsonEncode({
             'ok': true,
@@ -119,7 +119,7 @@ void main() {
       final client = MockClient((request) async {
         paths.add(request.url.path);
         expect(request.method, 'POST');
-        expect(request.headers['x-user-id'], '1');
+        expect(request.headers['x-user-id'], isNull);
         return http.Response('{"ok":true}', 200);
       });
 

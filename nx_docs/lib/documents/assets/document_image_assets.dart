@@ -9,14 +9,11 @@ import 'package:nx_docs/documents/assets/document_image_file_reader_stub.dart'
 class DocumentImageAssetService {
   DocumentImageAssetService({
     required String baseUrl,
-    required String userId,
     required http.Client client,
   }) : _baseUri = Uri.parse(_trimTrailingSlash(baseUrl)),
-       _userId = userId,
        _client = client;
 
   final Uri _baseUri;
-  final String _userId;
   final http.Client _client;
 
   String get imageBaseUrl => _baseUri.toString();
@@ -38,7 +35,6 @@ class DocumentImageAssetService {
       'filename=${payload.filename} bytes=${payload.bytes.length}',
     );
     final request = http.MultipartRequest('POST', uploadUri)
-      ..headers['X-User-Id'] = _userId
       ..fields['document_id'] = '$documentId'
       ..files.add(
         http.MultipartFile.fromBytes(

@@ -8,6 +8,7 @@ import 'package:nexus_voice_assistant/data/background/background_service.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
 import 'package:nexus_voice_assistant/data/watch/watch_bridge_service.dart';
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_voice/nx_voice.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'dart:ui';
@@ -30,7 +31,10 @@ void main() async {
   }
 
   final container = ProviderContainer(
-    overrides: [dbAuditSourceKindProvider.overrideWithValue('nx_main')],
+    overrides: [
+      dbAuditSourceKindProvider.overrideWithValue('nx_main'),
+      nexusClientAppIdProvider.overrideWithValue('nx_main'),
+    ],
   );
   final bgService = container.read(bleBackgroundServiceProvider);
   await bgService.init(

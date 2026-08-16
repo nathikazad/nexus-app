@@ -14,7 +14,6 @@ final mirrorPublishTriggerProvider = Provider<MirrorPublishTrigger?>((ref) {
   if (client == null) return null;
   return MirrorPublishTriggerService(
     baseUrl: resolve(user.preset).imageHttp,
-    userId: user.userId,
     client: client,
   );
 });

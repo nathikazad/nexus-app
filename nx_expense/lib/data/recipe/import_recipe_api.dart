@@ -17,7 +17,7 @@ Map<String, String> _mcpHeaders(
   String userId, {
   bool jsonBody = false,
 }) {
-  final headers = <String, String>{'x-user-id': userId};
+  final headers = <String, String>{};
   if (jsonBody) {
     headers['Content-Type'] = 'application/json';
   }
@@ -87,7 +87,7 @@ Never _throwFromResponse(http.Response resp) {
 /// `POST {imageBaseUrl}/import-recipe` with body `{"url":"..."}` — fetch page and import (crawler + KGQL).
 ///
 /// Equivalent to:
-/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"url":"…"}' …/import-recipe`
+/// Uses the caller's authenticated HTTP client.
 Future<ImportRecipeHttpResult> importRecipeFromUrl({
   required String imageBaseUrl,
   required String userId,
@@ -123,7 +123,7 @@ Future<ImportRecipeHttpResult> importRecipeFromUrl({
 /// `POST {imageBaseUrl}/import-recipe` with body `{"text":"..."}` — paste recipe text (skips fetch).
 ///
 /// Equivalent to:
-/// `curl -sS -X POST -H 'Content-Type: application/json' -H 'x-user-id: …' -d '{"text":"…"}' …/import-recipe`
+/// Uses the caller's authenticated HTTP client.
 Future<ImportRecipeHttpResult> importRecipeFromPastedText({
   required String imageBaseUrl,
   required String userId,

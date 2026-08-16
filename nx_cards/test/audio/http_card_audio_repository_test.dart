@@ -4,31 +4,34 @@ import 'package:http/testing.dart';
 import 'package:nx_cards/audio/http_card_audio.dart';
 
 void main() {
-  test('fetch resolves relative audio URL and sends user header', () async {
-    late Uri requested;
-    late Map<String, String> headers;
-    final client = MockClient((request) async {
-      requested = request.url;
-      headers = request.headers;
-      return http.Response.bytes([0x49, 0x44, 0x33], 200);
-    });
-    final repository = HttpCardAudioRepository(
-      baseUrl: 'http://100.108.43.37:8001',
-      userId: '7',
-      httpClient: client,
-    );
+  test(
+    'fetch resolves relative audio URL without caller identity headers',
+    () async {
+      late Uri requested;
+      late Map<String, String> headers;
+      final client = MockClient((request) async {
+        requested = request.url;
+        headers = request.headers;
+        return http.Response.bytes([0x49, 0x44, 0x33], 200);
+      });
+      final repository = HttpCardAudioRepository(
+        baseUrl: 'http://100.108.43.37:8001',
+        userId: '7',
+        httpClient: client,
+      );
 
-    final bytes = await repository.fetch(
-      '/cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
-    );
+      final bytes = await repository.fetch(
+        '/cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
+      );
 
-    expect(
-      requested.toString(),
-      'http://100.108.43.37:8001/cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
-    );
-    expect(headers['x-user-id'], '7');
-    expect(bytes, [0x49, 0x44, 0x33]);
-  });
+      expect(
+        requested.toString(),
+        'http://100.108.43.37:8001/cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
+      );
+      expect(headers['x-user-id'], isNull);
+      expect(bytes, [0x49, 0x44, 0x33]);
+    },
+  );
 
   test('fetch reports HTTP failure without returning response bytes', () async {
     final repository = HttpCardAudioRepository(

@@ -14,7 +14,7 @@ String normalizeSuggestionHttpBase(String url) {
 }
 
 Map<String, String> suggestionHttpHeaders(String base, String userId) {
-  return <String, String>{'x-user-id': userId};
+  return const <String, String>{};
 }
 
 String resolveSuggestionAssetUrl(String imageBaseUrl, String path) {

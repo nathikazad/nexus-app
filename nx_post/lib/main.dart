@@ -28,7 +28,10 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ProviderScope(
-      overrides: [dbAuditSourceKindProvider.overrideWithValue('nx_post')],
+      overrides: [
+        dbAuditSourceKindProvider.overrideWithValue('nx_post'),
+        nexusClientAppIdProvider.overrideWithValue('nx_post'),
+      ],
       child: const NexusPostApp(),
     ),
   );
@@ -78,8 +81,8 @@ class PostAppShell extends ConsumerWidget {
       repository: MirrorFeedRepository(session.mirrorUrl),
       postRepository: MicroblogPostRepository(
         session.mcpUrl,
-        graphqlUrl: session.graphqlUrl,
-        userId: session.userId,
+        graphqlClient: ref.watch(graphqlClientProvider),
+        client: ref.watch(nexusHttpClientProvider)!,
       ),
     );
   }
@@ -2392,19 +2395,12 @@ InputDecoration inputDecoration(String hint) {
 class MicroblogPostRepository {
   MicroblogPostRepository(
     this.baseUrl, {
-    required this.graphqlUrl,
-    required this.userId,
-    http.Client? client,
-  }) : _client = client ?? http.Client(),
-       _graphqlClient = createClient(
-         graphqlUrl,
-         userId,
-         auditSourceKind: 'nx_post',
-       );
+    required dynamic graphqlClient,
+    required http.Client client,
+  }) : _client = client,
+       _graphqlClient = graphqlClient;
 
   final String baseUrl;
-  final String graphqlUrl;
-  final String userId;
   final http.Client _client;
   final dynamic _graphqlClient;
 
@@ -2593,10 +2589,7 @@ class MicroblogPostRepository {
   }
 
   Map<String, String> httpHeaders({bool contentTypeJson = false}) {
-    return {
-      if (contentTypeJson) 'content-type': 'application/json',
-      'x-user-id': userId,
-    };
+    return {if (contentTypeJson) 'content-type': 'application/json'};
   }
 }
 

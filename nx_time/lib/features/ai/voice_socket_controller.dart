@@ -496,7 +496,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       _appLogUploader ??= NxAppLogUploader(
         httpBaseUrl: httpBaseUrl,
         origin: 'nx_time',
-        headers: {'X-User-Id': userId},
+        httpClient: ref.read(nexusHttpClientProvider),
       );
       return existing;
     }
@@ -513,7 +513,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     _appLogUploader = NxAppLogUploader(
       httpBaseUrl: httpBaseUrl,
       origin: 'nx_time',
-      headers: {'X-User-Id': userId},
+      httpClient: ref.read(nexusHttpClientProvider),
     );
     final player = _player ??= NxWavAudioPlayer();
     final socket = NxVoiceSocketClient()
@@ -644,7 +644,6 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       };
 
     final headers = <String, String>{
-      'X-User-Id': userId,
       'X-Client-App': 'nx_time',
       'X-Agent-Id': 'nx_time',
     };
@@ -652,7 +651,15 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       '[nx_time voice] socket headers client_app=nx_time '
       'agent_id=nx_time',
     );
-    final connected = await socket.connect(socketUrl, headers: headers);
+    final connected = await socket.connect(
+      socketUrl,
+      headers: headers,
+      authHeaders: (forceRefresh) => nexusAuthHeaders(
+        ref.read(authProvider).value!.preset,
+        userId,
+        forceRefresh: forceRefresh,
+      ),
+    );
     if (!connected) {
       throw StateError('Could not connect to voice socket.');
     }

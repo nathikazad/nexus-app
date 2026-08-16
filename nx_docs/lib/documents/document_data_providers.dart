@@ -31,11 +31,7 @@ final documentImageAssetServiceProvider = Provider<DocumentImageAssetService?>((
   );
   final client = ref.watch(nexusHttpClientProvider);
   if (client == null) return null;
-  return DocumentImageAssetService(
-    baseUrl: imageBaseUrl,
-    userId: user.userId,
-    client: client,
-  );
+  return DocumentImageAssetService(baseUrl: imageBaseUrl, client: client);
 });
 
 final nxDocsStateServiceProvider = Provider<NxDocsStateService?>((ref) {
@@ -47,7 +43,6 @@ final nxDocsStateServiceProvider = Provider<NxDocsStateService?>((ref) {
   if (client == null) return null;
   return NxDocsStateService(
     baseUrl: resolve(user.preset).imageHttp,
-    userId: user.userId,
     client: client,
   );
 });

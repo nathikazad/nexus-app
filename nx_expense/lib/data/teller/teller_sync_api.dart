@@ -48,11 +48,10 @@ Future<TellerSyncResult> _postExternalSync({
       : imageBaseUrl;
   final base = _normalizeImageBase(trimmed);
   final uri = Uri.parse('$base$path');
-  final headers = <String, String>{'x-user-id': userId};
   final client = httpClient ?? http.Client();
   final closeClient = httpClient == null;
   try {
-    final resp = await client.post(uri, headers: headers);
+    final resp = await client.post(uri);
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
       throw StateError('$label failed (${resp.statusCode}): ${resp.body}');
     }

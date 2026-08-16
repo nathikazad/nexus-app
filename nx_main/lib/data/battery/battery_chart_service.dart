@@ -6,10 +6,6 @@ import 'package:nexus_voice_assistant/domain/battery/battery_point.dart';
 
 String _normalizeBase(String baseUrl) => baseUrl.replaceAll(RegExp(r'/+$'), '');
 
-Map<String, String> _headers(String userId) => {
-      'X-User-Id': userId,
-    };
-
 /// Distinct calendar days with at least one necklace battery event.
 Future<List<DateTime>> fetchBatteryDates(
   String baseUrl,
@@ -21,7 +17,7 @@ Future<List<DateTime>> fetchBatteryDates(
   try {
     final base = _normalizeBase(baseUrl);
     final uri = Uri.parse('$base/battery/dates');
-    final response = await client.get(uri, headers: _headers(userId));
+    final response = await client.get(uri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw BatteryChartException(
         'GET /battery/dates failed: ${response.statusCode} ${response.body}',
@@ -63,7 +59,7 @@ Future<List<BatteryPoint>> fetchBatteryDay(
     final uri = Uri.parse('$base/battery/day').replace(
       queryParameters: {'date': dateStr},
     );
-    final response = await client.get(uri, headers: _headers(userId));
+    final response = await client.get(uri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw BatteryChartException(
         'GET /battery/day failed: ${response.statusCode} ${response.body}',

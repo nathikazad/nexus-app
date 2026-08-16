@@ -4,17 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:nx_docs/documents/document_models.dart';
 
 class DocumentAudioService {
-  DocumentAudioService({
-    required String baseUrl,
-    required String userId,
-    http.Client? client,
-  }) : _baseUri = Uri.parse(_trimTrailingSlash(baseUrl)),
-       _userId = userId,
-       _client = client ?? http.Client(),
-       _ownsClient = client == null;
+  DocumentAudioService({required String baseUrl, http.Client? client})
+    : _baseUri = Uri.parse(_trimTrailingSlash(baseUrl)),
+      _client = client ?? http.Client(),
+      _ownsClient = client == null;
 
   final Uri _baseUri;
-  final String _userId;
   final http.Client _client;
   final bool _ownsClient;
 
@@ -24,10 +19,7 @@ class DocumentAudioService {
   }) async {
     final response = await _client.post(
       _baseUri.resolve('/docs/audio/generate'),
-      headers: <String, String>{
-        'X-User-Id': _userId,
-        'Content-Type': 'application/json',
-      },
+      headers: const {'Content-Type': 'application/json'},
       body: jsonEncode(<String, Object>{
         'document_id': documentId,
         'language': 'en',

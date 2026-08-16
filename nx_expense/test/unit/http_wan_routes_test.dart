@@ -14,7 +14,7 @@ void main() {
       final client = MockClient((request) async {
         expect(request.method, 'POST');
         expect(request.url.toString(), 'https://nexus.kgql.io/teller/sync');
-        expect(request.headers['x-user-id'], '1');
+        expect(request.headers['x-user-id'], isNull);
         return http.Response('{"ok":true}', 200);
       });
 
@@ -26,7 +26,7 @@ void main() {
       final client = MockClient((request) async {
         expect(request.method, 'POST');
         expect(request.url.toString(), 'https://nexus.kgql.io/bofa/sync');
-        expect(request.headers['x-user-id'], '1');
+        expect(request.headers['x-user-id'], isNull);
         return http.Response('{"ok":true}', 200);
       });
 
@@ -38,7 +38,7 @@ void main() {
       final client = MockClient((request) async {
         expect(request.method, 'POST');
         expect(request.url.toString(), 'https://nexus.kgql.io/import-recipe');
-        expect(request.headers['x-user-id'], '1');
+        expect(request.headers['x-user-id'], isNull);
         expect(jsonDecode(request.body), {'text': 'ingredients'});
         return http.Response(
           jsonEncode({

@@ -12,7 +12,7 @@ void main() {
     final client = MockClient((request) async {
       expect(request.method, 'POST');
       expect(request.url.toString(), 'https://nexus.kgql.io/import-recipe');
-      expect(request.headers['x-user-id'], '1');
+      expect(request.headers['x-user-id'], isNull);
       expect(jsonDecode(request.body), {'url': 'https://example.com/recipe'});
       return http.Response(
         jsonEncode({

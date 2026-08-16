@@ -54,6 +54,7 @@ class WatchVoiceRelay {
 
   String? _socketUrl;
   String? _userId;
+  Future<Map<String, String>> Function(bool forceRefresh)? _authHeaders;
   bool _started = false;
   bool _inputTurnActive = false;
   Future<void> _sendChain = Future<void>.value();
@@ -62,10 +63,13 @@ class WatchVoiceRelay {
   void configure({
     required String? socketUrl,
     required String? userId,
+    required Future<Map<String, String>> Function(bool forceRefresh)?
+        authHeaders,
   }) {
     final changed = _socketUrl != socketUrl || _userId != userId;
     _socketUrl = socketUrl;
     _userId = userId;
+    _authHeaders = authHeaders;
     if (changed && _socketSession.isConnected) {
       unawaited(_socketSession.disconnect());
     }
@@ -123,6 +127,7 @@ class WatchVoiceRelay {
           userId: userId,
           clientApp: 'nx_watch',
           agentId: 'nx_watch',
+          authHeaders: _authHeaders!,
         ),
       );
       _socketSession.beginAudioTurn();

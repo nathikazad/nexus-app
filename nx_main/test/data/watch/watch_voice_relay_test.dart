@@ -19,7 +19,11 @@ void main() {
       socketSession: socket,
       inputEncoder: NxPcmOpusStreamEncoder(encodePcm16: _fakeEncode),
     )..start();
-    relay.configure(socketUrl: 'wss://socket.nathikazad.com', userId: '1');
+    relay.configure(
+      socketUrl: 'wss://socket.nathikazad.com',
+      userId: '1',
+      authHeaders: (_) async => {'authorization': 'Bearer test'},
+    );
 
     bridge.emitStart();
     bridge.emitAudio(_pcmRamp(sampleCount: 2880));
@@ -95,7 +99,7 @@ void main() {
     final socket = _FakeVoiceSocketSession();
     final relay = WatchVoiceRelay(bridge: bridge, socketSession: socket)
       ..start();
-    relay.configure(socketUrl: null, userId: null);
+    relay.configure(socketUrl: null, userId: null, authHeaders: null);
 
     bridge.emitStart();
     await _drain(relay);

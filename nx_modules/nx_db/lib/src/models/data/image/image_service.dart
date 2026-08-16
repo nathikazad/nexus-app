@@ -14,10 +14,9 @@ final imageCacheManager = CacheManager(
   ),
 );
 
-/// Headers for image HTTP API and [CachedNetworkImage].
-Map<String, String> imageHeaders(String userId) => {
-      'X-User-Id': userId,
-    };
+/// Kept for source compatibility. Identity is supplied by nx_auth transports.
+@Deprecated('Use nexusRequestHeadersProvider or nexusHttpClientProvider')
+Map<String, String> imageHeaders(String userId) => const {};
 
 /// Strips trailing slashes from [baseUrl] for joining paths.
 String _normalizeBase(String baseUrl) => baseUrl.replaceAll(RegExp(r'/+$'), '');
@@ -30,9 +29,10 @@ String _urlOnBase(String url, String baseUrl) {
   }
   return parsed
       .replace(
-          scheme: base.scheme,
-          host: base.host,
-          port: base.hasPort ? base.port : null)
+        scheme: base.scheme,
+        host: base.host,
+        port: base.hasPort ? base.port : null,
+      )
       .toString();
 }
 
@@ -41,8 +41,9 @@ String _urlOnBase(String url, String baseUrl) {
 double? minutesFromImageFilename(String url) {
   final name = Uri.parse(url).queryParameters['name'];
   if (name == null || name.isEmpty) return null;
-  final stem =
-      name.contains('.') ? name.substring(0, name.lastIndexOf('.')) : name;
+  final stem = name.contains('.')
+      ? name.substring(0, name.lastIndexOf('.'))
+      : name;
 
   if (stem.length < 12 || !_allDigits(stem.substring(0, 12))) return null;
   final hh = int.tryParse(stem.substring(6, 8));
@@ -62,7 +63,7 @@ bool _allDigits(String s) {
 
 /// Fetches calendar days that have at least one image for [source] (`necklace` or `desktop`).
 ///
-/// Calls `GET {baseUrl}/images/dates?source=...` with `X-User-Id`.
+/// Calls `GET {baseUrl}/images/dates?source=...`.
 Future<List<DateTime>> fetchAvailableDates(
   String baseUrl,
   String userId,
@@ -73,11 +74,11 @@ Future<List<DateTime>> fetchAvailableDates(
   final closeClient = httpClient == null;
   try {
     final base = _normalizeBase(baseUrl);
-    final uri = Uri.parse('$base/images/dates').replace(
-      queryParameters: {'source': source},
-    );
+    final uri = Uri.parse(
+      '$base/images/dates',
+    ).replace(queryParameters: {'source': source});
 
-    final response = await client.get(uri, headers: imageHeaders(userId));
+    final response = await client.get(uri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ImageServiceException(
         'GET /images/dates failed: ${response.statusCode} ${response.body}',
@@ -122,14 +123,11 @@ Future<List<ImageEntry>> fetchImagesForDay(
     final base = _normalizeBase(baseUrl);
     final dateStr =
         '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-    final uri = Uri.parse('$base/images/day').replace(
-      queryParameters: {
-        'date': dateStr,
-        'source': source,
-      },
-    );
+    final uri = Uri.parse(
+      '$base/images/day',
+    ).replace(queryParameters: {'date': dateStr, 'source': source});
 
-    final response = await client.get(uri, headers: imageHeaders(userId));
+    final response = await client.get(uri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ImageServiceException(
         'GET /images/day failed: ${response.statusCode} ${response.body}',

@@ -7,7 +7,7 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 /// Login gate for real PGDB-backed cooking data.
 ///
 /// Mirrors nx_time: auth owns user id + backend preset, then nx_db derives the
-/// GraphQL endpoint and `x-user-id` header before recipe providers are allowed
+/// Authenticates the shared Nexus transport before recipe providers are allowed
 /// to load.
 class CookingLoginScreen extends ConsumerStatefulWidget {
   const CookingLoginScreen({super.key});

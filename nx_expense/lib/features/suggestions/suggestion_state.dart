@@ -24,5 +24,9 @@ final openExpenseSuggestionsProvider = FutureProvider<List<ExpenseSuggestion>>((
   if (userId == null || userId.trim().isEmpty) {
     throw StateError('Not signed in.');
   }
-  return fetchExpenseSuggestions(imageBaseUrl: base, userId: userId);
+  return fetchExpenseSuggestions(
+    imageBaseUrl: base,
+    userId: userId,
+    httpClient: ref.watch(nexusHttpClientProvider),
+  );
 });

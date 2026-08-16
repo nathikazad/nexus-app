@@ -10,14 +10,11 @@ export 'package:nx_docs/publishing/mirror_publish_trigger.dart';
 class MirrorPublishTriggerService implements MirrorPublishTrigger {
   MirrorPublishTriggerService({
     required String baseUrl,
-    required String userId,
     required http.Client client,
   }) : _baseUri = Uri.parse(_trimTrailingSlash(baseUrl)),
-       _userId = userId,
        _client = client;
 
   final Uri _baseUri;
-  final String _userId;
   final http.Client _client;
 
   @override
@@ -105,10 +102,7 @@ class MirrorPublishTriggerService implements MirrorPublishTrigger {
   }
 
   Map<String, String> _headers({bool contentTypeJson = false}) {
-    return {
-      if (contentTypeJson) 'Content-Type': 'application/json',
-      'X-User-Id': _userId,
-    };
+    return {if (contentTypeJson) 'Content-Type': 'application/json'};
   }
 
   String _httpErrorMessage(http.Response response, String label) {

@@ -7,18 +7,17 @@ class NoteAiSessionConfig {
     required this.socketUrl,
     required this.userId,
     required this.documentId,
-    this.authHeaders = const <String, String>{},
+    required this.authHeaders,
   });
 
   final String socketUrl;
   final String userId;
   final int documentId;
-  final Map<String, String> authHeaders;
+  final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
   String get key => '$socketUrl|$userId|$documentId';
 
   Map<String, String> get headers => <String, String>{
-    if (authHeaders.isEmpty) 'X-User-Id': userId else ...authHeaders,
     'X-Client-App': 'nx_notes',
     'X-Agent-Id': 'nx_notes',
     'X-Document-Id': documentId.toString(),
@@ -34,7 +33,12 @@ abstract interface class NoteAiSocketPort {
 
   bool get isConnected;
 
-  Future<bool> connect(String url, {required Map<String, String> headers});
+  Future<bool> connect(
+    String url, {
+    required Map<String, String> headers,
+    required Future<Map<String, String>> Function(bool forceRefresh)
+    authHeaders,
+  });
   Future<void> disconnect({bool clearQueuedPackets = true});
   void sendAudioChunk(
     Uint8List opus, {
@@ -75,8 +79,12 @@ class NxNoteAiSocketPort implements NoteAiSocketPort {
   bool get isConnected => _socket.isConnected;
 
   @override
-  Future<bool> connect(String url, {required Map<String, String> headers}) =>
-      _socket.connect(url, headers: headers);
+  Future<bool> connect(
+    String url, {
+    required Map<String, String> headers,
+    required Future<Map<String, String>> Function(bool forceRefresh)
+    authHeaders,
+  }) => _socket.connect(url, headers: headers, authHeaders: authHeaders);
 
   @override
   Future<void> disconnect({bool clearQueuedPackets = true}) =>
@@ -145,6 +153,7 @@ class NoteAiSession {
     final connected = await _socket.connect(
       config.socketUrl,
       headers: config.headers,
+      authHeaders: config.authHeaders,
     );
     if (!connected) {
       throw StateError('Could not connect to the Nx Docs AI socket.');

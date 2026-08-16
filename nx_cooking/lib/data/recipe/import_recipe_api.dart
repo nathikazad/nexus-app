@@ -16,7 +16,7 @@ Map<String, String> _mcpHeaders(
   String userId, {
   bool jsonBody = false,
 }) {
-  final headers = <String, String>{'x-user-id': userId};
+  final headers = <String, String>{};
   if (jsonBody) {
     headers['Content-Type'] = 'application/json';
   }

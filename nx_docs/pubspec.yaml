@@ -52,6 +52,10 @@ dev_dependencies:
 
 dependency_overrides:
   connectivity_plus: 6.1.5
+  # Upstream 3.0.1 omits the arm64 iOS Simulator slice. This local fork
+  # supplies the same plugin with an Apple Silicon-compatible XCFramework.
+  opus_flutter_ios:
+    path: ../third_party/opus_flutter_ios
   # flutter_sound 9.30 advertises a broken macOS plugin. Nx Docs uses its
   # unchanged mobile implementation but intentionally omits desktop voice.
   flutter_sound:

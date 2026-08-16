@@ -247,6 +247,7 @@ class _SuggestionDetailPaneState extends ConsumerState<SuggestionDetailPane> {
         userId: userId,
         suggestionId: suggestion.id,
         accept: accept,
+        httpClient: ref.read(nexusHttpClientProvider),
       );
       ref.invalidate(openExpenseSuggestionsProvider);
       ref.invalidate(expenseListProvider);
@@ -283,6 +284,7 @@ class _SuggestionDetailPaneState extends ConsumerState<SuggestionDetailPane> {
         userId: userId,
         suggestionId: suggestion.id,
         note: note,
+        httpClient: ref.read(nexusHttpClientProvider),
       );
       ref.invalidate(openExpenseSuggestionsProvider);
       ref.read(selectedExpenseSuggestionIdProvider.notifier).state = null;

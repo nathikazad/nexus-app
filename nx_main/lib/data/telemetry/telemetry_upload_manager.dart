@@ -59,12 +59,12 @@ class _TelemetryTransferBuffer {
 class TelemetryUploadManager {
   TelemetryUploadManager({
     required this.httpBaseUrl,
-    required this.headers,
+    required http.Client client,
     required this.onCommitted,
-  });
+  }) : _client = client;
 
   final String httpBaseUrl;
-  final Map<String, String> headers;
+  final http.Client _client;
   final Future<void> Function(int transferId) onCommitted;
   final Map<int, _TelemetryTransferBuffer> _buffers = {};
 
@@ -135,13 +135,10 @@ class TelemetryUploadManager {
     final base = httpBaseUrl.replaceAll(RegExp(r'/+$'), '');
     final uri = Uri.parse('$base/telemetry/firmware/upload');
     try {
-      final response = await http
+      final response = await _client
           .post(
             uri,
-            headers: {
-              ...headers,
-              'content-type': 'application/json',
-            },
+            headers: const {'content-type': 'application/json'},
             body: jsonEncode({
               'transfer_id': transferId,
               'filename': filename,

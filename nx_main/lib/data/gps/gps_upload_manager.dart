@@ -92,20 +92,18 @@ typedef GpsSampleStreamFactory = Stream<GpsSample> Function();
 class GpsUploadManager {
   GpsUploadManager({
     required this.httpBaseUrl,
-    required this.headers,
-    http.Client? client,
+    required http.Client client,
     GpsSampleReader? sampleReader,
     GpsSampleStreamFactory? sampleStreamFactory,
     this.sampleInterval = const Duration(seconds: 60),
     this.flushInterval = const Duration(seconds: 600),
     this.source = 'phone',
     this.timezoneLabel,
-  })  : _client = client ?? http.Client(),
+  })  : _client = client,
         _sampleReader = sampleReader ?? _readCurrentSample,
         _sampleStreamFactory = sampleStreamFactory ?? _positionSampleStream;
 
   final String httpBaseUrl;
-  final Map<String, String> headers;
   final http.Client _client;
   final GpsSampleReader _sampleReader;
   final GpsSampleStreamFactory _sampleStreamFactory;
@@ -242,10 +240,7 @@ class GpsUploadManager {
       final response = await _client
           .post(
             Uri.parse('$base/gps/upload'),
-            headers: {
-              ...headers,
-              'content-type': 'application/json',
-            },
+            headers: const {'content-type': 'application/json'},
             body: jsonEncode({
               'source': source,
               if (timezoneLabel != null) 'timezone': timezoneLabel,

@@ -20,6 +20,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders["oidcRedirectScheme"] = "nx-projects"
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.nx_projects"
         // You can update the following values to match your application needs.

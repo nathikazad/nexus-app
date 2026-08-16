@@ -76,7 +76,11 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     }
     setState(() => _syncBusy = true);
     try {
-      final result = await postBofaSync(imageBaseUrl: base, userId: uid);
+      final result = await postBofaSync(
+        imageBaseUrl: base,
+        userId: uid,
+        httpClient: ref.read(nexusHttpClientProvider),
+      );
       ref.invalidate(tellerTransactionsProvider);
       await ref.read(tellerTransactionsProvider.future);
       if (mounted) {
@@ -122,6 +126,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
         imageBaseUrl: base,
         userId: uid,
         enrollment: enrollment,
+        httpClient: ref.read(nexusHttpClientProvider),
       );
       ref.invalidate(tellerAccountsProvider);
       await ref.read(tellerAccountsProvider.future);

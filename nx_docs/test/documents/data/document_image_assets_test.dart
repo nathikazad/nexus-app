@@ -52,7 +52,6 @@ void main() {
       var requestCount = 0;
       final service = DocumentImageAssetService(
         baseUrl: 'http://127.0.0.1:8001',
-        userId: '1',
         client: MockClient((request) async {
           requestCount += 1;
           return http.Response('{}', 500);
@@ -82,7 +81,6 @@ void main() {
     late http.Request seen;
     final service = DocumentImageAssetService(
       baseUrl: 'http://100.108.43.37:8001',
-      userId: '7',
       client: MockClient((request) async {
         seen = request;
         return http.Response(
@@ -107,7 +105,7 @@ void main() {
     );
     expect(seen.method, 'POST');
     expect(seen.url.toString(), 'http://100.108.43.37:8001/docs/assets/images');
-    expect(seen.headers['X-User-Id'], '7');
+    expect(seen.headers['X-User-Id'], isNull);
     final multipartBody = latin1.decode(seen.bodyBytes);
     expect(multipartBody, contains('name="document_id"'));
     expect(multipartBody, contains('4209'));
@@ -118,12 +116,10 @@ void main() {
   test('resolves relative document image urls against active image base', () {
     final tailscaleService = DocumentImageAssetService(
       baseUrl: 'http://100.108.43.37:8001',
-      userId: '1',
       client: MockClient((request) async => http.Response('{}', 500)),
     );
     final wanService = DocumentImageAssetService(
       baseUrl: 'https://nexus.kgql.io',
-      userId: '1',
       client: MockClient((request) async => http.Response('{}', 500)),
     );
 
@@ -146,7 +142,6 @@ void main() {
       late http.Request seen;
       final service = DocumentImageAssetService(
         baseUrl: 'https://nexus.kgql.io',
-        userId: '1',
         client: MockClient((request) async {
           seen = request;
           return http.Response('{"ok":true,"deleted":true}', 200);

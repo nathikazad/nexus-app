@@ -283,7 +283,11 @@ final tellerAccountsProvider = FutureProvider<List<TellerLinkedAccount>>((
   if (base == null || base.isEmpty || userId == null || userId.isEmpty) {
     return const [];
   }
-  return fetchTellerAccounts(imageBaseUrl: base, userId: userId);
+  return fetchTellerAccounts(
+    imageBaseUrl: base,
+    userId: userId,
+    httpClient: ref.watch(nexusHttpClientProvider),
+  );
 });
 
 final tellerAccountNameByIdProvider = Provider<Map<String, String>>((ref) {

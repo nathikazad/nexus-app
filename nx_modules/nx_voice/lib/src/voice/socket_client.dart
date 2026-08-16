@@ -26,6 +26,7 @@ class NxVoiceSocketClient {
   WebSocketChannel? _channel;
   String? _url;
   Map<String, String>? _headers;
+  Future<Map<String, String>> Function(bool forceRefresh)? _authHeaders;
   bool _isConnected = false;
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
@@ -47,20 +48,26 @@ class NxVoiceSocketClient {
   Future<bool> connect(
     String url, {
     Map<String, String>? headers,
+    Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
   }) async {
     _url = url;
     _headers = headers;
-    return _connect();
+    _authHeaders = authHeaders;
+    return _connect(forceRefresh: false);
   }
 
-  Future<bool> _connect() async {
+  Future<bool> _connect({required bool forceRefresh}) async {
     final url = _url;
     if (url == null) return false;
 
     try {
+      final headers = <String, String>{
+        ...?_headers,
+        ...?await _authHeaders?.call(forceRefresh),
+      };
       _channel = IOWebSocketChannel.connect(
         url,
-        headers: _headers,
+        headers: headers,
         pingInterval: const Duration(seconds: 20),
         connectTimeout: const Duration(seconds: 10),
       );
@@ -82,6 +89,9 @@ class NxVoiceSocketClient {
       );
       return true;
     } catch (error) {
+      if (!forceRefresh && _authHeaders != null) {
+        return _connect(forceRefresh: true);
+      }
       onError?.call(error);
       _isConnected = false;
       _scheduleReconnect();
@@ -272,7 +282,7 @@ class NxVoiceSocketClient {
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(reconnectDelay * (_reconnectAttempts + 1), () {
       _reconnectAttempts++;
-      _connect();
+      _connect(forceRefresh: true);
     });
   }
 }

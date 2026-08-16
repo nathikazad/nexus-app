@@ -5,5 +5,4 @@ export 'package:nx_db/nx_db.dart'
         ImageEntry,
         ImageRepository,
         imageCacheManager,
-        imageHeaders,
         minutesFromImageFilename;

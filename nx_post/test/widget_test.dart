@@ -55,7 +55,7 @@ void main() {
     final client = _RecordingClient((request) async {
       requests.add(request);
       if (request is http.MultipartRequest) {
-        expect(request.headers['x-user-id'], '7');
+        expect(request.headers['x-user-id'], isNull);
         expect(request.fields['text'], isNotEmpty);
         expect(request.fields['categories'], isNotNull);
       }
@@ -76,8 +76,7 @@ void main() {
     });
     final repository = MicroblogPostRepository(
       'http://mcp.local',
-      graphqlUrl: 'http://graphql.local/graphql',
-      userId: '7',
+      graphqlClient: Object(),
       client: client,
     );
 
@@ -132,8 +131,7 @@ void main() {
     );
     final repository = MicroblogPostRepository(
       'http://mcp.local',
-      graphqlUrl: 'http://graphql.local/graphql',
-      userId: '7',
+      graphqlClient: Object(),
       client: client,
     );
 
@@ -162,12 +160,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          authProvider.overrideWith(
-            () => AuthController(
-              initialDelay: Duration.zero,
-              skipBackendPing: true,
-            ),
-          ),
+          authProvider.overrideWith(_TestAuthController.new),
           dbAuditSourceKindProvider.overrideWithValue('nx_post'),
         ],
         child: const NexusPostApp(),
@@ -191,6 +184,17 @@ void main() {
     expect(find.text('New microblog'), findsOneWidget);
     expect(find.text('Save microblog'), findsOneWidget);
   });
+}
+
+class _TestAuthController extends AuthController {
+  @override
+  Future<User?> build() async => null;
+
+  @override
+  Future<String?> login(String userId, BackendPreset preset) async {
+    state = AsyncData(User(userId: userId, preset: BackendPreset.localhost));
+    return null;
+  }
 }
 
 class _RecordingClient extends http.BaseClient {

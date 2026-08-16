@@ -158,6 +158,7 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
         imageBaseUrl: imageBaseUrl,
         userId: userId,
         recipeUrl: url,
+        httpClient: ref.read(nexusHttpClientProvider),
       );
       scaffold.hideCurrentSnackBar();
       ref.invalidate(recipeListProvider);
@@ -188,6 +189,7 @@ class _RecipesPageState extends ConsumerState<RecipesPage> {
         imageBaseUrl: imageBaseUrl,
         userId: userId,
         recipeText: text,
+        httpClient: ref.read(nexusHttpClientProvider),
       );
       scaffold.hideCurrentSnackBar();
       ref.invalidate(recipeListProvider);

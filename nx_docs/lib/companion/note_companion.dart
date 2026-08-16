@@ -96,7 +96,6 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
     if (httpClient == null) return;
     final audioService = DocumentAudioService(
       baseUrl: baseUrl,
-      userId: userId,
       client: httpClient,
     );
     final initialAudio = widget.document.audio;
@@ -106,10 +105,14 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       userId: userId,
       audioService: audioService,
       transcriptLoader: ref.read(noteTranscriptLoaderProvider),
-      authHeaders: () {
+      authHeaders: (forceRefresh) {
         final user = ref.read(authProvider).value;
-        if (user == null) return Future.value({'x-user-id': userId});
-        return nexusAuthHeaders(user.preset, userId);
+        if (user == null) return Future.value(const {});
+        return nexusAuthHeaders(
+          user.preset,
+          userId,
+          forceRefresh: forceRefresh,
+        );
       },
       initialAudio: initialAudio == null
           ? null

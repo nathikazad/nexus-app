@@ -15,6 +15,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders["oidcRedirectScheme"] = "nx-post"
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.nathikazad.nx_post"
         // You can update the following values to match your application needs.

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nexus_voice_assistant/data/background/background_service.dart';
 import 'package:nexus_voice_assistant/data/battery/battery_repository.dart'
     as data_battery;
@@ -39,9 +40,11 @@ final watchVoiceRelayProvider = Provider<WatchVoiceRelay>((ref) {
 });
 
 final batteryRepositoryProvider = Provider<BatteryRepository>((ref) {
-  return data_battery.HttpBatteryRepository();
+  return data_battery.HttpBatteryRepository(
+    client: ref.watch(nexusHttpClientProvider),
+  );
 });
 
 final gpsRepositoryProvider = Provider<GpsRepository>((ref) {
-  return data_gps.HttpGpsRepository();
+  return data_gps.HttpGpsRepository(client: ref.watch(nexusHttpClientProvider));
 });

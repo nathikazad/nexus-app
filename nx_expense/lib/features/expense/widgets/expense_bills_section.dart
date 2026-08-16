@@ -21,10 +21,6 @@ String _basenameFromPayloadPath(Map<String, dynamic> payload) {
 /// Same rules as [normalizeHttpEndpoint] in nx_db (public API is @visibleForTesting).
 String _normalizeImageBase(String url) => normalizeHttpEndpoint(url);
 
-Map<String, String> _imageGetHeaders(String userId) => <String, String>{
-  'x-user-id': userId,
-};
-
 Future<void> _showBillImageFullScreen(
   BuildContext context,
   String imageUrl,
@@ -116,6 +112,7 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
         bytes: bytes,
         filename: uploadName,
         imageContentType: mediaType,
+        httpClient: ref.read(nexusHttpClientProvider)!,
       );
       await linkExpenseToTimelineEvent(
         client,
@@ -242,7 +239,7 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
   }
 }
 
-class _BillThumb extends StatelessWidget {
+class _BillThumb extends ConsumerWidget {
   const _BillThumb({
     required this.imageBaseUrl,
     required this.userId,
@@ -256,7 +253,7 @@ class _BillThumb extends StatelessWidget {
   final VoidCallback? onRemove;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (filename.isEmpty) {
       return const SizedBox(width: 64, height: 64);
     }
@@ -267,7 +264,7 @@ class _BillThumb extends StatelessWidget {
     final uri = Uri.parse(
       '$base/images/file',
     ).replace(queryParameters: {'name': filename});
-    final headers = _imageGetHeaders(userId);
+    final headers = ref.watch(nexusRequestHeadersProvider).value ?? const {};
 
     final url = uri.toString();
 
