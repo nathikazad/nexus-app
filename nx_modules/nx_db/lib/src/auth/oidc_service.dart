@@ -14,10 +14,6 @@ class NexusIdentity {
 }
 
 class NexusOidcService {
-  static const _useInsecureLocalStore = bool.fromEnvironment(
-    'NEXUS_INSECURE_LOCAL_OIDC_STORE',
-  );
-
   OidcUserManager? _manager;
   BackendPreset? _preset;
   String? _clientAppId;
@@ -36,12 +32,7 @@ class NexusOidcService {
         clientId: config.clientId,
       ),
       store: OidcDefaultStore(
-        // Unsigned local macOS builds cannot use Keychain Sharing. Keep the
-        // plaintext fallback explicit and opt-in; signed/release builds always
-        // use hardened secure storage.
-        secureStorageInstance: _useInsecureLocalStore
-            ? null
-            : OidcDefaultStore.createHardenedSecureStorage(),
+        secureStorageInstance: OidcDefaultStore.createHardenedSecureStorage(),
       ),
       settings: OidcUserManagerSettings(
         redirectUri: config.redirectUri,
