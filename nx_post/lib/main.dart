@@ -17,7 +17,7 @@ import 'package:nx_db/riverpod.dart';
 
 const mirrorPublicUrl = String.fromEnvironment(
   'MIRROR_PUBLIC_URL',
-  defaultValue: 'https://kgql.io',
+  defaultValue: 'https://nathikazad.com',
 );
 
 const kDocumentTopicTagSystem = 'Topic';
@@ -231,7 +231,7 @@ class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Public mirror: https://kgql.io',
+                      'Public mirror: https://nathikazad.com',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xffa1a1aa), fontSize: 12),
                     ),
