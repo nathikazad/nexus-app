@@ -6,9 +6,6 @@ from pathlib import Path
 import re
 from typing import Any, Mapping, Sequence
 
-from importer.book_importer import BackupResult
-
-
 class FakeMarkdownConverter:
     """Small deterministic converter used instead of Flutter in unit tests."""
 
@@ -63,20 +60,6 @@ class FakeMarkdownConverter:
                 paragraphs.append(line)
         flush()
         return blocks
-
-
-class FakeBackupRunner:
-    def __init__(self) -> None:
-        self.calls = 0
-
-    def create(self) -> BackupResult:
-        self.calls += 1
-        return BackupResult(
-            path="/backups/test.dump",
-            checksum_path="/backups/test.dump.sha256",
-            sha256="a" * 64,
-            size_bytes=123,
-        )
 
 
 class FakeKgqlClient:

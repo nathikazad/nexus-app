@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 from typing import Any, Iterable, Mapping, Protocol, Sequence
@@ -23,16 +24,38 @@ SHORT_MARKER = "<!-- SHORT_SUMMARY -->"
 DETAILED_MARKER = "<!-- DETAILED_SUMMARY -->"
 APPFLOWY_FORMAT = "appflowy_document"
 MANIFEST_SCHEMA_VERSION = 1
-DEFAULT_GRAPHQL_URL = "http://100.108.43.37:5001/graphql"
 DEFAULT_DOMAIN_ID = 1
 DEFAULT_USER_ID = "1"
+DEFAULT_SSH_TARGET = "hetzner-personal"
 DEFAULT_NEXUS_MOBILE = Path("/Users/nathikazad/Projects/Nexus/mobile")
 DEFAULT_FLUTTER = Path("/Users/nathikazad/development/flutter/bin/flutter")
-DEFAULT_BACKUP_SCRIPT = Path(
-    "/Users/nathikazad/Projects/Nexus/servers/"
-    "skills/backup-nexus-db/scripts/create_backup.sh"
+
+_SSH_GRAPHQL_RELAY = r"""
+import json
+import sys
+import urllib.error
+import urllib.request
+
+payload = sys.stdin.buffer.read()
+user_id = sys.argv[1]
+with open("/run/secrets/graphql_secret", encoding="utf-8") as source:
+    secret = source.read().strip()
+request = urllib.request.Request(
+    "http://graphql:5001/graphql",
+    payload,
+    {
+        "content-type": "application/json",
+        "x-user-id": user_id,
+        "x-nexus-internal-secret": secret,
+    },
 )
-DEFAULT_BACKUP_TARGET = "nathik@100.108.43.37"
+try:
+    with urllib.request.urlopen(request, timeout=30) as response:
+        sys.stdout.buffer.write(response.read())
+except urllib.error.HTTPError as error:
+    sys.stdout.buffer.write(error.read())
+    raise SystemExit(22)
+""".strip()
 
 
 class ImporterError(RuntimeError):
@@ -575,7 +598,7 @@ class GraphQLKgqlClient:
 
     def __init__(
         self,
-        url: str = DEFAULT_GRAPHQL_URL,
+        url: str,
         user_id: str = DEFAULT_USER_ID,
         domain_id: int = DEFAULT_DOMAIN_ID,
         timeout: int = 30,
@@ -648,65 +671,76 @@ class GraphQLKgqlClient:
         return json.loads(value) if isinstance(value, str) else value
 
 
-@dataclass(frozen=True)
-class BackupResult:
-    path: str
-    checksum_path: str
-    sha256: str
-    size_bytes: int | None = None
+class SshGraphQLKgqlClient(GraphQLKgqlClient):
+    """Relay KGQL requests through SSH without exporting server credentials."""
 
-
-class BackupRunner(Protocol):
-    def create(self) -> BackupResult:
-        ...
-
-
-class SubprocessBackupRunner:
     def __init__(
         self,
-        script: Path = DEFAULT_BACKUP_SCRIPT,
-        target: str = DEFAULT_BACKUP_TARGET,
-        label: str = "before-book-summary-import",
+        ssh_target: str = DEFAULT_SSH_TARGET,
+        user_id: str = DEFAULT_USER_ID,
+        domain_id: int = DEFAULT_DOMAIN_ID,
+        timeout: int = 45,
     ) -> None:
-        self.script = script.expanduser().resolve()
-        self.target = target
-        self.label = label
-
-    def create(self) -> BackupResult:
-        if not self.script.is_file():
-            raise ImporterError(f"Backup script not found: {self.script}")
-        completed = subprocess.run(
-            [
-                str(self.script),
-                "--target",
-                self.target,
-                "--label",
-                self.label,
-            ],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        output = completed.stdout + completed.stderr
-        if (
-            completed.returncode
-            or "status=ok" not in output
-            or "archive_validation=pg_restore_list_ok" not in output
+        if not ssh_target or ssh_target.startswith("-") or any(
+            character in ssh_target for character in "\r\n"
         ):
-            raise ImporterError(f"Production backup failed:\n{output.strip()}")
-        values = dict(
-            line.split("=", 1)
-            for line in output.splitlines()
-            if "=" in line
+            raise ImporterError("Invalid SSH target")
+        if not user_id.isdecimal():
+            raise ImporterError("User ID must be numeric")
+        super().__init__(
+            url="ssh://" + ssh_target,
+            user_id=user_id,
+            domain_id=domain_id,
+            timeout=timeout,
         )
-        return BackupResult(
-            path=values["path"],
-            checksum_path=values["checksum_path"],
-            sha256=values["sha256"],
-            size_bytes=(
-                int(values["size_bytes"]) if values.get("size_bytes") else None
-            ),
+        self.ssh_target = ssh_target
+
+    def _request(self, query: str, variables: Mapping[str, Any]) -> dict[str, Any]:
+        payload = json.dumps(
+            {"query": query, "variables": variables},
+            ensure_ascii=False,
         )
+        remote_command = " ".join(
+            [
+                "docker exec -i nexus-server python -c",
+                shlex.quote(_SSH_GRAPHQL_RELAY),
+                shlex.quote(self.user_id),
+            ]
+        )
+        try:
+            completed = subprocess.run(
+                [
+                    "ssh",
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "ConnectTimeout=10",
+                    self.ssh_target,
+                    remote_command,
+                ],
+                input=payload,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=self.timeout,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise ImporterError("SSH GraphQL relay timed out") from error
+        except OSError as error:
+            raise ImporterError(f"Cannot start SSH GraphQL relay: {error}") from error
+        if completed.returncode:
+            detail = completed.stderr.strip() or completed.stdout.strip()
+            raise ImporterError(f"SSH GraphQL relay failed: {detail}")
+        try:
+            result = json.loads(completed.stdout)
+        except json.JSONDecodeError as error:
+            raise ImporterError("SSH GraphQL relay returned invalid JSON") from error
+        if result.get("errors"):
+            raise ImporterError(
+                "GraphQL error: "
+                + json.dumps(result["errors"], ensure_ascii=False)
+            )
+        return result
 
 
 @dataclass(frozen=True)
@@ -774,13 +808,8 @@ def _hrefs(wrapper: Mapping[str, Any]) -> list[str]:
 
 
 class BookImporter:
-    def __init__(
-        self,
-        client: KgqlClient,
-        backup_runner: BackupRunner | None = None,
-    ) -> None:
+    def __init__(self, client: KgqlClient) -> None:
         self.client = client
-        self.backup_runner = backup_runner
 
     @staticmethod
     def load_manifest(path: Path) -> dict[str, Any]:
@@ -898,9 +927,6 @@ class BookImporter:
         resume: bool = False,
     ) -> dict[str, Any]:
         initial_plan = self.plan(manifest)
-        if self.backup_runner is None:
-            raise ImporterError("Execute requires a production backup runner")
-        backup = self.backup_runner.create()
         receipt = self._load_receipt(receipt_path) if resume else None
         ids: dict[int, int] = {}
         if receipt:
@@ -934,7 +960,6 @@ class BookImporter:
                 receipt_path,
                 manifest,
                 ids,
-                backup,
                 status="chapters_in_progress",
             )
         self._update_book(manifest, ids, resume=resume)
@@ -943,7 +968,6 @@ class BookImporter:
             receipt_path,
             manifest,
             ids,
-            backup,
             status="complete",
             verification=verification,
         )
@@ -1297,7 +1321,6 @@ class BookImporter:
         path: Path,
         manifest: Mapping[str, Any],
         ids: Mapping[int, int],
-        backup: BackupResult,
         *,
         status: str,
         verification: Mapping[str, Any] | None = None,
@@ -1310,7 +1333,6 @@ class BookImporter:
             "chapter_ids": {
                 str(key): value for key, value in sorted(ids.items())
             },
-            "backup": asdict(backup),
             "verification": dict(verification or {}),
         }
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -7,7 +7,6 @@ import unittest
 
 from importer.book_importer import BookImporter, BookPackageCompiler
 from importer.tests.helpers import (
-    FakeBackupRunner,
     FakeKgqlClient,
     FakeMarkdownConverter,
     create_package,
@@ -82,14 +81,12 @@ class BookImporterTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             manifest_path, manifest = self._manifest(directory)
             client = FakeKgqlClient(77, "Sample Book")
-            backup = FakeBackupRunner()
             receipt = manifest_path.with_name("receipt.json")
 
-            result = BookImporter(client, backup).execute(
+            result = BookImporter(client).execute(
                 manifest, receipt
             )
 
-            self.assertEqual(backup.calls, 1)
             self.assertEqual(len(client.chapters), 2)
             self.assertEqual(client.book["tags"], {"Topic": ["People"]})
             self.assertEqual(client.book["reading_state"], "to_read")
@@ -110,9 +107,8 @@ class BookImporterTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             manifest_path, manifest = self._manifest(directory)
             client = FakeKgqlClient(77, "Sample Book")
-            backup = FakeBackupRunner()
             receipt = manifest_path.with_name("receipt.json")
-            importer = BookImporter(client, backup)
+            importer = BookImporter(client)
             importer.execute(manifest, receipt)
             chapter_ids = set(client.chapters)
 
@@ -128,7 +124,6 @@ class BookImporterTest(unittest.TestCase):
             self.assertEqual(len(hrefs), 2)
             self.assertEqual(len(set(hrefs)), 2)
             self.assertEqual(len(client.book["Book Chapter"]), 2)
-            self.assertEqual(backup.calls, 2)
 
 
 if __name__ == "__main__":

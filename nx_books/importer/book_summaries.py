@@ -14,31 +14,25 @@ if __package__ in (None, ""):
     from importer.book_importer import (  # type: ignore
         BookImporter,
         BookPackageCompiler,
-        DEFAULT_BACKUP_SCRIPT,
-        DEFAULT_BACKUP_TARGET,
         DEFAULT_DOMAIN_ID,
-        DEFAULT_GRAPHQL_URL,
         DEFAULT_NEXUS_MOBILE,
+        DEFAULT_SSH_TARGET,
         DEFAULT_USER_ID,
         FlutterMarkdownConverter,
-        GraphQLKgqlClient,
         ImporterError,
-        SubprocessBackupRunner,
+        SshGraphQLKgqlClient,
     )
 else:
     from .book_importer import (
         BookImporter,
         BookPackageCompiler,
-        DEFAULT_BACKUP_SCRIPT,
-        DEFAULT_BACKUP_TARGET,
         DEFAULT_DOMAIN_ID,
-        DEFAULT_GRAPHQL_URL,
         DEFAULT_NEXUS_MOBILE,
+        DEFAULT_SSH_TARGET,
         DEFAULT_USER_ID,
         FlutterMarkdownConverter,
-        GraphQLKgqlClient,
         ImporterError,
-        SubprocessBackupRunner,
+        SshGraphQLKgqlClient,
     )
 
 
@@ -67,13 +61,9 @@ def _parser() -> argparse.ArgumentParser:
     mode.add_argument("--execute", action="store_true")
     import_parser.add_argument("--resume", action="store_true")
     import_parser.add_argument("--receipt", type=Path)
-    import_parser.add_argument("--graphql-url", default=DEFAULT_GRAPHQL_URL)
+    import_parser.add_argument("--ssh-target", default=DEFAULT_SSH_TARGET)
     import_parser.add_argument("--user-id", default=DEFAULT_USER_ID)
     import_parser.add_argument("--domain-id", type=int, default=DEFAULT_DOMAIN_ID)
-    import_parser.add_argument(
-        "--backup-script", type=Path, default=DEFAULT_BACKUP_SCRIPT
-    )
-    import_parser.add_argument("--backup-target", default=DEFAULT_BACKUP_TARGET)
     return parser
 
 
@@ -93,8 +83,8 @@ def main(argv: list[str] | None = None) -> int:
         print(manifest)
         return 0
 
-    client = GraphQLKgqlClient(
-        url=args.graphql_url,
+    client = SshGraphQLKgqlClient(
+        ssh_target=args.ssh_target,
         user_id=args.user_id,
         domain_id=args.domain_id,
     )
@@ -105,13 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(asdict(plan), ensure_ascii=False, indent=2))
         return 0
     receipt = args.receipt or manifest_path.with_name("kgql-import.receipt.json")
-    importer = BookImporter(
-        client,
-        SubprocessBackupRunner(
-            script=args.backup_script,
-            target=args.backup_target,
-        ),
-    )
+    importer = BookImporter(client)
     result = importer.execute(
         manifest,
         receipt.expanduser().resolve(),

@@ -2,8 +2,10 @@
 
 This package compiles structured chapter summaries into a deterministic
 `kgql-import.json`, then imports that manifest through the existing KGQL
-GraphQL API. It does not require or make KGQL schema, server, or database-layer
-changes.
+GraphQL API. Imports travel through the `hetzner-personal` SSH host and execute
+against GraphQL inside the Nexus Docker network. The server-side relay reads the
+internal secret in the container, so no production credential is copied to the
+Mac. It does not require or make KGQL schema, server, or database-layer changes.
 
 ## Book package format
 
@@ -80,13 +82,16 @@ python3 importer/book_summaries.py import \
   --resume
 ```
 
-Execution always requires a validated production backup. The importer writes a
-local `kgql-import.receipt.json` containing the backup path, checksum, created
-Book Chapter IDs, and verification result.
+Both commands default to Nexus user ID `1`, domain ID `1`, and SSH target
+`hetzner-personal`. The importer writes a local `kgql-import.receipt.json`
+containing created Book Chapter IDs and the verification result. Production
+backups are handled independently by the Hetzner backup schedule, not by an
+individual book import.
 
 ## Safety properties
 
-- `--dry-run` performs no writes and no backup.
+- `--dry-run` performs no writes.
+- Imports target Hetzner over SSH; they never target the Pi implicitly.
 - Chapter titles and numbers come from `book.json`, not filename parsing.
 - Each detailed summary is stored as a `Book Chapter` with its
   `chapter_number` attribute.
