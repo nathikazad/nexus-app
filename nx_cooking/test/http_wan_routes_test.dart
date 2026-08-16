@@ -11,10 +11,7 @@ void main() {
     final base = resolve(BackendPreset.piWan).imageHttp;
     final client = MockClient((request) async {
       expect(request.method, 'POST');
-      expect(
-        request.url.toString(),
-        'https://nexus.nathikazad.com/import-recipe',
-      );
+      expect(request.url.toString(), 'https://nexus.kgql.io/import-recipe');
       expect(request.headers['x-user-id'], '1');
       expect(jsonDecode(request.body), {'url': 'https://example.com/recipe'});
       return http.Response(

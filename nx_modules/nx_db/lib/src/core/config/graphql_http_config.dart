@@ -4,7 +4,9 @@ String normalizeHttpEndpoint(String endpoint) {
   final uri = Uri.tryParse(ep);
   final host = uri?.host ?? '';
   final isPublicNexusHost =
-      host.endsWith('.nathikazad.com') || host.endsWith('.supacharger.ai');
+      host.endsWith('.kgql.io') ||
+      host.endsWith('.nathikazad.com') ||
+      host.endsWith('.supacharger.ai');
   if (isPublicNexusHost && ep.startsWith('http://')) {
     ep = ep.replaceFirst('http://', 'https://');
   }
@@ -13,8 +15,8 @@ String normalizeHttpEndpoint(String endpoint) {
 
 /// Headers passed to [HttpLink] for GraphQL HTTP (matches [createClient]).
 Map<String, String> buildHttpLinkDefaultHeaders(
-    String endpoint, String userId) {
-  return {
-    'x-user-id': userId,
-  };
+  String endpoint,
+  String userId,
+) {
+  return {'x-user-id': userId};
 }

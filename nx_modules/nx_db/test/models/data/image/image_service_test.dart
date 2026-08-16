@@ -47,12 +47,9 @@ void main() {
   group('fetchImagesForDay', () {
     test('parses image entries with time from filename', () async {
       final mock = MockClient((request) async {
-        return http.Response(
-          '''
+        return http.Response('''
 {"images":[{"url":"https://x/i?name=250418120000.jpg","current_app":"cam"}]}
-''',
-          200,
-        );
+''', 200);
       });
       final day = DateTime(2025, 4, 18);
       final images = await fetchImagesForDay(
@@ -69,16 +66,13 @@ void main() {
 
     test('rewrites returned file URLs onto the request base', () async {
       final mock = MockClient((request) async {
-        return http.Response(
-          '''
+        return http.Response('''
 {"images":[{"url":"https://socket.nathikazad.com/images/file?name=250418120000.jpg"}]}
-''',
-          200,
-        );
+''', 200);
       });
       final day = DateTime(2025, 4, 18);
       final images = await fetchImagesForDay(
-        'https://nexus.nathikazad.com',
+        'https://nexus.kgql.io',
         'u',
         'necklace',
         day,
@@ -86,7 +80,7 @@ void main() {
       );
       expect(
         images.single.url,
-        'https://nexus.nathikazad.com/images/file?name=250418120000.jpg',
+        'https://nexus.kgql.io/images/file?name=250418120000.jpg',
       );
     });
   });

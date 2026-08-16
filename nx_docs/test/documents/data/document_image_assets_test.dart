@@ -8,7 +8,7 @@ import 'package:nx_docs/documents/assets/document_image_assets.dart';
 void main() {
   test('parses document image asset urls', () {
     final ref = DocumentImageAssetRef.tryParse(
-      'https://nexus.nathikazad.com/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'https://nexus.kgql.io/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
 
     expect(ref, isNotNull);
@@ -122,7 +122,7 @@ void main() {
       client: MockClient((request) async => http.Response('{}', 500)),
     );
     final wanService = DocumentImageAssetService(
-      baseUrl: 'https://nexus.nathikazad.com',
+      baseUrl: 'https://nexus.kgql.io',
       userId: '1',
       client: MockClient((request) async => http.Response('{}', 500)),
     );
@@ -136,7 +136,7 @@ void main() {
     );
     expect(
       wanService.resolveImageUrl(storedUrl),
-      'https://nexus.nathikazad.com/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'https://nexus.kgql.io/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
   });
 
@@ -145,7 +145,7 @@ void main() {
     () async {
       late http.Request seen;
       final service = DocumentImageAssetService(
-        baseUrl: 'https://nexus.nathikazad.com',
+        baseUrl: 'https://nexus.kgql.io',
         userId: '1',
         client: MockClient((request) async {
           seen = request;
@@ -161,7 +161,7 @@ void main() {
       expect(seen.method, 'DELETE');
       expect(
         seen.url.toString(),
-        'https://nexus.nathikazad.com/docs/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
+        'https://nexus.kgql.io/docs/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
       );
     },
   );

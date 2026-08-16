@@ -19,8 +19,8 @@ void main() {
 
     test('CR11.2 normalizeHttpEndpoint upgrades public HTTP to HTTPS', () {
       expect(
-        normalizeHttpEndpoint('http://graphql.nathikazad.com/graphql'),
-        'https://graphql.nathikazad.com/graphql',
+        normalizeHttpEndpoint('http://nexus.kgql.io/graphql'),
+        'https://nexus.kgql.io/graphql',
       );
     });
 
@@ -42,9 +42,9 @@ void main() {
     test('CR11.4b Pi presets use a single Caddy origin', () {
       final u = resolve(BackendPreset.piWan);
 
-      expect(u.graphqlHttp, 'https://nexus.nathikazad.com/graphql');
-      expect(u.sockWs, 'wss://nexus.nathikazad.com/realtime');
-      expect(u.imageHttp, 'https://nexus.nathikazad.com');
+      expect(u.graphqlHttp, 'https://nexus.kgql.io/graphql');
+      expect(u.sockWs, 'wss://nexus.kgql.io/realtime');
+      expect(u.imageHttp, 'https://nexus.kgql.io');
 
       final tailscale = resolve(BackendPreset.piTailscale);
       expect(tailscale.graphqlHttp, 'http://100.108.43.37/graphql');

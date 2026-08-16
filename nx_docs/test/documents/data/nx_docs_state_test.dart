@@ -34,7 +34,7 @@ void main() {
   test('saves last document id to nx_docs state endpoint', () async {
     late http.Request seen;
     final service = NxDocsStateService(
-      baseUrl: 'https://nexus.nathikazad.com',
+      baseUrl: 'https://nexus.kgql.io',
       userId: '1',
       client: MockClient((request) async {
         seen = request;
@@ -45,10 +45,7 @@ void main() {
     await service.saveLastDocumentId(4293);
 
     expect(seen.method, 'PUT');
-    expect(
-      seen.url.toString(),
-      'https://nexus.nathikazad.com/docs/state/nx_docs',
-    );
+    expect(seen.url.toString(), 'https://nexus.kgql.io/docs/state/nx_docs');
     expect(seen.headers['X-User-Id'], '1');
     expect(jsonDecode(seen.body), {'last_document_id': 4293});
   });

@@ -32,7 +32,7 @@ void main() {
 
   test('fetch reports HTTP failure without returning response bytes', () async {
     final repository = HttpCardAudioRepository(
-      baseUrl: 'https://nexus.nathikazad.com',
+      baseUrl: 'https://nexus.kgql.io',
       userId: '1',
       httpClient: MockClient((_) async => http.Response('missing', 404)),
     );

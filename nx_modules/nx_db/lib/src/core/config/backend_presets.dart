@@ -97,6 +97,6 @@ BackendUrls resolve(BackendPreset p) {
     case BackendPreset.piTailscale:
       return BackendUrls.fromOrigin('http://100.108.43.37');
     case BackendPreset.piWan:
-      return BackendUrls.fromOrigin('https://nexus.nathikazad.com');
+      return BackendUrls.fromOrigin('https://nexus.kgql.io');
   }
 }
