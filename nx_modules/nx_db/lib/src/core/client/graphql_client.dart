@@ -4,13 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:gql/ast.dart' show OperationType;
 import 'package:gql/language.dart' show printNode;
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_auth/nx_auth.dart';
 
-import '../config/backend_presets.dart';
-import '../config/graphql_http_config.dart';
-import '../../auth/oidc_service.dart';
 import 'db_audit_context.dart';
 
-export '../config/graphql_http_config.dart';
+export 'package:nx_auth/nx_auth.dart'
+    show buildHttpLinkDefaultHeaders, normalizeHttpEndpoint;
 
 const bool _kLogKgqlFromDefine = bool.fromEnvironment(
   'NX_GRAPHQL_LOG',

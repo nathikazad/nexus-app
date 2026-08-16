@@ -552,8 +552,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.10.0"
-  oidc:
+  nx_auth:
     dependency: "direct main"
+    description:
+      path: "../nx_auth"
+      relative: true
+    source: path
+    version: "1.0.0"
+  oidc:
+    dependency: transitive
     description:
       name: oidc
       sha256: ccc9e17f37c4d35d484bab7bd0000b25adff371fce1d28c3e8a8fd4f4a2e83f8
@@ -585,7 +592,7 @@ packages:
     source: hosted
     version: "1.1.1"
   oidc_default_store:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: oidc_default_store
       sha256: b2d2ecd400db86dfbb07f742e95d1487526093d08f1a98f30c91fc9e5f984055

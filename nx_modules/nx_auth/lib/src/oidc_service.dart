@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:oidc/oidc.dart';
 import 'package:oidc_default_store/oidc_default_store.dart';
 
-import '../core/config/backend_presets.dart';
+import 'backend_presets.dart';
 import 'oidc_config.dart';
 
 class NexusIdentity {
@@ -93,8 +93,9 @@ class NexusOidcService {
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     final principal = json['principal'] as Map<String, dynamic>?;
     final userId = principal?['user_id']?.toString() ?? '';
-    if (userId.isEmpty)
+    if (userId.isEmpty) {
       throw const FormatException('Nexus identity has no user ID');
+    }
     return NexusIdentity(userId: userId);
   }
 

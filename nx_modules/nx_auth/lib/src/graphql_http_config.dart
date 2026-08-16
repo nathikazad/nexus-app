@@ -13,7 +13,7 @@ String normalizeHttpEndpoint(String endpoint) {
   return ep;
 }
 
-/// Headers passed to [HttpLink] for GraphQL HTTP (matches [createClient]).
+/// Legacy direct-mode GraphQL identity headers.
 Map<String, String> buildHttpLinkDefaultHeaders(
   String endpoint,
   String userId,

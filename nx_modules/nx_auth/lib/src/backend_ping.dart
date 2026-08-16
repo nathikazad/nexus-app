@@ -3,16 +3,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../core/config/graphql_http_config.dart';
+import 'graphql_http_config.dart';
 
-/// Max time to wait for the GraphQL HTTP ping during login.
 const Duration kBackendLoginPingTimeout = Duration(seconds: 2);
 
-/// POSTs a minimal GraphQL document to [graphqlHttpUrl] with the same headers
-/// as the app’s GraphQL client. Throws [Exception] with a short message if the
-/// server is unreachable or returns an error.
-///
-/// Pass [httpClient] in tests; otherwise a short-lived client is created and closed.
 Future<void> pingGraphqlBackend({
   required String graphqlHttpUrl,
   required String userId,
@@ -69,7 +63,8 @@ Future<void> pingGraphqlBackend({
       decoded = jsonDecode(response.body);
     } catch (_) {
       throw Exception(
-          'Server did not return valid JSON (not a GraphQL endpoint?)');
+        'Server did not return valid JSON (not a GraphQL endpoint?)',
+      );
     }
 
     if (decoded is Map && decoded['errors'] != null) {
@@ -79,8 +74,6 @@ Future<void> pingGraphqlBackend({
 
     print('[BackendPing] OK (parsed JSON, no GraphQL errors)');
   } finally {
-    if (ownsClient) {
-      client.close();
-    }
+    if (ownsClient) client.close();
   }
 }

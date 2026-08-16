@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../core/config/backend_presets.dart';
+import 'backend_presets.dart';
 
 class NexusOidcConfig {
   const NexusOidcConfig({

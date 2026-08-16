@@ -2,14 +2,10 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-import '../core/config/backend_presets.dart';
+import 'backend_presets.dart';
 import 'oidc_service.dart';
 
 /// Adds the correct Nexus identity to every HTTP request.
-///
-/// Hosted requests use a short-lived bearer token and get exactly one forced
-/// refresh/retry after a 401. Direct Pi/development requests retain the legacy
-/// trusted `x-user-id` header until direct mode is retired.
 class NexusAuthenticatedClient extends http.BaseClient {
   NexusAuthenticatedClient({
     required this.preset,

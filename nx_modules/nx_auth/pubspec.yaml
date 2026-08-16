@@ -1,5 +1,5 @@
-name: nx_db
-description: Nexus GraphQL, KGQL, and data provider package for Flutter apps.
+name: nx_auth
+description: Shared Nexus identity, OIDC, session, and authenticated transport package.
 publish_to: 'none'
 version: 1.0.0
 
@@ -10,17 +10,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_cache_manager: ^3.4.1
   flutter_riverpod: ^3.2.0
-  riverpod: ^3.2.0
-  graphql_flutter: ^5.1.2
-  graphql: ^5.1.1
-  gql: ^1.0.1
   http: ^1.2.2
-  nx_auth:
-    path: ../nx_auth
+  oidc: ^3.0.1
+  oidc_default_store: ^1.1.1
   shared_preferences: ^2.2.2
-  json_annotation: ^4.9.0
 
 dev_dependencies:
   flutter_test:

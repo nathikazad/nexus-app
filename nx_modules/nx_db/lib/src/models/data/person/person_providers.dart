@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
+import 'package:nx_auth/nx_auth.dart';
 import 'package:nx_db/riverpod.dart';
 
 import '../../domain/person/person.dart';
@@ -19,14 +19,12 @@ final authenticatedUserProvider = FutureProvider<User>((ref) async {
 });
 
 /// KGQL [Person] fetch with account preferences stored on `users.preferences`.
-final personRepositoryProvider = Provider<PersonRepository>(
-  (ref) {
-    return KgqlPersonRepository(
-      client: ref.watch(graphqlClientProvider),
-      loadAuthenticatedUser: () => ref.read(authenticatedUserProvider.future),
-    );
-  },
-);
+final personRepositoryProvider = Provider<PersonRepository>((ref) {
+  return KgqlPersonRepository(
+    client: ref.watch(graphqlClientProvider),
+    loadAuthenticatedUser: () => ref.read(authenticatedUserProvider.future),
+  );
+});
 
 /// Current user's linked Person row plus `users.preferences` JSON.
 final mainPersonProvider = FutureProvider<Person?>((ref) async {

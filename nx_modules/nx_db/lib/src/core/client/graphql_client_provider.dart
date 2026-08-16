@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:nx_auth/nx_auth.dart';
 
-import '../../auth/auth_providers.dart';
-import '../../auth/auth_controller.dart';
 import 'graphql_client.dart';
 
 final dbAuditSourceKindProvider = Provider<String>(

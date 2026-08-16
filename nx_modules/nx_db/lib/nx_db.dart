@@ -1,17 +1,13 @@
 library nx_db;
 
+// Authentication is implemented by nx_auth and exposed through nx_db so every
+// nx_db consumer receives the shared authentication API automatically.
+export 'package:nx_auth/nx_auth.dart';
+
 // Core — config, GraphQL client
 export 'src/core/client/db_audit_context.dart';
 export 'src/core/client/graphql_client.dart';
 export 'src/core/client/graphql_client_provider.dart';
-export 'src/core/config/backend_presets.dart';
-export 'src/core/config/graphql_http_config.dart';
-
-// Auth
-export 'src/auth/user.dart';
-export 'src/auth/auth_controller.dart';
-export 'src/auth/auth_providers.dart';
-export 'src/auth/backend_ping.dart';
 
 // KGQL — models
 export 'src/kgql/models/model.dart';

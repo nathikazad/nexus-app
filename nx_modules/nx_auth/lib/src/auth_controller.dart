@@ -1,31 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../core/config/backend_presets.dart';
 import 'backend_ping.dart';
+import 'backend_presets.dart';
 import 'oidc_service.dart';
 import 'user.dart';
 
-/// Whether an application may restore a saved identity when its backend is
-/// unreachable. Online-only applications keep the default `false`.
 final retainAuthSessionWhenOfflineProvider = Provider<bool>((ref) => false);
 
 /// Stable identifier used to select this installed app's native OIDC client.
-/// Every hosted NX app must override this at its root ProviderScope.
 final nexusClientAppIdProvider = Provider<String>((ref) => 'nx_mobile');
 
-/// AuthController manages user authentication state.
-/// Loads saved credentials from SharedPreferences on initialization.
 class AuthController extends AsyncNotifier<User?> {
   AuthController({
     this.initialDelay = const Duration(seconds: 1),
     this.skipBackendPing = false,
   });
 
-  /// Artificial delay before reading prefs (tests use [Duration.zero]).
   final Duration initialDelay;
-
-  /// When true, [login] and session restore skip [pingGraphqlBackend] (tests).
   final bool skipBackendPing;
 
   static Future<void> _clearSessionPrefs(SharedPreferences prefs) async {
@@ -37,16 +29,13 @@ class AuthController extends AsyncNotifier<User?> {
 
   @override
   Future<User?> build() async {
-    if (initialDelay > Duration.zero) {
-      await Future.delayed(initialDelay);
-    }
+    if (initialDelay > Duration.zero) await Future.delayed(initialDelay);
     print('[AuthController] build() - Initializing auth state');
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString(PrefsKeys.userId);
       final presetKey = prefs.getString(PrefsKeys.backendPreset);
-
       BackendPreset? preset = BackendPreset.fromKey(presetKey);
 
       if (userId != null &&
@@ -98,21 +87,16 @@ class AuthController extends AsyncNotifier<User?> {
           }
         }
         return User(userId: userId, preset: preset);
-      } else {
-        print('[AuthController] No saved credentials found');
-        return null;
       }
+
+      print('[AuthController] No saved credentials found');
+      return null;
     } catch (e) {
       print('[AuthController] Error loading saved credentials: $e');
       return null;
     }
   }
 
-  /// Signs into [preset] and persists the resolved Nexus identity.
-  ///
-  /// [userId] is only used by direct development/Pi presets. Hosted presets
-  /// derive it from the verified bearer token via `/v1/me`.
-  /// Returns null if login was successful, error message String otherwise.
   Future<String?> login(String userId, BackendPreset preset) async {
     print('[AuthController] login() - user: $userId preset: ${preset.key}');
     state = const AsyncValue.loading();
@@ -154,7 +138,6 @@ class AuthController extends AsyncNotifier<User?> {
     }
   }
 
-  /// Clears SharedPreferences and updates state to null.
   Future<void> logout() async {
     print('[AuthController] logout() - Logging out user');
     final currentUser = state.value;
@@ -165,7 +148,6 @@ class AuthController extends AsyncNotifier<User?> {
       }
       final prefs = await SharedPreferences.getInstance();
       await _clearSessionPrefs(prefs);
-
       state = const AsyncValue.data(null);
       print('[AuthController] Logout successful');
     } catch (e, stackTrace) {
@@ -175,7 +157,7 @@ class AuthController extends AsyncNotifier<User?> {
   }
 }
 
-/// Provider for the AuthController.
-final authProvider = AsyncNotifierProvider<AuthController, User?>((() {
-  return AuthController();
-}), name: 'authProvider');
+final authProvider = AsyncNotifierProvider<AuthController, User?>(
+  AuthController.new,
+  name: 'authProvider',
+);

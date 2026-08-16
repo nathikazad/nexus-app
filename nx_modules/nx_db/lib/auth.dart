@@ -1,12 +1,4 @@
-/// Auth, config, and HTTP helpers — no KGQL, no Material.
+/// Stable authentication entry point for applications that already use nx_db.
 library;
 
-export 'src/auth/user.dart';
-export 'src/auth/auth_controller.dart';
-export 'src/auth/auth_providers.dart';
-export 'src/auth/authenticated_http_client.dart';
-export 'src/auth/backend_ping.dart';
-export 'src/auth/oidc_config.dart';
-export 'src/auth/oidc_service.dart';
-export 'src/core/config/backend_presets.dart';
-export 'src/core/config/graphql_http_config.dart';
+export 'package:nx_auth/nx_auth.dart';

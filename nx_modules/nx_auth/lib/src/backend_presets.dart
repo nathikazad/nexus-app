@@ -75,7 +75,6 @@ class BackendUrls {
 }
 
 /// URLs for integration tests with PGDB on the same machine as the test runner.
-/// Same as [BackendPreset.localhost] / Docker port maps on `127.0.0.1`.
 const kIntegrationTestBackendUrls = BackendUrls(
   graphqlHttp: 'http://127.0.0.1:5001/graphql',
   sockWs: 'ws://127.0.0.1:8002',

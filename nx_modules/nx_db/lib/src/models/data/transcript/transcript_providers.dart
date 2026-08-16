@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/auth.dart';
+import 'package:nx_auth/nx_auth.dart';
 import 'package:nx_db/riverpod.dart';
 
 import '../../domain/transcript/transcript.dart';
@@ -36,5 +36,7 @@ final currentTranscriptProvider = FutureProvider<Transcript?>((ref) async {
 /// New messages for [transcriptId] from the GraphQL subscription.
 final transcriptMessageStreamProvider =
     StreamProvider.family<TranscriptMessage, int>((ref, transcriptId) {
-  return ref.watch(transcriptRepositoryProvider).watchMessages(transcriptId);
-});
+      return ref
+          .watch(transcriptRepositoryProvider)
+          .watchMessages(transcriptId);
+    });

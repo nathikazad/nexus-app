@@ -1,14 +1,11 @@
-import '../core/config/backend_presets.dart';
+import 'backend_presets.dart';
 
 /// User model: [preset] drives all resolved URLs via [resolve].
 class User {
   final String userId;
   final BackendPreset preset;
 
-  User({
-    required this.userId,
-    required this.preset,
-  });
+  User({required this.userId, required this.preset});
 
   @override
   bool operator ==(Object other) =>
@@ -22,24 +19,15 @@ class User {
   int get hashCode => userId.hashCode ^ preset.hashCode;
 }
 
-/// Fixed login choices used by the mobile apps.
+/// Fixed login choices used by direct Pi/development deployments.
 class AuthLoginProfile {
-  const AuthLoginProfile({
-    required this.label,
-    required this.userId,
-  });
+  const AuthLoginProfile({required this.label, required this.userId});
 
   final String label;
   final String userId;
 }
 
 const authLoginProfiles = <AuthLoginProfile>[
-  AuthLoginProfile(
-    label: 'Nathik',
-    userId: '1',
-  ),
-  AuthLoginProfile(
-    label: 'Yareni',
-    userId: '2',
-  ),
+  AuthLoginProfile(label: 'Nathik', userId: '1'),
+  AuthLoginProfile(label: 'Yareni', userId: '2'),
 ];

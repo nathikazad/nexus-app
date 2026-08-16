@@ -1,5 +1,5 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:nx_db/auth.dart' show User;
+import 'package:nx_auth/nx_auth.dart' show User;
 import 'package:nx_db/kgql.dart' show fetchKgqlModelById;
 
 import '../../domain/person/person.dart';
@@ -33,19 +33,15 @@ mutation UpdateUserPreferences($id: Int!, $preferences: JSON) {
 }
 ''';
 
-const _personStruct = {
-  'id': true,
-  'name': true,
-  'description': true,
-};
+const _personStruct = {'id': true, 'name': true, 'description': true};
 
 /// KGQL [Person] fetch with account preferences stored on `users.preferences`.
 class KgqlPersonRepository implements PersonRepository {
   KgqlPersonRepository({
     required GraphQLClient client,
     required Future<User> Function() loadAuthenticatedUser,
-  })  : _client = client,
-        _loadAuthenticatedUser = loadAuthenticatedUser;
+  }) : _client = client,
+       _loadAuthenticatedUser = loadAuthenticatedUser;
 
   final GraphQLClient _client;
   final Future<User> Function() _loadAuthenticatedUser;
@@ -78,10 +74,7 @@ class KgqlPersonRepository implements PersonRepository {
     final result = await _client.mutate(
       MutationOptions(
         document: gql(_updateUserPreferencesMutation),
-        variables: {
-          'id': userId,
-          'preferences': preference,
-        },
+        variables: {'id': userId, 'preferences': preference},
       ),
     );
     if (result.hasException) {
