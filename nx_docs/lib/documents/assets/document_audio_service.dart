@@ -10,11 +10,13 @@ class DocumentAudioService {
     http.Client? client,
   }) : _baseUri = Uri.parse(_trimTrailingSlash(baseUrl)),
        _userId = userId,
-       _client = client ?? http.Client();
+       _client = client ?? http.Client(),
+       _ownsClient = client == null;
 
   final Uri _baseUri;
   final String _userId;
   final http.Client _client;
+  final bool _ownsClient;
 
   Future<DocumentAudio> generate({
     required int documentId,
@@ -61,7 +63,9 @@ class DocumentAudioService {
     return uri.hasScheme ? raw : _baseUri.resolve(raw).toString();
   }
 
-  void dispose() => _client.close();
+  void dispose() {
+    if (_ownsClient) _client.close();
+  }
 }
 
 String _trimTrailingSlash(String value) {

@@ -14,7 +14,14 @@ final cardAudioRepositoryProvider = Provider<CardAudioRepository?>((ref) {
   final userId = user?.userId ?? session?.userId;
   if (baseUrl == null || userId == null) return null;
 
-  final remote = HttpCardAudioRepository(baseUrl: baseUrl, userId: userId);
+  final client = ref.watch(nexusHttpClientProvider);
+  if (client == null) return null;
+
+  final remote = HttpCardAudioRepository(
+    baseUrl: baseUrl,
+    userId: userId,
+    httpClient: client,
+  );
   if (!ref.watch(cardsOfflineEnabledProvider) || session == null) return remote;
 
   final safeName = session.account.key.replaceAll(

@@ -7,16 +7,18 @@ class NoteAiSessionConfig {
     required this.socketUrl,
     required this.userId,
     required this.documentId,
+    this.authHeaders = const <String, String>{},
   });
 
   final String socketUrl;
   final String userId;
   final int documentId;
+  final Map<String, String> authHeaders;
 
   String get key => '$socketUrl|$userId|$documentId';
 
   Map<String, String> get headers => <String, String>{
-    'X-User-Id': userId,
+    if (authHeaders.isEmpty) 'X-User-Id': userId else ...authHeaders,
     'X-Client-App': 'nx_notes',
     'X-Agent-Id': 'nx_notes',
     'X-Document-Id': documentId.toString(),

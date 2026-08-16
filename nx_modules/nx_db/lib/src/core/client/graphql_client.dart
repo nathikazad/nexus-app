@@ -7,6 +7,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../config/backend_presets.dart';
 import '../config/graphql_http_config.dart';
+import '../../auth/oidc_service.dart';
 import 'db_audit_context.dart';
 
 export '../config/graphql_http_config.dart';
@@ -120,7 +121,8 @@ Link dbAuditContextLink(String sourceKind) {
       return forward(request);
     }
 
-    final context = currentDbAuditContext() ??
+    final context =
+        currentDbAuditContext() ??
         DbAuditContext.create(
           sourceKind: sourceKind,
           sourceId: request.operation.operationName,
@@ -141,6 +143,24 @@ Link dbAuditContextLink(String sourceKind) {
   });
 }
 
+class _RefreshOnUnauthorizedLink extends Link {
+  @override
+  Stream<Response> request(Request request, [NextLink? forward]) async* {
+    if (forward == null) {
+      throw StateError('RefreshOnUnauthorizedLink: forward is null');
+    }
+    try {
+      await for (final response in forward(request)) {
+        yield response;
+      }
+    } on ServerException catch (error) {
+      if (error.statusCode != 401) rethrow;
+      await nexusOidcService.accessToken(forceRefresh: true);
+      yield* forward(request);
+    }
+  }
+}
+
 class GraphQLConfig {
   static String get defaultEndpoint =>
       resolve(BackendPreset.defaultPreset).graphqlHttp;
@@ -151,24 +171,30 @@ GraphQLClient createClient(
   String endpoint,
   String userId, {
   String auditSourceKind = 'nx_mobile',
+  BackendPreset? preset,
 }) {
   final ep = normalizeHttpEndpoint(endpoint);
-  final defaultHeaders = buildHttpLinkDefaultHeaders(ep, userId);
+  final usesOidc = preset?.requiresOidc ?? false;
+  final defaultHeaders = usesOidc
+      ? const <String, String>{}
+      : buildHttpLinkDefaultHeaders(ep, userId);
 
-  final httpLink = HttpLink(
-    ep,
-    defaultHeaders: defaultHeaders,
-  );
+  final httpLink = HttpLink(ep, defaultHeaders: defaultHeaders);
 
-  final wsUrl =
-      ep.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://');
+  final wsUrl = ep
+      .replaceFirst('http://', 'ws://')
+      .replaceFirst('https://', 'wss://');
 
   final wsLink = WebSocketLink(
     wsUrl,
     config: SocketClientConfig(
       autoReconnect: true,
       inactivityTimeout: const Duration(seconds: 30),
-      initialPayload: {'x-user-id': userId},
+      initialPayload: usesOidc
+          ? () async => {
+              'authorization': 'Bearer ${await nexusOidcService.accessToken()}',
+            }
+          : {'x-user-id': userId},
       headers: defaultHeaders,
     ),
   );
@@ -182,6 +208,11 @@ GraphQLClient createClient(
   final link = Link.from([
     _kgqlRequestLogLink(),
     dbAuditContextLink(auditSourceKind),
+    if (usesOidc) _RefreshOnUnauthorizedLink(),
+    if (usesOidc)
+      AuthLink(
+        getToken: () async => 'Bearer ${await nexusOidcService.accessToken()}',
+      ),
     transport,
   ]);
 

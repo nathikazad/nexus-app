@@ -54,6 +54,7 @@ class NoteCompanionController extends ChangeNotifier {
     required this.userId,
     required DocumentAudioService audioService,
     required NoteTranscriptLoader transcriptLoader,
+    Future<Map<String, String>> Function()? authHeaders,
     this.onAudioBlockChanged,
     DocumentAudio? initialAudio,
     String? initialBlockKey,
@@ -65,6 +66,7 @@ class NoteCompanionController extends ChangeNotifier {
        _microphone = microphone ?? NxMicrophoneOpusStreamer(),
        _player = player ?? NxWavAudioPlayer(),
        _audioService = audioService,
+       _authHeaders = authHeaders ?? (() async => {'x-user-id': userId}),
        _transcriptLoader = transcriptLoader,
        _noteAudioPlayer = noteAudioPlayer ?? NxStoredAudioPlayer(),
        _audio = initialAudio,
@@ -98,6 +100,7 @@ class NoteCompanionController extends ChangeNotifier {
   final NxMicrophoneOpusStreamer _microphone;
   final NxWavAudioPlayer _player;
   final DocumentAudioService _audioService;
+  final Future<Map<String, String>> Function() _authHeaders;
   final NoteTranscriptLoader _transcriptLoader;
   final NxStoredAudioPlayer _noteAudioPlayer;
   final ValueChanged<DocumentAudioBlockTiming>? onAudioBlockChanged;
@@ -382,6 +385,7 @@ class NoteCompanionController extends ChangeNotifier {
         socketUrl: socketUrl,
         userId: userId,
         documentId: documentId,
+        authHeaders: await _authHeaders(),
       ),
     );
   }

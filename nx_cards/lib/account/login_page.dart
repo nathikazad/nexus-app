@@ -17,7 +17,7 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
   Future<void> _login() async {
     final error = await ref
         .read(authProvider.notifier)
-        .login(_profile.userId, _preset);
+        .login(_preset.requiresOidc ? '' : _profile.userId, _preset);
     if (error != null && mounted) {
       ScaffoldMessenger.of(
         context,
@@ -65,18 +65,20 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
                   style: TextStyle(color: RecallColors.muted),
                 ),
                 const SizedBox(height: 32),
-                DropdownButtonFormField<AuthLoginProfile>(
-                  initialValue: _profile,
-                  decoration: const InputDecoration(labelText: 'Person'),
-                  items: [
-                    for (final item in authLoginProfiles)
-                      DropdownMenuItem(value: item, child: Text(item.label)),
-                  ],
-                  onChanged: loading
-                      ? null
-                      : (value) => setState(() => _profile = value!),
-                ),
-                const SizedBox(height: 14),
+                if (!_preset.requiresOidc) ...[
+                  DropdownButtonFormField<AuthLoginProfile>(
+                    initialValue: _profile,
+                    decoration: const InputDecoration(labelText: 'Person'),
+                    items: [
+                      for (final item in authLoginProfiles)
+                        DropdownMenuItem(value: item, child: Text(item.label)),
+                    ],
+                    onChanged: loading
+                        ? null
+                        : (value) => setState(() => _profile = value!),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 DropdownButtonFormField<BackendPreset>(
                   initialValue: _preset,
                   decoration: const InputDecoration(labelText: 'Backend'),
@@ -96,7 +98,11 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Log in'),
+                      : Text(
+                          _preset.requiresOidc
+                              ? 'Continue with passkey'
+                              : 'Log in',
+                        ),
                 ),
               ],
             ),

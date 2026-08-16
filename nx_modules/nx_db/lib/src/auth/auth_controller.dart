@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/config/backend_presets.dart';
 import 'backend_ping.dart';
+import 'oidc_service.dart';
 import 'user.dart';
 
 /// Whether an application may restore a saved identity when its backend is
@@ -56,6 +57,17 @@ class AuthController extends AsyncNotifier<User?> {
         print('[AuthController] Migrated legacy prefs to preset=${preset.key}');
       }
 
+      if (preset != null && preset.requiresOidc) {
+        print('[AuthController] Restoring OIDC session for ${preset.key}');
+        final identity = await nexusOidcService.restore(preset);
+        if (identity == null) {
+          await _clearSessionPrefs(prefs);
+          return null;
+        }
+        await prefs.setString(PrefsKeys.userId, identity.userId);
+        return User(userId: identity.userId, preset: preset);
+      }
+
       if (userId != null && userId.isNotEmpty && preset != null) {
         print(
           '[AuthController] Found saved credentials: userId=$userId preset=${preset.key}',
@@ -89,18 +101,25 @@ class AuthController extends AsyncNotifier<User?> {
     }
   }
 
-  /// Logs in with [userId] and [preset]. Persists to SharedPreferences.
+  /// Signs into [preset] and persists the resolved Nexus identity.
+  ///
+  /// [userId] is only used by direct development/Pi presets. Hosted presets
+  /// derive it from the verified bearer token via `/v1/me`.
   /// Returns null if login was successful, error message String otherwise.
   Future<String?> login(String userId, BackendPreset preset) async {
     print('[AuthController] login() - user: $userId preset: ${preset.key}');
     state = const AsyncValue.loading();
 
     try {
-      if (userId.isEmpty) {
+      if (userId.isEmpty && !preset.requiresOidc) {
         throw Exception('User ID is required');
       }
       final urls = resolve(preset);
-      if (!skipBackendPing) {
+      var resolvedUserId = userId;
+      if (preset.requiresOidc) {
+        final identity = await nexusOidcService.signIn(preset);
+        resolvedUserId = identity.userId;
+      } else if (!skipBackendPing) {
         await pingGraphqlBackend(
           graphqlHttpUrl: urls.graphqlHttp,
           userId: userId,
@@ -108,12 +127,12 @@ class AuthController extends AsyncNotifier<User?> {
       }
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(PrefsKeys.userId, userId);
+      await prefs.setString(PrefsKeys.userId, resolvedUserId);
       await prefs.setString(PrefsKeys.endpoint, urls.graphqlHttp);
       await prefs.setString(PrefsKeys.backendPreset, preset.key);
       await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
 
-      final user = User(userId: userId, preset: preset);
+      final user = User(userId: resolvedUserId, preset: preset);
       state = AsyncValue.data(user);
       print('[AuthController] Login successful');
       return null;
@@ -128,8 +147,12 @@ class AuthController extends AsyncNotifier<User?> {
   /// Clears SharedPreferences and updates state to null.
   Future<void> logout() async {
     print('[AuthController] logout() - Logging out user');
+    final currentUser = state.value;
     state = const AsyncValue.loading();
     try {
+      if (currentUser?.preset.requiresOidc ?? false) {
+        await nexusOidcService.logout();
+      }
       final prefs = await SharedPreferences.getInstance();
       await _clearSessionPrefs(prefs);
 

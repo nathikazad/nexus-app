@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_docs/documents/assets/document_image_assets.dart';
@@ -30,8 +29,8 @@ final documentImageAssetServiceProvider = Provider<DocumentImageAssetService?>((
     '[nx_docs image] connector preset=${user.preset.key} '
     'image_base=$imageBaseUrl app_base=${Uri.base}',
   );
-  final client = http.Client();
-  ref.onDispose(client.close);
+  final client = ref.watch(nexusHttpClientProvider);
+  if (client == null) return null;
   return DocumentImageAssetService(
     baseUrl: imageBaseUrl,
     userId: user.userId,
@@ -44,8 +43,8 @@ final nxDocsStateServiceProvider = Provider<NxDocsStateService?>((ref) {
   if (user == null) {
     return null;
   }
-  final client = http.Client();
-  ref.onDispose(client.close);
+  final client = ref.watch(nexusHttpClientProvider);
+  if (client == null) return null;
   return NxDocsStateService(
     baseUrl: resolve(user.preset).imageHttp,
     userId: user.userId,

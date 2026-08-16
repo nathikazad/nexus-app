@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config/backend_presets.dart';
 import 'auth_controller.dart';
+import 'authenticated_http_client.dart';
 
 /// Current user's ID, or null if not logged in.
 final userIdProvider = Provider<String?>((ref) {
@@ -30,12 +31,20 @@ final imageBaseUrlProvider = Provider<String?>((ref) {
   return resolve(user.preset).imageHttp;
 }, name: 'imageBaseUrlProvider');
 
+/// Shared authenticated HTTP transport for REST and asset operations.
+final nexusHttpClientProvider = Provider<NexusAuthenticatedClient?>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (user == null) return null;
+  final client = NexusAuthenticatedClient(
+    preset: user.preset,
+    userId: user.userId,
+  );
+  ref.onDispose(client.close);
+  return client;
+}, name: 'nexusHttpClientProvider');
+
 /// AppStatus enum representing the three possible states of the app.
-enum AppStatus {
-  initializing,
-  authenticated,
-  unauthenticated,
-}
+enum AppStatus { initializing, authenticated, unauthenticated }
 
 /// Stable status that prevents router flicker.
 final appStatusProvider = Provider<AppStatus>((ref) {

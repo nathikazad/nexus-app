@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.11.0 <4.0.0'
   flutter: '>=3.0.0'
 
 dependencies:
@@ -17,6 +17,8 @@ dependencies:
   graphql: ^5.1.1
   gql: ^1.0.1
   http: ^1.2.2
+  oidc: ^3.0.1
+  oidc_default_store: ^1.1.1
   shared_preferences: ^2.2.2
   json_annotation: ^4.9.0
 

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:nx_db/auth.dart';
 import 'package:nx_docs/publishing/data/kgql_mirror_publish_trigger.dart';
 import 'package:nx_docs/publishing/document_publish_service.dart';
@@ -11,8 +10,8 @@ final mirrorPublishTriggerProvider = Provider<MirrorPublishTrigger?>((ref) {
   if (user == null) {
     return null;
   }
-  final client = http.Client();
-  ref.onDispose(client.close);
+  final client = ref.watch(nexusHttpClientProvider);
+  if (client == null) return null;
   return MirrorPublishTriggerService(
     baseUrl: resolve(user.preset).imageHttp,
     userId: user.userId,

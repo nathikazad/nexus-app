@@ -19,7 +19,10 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
     if (!_formKey.currentState!.validate()) return;
     final error = await ref
         .read(authProvider.notifier)
-        .login(_selectedProfile.userId, _selectedPreset);
+        .login(
+          _selectedPreset.requiresOidc ? '' : _selectedProfile.userId,
+          _selectedPreset,
+        );
     if (error == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(error), backgroundColor: AppColors.red),
@@ -80,30 +83,32 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
                       style: TextStyle(fontSize: 14, color: AppColors.muted),
                     ),
                     const SizedBox(height: 36),
-                    const _LoginLabel('PERSON'),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<AuthLoginProfile>(
-                      isExpanded: true,
-                      initialValue: _selectedProfile,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.person_outline, size: 20),
+                    if (!_selectedPreset.requiresOidc) ...[
+                      const _LoginLabel('PERSON'),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<AuthLoginProfile>(
+                        isExpanded: true,
+                        initialValue: _selectedProfile,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.person_outline, size: 20),
+                        ),
+                        items: [
+                          for (final profile in authLoginProfiles)
+                            DropdownMenuItem<AuthLoginProfile>(
+                              value: profile,
+                              child: Text(profile.label),
+                            ),
+                        ],
+                        onChanged: loading
+                            ? null
+                            : (profile) {
+                                if (profile != null) {
+                                  setState(() => _selectedProfile = profile);
+                                }
+                              },
                       ),
-                      items: [
-                        for (final profile in authLoginProfiles)
-                          DropdownMenuItem<AuthLoginProfile>(
-                            value: profile,
-                            child: Text(profile.label),
-                          ),
-                      ],
-                      onChanged: loading
-                          ? null
-                          : (profile) {
-                              if (profile != null) {
-                                setState(() => _selectedProfile = profile);
-                              }
-                            },
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
+                    ],
                     const _LoginLabel('BACKEND'),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<BackendPreset>(
@@ -136,7 +141,11 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Log In'),
+                          : Text(
+                              _selectedPreset.requiresOidc
+                                  ? 'Continue with passkey'
+                                  : 'Log In',
+                            ),
                     ),
                     if (auth.hasError) ...[
                       const SizedBox(height: 16),

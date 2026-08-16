@@ -17,12 +17,17 @@ enum BackendPreset {
   localhost('localhost', 'Local (127.0.0.1 / Docker)'),
   piLan('pi_lan', 'Pi Caddy (LAN)'),
   piTailscale('pi_tailscale', 'Pi Caddy (Tailscale)'),
-  piWan('pi_wan', 'Pi Caddy (WAN)');
+  piWan('pi_wan', 'Hosted Nexus');
 
   const BackendPreset(this.key, this.label);
 
   final String key;
   final String label;
+
+  /// Hosted Nexus authenticates through the self-hosted OIDC provider.
+  /// Local Pi/development presets remain direct-only until that deployment
+  /// explicitly enables its own identity provider.
+  bool get requiresOidc => this == BackendPreset.piWan;
 
   static BackendPreset? fromKey(String? s) {
     if (s == null || s.isEmpty) return null;
@@ -55,10 +60,7 @@ class BackendUrls {
 
     final httpOrigin = uri.replace(path: '').toString();
     final wsOrigin = uri
-        .replace(
-          scheme: uri.scheme == 'https' ? 'wss' : 'ws',
-          path: '',
-        )
+        .replace(scheme: uri.scheme == 'https' ? 'wss' : 'ws', path: '')
         .toString();
     return BackendUrls(
       graphqlHttp: '$httpOrigin/graphql',
