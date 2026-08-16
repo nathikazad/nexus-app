@@ -16,12 +16,15 @@ class NexusIdentity {
 class NexusOidcService {
   OidcUserManager? _manager;
   BackendPreset? _preset;
+  String? _clientAppId;
 
-  Future<void> _initialize(BackendPreset preset) async {
-    if (_manager != null && _preset == preset) return;
-    final config = await fetchNexusOidcConfig(preset);
+  Future<void> _initialize(BackendPreset preset, String clientAppId) async {
+    if (_manager != null && _preset == preset && _clientAppId == clientAppId) {
+      return;
+    }
+    final config = await fetchNexusOidcConfig(preset, clientAppId: clientAppId);
     final manager = OidcUserManager.lazy(
-      id: 'nexus-${preset.key}',
+      id: 'nexus-${preset.key}-$clientAppId',
       discoveryDocumentUri: OidcUtils.getOpenIdConfigWellKnownUri(
         config.issuer,
       ),
@@ -44,16 +47,20 @@ class NexusOidcService {
     await manager.init();
     _manager = manager;
     _preset = preset;
+    _clientAppId = clientAppId;
   }
 
-  Future<NexusIdentity?> restore(BackendPreset preset) async {
-    await _initialize(preset);
+  Future<NexusIdentity?> restore(
+    BackendPreset preset,
+    String clientAppId,
+  ) async {
+    await _initialize(preset, clientAppId);
     if (_manager!.currentUser == null) return null;
     return _loadIdentity(preset);
   }
 
-  Future<NexusIdentity> signIn(BackendPreset preset) async {
-    await _initialize(preset);
+  Future<NexusIdentity> signIn(BackendPreset preset, String clientAppId) async {
+    await _initialize(preset, clientAppId);
     final user = await _manager!.loginAuthorizationCodeFlow();
     if (user == null) throw Exception('Sign-in was cancelled');
     return _loadIdentity(preset);

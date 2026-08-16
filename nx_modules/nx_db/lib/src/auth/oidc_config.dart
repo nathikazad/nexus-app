@@ -19,7 +19,10 @@ class NexusOidcConfig {
   final Uri logoutUri;
   final List<String> scopes;
 
-  static NexusOidcConfig fromJson(Map<String, dynamic> json) {
+  static NexusOidcConfig fromJson(
+    Map<String, dynamic> json, {
+    required String clientAppId,
+  }) {
     final issuer = Uri.parse(json['issuer'] as String? ?? '');
     final redirectUri = Uri.parse(json['redirect_uri'] as String? ?? '');
     final logoutUri = Uri.parse(json['logout_uri'] as String? ?? '');
@@ -27,10 +30,12 @@ class NexusOidcConfig {
     final scopes = (json['scopes'] as List<dynamic>? ?? const [])
         .whereType<String>()
         .toList(growable: false);
-    if (issuer.scheme != 'https' ||
+    final expectedScheme = clientAppId.replaceAll('_', '-');
+    if (json['app_id'] != clientAppId ||
+        issuer.scheme != 'https' ||
         clientId.isEmpty ||
-        redirectUri.scheme != 'nexus' ||
-        logoutUri.scheme != 'nexus' ||
+        redirectUri.scheme != expectedScheme ||
+        logoutUri.scheme != expectedScheme ||
         !scopes.contains('openid')) {
       throw const FormatException(
         'Nexus returned an invalid OIDC configuration',
@@ -48,12 +53,15 @@ class NexusOidcConfig {
 
 Future<NexusOidcConfig> fetchNexusOidcConfig(
   BackendPreset preset, {
+  required String clientAppId,
   http.Client? client,
 }) async {
   final ownedClient = client == null;
   final httpClient = client ?? http.Client();
   try {
-    final uri = Uri.parse('${resolve(preset).imageHttp}/v1/auth/config');
+    final uri = Uri.parse(
+      '${resolve(preset).imageHttp}/v1/auth/config',
+    ).replace(queryParameters: {'app': clientAppId});
     final response = await httpClient
         .get(uri)
         .timeout(const Duration(seconds: 15));
@@ -66,7 +74,7 @@ Future<NexusOidcConfig> fetchNexusOidcConfig(
     if (json['mode'] != 'oidc') {
       throw Exception('This backend does not provide OIDC authentication');
     }
-    return NexusOidcConfig.fromJson(json);
+    return NexusOidcConfig.fromJson(json, clientAppId: clientAppId);
   } finally {
     if (ownedClient) httpClient.close();
   }

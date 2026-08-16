@@ -10,6 +10,10 @@ import 'user.dart';
 /// unreachable. Online-only applications keep the default `false`.
 final retainAuthSessionWhenOfflineProvider = Provider<bool>((ref) => false);
 
+/// Stable identifier used to select this installed app's native OIDC client.
+/// Every hosted NX app must override this at its root ProviderScope.
+final nexusClientAppIdProvider = Provider<String>((ref) => 'nx_mobile');
+
 /// AuthController manages user authentication state.
 /// Loads saved credentials from SharedPreferences on initialization.
 class AuthController extends AsyncNotifier<User?> {
@@ -59,7 +63,10 @@ class AuthController extends AsyncNotifier<User?> {
 
       if (preset != null && preset.requiresOidc) {
         print('[AuthController] Restoring OIDC session for ${preset.key}');
-        final identity = await nexusOidcService.restore(preset);
+        final identity = await nexusOidcService.restore(
+          preset,
+          ref.read(nexusClientAppIdProvider),
+        );
         if (identity == null) {
           await _clearSessionPrefs(prefs);
           return null;
@@ -117,7 +124,10 @@ class AuthController extends AsyncNotifier<User?> {
       final urls = resolve(preset);
       var resolvedUserId = userId;
       if (preset.requiresOidc) {
-        final identity = await nexusOidcService.signIn(preset);
+        final identity = await nexusOidcService.signIn(
+          preset,
+          ref.read(nexusClientAppIdProvider),
+        );
         resolvedUserId = identity.userId;
       } else if (!skipBackendPing) {
         await pingGraphqlBackend(

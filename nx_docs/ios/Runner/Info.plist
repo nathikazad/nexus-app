@@ -23,7 +23,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>nexus</string>
+				<string>nx-docs</string>
 			</array>
 		</dict>
 	</array>

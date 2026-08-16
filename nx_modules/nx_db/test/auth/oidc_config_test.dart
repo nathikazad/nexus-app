@@ -9,13 +9,15 @@ void main() {
   test('parses hosted public OIDC discovery without a client secret', () async {
     final client = MockClient((request) async {
       expect(request.url.path, '/v1/auth/config');
+      expect(request.url.queryParameters['app'], 'nx_docs');
       return http.Response(
         jsonEncode({
           'mode': 'oidc',
+          'app_id': 'nx_docs',
           'issuer': 'https://auth.example.com',
           'client_id': 'native-client',
-          'redirect_uri': 'nexus://oauth/callback',
-          'logout_uri': 'nexus://oauth/logout',
+          'redirect_uri': 'nx-docs://oauth/callback',
+          'logout_uri': 'nx-docs://oauth/logout',
           'scopes': ['openid', 'offline_access', 'nexus-api'],
         }),
         200,
@@ -24,6 +26,7 @@ void main() {
 
     final config = await fetchNexusOidcConfig(
       BackendPreset.piWan,
+      clientAppId: 'nx_docs',
       client: client,
     );
 
@@ -38,7 +41,11 @@ void main() {
     );
 
     expect(
-      fetchNexusOidcConfig(BackendPreset.piWan, client: client),
+      fetchNexusOidcConfig(
+        BackendPreset.piWan,
+        clientAppId: 'nx_docs',
+        client: client,
+      ),
       throwsA(isA<Exception>()),
     );
   });
@@ -46,12 +53,13 @@ void main() {
   test('rejects insecure issuer metadata', () {
     expect(
       () => NexusOidcConfig.fromJson({
+        'app_id': 'nx_docs',
         'issuer': 'http://auth.example.com',
         'client_id': 'native-client',
-        'redirect_uri': 'nexus://oauth/callback',
-        'logout_uri': 'nexus://oauth/logout',
+        'redirect_uri': 'nx-docs://oauth/callback',
+        'logout_uri': 'nx-docs://oauth/logout',
         'scopes': ['openid'],
-      }),
+      }, clientAppId: 'nx_docs'),
       throwsFormatException,
     );
   });

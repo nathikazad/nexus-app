@@ -20,6 +20,7 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         dbAuditSourceKindProvider.overrideWithValue('nx_notes'),
+        nexusClientAppIdProvider.overrideWithValue('nx_docs'),
         retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
       ],
       child: const OfflineSyncLifecycle(child: NexusDocsApp()),
