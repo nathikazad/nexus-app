@@ -40,3 +40,12 @@ final activeCardsSessionProvider = FutureProvider<offline.CachedSession?>((
 
   return store.load();
 });
+
+Future<void> clearCardsCachedSession() async {
+  final preferences = await SharedPreferences.getInstance();
+  await offline.PreferencesCachedSessionStore(
+    preferences: preferences,
+    application: 'nx_cards',
+    serverId: 'nexus-primary',
+  ).clear();
+}

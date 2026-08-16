@@ -10,6 +10,8 @@ class NexusOidcConfig {
     required this.clientId,
     required this.redirectUri,
     required this.logoutUri,
+    required this.audience,
+    required this.allowedAudiences,
     required this.scopes,
   });
 
@@ -17,6 +19,8 @@ class NexusOidcConfig {
   final String clientId;
   final Uri redirectUri;
   final Uri logoutUri;
+  final String audience;
+  final List<String> allowedAudiences;
   final List<String> scopes;
 
   static NexusOidcConfig fromJson(
@@ -27,6 +31,11 @@ class NexusOidcConfig {
     final redirectUri = Uri.parse(json['redirect_uri'] as String? ?? '');
     final logoutUri = Uri.parse(json['logout_uri'] as String? ?? '');
     final clientId = json['client_id'] as String? ?? '';
+    final audience = json['audience'] as String? ?? '';
+    final allowedAudiences =
+        (json['allowed_audiences'] as List<dynamic>? ?? const [])
+            .whereType<String>()
+            .toList(growable: false);
     final scopes = (json['scopes'] as List<dynamic>? ?? const [])
         .whereType<String>()
         .toList(growable: false);
@@ -34,6 +43,8 @@ class NexusOidcConfig {
     if (json['app_id'] != clientAppId ||
         issuer.scheme != 'https' ||
         clientId.isEmpty ||
+        audience.isEmpty ||
+        !allowedAudiences.contains(audience) ||
         redirectUri.scheme != expectedScheme ||
         logoutUri.scheme != expectedScheme ||
         !scopes.contains('openid')) {
@@ -46,6 +57,8 @@ class NexusOidcConfig {
       clientId: clientId,
       redirectUri: redirectUri,
       logoutUri: logoutUri,
+      audience: audience,
+      allowedAudiences: allowedAudiences,
       scopes: scopes,
     );
   }

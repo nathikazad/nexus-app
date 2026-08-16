@@ -18,6 +18,8 @@ void main() {
           'client_id': 'native-client',
           'redirect_uri': 'nx-docs://oauth/callback',
           'logout_uri': 'nx-docs://oauth/logout',
+          'audience': 'project-1',
+          'allowed_audiences': ['project-1', 'resource-api', 'native-client'],
           'scopes': ['openid', 'offline_access', 'nexus-api'],
         }),
         200,
@@ -32,6 +34,8 @@ void main() {
 
     expect(config.issuer, Uri.parse('https://auth.example.com'));
     expect(config.clientId, 'native-client');
+    expect(config.audience, 'project-1');
+    expect(config.allowedAudiences, contains('resource-api'));
     expect(config.scopes, contains('offline_access'));
   });
 
@@ -58,6 +62,8 @@ void main() {
         'client_id': 'native-client',
         'redirect_uri': 'nx-docs://oauth/callback',
         'logout_uri': 'nx-docs://oauth/logout',
+        'audience': 'project-1',
+        'allowed_audiences': ['project-1'],
         'scopes': ['openid'],
       }, clientAppId: 'nx_docs'),
       throwsFormatException,

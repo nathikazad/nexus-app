@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_cards/account/account_session.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:nx_cards/settings/appearance.dart';
+import 'package:nx_db/auth.dart';
+
+Future<void> _logoutAndClearSession(WidgetRef ref) async {
+  await ref.read(authProvider.notifier).logout();
+  await clearCardsCachedSession();
+  ref.invalidate(activeCardsSessionProvider);
+  await ref.read(activeCardsSessionProvider.future);
+}
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -13,7 +22,19 @@ class SettingsPage extends ConsumerWidget {
     final settings = ref.watch(reviewProgressionSettingsProvider);
     final appearance = ref.watch(appearanceProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Review settings')),
+      appBar: AppBar(
+        title: const Text('Review settings'),
+        actions: [
+          IconButton(
+            key: const Key('app-bar-sign-out-button'),
+            tooltip: 'Sign out or change server',
+            onPressed: () async {
+              await _logoutAndClearSession(ref);
+            },
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
       body: settings.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
@@ -102,6 +123,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
+  }
+
+  Future<void> _logout() async {
+    await _logoutAndClearSession(ref);
   }
 
   @override
@@ -297,6 +322,13 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               FilledButton(
                 onPressed: _valid && !_saving ? _save : null,
                 child: Text(_saving ? 'Saving…' : 'Save settings'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key: const Key('sign-out-button'),
+                onPressed: _logout,
+                icon: const Icon(Icons.logout),
+                label: const Text('Sign out or change server'),
               ),
             ],
           ),

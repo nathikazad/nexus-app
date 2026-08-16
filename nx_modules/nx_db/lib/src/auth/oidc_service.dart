@@ -40,6 +40,7 @@ class NexusOidcService {
         scope: config.scopes,
         strictIssuerValidation: true,
         expectedIssuer: config.issuer,
+        allowedAudiences: config.allowedAudiences,
         allowedIdTokenAlgorithms: const ['RS256'],
         supportOfflineAuth: true,
       ),
