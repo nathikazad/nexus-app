@@ -108,7 +108,7 @@ void main() {
     var requests = 0;
     final refreshes = <bool>[];
     final authenticatedClient = NexusAuthenticatedClient(
-      preset: BackendPreset.piWan,
+      preset: BackendPreset.hosted,
       userId: '7',
       inner: MockClient((request) async {
         requests++;

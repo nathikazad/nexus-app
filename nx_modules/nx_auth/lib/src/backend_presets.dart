@@ -17,7 +17,7 @@ enum BackendPreset {
   localhost('localhost', 'Local (127.0.0.1 / Docker)'),
   piLan('pi_lan', 'Pi Caddy (LAN)'),
   piTailscale('pi_tailscale', 'Pi Caddy (Tailscale)'),
-  piWan('pi_wan', 'Hosted Nexus');
+  hosted('hosted', 'Hosted Nexus (Hetzner production)');
 
   const BackendPreset(this.key, this.label);
 
@@ -27,17 +27,19 @@ enum BackendPreset {
   /// Hosted Nexus authenticates through the self-hosted OIDC provider.
   /// Local Pi/development presets remain direct-only until that deployment
   /// explicitly enables its own identity provider.
-  bool get requiresOidc => this == BackendPreset.piWan;
+  bool get requiresOidc => this == BackendPreset.hosted;
 
   static BackendPreset? fromKey(String? s) {
     if (s == null || s.isEmpty) return null;
+    // Preserve sessions written before the production preset was renamed.
+    if (s == 'pi_wan') return hosted;
     for (final p in BackendPreset.values) {
       if (p.key == s) return p;
     }
     return null;
   }
 
-  static const BackendPreset defaultPreset = piWan;
+  static const BackendPreset defaultPreset = hosted;
 }
 
 class BackendUrls {
@@ -95,7 +97,7 @@ BackendUrls resolve(BackendPreset p) {
       return BackendUrls.fromOrigin('http://10.0.0.156');
     case BackendPreset.piTailscale:
       return BackendUrls.fromOrigin('http://100.108.43.37');
-    case BackendPreset.piWan:
+    case BackendPreset.hosted:
       return BackendUrls.fromOrigin('https://nexus.kgql.io');
   }
 }

@@ -28,6 +28,8 @@ void main() {
       expect(BackendPreset.fromKey('laptop'), BackendPreset.laptop);
       expect(BackendPreset.fromKey('localhost'), BackendPreset.localhost);
       expect(BackendPreset.fromKey('pi_tailscale'), BackendPreset.piTailscale);
+      expect(BackendPreset.fromKey('hosted'), BackendPreset.hosted);
+      expect(BackendPreset.fromKey('pi_wan'), BackendPreset.hosted);
     });
 
     test('CR11.4 resolve URLs non-empty for each preset', () {
@@ -39,8 +41,8 @@ void main() {
       }
     });
 
-    test('CR11.4b Pi presets use a single Caddy origin', () {
-      final u = resolve(BackendPreset.piWan);
+    test('CR11.4b hosted and Pi presets use their configured origins', () {
+      final u = resolve(BackendPreset.hosted);
 
       expect(u.graphqlHttp, 'https://nexus.kgql.io/graphql');
       expect(u.sockWs, 'wss://nexus.kgql.io/realtime');

@@ -8,7 +8,7 @@ void main() {
   test('restores the last saved user by default', () async {
     SharedPreferences.setMockInitialValues({
       PrefsKeys.userId: '2',
-      PrefsKeys.backendPreset: BackendPreset.piWan.key,
+      PrefsKeys.backendPreset: BackendPreset.hosted.key,
     });
     final container = ProviderContainer(
       overrides: [authProvider.overrideWith(PeopleAuthController.new)],
@@ -19,7 +19,7 @@ void main() {
 
     expect(user, isNotNull);
     expect(user!.userId, '2');
-    expect(user.preset, BackendPreset.piWan);
+    expect(user.preset, BackendPreset.hosted);
   });
 
   test('uses explicit initial user when provided', () async {
@@ -45,7 +45,7 @@ void main() {
   test('logout clears the saved user', () async {
     SharedPreferences.setMockInitialValues({
       PrefsKeys.userId: '2',
-      PrefsKeys.backendPreset: BackendPreset.piWan.key,
+      PrefsKeys.backendPreset: BackendPreset.hosted.key,
     });
     final container = ProviderContainer(
       overrides: [authProvider.overrideWith(PeopleAuthController.new)],

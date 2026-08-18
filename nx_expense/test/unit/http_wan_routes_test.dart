@@ -9,8 +9,8 @@ import 'package:nx_expense/data/teller/teller_sync_api.dart';
 
 void main() {
   group('WAN HTTP routes', () {
-    test('Teller sync posts to pi WAN HTTP host', () async {
-      final base = resolve(BackendPreset.piWan).imageHttp;
+    test('Teller sync posts to the hosted production HTTP origin', () async {
+      final base = resolve(BackendPreset.hosted).imageHttp;
       final client = MockClient((request) async {
         expect(request.method, 'POST');
         expect(request.url.toString(), 'https://nexus.kgql.io/teller/sync');
@@ -21,8 +21,8 @@ void main() {
       await postTellerSync(imageBaseUrl: base, userId: '1', httpClient: client);
     });
 
-    test('BofA sync posts to pi WAN HTTP host', () async {
-      final base = resolve(BackendPreset.piWan).imageHttp;
+    test('BofA sync posts to the hosted production HTTP origin', () async {
+      final base = resolve(BackendPreset.hosted).imageHttp;
       final client = MockClient((request) async {
         expect(request.method, 'POST');
         expect(request.url.toString(), 'https://nexus.kgql.io/bofa/sync');
@@ -33,8 +33,8 @@ void main() {
       await postBofaSync(imageBaseUrl: base, userId: '1', httpClient: client);
     });
 
-    test('Recipe import posts to pi WAN HTTP host', () async {
-      final base = resolve(BackendPreset.piWan).imageHttp;
+    test('Recipe import posts to the hosted production HTTP origin', () async {
+      final base = resolve(BackendPreset.hosted).imageHttp;
       final client = MockClient((request) async {
         expect(request.method, 'POST');
         expect(request.url.toString(), 'https://nexus.kgql.io/import-recipe');

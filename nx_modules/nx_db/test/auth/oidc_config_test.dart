@@ -27,7 +27,7 @@ void main() {
     });
 
     final config = await fetchNexusOidcConfig(
-      BackendPreset.piWan,
+      BackendPreset.hosted,
       clientAppId: 'nx_docs',
       client: client,
     );
@@ -46,7 +46,7 @@ void main() {
 
     expect(
       fetchNexusOidcConfig(
-        BackendPreset.piWan,
+        BackendPreset.hosted,
         clientAppId: 'nx_docs',
         client: client,
       ),

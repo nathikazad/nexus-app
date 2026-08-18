@@ -7,8 +7,8 @@ import 'package:nx_cooking/data/recipe/import_recipe_api.dart';
 import 'package:nx_db/auth.dart';
 
 void main() {
-  test('Recipe import posts to pi WAN HTTP host', () async {
-    final base = resolve(BackendPreset.piWan).imageHttp;
+  test('Recipe import posts to the hosted production HTTP origin', () async {
+    final base = resolve(BackendPreset.hosted).imageHttp;
     final client = MockClient((request) async {
       expect(request.method, 'POST');
       expect(request.url.toString(), 'https://nexus.kgql.io/import-recipe');

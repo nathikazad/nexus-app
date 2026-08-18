@@ -32,7 +32,7 @@ void main() {
     final seen = <String>[];
     var firstRequests = 0;
     final first = NexusAuthenticatedClient(
-      preset: BackendPreset.piWan,
+      preset: BackendPreset.hosted,
       userId: '7',
       inner: MockClient((request) async {
         firstRequests++;
@@ -47,7 +47,7 @@ void main() {
       },
     );
     final second = NexusAuthenticatedClient(
-      preset: BackendPreset.piWan,
+      preset: BackendPreset.hosted,
       userId: '8',
       inner: MockClient((request) async {
         seen.add(request.headers['authorization']!);

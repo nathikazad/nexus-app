@@ -41,7 +41,7 @@ void main() {
       );
     });
     final client = NexusAuthenticatedClient(
-      preset: BackendPreset.piWan,
+      preset: BackendPreset.hosted,
       userId: '7',
       inner: inner,
       authHeaders: (forceRefresh) async {
