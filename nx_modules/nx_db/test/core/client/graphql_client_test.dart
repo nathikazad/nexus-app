@@ -8,9 +8,16 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_db/src/core/client/graphql_client.dart' as graphql_client;
 
 void main() {
-  test('createClient returns GraphQLClient', () {
+  test('createClient allows large initial synchronization responses', () {
     final c = createClient('http://127.0.0.1:5001/graphql', '1');
-    expect(c, isNotNull);
+    expect(
+      c.queryManager.requestTimeout,
+      graphql_client.graphQlQueryRequestTimeout,
+    );
+    expect(
+      graphql_client.graphQlQueryRequestTimeout,
+      const Duration(seconds: 90),
+    );
   });
 
   test('formatGraphQlLogValue truncates large values', () {
@@ -72,49 +79,51 @@ void main() {
     expect(captured!.context.entry<HttpLinkHeaders>(), isNull);
   });
 
-  test('dbAuditContextLink uses app source kind when helper context omits it',
-      () async {
-    Request? captured;
-    final captureLink = Link.function((request, [forward]) {
-      captured = request;
-      return Stream.value(
-        Response(
-          response: const {},
-          data: const {'ok': true},
-          context: request.context,
+  test(
+    'dbAuditContextLink uses app source kind when helper context omits it',
+    () async {
+      Request? captured;
+      final captureLink = Link.function((request, [forward]) {
+        captured = request;
+        return Stream.value(
+          Response(
+            response: const {},
+            data: const {'ok': true},
+            context: request.context,
+          ),
+        );
+      });
+      final link = Link.from([dbAuditContextLink('nx_time'), captureLink]);
+
+      await runWithDbAuditContext(
+        const DbAuditContext(
+          operationId: 'operation-2',
+          sourceKind: '',
+          sourceId: 'set_kgql_models:Work',
+          sourceLabel: 'create Work',
         ),
-      );
-    });
-    final link = Link.from([dbAuditContextLink('nx_time'), captureLink]);
-
-    await runWithDbAuditContext(
-      const DbAuditContext(
-        operationId: 'operation-2',
-        sourceKind: '',
-        sourceId: 'set_kgql_models:Work',
-        sourceLabel: 'create Work',
-      ),
-      () => link
-          .request(
-            Request(
-              operation: Operation(
-                document: gql('mutation SaveThing { __typename }'),
-                operationName: 'SaveThing',
+        () => link
+            .request(
+              Request(
+                operation: Operation(
+                  document: gql('mutation SaveThing { __typename }'),
+                  operationName: 'SaveThing',
+                ),
               ),
-            ),
-          )
-          .drain<void>(),
-    );
+            )
+            .drain<void>(),
+      );
 
-    final extensions = captured!.context
-        .entry<RequestExtensionsThunk>()!
-        .getRequestExtensions(captured!);
-    expect(extensions['nexusAudit'], {
-      'operationId': 'operation-2',
-      'sourceKind': 'nx_time',
-      'sourceId': 'set_kgql_models:Work',
-      'sourceLabel': 'create Work',
-    });
-    expect(captured!.context.entry<HttpLinkHeaders>(), isNull);
-  });
+      final extensions = captured!.context
+          .entry<RequestExtensionsThunk>()!
+          .getRequestExtensions(captured!);
+      expect(extensions['nexusAudit'], {
+        'operationId': 'operation-2',
+        'sourceKind': 'nx_time',
+        'sourceId': 'set_kgql_models:Work',
+        'sourceLabel': 'create Work',
+      });
+      expect(captured!.context.entry<HttpLinkHeaders>(), isNull);
+    },
+  );
 }

@@ -21,6 +21,11 @@ const int _kMaxGraphQlLogStringChars = 500;
 const int _kMaxGraphQlLogCollectionItems = 20;
 const int _kMaxGraphQlLogDepth = 6;
 
+/// Allows large first-time offline synchronizations to finish without making
+/// the realtime transport less responsive to broken connections.
+@visibleForTesting
+const Duration graphQlQueryRequestTimeout = Duration(seconds: 90);
+
 bool _shouldLogKgqlQueries() => _kLogKgqlFromDefine;
 
 void _logOutgoingGraphQlRequest(Request request) {
@@ -218,6 +223,6 @@ GraphQLClient createClient(
   return GraphQLClient(
     link: link,
     cache: GraphQLCache(),
-    queryRequestTimeout: const Duration(seconds: 30),
+    queryRequestTimeout: graphQlQueryRequestTimeout,
   );
 }
