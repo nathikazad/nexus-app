@@ -6,10 +6,15 @@ import 'package:nx_people/app.dart';
 import 'package:nx_people/data/auth/people_auth_controller.dart';
 import 'package:nx_people/data/fake_people_repository.dart';
 import 'package:nx_people/data/providers.dart';
+import 'package:nx_people/domain/log/daily_log.dart';
+import 'package:nx_people/domain/log/log_repository.dart';
+import 'package:nx_people/domain/meeting/meeting_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  Future<void> pumpApp(WidgetTester tester, Size size) async {
+  Future<_FakeLogRepository> pumpApp(WidgetTester tester, Size size) async {
+    final logs = _FakeLogRepository();
+    final meetings = _FakeMeetingRepository();
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -29,11 +34,14 @@ void main() {
             ),
           ),
           peopleRepositoryProvider.overrideWithValue(FakePeopleRepository()),
+          logRepositoryProvider.overrideWithValue(logs),
+          meetingRepositoryProvider.overrideWithValue(meetings),
         ],
         child: const NexusPeopleApp(),
       ),
     );
     await tester.pumpAndSettle();
+    return logs;
   }
 
   testWidgets('desktop renders four section nav, people list, and profile', (
@@ -45,7 +53,8 @@ void main() {
     expect(find.text('People'), findsWidgets);
     expect(find.text('Meetings'), findsOneWidget);
     expect(find.text('Pending'), findsOneWidget);
-    expect(find.text('Funnels'), findsOneWidget);
+    expect(find.text('Logs'), findsOneWidget);
+    expect(find.text('Funnels'), findsNothing);
     expect(find.text('Sarah Chen'), findsWidgets);
     expect(find.text('NEXT ACTION'), findsOneWidget);
     await tester.scrollUntilVisible(
@@ -149,10 +158,17 @@ void main() {
   testWidgets('mobile adds a person from people tab', (tester) async {
     await pumpApp(tester, const Size(390, 844));
 
-    expect(find.byKey(const ValueKey('people-add-button')), findsNothing);
-    expect(find.byKey(const ValueKey('people-logout-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('people-create-button')), findsNothing);
+    expect(find.byKey(const ValueKey('people-menu-button')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('people-add-fab')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create'), findsOneWidget);
+    expect(find.text('Person'), findsOneWidget);
+    expect(find.text('Meeting'), findsOneWidget);
+    expect(find.text('Log'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('create-person-option')));
     await tester.pumpAndSettle();
 
     expect(find.text('Add Person'), findsOneWidget);
@@ -185,15 +201,75 @@ void main() {
     );
   });
 
+  testWidgets('creates a text Daily Log and offers image attachment', (
+    tester,
+  ) async {
+    final logs = await pumpApp(tester, const Size(390, 844));
+
+    await tester.tap(find.byKey(const ValueKey('people-add-fab')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('create-log-option')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Log'), findsOneWidget);
+    expect(find.byKey(const ValueKey('log-add-image-button')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('log-entry-field')),
+      'Quick relationship note.',
+    );
+    await tester.tap(find.byKey(const ValueKey('log-save-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Log'), findsNothing);
+    expect(logs.created, hasLength(1));
+    expect(logs.created.single.entry, 'Quick relationship note.');
+    expect(logs.created.single.imageUrl, isNull);
+  });
+
   testWidgets('mobile top action logs out', (tester) async {
     await pumpApp(tester, const Size(390, 844));
 
-    await tester.tap(find.byKey(const ValueKey('people-logout-button')));
+    await tester.tap(find.byKey(const ValueKey('people-menu-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Funnels'), findsOneWidget);
+    expect(find.text('Logout'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('menu-logout-option')));
     await tester.pumpAndSettle();
 
     expect(find.text('nx_people'), findsOneWidget);
     expect(find.text('Log In'), findsOneWidget);
     expect(find.byKey(const ValueKey('people-add-fab')), findsNothing);
+  });
+
+  testWidgets('Logs replaces Funnels and the burger opens Funnels', (
+    tester,
+  ) async {
+    await pumpApp(tester, const Size(390, 844));
+
+    await tester.tap(find.text('Logs'));
+    await tester.pumpAndSettle();
+    expect(find.text('No logs yet'), findsOneWidget);
+    expect(find.textContaining('Today ·'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('logs-previous-day-button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Today ·'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('logs-today-button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Today ·'), findsOneWidget);
+
+    await tester.tap(find.text('People'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('people-menu-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('menu-funnels-option')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Funnels'), findsOneWidget);
+    expect(find.text('Logs'), findsOneWidget);
   });
 
   testWidgets('mobile edits a person from profile detail', (tester) async {
@@ -289,7 +365,7 @@ void main() {
     expect(find.text('People'), findsWidgets);
     expect(find.text('Meetings'), findsOneWidget);
     expect(find.text('Pending'), findsOneWidget);
-    expect(find.text('Funnels'), findsOneWidget);
+    expect(find.text('Logs'), findsOneWidget);
 
     await tester.tap(find.text('Sarah Chen').first);
     await tester.pumpAndSettle();
@@ -314,4 +390,28 @@ void main() {
     );
     expect(find.text('TIMELINE AND MEETINGS'), findsOneWidget);
   });
+}
+
+class _FakeLogRepository implements LogRepository {
+  final List<DailyLogDraft> created = <DailyLogDraft>[];
+
+  @override
+  Future<List<DailyLog>> listForCalendarDay(DateTime dayLocal) async =>
+      const <DailyLog>[];
+
+  @override
+  Future<int> create(DailyLogDraft draft) async {
+    created.add(draft);
+    return created.length;
+  }
+}
+
+class _FakeMeetingRepository implements MeetingRepository {
+  final List<MeetingDraft> created = <MeetingDraft>[];
+
+  @override
+  Future<int> create(MeetingDraft draft) async {
+    created.add(draft);
+    return created.length;
+  }
 }

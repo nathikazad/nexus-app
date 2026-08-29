@@ -1,9 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart'
-    show imageBaseUrlProvider, nexusRequestHeadersProvider, userIdProvider;
+    show
+        imageBaseUrlProvider,
+        nexusHttpClientProvider,
+        nexusRequestHeadersProvider,
+        userIdProvider;
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_people/data/log/kgql_log_repository.dart';
+import 'package:nx_people/data/log/log_image_upload_service.dart';
+import 'package:nx_people/data/meeting/kgql_meeting_repository.dart';
 import 'package:nx_people/data/person/kgql_people_repository.dart';
 import 'package:nx_people/data/person/person_schema_provider.dart';
+import 'package:nx_people/domain/log/daily_log.dart';
+import 'package:nx_people/domain/log/log_repository.dart';
+import 'package:nx_people/domain/meeting/meeting_repository.dart';
 import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/domain/person/person_query.dart';
 
@@ -31,6 +41,25 @@ final peopleRepositoryProvider = Provider<PersonRepository>((ref) {
     loadPersonSchema: () => ref.read(personSchemaProvider.future),
   );
 });
+
+final logRepositoryProvider = Provider<LogRepository>((ref) {
+  return KgqlLogRepository(client: ref.watch(graphqlClientProvider));
+});
+
+final meetingRepositoryProvider = Provider<MeetingRepository>((ref) {
+  return KgqlMeetingRepository(client: ref.watch(graphqlClientProvider));
+});
+
+final logImageUploadServiceProvider = Provider<LogImageUploadService?>((ref) {
+  final baseUrl = ref.watch(imageBaseUrlProvider);
+  final client = ref.watch(nexusHttpClientProvider);
+  if (baseUrl == null || baseUrl.trim().isEmpty || client == null) return null;
+  return LogImageUploadService(baseUrl: baseUrl, client: client);
+});
+
+final dailyLogsForDayProvider = FutureProvider.family<List<DailyLog>, DateTime>(
+  (ref, day) => ref.watch(logRepositoryProvider).listForCalendarDay(day),
+);
 
 final recentPeopleProvider = FutureProvider<List<Person>>(
   (ref) => ref.watch(peopleRepositoryProvider).listRecent(limit: 20),

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
@@ -5,6 +8,8 @@ import 'package:nx_people/core/layout/is_desktop_layout.dart';
 import 'package:nx_people/core/theme/app_theme.dart';
 import 'package:nx_people/data/person/person_attr_keys.dart';
 import 'package:nx_people/data/providers.dart';
+import 'package:nx_people/domain/log/daily_log.dart';
+import 'package:nx_people/domain/meeting/meeting_repository.dart';
 import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/domain/person/person_query.dart';
 import 'package:nx_people/features/shell/people_state.dart';
@@ -44,6 +49,60 @@ Future<void> _showPersonForm(BuildContext context, {Person? person}) {
   );
 }
 
+Future<void> _showLogForm(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const _LogFormSheet(),
+  );
+}
+
+enum _CreateKind { person, meeting, log }
+
+enum _AppMenuAction { funnels, logout }
+
+Future<void> _showCreateMenu(BuildContext context) async {
+  final selection = await showModalBottomSheet<_CreateKind>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const _CreateMenuSheet(),
+  );
+  if (!context.mounted || selection == null) return;
+  switch (selection) {
+    case _CreateKind.person:
+      return _showPersonForm(context);
+    case _CreateKind.meeting:
+      return showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => const _MeetingFormSheet(),
+      );
+    case _CreateKind.log:
+      return _showLogForm(context);
+  }
+}
+
+Future<void> _showAppMenu(BuildContext context, WidgetRef ref) async {
+  final action = await showModalBottomSheet<_AppMenuAction>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const _AppMenuSheet(),
+  );
+  if (action == null) return;
+  switch (action) {
+    case _AppMenuAction.funnels:
+      ref
+          .read(peopleWorkspaceProvider.notifier)
+          .setSection(PeopleAppSection.funnels);
+      return;
+    case _AppMenuAction.logout:
+      await ref.read(authProvider.notifier).logout();
+      return;
+  }
+}
+
 class PeopleRootShell extends ConsumerWidget {
   const PeopleRootShell({super.key});
 
@@ -64,10 +123,10 @@ class PeopleRootShell extends ConsumerWidget {
           !desktop && workspace.section == PeopleAppSection.people
           ? FloatingActionButton(
               key: const ValueKey('people-add-fab'),
-              onPressed: () => _showPersonForm(context),
+              onPressed: () => _showCreateMenu(context),
               backgroundColor: AppColors.text,
               foregroundColor: AppColors.bg,
-              tooltip: 'Add person',
+              tooltip: 'Create',
               child: const Icon(Icons.add),
             )
           : null,
@@ -119,6 +178,7 @@ class _SectionBody extends StatelessWidget {
         body:
             'Follow-ups, promises, intros, and waiting-on-me items will live here.',
       ),
+      PeopleAppSection.logs => _LogsView(desktop: desktop),
       PeopleAppSection.funnels => const _PlaceholderView(
         icon: Icons.filter_alt_outlined,
         title: 'Funnels',
@@ -165,7 +225,7 @@ class _SideNav extends ConsumerWidget {
             child: SizedBox(
               width: double.infinity,
               child: TextButton(
-                onPressed: () => ref.read(authProvider.notifier).logout(),
+                onPressed: () => _showAppMenu(context, ref),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.text,
                   alignment: Alignment.centerLeft,
@@ -177,7 +237,13 @@ class _SideNav extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('Log Out'),
+                child: const Row(
+                  children: <Widget>[
+                    Icon(Icons.menu, size: 19),
+                    SizedBox(width: 12),
+                    Text('Menu'),
+                  ],
+                ),
               ),
             ),
           ),
@@ -297,14 +363,14 @@ class _PeopleList extends ConsumerWidget {
       children: <Widget>[
         _ViewHeader(
           title: 'People',
-          actionIcon: fullHeight ? Icons.logout : Icons.add,
+          actionIcon: fullHeight ? Icons.menu : Icons.add,
           actionFilled: !fullHeight,
           actionKey: fullHeight
-              ? const ValueKey('people-logout-button')
-              : const ValueKey('people-add-button'),
+              ? const ValueKey('people-menu-button')
+              : const ValueKey('people-create-button'),
           onActionPressed: fullHeight
-              ? () => ref.read(authProvider.notifier).logout()
-              : () => _showPersonForm(context),
+              ? () => _showAppMenu(context, ref)
+              : () => _showCreateMenu(context),
           child: Row(
             children: <Widget>[
               Expanded(
@@ -2209,6 +2275,7 @@ class _MeetingAgenda extends StatelessWidget {
         _ViewHeader(
           title: 'Meetings',
           actionIcon: Icons.add,
+          onActionPressed: () => _showCreateMenu(context),
           child: fullHeight
               ? _MobileMeetingDateCard(
                   selectedOffset: selectedDayOffset,
@@ -2528,6 +2595,230 @@ class _AgendaRow extends ConsumerWidget {
   }
 }
 
+class _LogsView extends ConsumerWidget {
+  const _LogsView({required this.desktop});
+
+  final bool desktop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offset = ref.watch(
+      peopleWorkspaceProvider.select((state) => state.selectedLogDayOffset),
+    );
+    final now = DateTime.now();
+    final day = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(Duration(days: offset));
+    final logsValue = ref.watch(dailyLogsForDayProvider(day));
+    return Column(
+      children: <Widget>[
+        _ViewHeader(
+          title: 'Logs',
+          actionIcon: Icons.add,
+          actionKey: const ValueKey('logs-create-button'),
+          onActionPressed: () => _showCreateMenu(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              const Text(
+                'Daily notes and images from your people work.',
+                style: TextStyle(color: AppColors.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              _LogDateNavigator(offset: offset, day: day),
+            ],
+          ),
+        ),
+        Expanded(
+          child: logsValue.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => _EmptyPanel(
+              title: 'Could not load logs',
+              body: '$error',
+              icon: Icons.error_outline,
+            ),
+            data: (logs) => RefreshIndicator(
+              onRefresh: () async =>
+                  ref.invalidate(dailyLogsForDayProvider(day)),
+              child: logs.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(24),
+                      children: const <Widget>[
+                        _EmptyPanel(
+                          title: 'No logs yet',
+                          body:
+                              'Use the plus button and choose Log to add text, an image, or both.',
+                          icon: Icons.notes_outlined,
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        desktop ? 32 : 18,
+                        20,
+                        desktop ? 32 : 18,
+                        desktop ? 32 : 100,
+                      ),
+                      itemCount: logs.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 14),
+                      itemBuilder: (context, index) =>
+                          _LogCard(log: logs[index]),
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LogDateNavigator extends ConsumerWidget {
+  const _LogDateNavigator({required this.offset, required this.day});
+
+  final int offset;
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(peopleWorkspaceProvider.notifier);
+    final label = offset == 0
+        ? 'Today · ${_month(day.month)} ${day.day}'
+        : '${_weekday(day.weekday)} · ${_month(day.month)} ${day.day}, ${day.year}';
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.subtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: <Widget>[
+          IconButton(
+            key: const ValueKey('logs-previous-day-button'),
+            tooltip: 'Previous day',
+            onPressed: () => notifier.setSelectedLogDayOffset(offset - 1),
+            icon: const Icon(Icons.chevron_left),
+          ),
+          Expanded(
+            child: TextButton(
+              key: const ValueKey('logs-today-button'),
+              onPressed: offset == 0
+                  ? null
+                  : () => notifier.setSelectedLogDayOffset(0),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('logs-next-day-button'),
+            tooltip: 'Next day',
+            onPressed: () => notifier.setSelectedLogDayOffset(offset + 1),
+            icon: const Icon(Icons.chevron_right),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LogCard extends ConsumerWidget {
+  const _LogCard({required this.log});
+
+  final DailyLog log;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entry = log.entry?.trim() ?? '';
+    final rawImageUrl = log.imageUrl?.trim() ?? '';
+    final imageConfig = ref.watch(peopleImageConfigProvider);
+    final imageUrl = _resolvePersonImageUrl(rawImageUrl, imageConfig?.baseUrl);
+    final headers =
+        imageUrl != null &&
+            imageConfig != null &&
+            _shouldAttachPersonImageHeaders(imageUrl, imageConfig.baseUrl)
+        ? imageConfig.headers
+        : null;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppColors.panel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (imageUrl != null)
+            Image.network(
+              imageUrl,
+              headers: headers,
+              height: 230,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const SizedBox(
+                height: 120,
+                child: Center(
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.faint,
+                  ),
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  _logTimestamp(log.loggedAt),
+                  style: const TextStyle(
+                    color: AppColors.faint,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (entry.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    entry,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 14,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _logTimestamp(DateTime value) {
+  String two(int part) => part.toString().padLeft(2, '0');
+  return '${value.year}-${two(value.month)}-${two(value.day)} '
+      '${two(value.hour)}:${two(value.minute)}';
+}
+
 class _PlaceholderView extends StatelessWidget {
   const _PlaceholderView({
     required this.icon,
@@ -2729,6 +3020,506 @@ class _ViewHeader extends StatelessWidget {
           const SizedBox(height: 14),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _CreateMenuSheet extends StatelessWidget {
+  const _CreateMenuSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return _MenuSheet(
+      title: 'Create',
+      children: <Widget>[
+        _MenuOption(
+          key: const ValueKey('create-person-option'),
+          icon: Icons.person_add_alt_1_outlined,
+          label: 'Person',
+          onTap: () => Navigator.of(context).pop(_CreateKind.person),
+        ),
+        _MenuOption(
+          key: const ValueKey('create-meeting-option'),
+          icon: Icons.calendar_month_outlined,
+          label: 'Meeting',
+          onTap: () => Navigator.of(context).pop(_CreateKind.meeting),
+        ),
+        _MenuOption(
+          key: const ValueKey('create-log-option'),
+          icon: Icons.note_add_outlined,
+          label: 'Log',
+          onTap: () => Navigator.of(context).pop(_CreateKind.log),
+        ),
+      ],
+    );
+  }
+}
+
+class _AppMenuSheet extends StatelessWidget {
+  const _AppMenuSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return _MenuSheet(
+      title: 'Menu',
+      children: <Widget>[
+        _MenuOption(
+          key: const ValueKey('menu-funnels-option'),
+          icon: Icons.filter_alt_outlined,
+          label: 'Funnels',
+          onTap: () => Navigator.of(context).pop(_AppMenuAction.funnels),
+        ),
+        _MenuOption(
+          key: const ValueKey('menu-logout-option'),
+          icon: Icons.logout,
+          label: 'Logout',
+          onTap: () => Navigator.of(context).pop(_AppMenuAction.logout),
+        ),
+      ],
+    );
+  }
+}
+
+class _MenuSheet extends StatelessWidget {
+  const _MenuSheet({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 0, 6, 12),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuOption extends StatelessWidget {
+  const _MenuOption({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: ListTile(
+        onTap: onTap,
+        leading: Icon(icon, color: AppColors.muted),
+        title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.faint),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+}
+
+class _MeetingFormSheet extends ConsumerStatefulWidget {
+  const _MeetingFormSheet();
+
+  @override
+  ConsumerState<_MeetingFormSheet> createState() => _MeetingFormSheetState();
+}
+
+class _MeetingFormSheetState extends ConsumerState<_MeetingFormSheet> {
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  int? _personId;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save(List<Person> people) async {
+    final title = _titleController.text.trim();
+    final selectedId =
+        _personId ??
+        ref.read(peopleWorkspaceProvider).activePersonId ??
+        people.firstOrNull?.id;
+    if (title.isEmpty || selectedId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add a title and choose a person.')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(meetingRepositoryProvider)
+          .create(
+            MeetingDraft(
+              title: title,
+              description: _descriptionController.text.trim(),
+              personId: selectedId,
+              startedAt: DateTime.now(),
+            ),
+          );
+      _invalidatePeopleData(ref, personId: selectedId);
+      if (mounted) Navigator.of(context).pop();
+    } catch (error, stackTrace) {
+      debugPrint('Meeting creation failed: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save the meeting: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final peopleValue = ref.watch(recentPeopleProvider);
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(22, 18, 22, 24 + bottomInset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: Text(
+                      'Add Meeting',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                key: const ValueKey('meeting-title-field'),
+                controller: _titleController,
+                enabled: !_saving,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              const SizedBox(height: 12),
+              peopleValue.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Text('Could not load people: $error'),
+                data: (people) {
+                  final activeId = ref
+                      .watch(peopleWorkspaceProvider)
+                      .activePersonId;
+                  final selectedId =
+                      _personId ??
+                      (people.any((person) => person.id == activeId)
+                          ? activeId
+                          : people.firstOrNull?.id);
+                  return DropdownButtonFormField<int>(
+                    key: const ValueKey('meeting-person-field'),
+                    initialValue: selectedId,
+                    decoration: const InputDecoration(labelText: 'Person'),
+                    items: <DropdownMenuItem<int>>[
+                      for (final person in people)
+                        DropdownMenuItem<int>(
+                          value: person.id,
+                          child: Text(person.name),
+                        ),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(() => _personId = value),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('meeting-description-field'),
+                controller: _descriptionController,
+                enabled: !_saving,
+                minLines: 3,
+                maxLines: 6,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                key: const ValueKey('meeting-save-button'),
+                onPressed: _saving ? null : () => peopleValue.whenData(_save),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('Save meeting'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LogFormSheet extends ConsumerStatefulWidget {
+  const _LogFormSheet();
+
+  @override
+  ConsumerState<_LogFormSheet> createState() => _LogFormSheetState();
+}
+
+class _LogFormSheetState extends ConsumerState<_LogFormSheet> {
+  final TextEditingController _entryController = TextEditingController();
+  Uint8List? _imageBytes;
+  String? _imageName;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      withData: true,
+    );
+    if (!mounted || result == null || result.files.isEmpty) return;
+    final selected = result.files.single;
+    final bytes = selected.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      _showError('Could not read that image.');
+      return;
+    }
+    setState(() {
+      _imageBytes = bytes;
+      _imageName = selected.name;
+    });
+  }
+
+  Future<void> _save() async {
+    final entry = _entryController.text.trim();
+    if (entry.isEmpty && _imageBytes == null) {
+      _showError('Add some text, an image, or both.');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      String? imageUrl;
+      final imageBytes = _imageBytes;
+      if (imageBytes != null) {
+        final uploader = ref.read(logImageUploadServiceProvider);
+        if (uploader == null) {
+          throw StateError('Image upload is unavailable while signed out.');
+        }
+        imageUrl = await uploader.upload(
+          bytes: imageBytes,
+          filename: _imageName ?? 'log-image.jpg',
+        );
+      }
+      await ref
+          .read(logRepositoryProvider)
+          .create(
+            DailyLogDraft(
+              loggedAt: DateTime.now(),
+              entry: entry.isEmpty ? null : entry,
+              imageUrl: imageUrl,
+            ),
+          );
+      ref.invalidate(dailyLogsForDayProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (error, stackTrace) {
+      debugPrint('Log creation failed: $error\n$stackTrace');
+      if (mounted) _showError('Could not save the log: $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(22, 18, 22, 24 + bottomInset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: Text(
+                      'Add Log',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                key: const ValueKey('log-entry-field'),
+                controller: _entryController,
+                enabled: !_saving,
+                minLines: 5,
+                maxLines: 10,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  hintText: 'What happened?',
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (_imageBytes case final bytes?) ...<Widget>[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    alignment: Alignment.topRight,
+                    children: <Widget>[
+                      AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Image.memory(
+                          bytes,
+                          key: const ValueKey('log-image-preview'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: IconButton.filled(
+                          key: const ValueKey('log-remove-image-button'),
+                          onPressed: _saving
+                              ? null
+                              : () => setState(() {
+                                  _imageBytes = null;
+                                  _imageName = null;
+                                }),
+                          tooltip: 'Remove image',
+                          icon: const Icon(Icons.close, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else
+                OutlinedButton.icon(
+                  key: const ValueKey('log-add-image-button'),
+                  onPressed: _saving ? null : _pickImage,
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  label: const Text('Add image'),
+                  style: OutlinedButton.styleFrom(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    foregroundColor: AppColors.text,
+                    side: const BorderSide(color: AppColors.lineStrong),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              FilledButton(
+                key: const ValueKey('log-save-button'),
+                onPressed: _saving ? null : _save,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save log'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -4165,9 +4956,9 @@ const _navItems = <_NavItem>[
     badge: '3',
   ),
   _NavItem(
-    section: PeopleAppSection.funnels,
-    label: 'Funnels',
-    icon: Icons.filter_alt_outlined,
+    section: PeopleAppSection.logs,
+    label: 'Logs',
+    icon: Icons.notes_outlined,
   ),
 ];
 
