@@ -19,7 +19,7 @@ class NxMicrophoneOpusStreamer {
   final int channels;
   final FrameTime frameTime;
 
-  final AudioRecorder _recorder = AudioRecorder();
+  late final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription<Uint8List>? _recordingSubscription;
   late final NxPcmOpusStreamEncoder _opusEncoder = NxPcmOpusStreamEncoder(
     sampleRate: sampleRate,

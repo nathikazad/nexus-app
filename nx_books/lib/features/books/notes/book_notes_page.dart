@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_books/data/providers.dart';
 import 'package:nx_books/settings/books_preferences.dart';
+import 'package:nx_books/companion/reading_companion.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -89,6 +90,8 @@ class _NotesPage extends ConsumerWidget {
                 identity: identity,
                 repository: ref.watch(bookNotesRepositoryProvider),
                 textScaleFactor: textScale,
+                onSelectionChanged: (text) =>
+                    ref.read(readingSelectionProvider).value = (identity, text),
                 onOpenLink: (href) => _openNotesLink(context, href),
                 imageUrlResolver: imageBase == null
                     ? null

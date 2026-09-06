@@ -5,6 +5,9 @@ import 'package:nx_books/router.dart';
 import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_books/data/providers.dart';
 import 'package:nx_offline/nx_offline.dart';
+import 'package:nx_books/companion/reading_companion.dart';
+import 'package:nx_db/auth.dart';
+import 'package:nx_documents/nx_documents.dart';
 
 class NexusBooksApp extends ConsumerWidget {
   const NexusBooksApp({super.key});
@@ -12,6 +15,8 @@ class NexusBooksApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final darkMode = ref.watch(booksDarkModeProvider);
+    final router = ref.watch(routerProvider);
+    final user = ref.watch(authProvider).value;
     return OfflineLifecycle(
       synchronize: ref.watch(booksLifecycleSyncProvider),
       onlineChanges: ref.watch(booksOnlineChangesProvider),
@@ -20,7 +25,29 @@ class NexusBooksApp extends ConsumerWidget {
         title: 'Nexus Books',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(dark: darkMode),
-        routerConfig: ref.watch(routerProvider),
+        routerConfig: router,
+        builder: (context, child) => ListenableBuilder(
+          listenable: router.routeInformationProvider,
+          builder: (context, _) {
+            if (user == null) return child!;
+            final parts =
+                router.routeInformationProvider.value.uri.pathSegments;
+            final id = parts.length > 1 ? int.tryParse(parts[1]) : null;
+            final identity = id == null
+                ? null
+                : DocumentIdentity(
+                    id: id,
+                    modelType: parts.first == 'books' ? 'Book' : 'Document',
+                  );
+            return ReadingCompanion(
+              key: ValueKey(
+                '${user.userId}:${identity?.modelType}:${identity?.id}',
+              ),
+              identity: identity,
+              child: child!,
+            );
+          },
+        ),
       ),
     );
   }

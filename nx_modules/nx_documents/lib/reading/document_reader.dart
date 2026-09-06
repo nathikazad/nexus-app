@@ -20,6 +20,7 @@ class DocumentReader extends StatefulWidget {
     this.onOpenLink,
     this.imageUrlResolver,
     this.textScaleFactor = 1,
+    this.onSelectionChanged,
     super.key,
   });
 
@@ -28,6 +29,7 @@ class DocumentReader extends StatefulWidget {
   final Future<bool> Function(String href)? onOpenLink;
   final String Function(String url)? imageUrlResolver;
   final double textScaleFactor;
+  final ValueChanged<String>? onSelectionChanged;
 
   @override
   State<DocumentReader> createState() => _DocumentReaderState();
@@ -66,6 +68,7 @@ class _DocumentReaderState extends State<DocumentReader> {
     _contentFingerprint = _fingerprint(widget.content);
     _editorState = EditorState(document: _documentFromContent(widget.content));
     _editorState.editable = false;
+    _editorState.selectionNotifier.addListener(_selectionChanged);
     _scrollController = EditorScrollController(
       editorState: _editorState,
       shrinkWrap: false,
@@ -82,9 +85,18 @@ class _DocumentReaderState extends State<DocumentReader> {
   }
 
   void _disposeEditor() {
+    _editorState.selectionNotifier.removeListener(_selectionChanged);
     _transactions?.cancel();
     _scrollController.dispose();
     _editorState.dispose();
+  }
+
+  void _selectionChanged() {
+    final selection = _editorState.selection;
+    if (selection == null || selection.isCollapsed) return;
+    widget.onSelectionChanged?.call(
+      _editorState.getTextInSelection(selection).join('\n'),
+    );
   }
 
   Future<void> _saveHighlight() async {

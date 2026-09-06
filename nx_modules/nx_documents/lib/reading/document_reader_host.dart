@@ -11,6 +11,7 @@ class DocumentReaderHost extends StatefulWidget {
     this.imageUrlResolver,
     this.onOpenLink,
     this.textScaleFactor = 1,
+    this.onSelectionChanged,
     super.key,
   });
 
@@ -19,6 +20,7 @@ class DocumentReaderHost extends StatefulWidget {
   final String Function(String url)? imageUrlResolver;
   final Future<bool> Function(String href)? onOpenLink;
   final double textScaleFactor;
+  final ValueChanged<String>? onSelectionChanged;
 
   @override
   State<DocumentReaderHost> createState() => _DocumentReaderHostState();
@@ -120,6 +122,7 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
             imageUrlResolver: widget.imageUrlResolver,
             onOpenLink: widget.onOpenLink,
             textScaleFactor: widget.textScaleFactor,
+            onSelectionChanged: widget.onSelectionChanged,
           ),
         ),
         if (_saveError != null)

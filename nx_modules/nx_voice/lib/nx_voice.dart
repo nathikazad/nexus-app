@@ -1,5 +1,7 @@
 library;
 
+export 'src/voice/document_ai_session.dart';
+
 export 'src/voice/microphone_opus_streamer.dart';
 export 'src/voice/opus_pcm_stream_decoder.dart';
 export 'src/voice/opus_codec.dart';
