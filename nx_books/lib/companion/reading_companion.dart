@@ -471,34 +471,34 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                 ),
               ),
             if (_layoutPickerOpen)
-              Positioned.fill(
+              Positioned(
+                left: 0,
+                top: 0,
+                width: 48.0 * PanelLayout.values.length,
+                height: 48,
                 child: CompositedTransformFollower(
                   link: _layoutButtonLink,
-                  targetAnchor: Alignment.bottomLeft,
-                  followerAnchor: Alignment.topLeft,
+                  targetAnchor: Alignment.bottomRight,
+                  followerAnchor: Alignment.topRight,
                   showWhenUnlinked: false,
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      key: const ValueKey('panel-layout-picker'),
-                      elevation: 16,
-                      borderRadius: BorderRadius.circular(24),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (final option in PanelLayout.values)
-                            IconButton(
-                              tooltip: option.label,
-                              isSelected: option == layout,
-                              onPressed: () => setState(() {
-                                _panelLayoutIndex = option.index;
-                                _layoutPickerOpen = false;
-                              }),
-                              icon: PanelLayoutIcon(layout: option),
-                            ),
-                        ],
-                      ),
+                  child: Material(
+                    key: const ValueKey('panel-layout-picker'),
+                    elevation: 16,
+                    borderRadius: BorderRadius.circular(24),
+                    clipBehavior: Clip.antiAlias,
+                    child: Row(
+                      children: [
+                        for (final option in PanelLayout.values)
+                          IconButton(
+                            tooltip: option.label,
+                            isSelected: option == layout,
+                            onPressed: () => setState(() {
+                              _panelLayoutIndex = option.index;
+                              _layoutPickerOpen = false;
+                            }),
+                            icon: PanelLayoutIcon(layout: option),
+                          ),
+                      ],
                     ),
                   ),
                 ),

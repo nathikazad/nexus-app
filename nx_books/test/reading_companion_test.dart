@@ -311,8 +311,9 @@ void main() {
     final picker = tester.getRect(
       find.byKey(const ValueKey('panel-layout-picker')),
     );
-    expect(picker.left, closeTo(layoutButton.left, 1));
+    expect(picker.right, closeTo(layoutButton.right, 1));
     expect(picker.top, closeTo(layoutButton.bottom, 1));
+    expect(picker.width, greaterThan(picker.height * 4));
     expect(find.byType(PanelLayoutIcon), findsNWidgets(6));
     await tester.tap(find.byTooltip('Expanded panel'));
     await tester.pump();
