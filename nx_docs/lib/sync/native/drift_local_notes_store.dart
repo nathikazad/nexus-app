@@ -1,4 +1,6 @@
+import 'dart:isolate';
 import 'package:drift/drift.dart';
+import 'package:nx_offline/nx_offline_storage.dart';
 import 'package:nx_docs/sync/native/local_notes_store.dart';
 import 'package:nx_docs/sync/outbox_coalescer.dart';
 import 'package:nx_docs/sync/native/drift_document_mapper.dart';
@@ -7,15 +9,125 @@ import 'package:nx_docs/library/models/catalog_query.dart';
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/sync/sync_models.dart';
 
-class DriftLocalNotesStore implements LocalNotesStore {
+class DriftLocalNotesStore implements LocalNotesStore, QueuedDocumentReader {
   DriftLocalNotesStore({
     required this.database,
     required this.accountKey,
     this.mapper = const DriftDocumentMapper(),
     this.coalescer = const OutboxCoalescer(),
+    this.files,
   });
 
   final NotesDatabase database;
+  final ContentFiles? files;
+  Future<void>? _migration;
+
+  Future<LocalDocumentsCompanion> _toDocumentCompanion(
+    LocalDocument local,
+  ) async {
+    final codec = mapper;
+    final row = files != null && local.document.document.length > 32768
+        ? await _encodeDocumentOffThread(codec, local)
+        : codec.toDocumentCompanion(local);
+    final storage = files;
+    if (storage == null) return row;
+    final reference = await storage.write(
+      'documents',
+      local.key.localId,
+      row.documentJson.value,
+    );
+    return row.copyWith(documentJson: Value(reference));
+  }
+
+  Future<LocalDocument> _fromDocumentRow(LocalDocumentRow row) async {
+    final storage = files;
+    if (storage == null) return mapper.fromDocumentRow(row);
+    final json = await storage.read(row.documentJson);
+    if (!isContentReference(row.documentJson)) {
+      final reference = await storage.write('documents', row.localId, json);
+      await (database.update(database.localDocuments)..where(
+            (t) =>
+                t.accountKey.equals(accountKey) &
+                t.localId.equals(row.localId) &
+                t.documentJson.equals(row.documentJson),
+          ))
+          .write(LocalDocumentsCompanion(documentJson: Value(reference)));
+    }
+    final decodedRow = row.copyWith(documentJson: json);
+    final codec = mapper;
+    return json.length > 65536
+        ? _decodeDocumentOffThread(codec, decodedRow)
+        : codec.fromDocumentRow(decodedRow);
+  }
+
+  /// Export one bounded page at a time; interrupted migrations resume safely.
+  Future<void> migrateContent() => _migration ??= _migrateContent().catchError((
+    Object error,
+    StackTrace stack,
+  ) {
+    _migration = null;
+    Error.throwWithStackTrace(error, stack);
+  });
+
+  Future<void> _migrateContent() async {
+    if (files == null) return;
+    String after = '';
+    while (true) {
+      final rows =
+          await (database.select(database.localDocuments)
+                ..where(
+                  (t) =>
+                      t.accountKey.equals(accountKey) &
+                      t.localId.isBiggerThanValue(after),
+                )
+                ..orderBy([(t) => OrderingTerm.asc(t.localId)])
+                ..limit(25))
+              .get();
+      if (rows.isEmpty) break;
+      for (final row in rows) {
+        if (!isContentReference(row.documentJson)) await _fromDocumentRow(row);
+      }
+      after = rows.last.localId;
+    }
+    await _migrateAuxiliary('local_snapshots', 'snapshot_id', [
+      'document_json',
+    ]);
+    await _migrateAuxiliary('sync_conflicts', 'local_id', [
+      'local_document_json',
+      'remote_document_json',
+    ]);
+  }
+
+  Future<void> _migrateAuxiliary(
+    String table,
+    String idColumn,
+    List<String> columns,
+  ) async {
+    var after = '';
+    while (true) {
+      final rows = await database
+          .customSelect(
+            'SELECT $idColumn, ${columns.join(', ')} FROM $table WHERE account_key=? AND $idColumn>? ORDER BY $idColumn LIMIT 25',
+            variables: [Variable(accountKey), Variable(after)],
+          )
+          .get();
+      if (rows.isEmpty) return;
+      for (final row in rows) {
+        final id = row.read<String>(idColumn);
+        for (final column in columns) {
+          final old = row.read<String>(column);
+          if (isContentReference(old)) continue;
+          final reference = await files!.write(table, id, old);
+          await database.customStatement(
+            'UPDATE $table SET $column=? WHERE account_key=? AND $idColumn=? AND $column=?',
+            [reference, accountKey, id, old],
+          );
+        }
+      }
+      after = rows.last.read<String>(idColumn);
+    }
+  }
+
   @override
   final String accountKey;
   final DriftDocumentMapper mapper;
@@ -24,8 +136,15 @@ class DriftLocalNotesStore implements LocalNotesStore {
   @override
   Future<LocalDocument?> getDocument(DocumentKey key) async {
     final row = await _documentQuery(key.localId).getSingleOrNull();
-    return row == null ? null : mapper.fromDocumentRow(row);
+    return row == null ? null : await _fromDocumentRow(row);
   }
+
+  Future<LocalDocumentRow?> _rowByRemoteId(int remoteId) =>
+      (database.select(database.localDocuments)..where(
+            (t) =>
+                t.accountKey.equals(accountKey) & t.remoteId.equals(remoteId),
+          ))
+          .getSingleOrNull();
 
   @override
   Future<LocalDocument?> getDocumentByRemoteId(int remoteId) async {
@@ -36,34 +155,51 @@ class DriftLocalNotesStore implements LocalNotesStore {
                   table.remoteId.equals(remoteId),
             ))
             .getSingleOrNull();
-    return row == null ? null : mapper.fromDocumentRow(row);
+    return row == null ? null : await _fromDocumentRow(row);
   }
 
   @override
   Stream<LocalDocument?> watchDocument(DocumentKey key) {
-    return _documentQuery(key.localId).watchSingleOrNull().map(
-      (row) => row == null ? null : mapper.fromDocumentRow(row),
+    return _documentQuery(key.localId).watchSingleOrNull().asyncMap(
+      (row) async => row == null ? null : await _fromDocumentRow(row),
     );
   }
 
   @override
   Stream<List<DocumentSummary>> watchCatalog(CatalogQuery query) {
     if (!query.persistsMembership) {
-      final select = database.select(database.documentSummaries)
-        ..where(
-          (table) =>
-              table.accountKey.equals(accountKey) &
-              table.deletedLocally.equals(false),
-        )
-        ..orderBy(<OrderingTerm Function(DocumentSummaries)>[
-          (table) => OrderingTerm.desc(table.remoteUpdatedAt),
-        ]);
-      return select.watch().map(
-        (rows) => _filterSummaries(
-          rows.map(_summaryFromRow).toList(growable: false),
-          query,
-        ),
-      );
+      final variables = <Variable>[Variable(accountKey)];
+      var predicate = 'account_key = ? AND deleted_locally = 0';
+      final search = query.searchText.trim().toLowerCase();
+      if (search.isNotEmpty) {
+        predicate +=
+            " AND instr(lower(json_extract(document_json, '\$.title') || ' ' || "
+            "json_extract(document_json, '\$.excerpt') || ' ' || "
+            "json_extract(document_json, '\$.tags_by_system')), ?) > 0";
+        variables.add(Variable(search));
+      }
+      if (query.tagFilter case final tag?) {
+        predicate +=
+            " AND EXISTS (SELECT 1 FROM json_each(document_json, '\$.tags_by_system') systems, "
+            "json_each(systems.value) tags WHERE systems.key = ? AND tags.value = ?)";
+        variables.addAll([Variable(tag.system), Variable(tag.node)]);
+      }
+      // Filter inside SQLite: do not deserialize every document summary for
+      // each search keystroke. Only matching rows cross the isolate boundary.
+      return database
+          .customSelect(
+            'SELECT * FROM document_summaries WHERE $predicate '
+            'ORDER BY remote_updated_at DESC, remote_id DESC',
+            variables: variables,
+            readsFrom: {database.documentSummaries},
+          )
+          .watch()
+          .asyncMap(
+            (rows) async => [
+              for (final row in rows)
+                _summaryFromRow(database.documentSummaries.map(row.data)),
+            ],
+          );
     }
     final memberships = database.catalogMemberships;
     final summaries = database.documentSummaries;
@@ -80,7 +216,11 @@ class DriftLocalNotesStore implements LocalNotesStore {
                 memberships.catalogKey.equals(query.cacheKey) &
                 summaries.deletedLocally.equals(false),
           )
-          ..orderBy(<OrderingTerm>[OrderingTerm.asc(memberships.position)]);
+          ..orderBy(<OrderingTerm>[
+            OrderingTerm.desc(summaries.remoteUpdatedAt),
+            OrderingTerm.desc(summaries.remoteId),
+          ]);
+    if (query.limit != null) select.limit(query.limit!);
     return select.watch().map(
       (rows) => <DocumentSummary>[
         for (final row in rows) _summaryFromRow(row.readTable(summaries)),
@@ -109,9 +249,9 @@ class DriftLocalNotesStore implements LocalNotesStore {
       for (var index = 0; index < summaries.length; index++) {
         final summary = summaries[index];
         final remoteId = summary.id;
-        final existing = await getDocumentByRemoteId(remoteId);
+        final existing = await _rowByRemoteId(remoteId);
         if (existing == null ||
-            existing.syncState == DocumentSyncState.synced) {
+            existing.syncState == DocumentSyncState.synced.name) {
           await _upsertSummary(summary);
         }
         await database
@@ -153,35 +293,34 @@ class DriftLocalNotesStore implements LocalNotesStore {
         );
         await database
             .into(database.localDocuments)
-            .insertOnConflictUpdate(mapper.toDocumentCompanion(local));
+            .insertOnConflictUpdate(await _toDocumentCompanion(local));
         await _upsertBodySummary(
           remote.document,
           deletedLocally: remote.deleted,
         );
       }
-      await _rebuildDefaultCatalogs();
     });
   }
 
   @override
   Future<List<DocumentManifestEntry>> documentManifest() async {
+    await migrateContent();
+    final table = database.localDocuments;
     final rows =
-        await (database.select(database.localDocuments)
+        await (database.selectOnly(table)
+              ..addColumns([table.remoteId, table.serverHash])
               ..where(
-                (table) =>
-                    table.accountKey.equals(accountKey) &
+                table.accountKey.equals(accountKey) &
                     table.remoteId.isNotNull() &
                     table.deletedLocally.equals(false),
               )
-              ..orderBy(<OrderingTerm Function(LocalDocuments)>[
-                (table) => OrderingTerm.asc(table.remoteId),
-              ]))
+              ..orderBy([OrderingTerm.asc(table.remoteId)]))
             .get();
-    return <DocumentManifestEntry>[
+    return [
       for (final row in rows)
         DocumentManifestEntry(
-          documentId: row.remoteId!,
-          serverHash: row.serverHash,
+          documentId: row.read(table.remoteId)!,
+          serverHash: row.read(table.serverHash),
         ),
     ];
   }
@@ -192,13 +331,18 @@ class DriftLocalNotesStore implements LocalNotesStore {
       for (final remote in bundle.documents) {
         final remoteId = remote.key.remoteId;
         if (remoteId == null) continue;
-        final existing = await getDocumentByRemoteId(remoteId);
+        final existing = await _rowByRemoteId(remoteId);
         if (existing != null &&
-            existing.syncState != DocumentSyncState.synced) {
+            existing.syncState != DocumentSyncState.synced.name) {
           continue;
         }
         final key =
-            existing?.key ??
+            (existing == null
+                ? null
+                : DocumentKey(
+                    localId: existing.localId,
+                    remoteId: existing.remoteId,
+                  )) ??
             DocumentKey(localId: 'remote-$remoteId', remoteId: remoteId);
         final local = LocalDocument(
           key: key,
@@ -212,14 +356,14 @@ class DriftLocalNotesStore implements LocalNotesStore {
         );
         await database
             .into(database.localDocuments)
-            .insertOnConflictUpdate(mapper.toDocumentCompanion(local));
+            .insertOnConflictUpdate(await _toDocumentCompanion(local));
         await _upsertBodySummary(remote.document);
       }
 
       for (final remoteId in bundle.deletedIds) {
-        final existing = await getDocumentByRemoteId(remoteId);
+        final existing = await _rowByRemoteId(remoteId);
         if (existing != null &&
-            existing.syncState == DocumentSyncState.synced) {
+            existing.syncState == DocumentSyncState.synced.name) {
           await (database.delete(database.localDocuments)..where(
                 (table) =>
                     table.accountKey.equals(accountKey) &
@@ -228,7 +372,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
               .go();
         }
         if (existing == null ||
-            existing.syncState == DocumentSyncState.synced) {
+            existing.syncState == DocumentSyncState.synced.name) {
           await (database.delete(database.documentSummaries)..where(
                 (table) =>
                     table.accountKey.equals(accountKey) &
@@ -243,8 +387,6 @@ class DriftLocalNotesStore implements LocalNotesStore {
               .go();
         }
       }
-
-      await _rebuildDefaultCatalogs();
     });
   }
 
@@ -274,7 +416,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
       await database
           .into(database.localDocuments)
           .insertOnConflictUpdate(
-            mapper.toDocumentCompanion(
+            await _toDocumentCompanion(
               LocalDocument(
                 key: stableKey,
                 accountKey: accountKey,
@@ -317,7 +459,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
       await database
           .into(database.localDocuments)
           .insertOnConflictUpdate(
-            mapper.toDocumentCompanion(
+            await _toDocumentCompanion(
               LocalDocument(
                 key: DocumentKey(
                   localId: operation.aggregateId,
@@ -361,9 +503,10 @@ class DriftLocalNotesStore implements LocalNotesStore {
             ? DocumentSyncState.synced
             : DocumentSyncState.queued,
       );
+      final companion = await _toDocumentCompanion(saved);
       await database
           .into(database.localDocuments)
-          .insertOnConflictUpdate(mapper.toDocumentCompanion(saved));
+          .insertOnConflictUpdate(companion);
       final remoteId = saved.key.remoteId;
       if (remoteId != null) {
         await _upsertBodySummary(
@@ -380,9 +523,19 @@ class DriftLocalNotesStore implements LocalNotesStore {
       if (next != null) {
         await database
             .into(database.syncOutbox)
-            .insertOnConflictUpdate(mapper.toOperationCompanion(next));
+            .insertOnConflictUpdate(
+              mapper.toOperationCompanion(
+                files == null
+                    ? next
+                    : next.copyWith(
+                        payload: {
+                          ...next.payload,
+                          'body_ref': companion.documentJson.value,
+                        },
+                      ),
+              ),
+            );
       }
-      await _rebuildDefaultCatalogs();
     });
   }
 
@@ -479,7 +632,7 @@ class DriftLocalNotesStore implements LocalNotesStore {
       await database
           .into(database.localDocuments)
           .insertOnConflictUpdate(
-            mapper.toDocumentCompanion(
+            await _toDocumentCompanion(
               LocalDocument(
                 key: DocumentKey(
                   localId: row.aggregateId,
@@ -578,6 +731,10 @@ class DriftLocalNotesStore implements LocalNotesStore {
         .write(LocalDocumentsCompanion(syncState: Value<String>(state.name)));
   }
 
+  @override
+  Future<NxDocument> readQueuedDocument(String reference) async =>
+      mapper.documentFromJsonString(await files!.read(reference));
+
   void _validateWrite(LocalDocument document, PendingOperation operation) {
     if (document.accountKey != accountKey ||
         operation.accountKey != accountKey) {
@@ -604,7 +761,13 @@ class DriftLocalNotesStore implements LocalNotesStore {
           DocumentSummariesCompanion.insert(
             accountKey: accountKey,
             remoteId: summary.id,
-            documentJson: mapper.documentToJsonString(summary.toDocument()),
+            documentJson: mapper.documentToJsonString(
+              summary.toDocument().copyWith(
+                excerpt: summary.excerpt.length > 320
+                    ? summary.excerpt.substring(0, 320)
+                    : summary.excerpt,
+              ),
+            ),
             remoteUpdatedAt: summary.updatedAt,
             deletedLocally: Value<bool>(deletedLocally),
           ),
@@ -618,118 +781,49 @@ class DriftLocalNotesStore implements LocalNotesStore {
     final summary = DocumentSummary.fromDocument(document);
     await _upsertSummary(summary, deletedLocally: deletedLocally);
 
-    final membershipRows =
-        await (database.select(database.catalogMemberships)..where(
-              (table) =>
-                  table.accountKey.equals(accountKey) &
-                  table.catalogKey.like('pinned:%'),
-            ))
-            .get();
-    final catalogKeys = <String>{
-      const CatalogQuery.pinned().cacheKey,
-      const CatalogQuery.pinned(limit: 50).cacheKey,
-      for (final row in membershipRows) row.catalogKey,
-    };
-    await (database.delete(database.catalogMemberships)..where(
-          (table) =>
-              table.accountKey.equals(accountKey) &
-              table.catalogKey.like('pinned:%') &
-              table.remoteId.equals(document.id),
-        ))
-        .go();
-    if (!document.pinned || deletedLocally) return;
-    for (final catalogKey in catalogKeys) {
-      await database
-          .into(database.catalogMemberships)
-          .insertOnConflictUpdate(
-            CatalogMembershipsCompanion.insert(
-              accountKey: accountKey,
-              catalogKey: catalogKey,
-              remoteId: document.id,
-              position: -1,
-            ),
-          );
+    // Membership stores only eligibility. Ordering/limits are applied at read time.
+    for (final query in const [
+      CatalogQuery.all(),
+      CatalogQuery.recent(),
+      CatalogQuery.pinned(),
+      CatalogQuery.pinned(limit: 50),
+      CatalogQuery.books(),
+    ]) {
+      final eligible =
+          !deletedLocally &&
+          (query.kind != CatalogKind.pinned || document.pinned) &&
+          (query.kind != CatalogKind.books || document.isBook);
+      await (database.delete(database.catalogMemberships)..where(
+            (t) =>
+                t.accountKey.equals(accountKey) &
+                t.catalogKey.equals(query.cacheKey) &
+                t.remoteId.equals(document.id),
+          ))
+          .go();
+      if (eligible) {
+        await database
+            .into(database.catalogMemberships)
+            .insertOnConflictUpdate(
+              CatalogMembershipsCompanion.insert(
+                accountKey: accountKey,
+                catalogKey: query.cacheKey,
+                remoteId: document.id,
+                position: 0,
+              ),
+            );
+      }
     }
-  }
-
-  Future<void> _rebuildDefaultCatalogs() async {
-    final rows =
-        await (database.select(database.documentSummaries)
-              ..where(
-                (table) =>
-                    table.accountKey.equals(accountKey) &
-                    table.deletedLocally.equals(false),
-              )
-              ..orderBy(<OrderingTerm Function(DocumentSummaries)>[
-                (table) => OrderingTerm.desc(table.remoteUpdatedAt),
-              ]))
-            .get();
-    final summaries = rows.map(_summaryFromRow).toList(growable: false);
-    await _replaceMembershipRows(const CatalogQuery.all(), summaries);
-    await _replaceMembershipRows(
-      const CatalogQuery.recent(),
-      summaries.take(20).toList(growable: false),
-    );
-    await _replaceMembershipRows(
-      const CatalogQuery.pinned(),
-      summaries
-          .where((summary) => summary.pinned)
-          .take(20)
-          .toList(growable: false),
-    );
-    await _replaceMembershipRows(
-      const CatalogQuery.books(),
-      summaries.where((summary) => summary.isBook).toList(growable: false),
-    );
-  }
-
-  Future<void> _replaceMembershipRows(
-    CatalogQuery query,
-    List<DocumentSummary> summaries,
-  ) async {
-    await (database.delete(database.catalogMemberships)..where(
-          (table) =>
-              table.accountKey.equals(accountKey) &
-              table.catalogKey.equals(query.cacheKey),
-        ))
-        .go();
-    for (var index = 0; index < summaries.length; index++) {
-      await database
-          .into(database.catalogMemberships)
-          .insert(
-            CatalogMembershipsCompanion.insert(
-              accountKey: accountKey,
-              catalogKey: query.cacheKey,
-              remoteId: summaries[index].id,
-              position: index,
-            ),
-          );
-    }
-  }
-
-  List<DocumentSummary> _filterSummaries(
-    List<DocumentSummary> rows,
-    CatalogQuery query,
-  ) {
-    final search = query.searchText.trim().toLowerCase();
-    return rows
-        .where((summary) {
-          if (search.isNotEmpty &&
-              !<String>[
-                summary.title,
-                summary.excerpt,
-                ...summary.tagsBySystem.values.expand((tags) => tags),
-              ].join(' ').toLowerCase().contains(search)) {
-            return false;
-          }
-          final tag = query.tagFilter;
-          if (tag != null &&
-              !(summary.tagsBySystem[tag.system]?.contains(tag.node) ??
-                  false)) {
-            return false;
-          }
-          return true;
-        })
-        .toList(growable: false);
   }
 }
+
+// Keep worker closures outside the store's lexical scope. A closure created
+// beside a database callback can otherwise capture its unsendable connection.
+Future<LocalDocumentsCompanion> _encodeDocumentOffThread(
+  DriftDocumentMapper codec,
+  LocalDocument local,
+) => Isolate.run(() => codec.toDocumentCompanion(local));
+
+Future<LocalDocument> _decodeDocumentOffThread(
+  DriftDocumentMapper codec,
+  LocalDocumentRow row,
+) => Isolate.run(() => codec.fromDocumentRow(row));

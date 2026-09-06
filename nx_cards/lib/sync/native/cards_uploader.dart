@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:nx_cards/sync/native/card_outbox.dart';
+import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
 import 'package:nx_cards/scheduling/clock.dart' as cards;
 import 'package:nx_cards/sync/native/local_cards_store.dart';
@@ -35,7 +36,11 @@ final class CardMutationHandler implements offline.MutationHandler {
         ),
       );
     }
-    final card = await localStore.getCard(cardId);
+    final reader = localStore;
+    final reference = mutation.payload['body_ref'];
+    final card = reader is QueuedCardReader && reference is String
+        ? await (reader as QueuedCardReader).readQueuedCard(cardId, reference)
+        : await localStore.getCard(cardId);
     if (card == null) {
       throw offline.SyncTransportException(
         offline.SyncFailure(
@@ -66,7 +71,12 @@ final class CardMutationHandler implements offline.MutationHandler {
           ),
         ),
     });
-    final snapshot = await transport.syncCards();
+    // Accepted writes already describe the local version. Only a rejected
+    // write needs canonical remote content; do not download the whole library
+    // after every review.
+    final snapshot = result.status == CardMutationStatus.stale
+        ? await transport.syncCards()
+        : null;
     return offline.MutationReceipt(
       operationId: mutation.operationId,
       entityKey: mutation.entityKey,

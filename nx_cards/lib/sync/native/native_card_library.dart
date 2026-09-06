@@ -91,6 +91,9 @@ final class NativeCardLibrary implements CardWorkspace {
 
   @override
   Future<void> saveSchedule(StudyCard card) async {
+    if (card.isSummary) {
+      throw StateError('Load the full card before reviewing.');
+    }
     final existing = await _requireCard(card.id);
     await _enqueue(
       existing.copyWith(

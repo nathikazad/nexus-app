@@ -167,10 +167,15 @@ final class DocumentMutationHandler implements offline.MutationHandler {
       );
     }
 
+    final reader = localStore;
+    final reference = mutation.payload['body_ref'];
+    final document = reader is QueuedDocumentReader && reference is String
+        ? await (reader as QueuedDocumentReader).readQueuedDocument(reference)
+        : local.document;
     return switch (mutation.type) {
-      offline.MutationType.create => _create(mutation, local.document),
-      offline.MutationType.update => _update(mutation, local.document),
-      offline.MutationType.delete => _delete(mutation, local.document),
+      offline.MutationType.create => _create(mutation, document),
+      offline.MutationType.update => _update(mutation, document),
+      offline.MutationType.delete => _delete(mutation, document),
       offline.MutationType.relation =>
         throw const offline.SyncTransportException(
           offline.SyncFailure(

@@ -5,6 +5,7 @@ part 'cards_database.g.dart';
 
 @DataClassName('LocalStudyCardRow')
 class LocalStudyCards extends Table {
+  TextColumn get contentRef => text().nullable()();
   TextColumn get accountKey => text()();
   IntColumn get remoteId => integer()();
   TextColumn get modelType => text()();
@@ -38,7 +39,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +48,9 @@ class CardsDatabase extends _$CardsDatabase {
       await DriftOutboxPersistence.createSchema(this);
     },
     onUpgrade: (migrator, from, to) async {
+      if (from < 10) {
+        await migrator.addColumn(localStudyCards, localStudyCards.contentRef);
+      }
       if (from < 2) {
         await migrator.addColumn(localStudyCards, localStudyCards.examplesJson);
       }

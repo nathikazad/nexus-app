@@ -1,17 +1,105 @@
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:nx_offline/nx_offline_storage.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
+import 'package:nx_db/kgql.dart';
+import 'package:nx_books/data/offline/books_library_sync.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_books/data/book/kgql_book_repository.dart';
+import 'package:nx_books/data/offline/cached_book_repository.dart';
+import 'package:nx_books/data/offline/cached_document_repository.dart';
 import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/domain/book/book_repository.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_documents/nx_documents.dart';
 
-final bookRepositoryProvider = Provider<BookRepository>((ref) {
-  return KgqlBookRepository(client: ref.watch(graphqlClientProvider));
+final booksFileLibraryProvider = Provider<FileLibrary?>((ref) {
+  if (kIsWeb) return null;
+  final user = ref.watch(authProvider).value;
+  if (user == null) return null;
+  final library = FileLibrary.application(
+    'nx_books:nexus-primary:${user.userId}',
+  );
+  ref.onDispose(() => unawaited(library.close()));
+  return library;
 });
 
-final booksProvider = FutureProvider<List<NxBook>>((ref) {
-  return ref.watch(bookRepositoryProvider).listBooks();
+final bookRepositoryProvider = Provider<BookRepository>((ref) {
+  final userId = ref.watch(authProvider).value?.userId ?? 'last-session';
+  return CachedBookRepository(
+    remote: KgqlBookRepository(client: ref.watch(graphqlClientProvider)),
+    accountKey: userId,
+    library: ref.watch(booksFileLibraryProvider),
+  );
+});
+
+final bookDocumentRepositoryProvider =
+    Provider<CachedDocumentContentRepository>((ref) {
+      final userId = ref.watch(authProvider).value?.userId ?? 'last-session';
+      return CachedDocumentContentRepository(
+        remote: KgqlDocumentContentRepository(
+          client: ref.watch(graphqlClientProvider),
+          auditSourceKind: 'nx_books',
+        ),
+        accountKey: userId,
+        library: ref.watch(booksFileLibraryProvider),
+      );
+    });
+
+final offlineBookHydrationEnabledProvider = Provider<bool>((ref) => true);
+
+final booksLibrarySyncProvider =
+    Provider<offline.SyncSupervisor<DocumentIdentity>?>((ref) {
+      if (kIsWeb ||
+          !ref.watch(offlineBookHydrationEnabledProvider) ||
+          ref.watch(authProvider).value == null) {
+        return null;
+      }
+      final client = ref.watch(graphqlClientProvider);
+      final sync = offline.SyncSupervisor<DocumentIdentity>(
+        reconciler: BooksLibraryPull(
+          repository: ref.watch(bookDocumentRepositoryProvider),
+          discover: () async {
+            final revisions = <DocumentIdentity, DateTime?>{};
+            for (final type in ['Book', 'Document']) {
+              final models = await fetchKgqlModels(
+                client,
+                filter: {'model_type': type},
+                struct: const {'id': true, 'updated_at': true},
+              );
+              for (final model in models) {
+                revisions[DocumentIdentity(id: model.id, modelType: type)] =
+                    DateTime.tryParse(model.updatedAt ?? '');
+              }
+            }
+            return revisions;
+          },
+        ),
+      );
+      ref.onDispose(() => unawaited(sync.close()));
+      return sync;
+    });
+
+final booksLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
+  final sync = ref.watch(booksLibrarySyncProvider);
+  return sync?.requestFull;
+});
+
+final booksOnlineChangesProvider = Provider<Stream<bool>?>((ref) {
+  if (ref.watch(booksLibrarySyncProvider) == null) return null;
+  return Connectivity().onConnectivityChanged
+      .map(
+        (results) => results.any((result) => result != ConnectivityResult.none),
+      )
+      .distinct();
+});
+
+final booksProvider = FutureProvider<List<NxBook>>((ref) async {
+  final books = await ref.watch(bookRepositoryProvider).listBooks();
+  return books;
 });
 
 final topicTagsProvider = FutureProvider<List<String>>((ref) {

@@ -21,10 +21,12 @@ class Person {
     required this.tags,
     this.tagsBySystem = const <String, List<String>>{},
     required this.meetings,
+    this.actualMeetings = const <PersonMeeting>[],
     required this.planned,
     required this.summary,
     required this.desires,
-    required this.currentThreads,
+    this.currentThreads = const <PersonThread>[],
+    this.conversations = const <PersonConversation>[],
     required this.logs,
     required this.relatedIds,
     this.imageUrl = '',
@@ -51,10 +53,12 @@ class Person {
   final List<String> tags;
   final Map<String, List<String>> tagsBySystem;
   final List<String> meetings;
+  final List<PersonMeeting> actualMeetings;
   final List<String> planned;
   final String summary;
   final List<String> desires;
   final List<PersonThread> currentThreads;
+  final List<PersonConversation> conversations;
   final List<PersonLog> logs;
   final List<int> relatedIds;
   final String imageUrl;
@@ -100,10 +104,12 @@ class Person {
     List<String>? tags,
     Map<String, List<String>>? tagsBySystem,
     List<String>? meetings,
+    List<PersonMeeting>? actualMeetings,
     List<String>? planned,
     String? summary,
     List<String>? desires,
     List<PersonThread>? currentThreads,
+    List<PersonConversation>? conversations,
     List<PersonLog>? logs,
     List<int>? relatedIds,
     String? imageUrl,
@@ -130,10 +136,12 @@ class Person {
       tags: tags ?? this.tags,
       tagsBySystem: tagsBySystem ?? this.tagsBySystem,
       meetings: meetings ?? this.meetings,
+      actualMeetings: actualMeetings ?? this.actualMeetings,
       planned: planned ?? this.planned,
       summary: summary ?? this.summary,
       desires: desires ?? this.desires,
       currentThreads: currentThreads ?? this.currentThreads,
+      conversations: conversations ?? this.conversations,
       logs: logs ?? this.logs,
       relatedIds: relatedIds ?? this.relatedIds,
       imageUrl: imageUrl ?? this.imageUrl,
@@ -143,6 +151,13 @@ class Person {
       suggestions: suggestions ?? this.suggestions,
     );
   }
+}
+
+class PersonMeeting {
+  const PersonMeeting({required this.name, required this.startTime});
+
+  final String name;
+  final DateTime startTime;
 }
 
 class PersonContact {
@@ -190,6 +205,30 @@ class PersonThread {
 
   final String title;
   final String body;
+}
+
+class PersonConversation {
+  const PersonConversation({
+    required this.id,
+    required this.name,
+    required this.summary,
+    required this.provider,
+    required this.externalAccountId,
+    required this.externalThreadId,
+    required this.responsePending,
+    this.lastMessageAt,
+    this.lastSyncedAt,
+  });
+
+  final int id;
+  final String name;
+  final String summary;
+  final String provider;
+  final String externalAccountId;
+  final String externalThreadId;
+  final bool responsePending;
+  final DateTime? lastMessageAt;
+  final DateTime? lastSyncedAt;
 }
 
 class PersonLog {

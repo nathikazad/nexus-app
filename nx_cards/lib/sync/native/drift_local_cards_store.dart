@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:nx_offline/nx_offline_storage.dart';
 
 import 'package:drift/drift.dart';
 import 'package:nx_cards/sync/native/card_outbox.dart';
@@ -9,14 +11,135 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/nx_offline_drift.dart';
 
-final class DriftLocalCardsStore implements LocalCardsStore {
-  const DriftLocalCardsStore({
+final class DriftLocalCardsStore implements LocalCardsStore, QueuedCardReader {
+  DriftLocalCardsStore({
     required this.database,
     required this.account,
+    this.files,
     this.mapper = const DriftCardsMapper(),
   });
 
   final CardsDatabase database;
+  final ContentFiles? files;
+  Future<void>? _migration;
+
+  Future<LocalStudyCardsCompanion> _cardToCompanion(
+    StudyCard card, {
+    required String accountKey,
+    required CardLocalSyncState syncState,
+    bool deletedLocally = false,
+  }) async {
+    final row = mapper.cardToCompanion(
+      card,
+      accountKey: accountKey,
+      syncState: syncState,
+      deletedLocally: deletedLocally,
+    );
+    final storage = files;
+    if (storage == null) return row;
+    final body = jsonEncode({
+      'front': row.front.value,
+      'back': row.back.value,
+      'examples': row.examplesJson.value,
+      'history': row.reviewHistoryJson.value,
+      'schedule': row.scheduleJson.value,
+      'tags': row.tagsJson.value,
+      'linked': row.linkedWordIdsJson.value,
+      'suspended': row.suspended.value,
+      'learning_status': row.learningStatus.value,
+      'updated_at': row.updatedAt.value?.toUtc().toIso8601String(),
+      'model_type': row.modelType.value,
+      'transliteration': row.transliteration.value,
+      'audio_url': row.audioUrl.value,
+      'source_book_id': row.sourceBookId.value,
+      'source_book_name': row.sourceBookName.value,
+    });
+    final reference = await storage.write('cards', '${card.id}', body);
+    return row.copyWith(
+      contentRef: Value(reference),
+      front: Value(
+        card.front.length > 320 ? card.front.substring(0, 320) : card.front,
+      ),
+      back: Value(
+        card.back.length > 320 ? card.back.substring(0, 320) : card.back,
+      ),
+      examplesJson: const Value('[]'),
+      // The UI supports windows up to ten answers. Keep only that bounded
+      // projection per cue; full history remains in the immutable body file.
+      reviewHistoryJson: Value(
+        jsonEncode({
+          'items': [
+            for (final cue in StudyCue.values)
+              ...((card.reviewHistoryFor(cue).toList()
+                    ..sort((a, b) => b.reviewedAt.compareTo(a.reviewedAt)))
+                  .take(10)
+                  .map((r) => {...r.toJson(), 'cue': cue.storageKey})),
+          ],
+        }),
+      ),
+    );
+  }
+
+  Future<StudyCard> _cardFromRow(LocalStudyCardRow row) async {
+    if (row.contentRef == null) return mapper.cardFromRow(row);
+    final json = jsonDecode(await files!.read(row.contentRef!)) as Map;
+    return mapper.cardFromRow(
+      row.copyWith(
+        scheduleJson: json['schedule'] as String? ?? row.scheduleJson,
+        tagsJson: json['tags'] as String? ?? row.tagsJson,
+        linkedWordIdsJson: json['linked'] as String? ?? row.linkedWordIdsJson,
+        suspended: json['suspended'] as bool? ?? row.suspended,
+        learningStatus:
+            json['learning_status'] as String? ?? row.learningStatus,
+        updatedAt: Value(
+          json.containsKey('updated_at')
+              ? DateTime.tryParse(json['updated_at']?.toString() ?? '')
+              : row.updatedAt,
+        ),
+        modelType: json['model_type'] as String? ?? row.modelType,
+        transliteration: Value(json['transliteration'] as String?),
+        audioUrl: Value(json['audio_url'] as String?),
+        sourceBookId: Value(json['source_book_id'] as int?),
+        sourceBookName: Value(json['source_book_name'] as String?),
+        front: json['front'] as String,
+        back: json['back'] as String,
+        examplesJson: json['examples'] as String,
+        reviewHistoryJson: json['history'] as String,
+      ),
+    );
+  }
+
+  Future<void> migrateContent() => _migration ??= _migrate();
+  Future<void> _migrate() async {
+    if (files == null) return;
+    while (true) {
+      final rows =
+          await (database.select(database.localStudyCards)
+                ..where(
+                  (t) =>
+                      t.accountKey.equals(_accountKey) & t.contentRef.isNull(),
+                )
+                ..limit(25))
+              .get();
+      if (rows.isEmpty) return;
+      for (final row in rows) {
+        final next = await _cardToCompanion(
+          mapper.cardFromRow(row),
+          accountKey: _accountKey,
+          syncState: CardLocalSyncState.values.byName(row.syncState),
+          deletedLocally: row.deletedLocally,
+        );
+        await (database.update(database.localStudyCards)..where(
+              (t) =>
+                  t.accountKey.equals(_accountKey) &
+                  t.remoteId.equals(row.remoteId) &
+                  t.contentRef.isNull(),
+            ))
+            .write(next);
+      }
+    }
+  }
+
   @override
   final AccountIdentity account;
   final DriftCardsMapper mapper;
@@ -26,7 +149,8 @@ final class DriftLocalCardsStore implements LocalCardsStore {
       DriftOutboxPersistence(database: database, account: account);
 
   @override
-  Stream<CardsDashboard> watchDashboard() {
+  Stream<CardsDashboard> watchDashboard() async* {
+    await migrateContent();
     final cardStream =
         (database.select(database.localStudyCards)..where(
               (table) =>
@@ -34,11 +158,12 @@ final class DriftLocalCardsStore implements LocalCardsStore {
                   table.deletedLocally.equals(false),
             ))
             .watch();
-    return cardStream.map(_dashboard);
+    yield* cardStream.asyncMap(_dashboard);
   }
 
   @override
   Future<CardsDashboard> readDashboard() async {
+    await migrateContent();
     final rows =
         await (database.select(database.localStudyCards)..where(
               (table) =>
@@ -53,7 +178,15 @@ final class DriftLocalCardsStore implements LocalCardsStore {
   Future<StudyCard?> getCard(int cardId) async {
     final row = await _cardQuery(cardId).getSingleOrNull();
     if (row == null) return null;
-    return mapper.cardFromRow(row);
+    return _cardFromRow(row);
+  }
+
+  @override
+  Future<StudyCard?> readQueuedCard(int cardId, String reference) async {
+    final row = await _cardQuery(cardId).getSingleOrNull();
+    return row == null
+        ? null
+        : _cardFromRow(row.copyWith(contentRef: Value(reference)));
   }
 
   @override
@@ -68,7 +201,7 @@ final class DriftLocalCardsStore implements LocalCardsStore {
       await database
           .into(database.localStudyCards)
           .insertOnConflictUpdate(
-            mapper.cardToCompanion(
+            await _cardToCompanion(
               card,
               accountKey: _accountKey,
               syncState: CardLocalSyncState.synced,
@@ -94,6 +227,9 @@ final class DriftLocalCardsStore implements LocalCardsStore {
     required MutationType mutationType,
     required DateTime createdAt,
   }) async {
+    if (card.isSummary) {
+      throw StateError('Cannot save a card projection as full content.');
+    }
     if (mutationType != MutationType.update &&
         mutationType != MutationType.delete) {
       throw ArgumentError('Cards currently enqueue only update or delete');
@@ -102,7 +238,7 @@ final class DriftLocalCardsStore implements LocalCardsStore {
       await database
           .into(database.localStudyCards)
           .insertOnConflictUpdate(
-            mapper.cardToCompanion(
+            await _cardToCompanion(
               card,
               accountKey: _accountKey,
               syncState: CardLocalSyncState.queued,
@@ -118,6 +254,8 @@ final class DriftLocalCardsStore implements LocalCardsStore {
           type: mutationType,
           payload: <String, Object?>{
             'client_updated_at': createdAt.toUtc().toIso8601String(),
+            if (files != null)
+              'body_ref': (await _cardQuery(card.id).getSingle()).contentRef,
           },
           createdAt: createdAt.toUtc(),
         ),
@@ -203,9 +341,10 @@ final class DriftLocalCardsStore implements LocalCardsStore {
   @override
   Future<DateTime?> nextRetryAt() => _outbox.nextRetryAt();
 
-  CardsDashboard _dashboard(List<LocalStudyCardRow> cardRows) {
+  Future<CardsDashboard> _dashboard(List<LocalStudyCardRow> cardRows) async {
     final cards = <StudyCard>[
-      for (final row in cardRows) mapper.cardFromRow(row),
+      for (final row in cardRows)
+        mapper.cardFromRow(row).copyWith(isSummary: row.contentRef != null),
     ];
     return CardsDashboard(cards: cards);
   }

@@ -64,6 +64,7 @@ export 'src/models/data/transcript/transcript_providers.dart';
 export 'goals.dart';
 export 'documents.dart';
 export 'cards.dart';
+export 'external_messages.dart';
 
 // Logs / telemetry
 export 'src/logs/log_models.dart';

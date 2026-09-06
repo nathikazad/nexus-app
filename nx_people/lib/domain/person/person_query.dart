@@ -49,11 +49,13 @@ class PersonDraft {
     required this.name,
     required this.summary,
     this.desires = const <String>[],
+    this.contacts = const <PersonContact>[],
   });
 
   final String name;
   final String summary;
   final List<String> desires;
+  final List<PersonContact> contacts;
 }
 
 class PeopleTagSystem {

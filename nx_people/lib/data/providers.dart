@@ -5,8 +5,11 @@ import 'package:nx_db/auth.dart'
         nexusHttpClientProvider,
         nexusRequestHeadersProvider,
         userIdProvider;
+import 'package:nx_db/external_messages.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_people/data/log/kgql_log_repository.dart';
+import 'package:nx_people/data/conversation/conversation_repository.dart';
+import 'package:nx_people/data/conversation/conversation_attachment_service.dart';
 import 'package:nx_people/data/log/log_image_upload_service.dart';
 import 'package:nx_people/data/meeting/kgql_meeting_repository.dart';
 import 'package:nx_people/data/person/kgql_people_repository.dart';
@@ -42,6 +45,28 @@ final peopleRepositoryProvider = Provider<PersonRepository>((ref) {
   );
 });
 
+final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
+  return ConversationRepository(client: ref.watch(graphqlClientProvider));
+});
+
+final conversationAttachmentServiceProvider =
+    Provider<ConversationAttachmentService?>((ref) {
+      final baseUrl = ref.watch(imageBaseUrlProvider);
+      final client = ref.watch(nexusHttpClientProvider);
+      if (baseUrl == null || baseUrl.trim().isEmpty || client == null) {
+        return null;
+      }
+      return ConversationAttachmentService(baseUrl: baseUrl, client: client);
+    });
+
+final conversationMessagesProvider =
+    FutureProvider.family<List<ExternalMessage>, PersonConversation>((
+      ref,
+      conversation,
+    ) {
+      return ref.watch(conversationRepositoryProvider).loadAll(conversation);
+    });
+
 final logRepositoryProvider = Provider<LogRepository>((ref) {
   return KgqlLogRepository(client: ref.watch(graphqlClientProvider));
 });
@@ -53,7 +78,9 @@ final meetingRepositoryProvider = Provider<MeetingRepository>((ref) {
 final logImageUploadServiceProvider = Provider<LogImageUploadService?>((ref) {
   final baseUrl = ref.watch(imageBaseUrlProvider);
   final client = ref.watch(nexusHttpClientProvider);
-  if (baseUrl == null || baseUrl.trim().isEmpty || client == null) return null;
+  if (baseUrl == null || baseUrl.trim().isEmpty || client == null) {
+    return null;
+  }
   return LogImageUploadService(baseUrl: baseUrl, client: client);
 });
 
@@ -62,7 +89,7 @@ final dailyLogsForDayProvider = FutureProvider.family<List<DailyLog>, DateTime>(
 );
 
 final recentPeopleProvider = FutureProvider<List<Person>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listRecent(limit: 20),
+  (ref) => ref.watch(peopleRepositoryProvider).listRecent(limit: 200),
 );
 
 final pinnedPeopleProvider = FutureProvider<List<Person>>(

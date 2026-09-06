@@ -11,6 +11,7 @@ void main() {
       overrides: [
         dbAuditSourceKindProvider.overrideWithValue('nx_books'),
         nexusClientAppIdProvider.overrideWithValue('nx_books'),
+        retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
       ],
       child: const NexusBooksApp(),
     ),

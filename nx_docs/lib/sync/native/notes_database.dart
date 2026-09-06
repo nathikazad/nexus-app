@@ -126,11 +126,19 @@ class NotesDatabase extends _$NotesDatabase {
   NotesDatabase(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
+
+  Future<void> _createProjectionIndexes() => customStatement(
+    'CREATE INDEX IF NOT EXISTS document_summary_order ON document_summaries '
+    '(account_key, deleted_locally, remote_updated_at DESC, remote_id DESC)',
+  );
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (migrator) => migrator.createAll(),
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await _createProjectionIndexes();
+    },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) await migrator.createTable(localSnapshots);
       if (from < 3) await migrator.createTable(catalogMemberships);
@@ -156,6 +164,34 @@ class NotesDatabase extends _$NotesDatabase {
       }
       if (from < 5) {
         await migrator.addColumn(localDocuments, localDocuments.serverHash);
+      }
+      if (from < 6) {
+        await _createProjectionIndexes();
+        await customStatement("""
+          UPDATE document_summaries SET document_json = json_set(
+            document_json, '\$.document', '', '\$.json_document', json('{}'),
+            '\$.excerpt', substr(json_extract(document_json, '\$.excerpt'), 1, 320))
+          """);
+        // Previous recent/pinned memberships were truncated on write. Rebuild
+        // eligibility once; future edits update only their own membership.
+        for (final key in [
+          'all',
+          'recent:20',
+          'pinned:20',
+          'pinned:50',
+          'books:all',
+        ]) {
+          final predicate = key.startsWith('pinned')
+              ? "AND json_extract(document_json, '\$.pinned') = 1"
+              : key.startsWith('books')
+              ? "AND json_extract(document_json, '\$.model_type_name') = 'Book'"
+              : '';
+          await customStatement(
+            'INSERT OR IGNORE INTO catalog_memberships (account_key, catalog_key, remote_id, position) '
+            'SELECT account_key, ?, remote_id, 0 FROM document_summaries WHERE deleted_locally = 0 $predicate',
+            [key],
+          );
+        }
       }
     },
   );

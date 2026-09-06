@@ -69,6 +69,7 @@ void main() {
         final fixture = ModelType.fromJson(_expenseMtJson(), recursive: true);
         final container = ProviderContainer(
           overrides: [
+            expenseFileCacheProvider.overrideWithValue(null),
             expenseSchemaProvider.overrideWith((ref) async => fixture),
           ],
         );
@@ -103,6 +104,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -143,6 +145,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            expenseFileCacheProvider.overrideWithValue(null),
             authProvider.overrideWith(_AuthLoggedIn.new),
             graphqlClientProvider.overrideWithValue(mock),
           ],
@@ -186,6 +189,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -232,6 +236,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -283,6 +288,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -326,6 +332,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -372,6 +379,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            expenseFileCacheProvider.overrideWithValue(null),
             authProvider.overrideWith(_AuthLoggedIn.new),
             graphqlClientProvider.overrideWithValue(mock),
           ],
@@ -409,6 +417,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -452,6 +461,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            expenseFileCacheProvider.overrideWithValue(null),
             authProvider.overrideWith(_AuthLoggedIn.new),
             graphqlClientProvider.overrideWithValue(mock),
           ],
@@ -499,6 +509,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -532,6 +543,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -558,6 +570,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -589,6 +602,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          expenseFileCacheProvider.overrideWithValue(null),
           authProvider.overrideWith(_AuthLoggedIn.new),
           graphqlClientProvider.overrideWithValue(mock),
         ],
@@ -635,6 +649,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            expenseFileCacheProvider.overrideWithValue(null),
             authProvider.overrideWith(_AuthLoggedIn.new),
             graphqlClientProvider.overrideWithValue(mock),
           ],

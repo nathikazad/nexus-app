@@ -4,6 +4,7 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
+import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/language_examples.dart';
 
@@ -26,6 +27,7 @@ class CardDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
+  StudyCard? _loadedCard;
   StudyCue? _selectedCue;
   late CardDetailsTab _selectedTab;
 
@@ -37,7 +39,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
 
   List<StudyCue> get _reviewedCues => [
     for (final cue in StudyCue.values)
-      if (widget.card.reviewHistoryFor(cue).isNotEmpty) cue,
+      if ((_loadedCard ?? widget.card).reviewHistoryFor(cue).isNotEmpty) cue,
   ];
 
   StudyCue? get _visibleCue {
@@ -51,7 +53,21 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final card = widget.card;
+    final body = widget.card.isSummary
+        ? ref.watch(cardBodyProvider(widget.card))
+        : null;
+    if (body != null && !body.hasValue) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Card details')),
+        body: Center(
+          child: body.hasError
+              ? Text('Could not open card: ${body.error}')
+              : const CircularProgressIndicator(),
+        ),
+      );
+    }
+    final card = body?.value ?? widget.card;
+    _loadedCard = card;
     final languageContent = switch (card.content) {
       final LanguageCardContent content => content,
       _ => null,

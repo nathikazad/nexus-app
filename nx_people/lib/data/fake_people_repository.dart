@@ -261,10 +261,11 @@ class FakePeopleRepository implements PersonRepository {
           : draft.summary.trim(),
       desires: draft.desires,
       currentThreads: existing?.currentThreads ?? const <PersonThread>[],
+      conversations: existing?.conversations ?? const <PersonConversation>[],
       logs: existing?.logs ?? const <PersonLog>[],
       relatedIds: existing?.relatedIds ?? const <int>[],
       imageUrl: existing?.imageUrl ?? '',
-      contacts: existing?.contacts ?? const <PersonContact>[],
+      contacts: draft.contacts,
       workRelations:
           existing?.workRelations ?? const <PersonBackgroundRelation>[],
       educationRelations:
@@ -388,6 +389,18 @@ const _samplePeople = <Person>[
         title: 'Ask about hiring graph',
         body:
             'She mentioned a hiring CRM problem that maps closely to KGQL people relations.',
+      ),
+    ],
+    conversations: <PersonConversation>[
+      PersonConversation(
+        id: 101,
+        name: 'Send notes prototype',
+        summary:
+            'Promised to share the notes UI once the back-navigation flow is tightened.',
+        provider: 'whatsapp',
+        externalAccountId: 'demo',
+        externalThreadId: 'sarah-chen',
+        responsePending: true,
       ),
     ],
     logs: <PersonLog>[

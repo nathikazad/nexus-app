@@ -1,5 +1,6 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
+import 'package:nx_expense/data/expense/expense_file_cache.dart';
 
 import 'package:nx_expense/data/expense/expense_attr_keys.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
@@ -20,12 +21,24 @@ String _dateOnlyYmd(DateTime d) =>
 class KgqlExpenseRepository implements ExpenseRepository {
   KgqlExpenseRepository({
     required GraphQLClient client,
+    this.cache,
     required Future<ModelType> Function() loadExpenseSchema,
   }) : _client = client,
        _loadExpenseSchema = loadExpenseSchema;
 
   final GraphQLClient _client;
+  final ExpenseFileCache? cache;
   final Future<ModelType> Function() _loadExpenseSchema;
+
+  Future<Map<String, dynamic>> _aggregate(
+    GraphQLClient client,
+    Map<String, dynamic> filter,
+    Map<String, dynamic> operation,
+  ) {
+    Future<Map<String, dynamic>> load() =>
+        getKgqlAggregate(client, filter, operation);
+    return cache?.aggregate(filter, operation, load) ?? load();
+  }
 
   @override
   Future<List<Expense>> list({
@@ -57,8 +70,9 @@ class KgqlExpenseRepository implements ExpenseRepository {
         {'key': 'date', 'op': '<=', 'value': _dateOnlyYmd(rangeEnd)},
       ],
     };
-    final rows = await fetchKgqlModels(
+    final rows = await fetchStoredModels(
       _client,
+      cache: cache,
       filter: filterMap,
       struct: struct,
     );
@@ -69,8 +83,9 @@ class KgqlExpenseRepository implements ExpenseRepository {
   Future<Expense?> getById(int id) async {
     final schema = await _loadExpenseSchema();
     final struct = buildExpenseDetailStruct(schema);
-    final m = await fetchKgqlModelById(
+    final m = await fetchStoredModelById(
       _client,
+      cache: cache,
       modelTypeName: kExpenseModelTypeName,
       id: id,
       struct: struct,
@@ -81,12 +96,15 @@ class KgqlExpenseRepository implements ExpenseRepository {
   @override
   Future<int> upsert(ExpenseUpsert payload) async {
     final req = buildExpenseSetModelRequest(payload);
-    return setKgqlModel(_client, req);
+    final id = await setKgqlModel(_client, req);
+    await cache?.invalidate();
+    return id;
   }
 
   @override
   Future<void> deleteById(int id) async {
     await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+    await cache?.invalidate();
   }
 
   @override
@@ -163,7 +181,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         .map((a) => a.key!)
         .firstOrNull;
 
-    final countMap = await getKgqlAggregate(
+    final countMap = await _aggregate(
       _client,
       {'model_type': kExpenseModelTypeName},
       {'metric': 'count', 'key': null, 'group': null},
@@ -172,7 +190,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
 
     num? sum;
     if (key != null) {
-      final sumMap = await getKgqlAggregate(
+      final sumMap = await _aggregate(
         _client,
         {'model_type': kExpenseModelTypeName},
         {'metric': 'sum', 'key': key, 'group': null},
@@ -198,7 +216,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
       rangeEnd: rangeEnd,
     );
 
-    final countMap = await getKgqlAggregate(_client, filterKgql, {
+    final countMap = await _aggregate(_client, filterKgql, {
       'metric': 'count',
       'key': null,
       'group': null,
@@ -207,7 +225,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
 
     num? sum;
     if (key != null) {
-      final sumMap = await getKgqlAggregate(_client, filterKgql, {
+      final sumMap = await _aggregate(_client, filterKgql, {
         'metric': 'sum',
         'key': key,
         'group': null,
@@ -229,7 +247,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         .map((a) => a.key!)
         .firstOrNull;
     if (key == null) return {};
-    return getKgqlAggregate(
+    return _aggregate(
       _client,
       _dashboardFilter(rangeStart: rangeStart, rangeEnd: rangeEnd),
       {
@@ -270,7 +288,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
     if (parentNode != null) group['node'] = parentNode;
     if (level != null) group['level'] = level;
 
-    return getKgqlAggregate(_client, filter, {
+    return _aggregate(_client, filter, {
       'metric': 'sum',
       'key': key,
       'group': group,
@@ -290,7 +308,7 @@ class KgqlExpenseRepository implements ExpenseRepository {
         .firstOrNull;
     if (key == null) return {};
 
-    return getKgqlAggregate(
+    return _aggregate(
       _client,
       _dashboardFilter(rangeStart: rangeStart, rangeEnd: rangeEnd),
       {
@@ -308,8 +326,9 @@ class KgqlExpenseRepository implements ExpenseRepository {
   }) async {
     final schema = await _loadExpenseSchema();
     final struct = buildExpenseListStruct(schema);
-    final rows = await fetchKgqlModels(
+    final rows = await fetchStoredModels(
       _client,
+      cache: cache,
       filter: {
         'model_type': kExpenseModelTypeName,
         'filters': [

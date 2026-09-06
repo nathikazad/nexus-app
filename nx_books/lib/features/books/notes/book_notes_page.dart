@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nx_books/data/providers.dart';
+import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_db/auth.dart';
-import 'package:nx_db/riverpod.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final bookNotesRepositoryProvider = Provider<DocumentContentRepository>((ref) {
-  return KgqlDocumentContentRepository(
-    client: ref.watch(graphqlClientProvider),
-    auditSourceKind: 'nx_books',
-  );
+  return ref.watch(bookDocumentRepositoryProvider);
 });
 
 final bookNotesImageBaseProvider = Provider<Uri?>((ref) {
@@ -65,6 +63,7 @@ class _NotesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final imageBase = ref.watch(bookNotesImageBaseProvider);
+    final textScale = ref.watch(booksTextScaleProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -89,6 +88,7 @@ class _NotesPage extends ConsumerWidget {
               child: DocumentReaderHost(
                 identity: identity,
                 repository: ref.watch(bookNotesRepositoryProvider),
+                textScaleFactor: textScale,
                 onOpenLink: (href) => _openNotesLink(context, href),
                 imageUrlResolver: imageBase == null
                     ? null

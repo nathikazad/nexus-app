@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
+import 'package:nx_expense/data/expense/expense_file_cache.dart';
 
 import 'package:nx_expense/domain/expense/model_names.dart';
 import 'package:nx_expense/domain/order/order.dart';
@@ -12,11 +13,13 @@ String _dateOnlyYmd(DateTime d) =>
 class KgqlOrderRepository {
   KgqlOrderRepository({
     required GraphQLClient client,
+    this.cache,
     required Future<ModelType> Function() loadOrderSchema,
   }) : _client = client,
        _loadOrderSchema = loadOrderSchema;
 
   final GraphQLClient _client;
+  final ExpenseFileCache? cache;
   final Future<ModelType> Function() _loadOrderSchema;
 
   Future<List<Order>> list({
@@ -24,8 +27,9 @@ class KgqlOrderRepository {
     required DateTime rangeEnd,
   }) async {
     final schema = await _loadOrderSchema();
-    final rows = await fetchKgqlModels(
+    final rows = await fetchStoredModels(
       _client,
+      cache: cache,
       filter: {
         'model_type': kOrderModelTypeName,
         'filters': [
@@ -40,8 +44,9 @@ class KgqlOrderRepository {
 
   Future<Order?> getById(int id) async {
     final schema = await _loadOrderSchema();
-    final m = await fetchKgqlModelById(
+    final m = await fetchStoredModelById(
       _client,
+      cache: cache,
       modelTypeName: kOrderModelTypeName,
       id: id,
       struct: _orderStruct(schema),

@@ -66,3 +66,7 @@ abstract interface class LocalNotesStore {
     required DateTime retryAt,
   });
 }
+
+abstract interface class QueuedDocumentReader {
+  Future<NxDocument> readQueuedDocument(String reference);
+}

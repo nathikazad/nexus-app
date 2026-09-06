@@ -17,3 +17,7 @@ abstract interface class LocalCardsStore implements OutboxStore {
     required DateTime createdAt,
   });
 }
+
+abstract interface class QueuedCardReader {
+  Future<StudyCard?> readQueuedCard(int cardId, String reference);
+}

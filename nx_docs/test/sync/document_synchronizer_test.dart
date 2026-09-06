@@ -66,6 +66,19 @@ void main() {
   });
 
   test(
+    'full sync discovers headers and keeps body requests to twenty items',
+    () async {
+      for (var id = 3; id <= 45; id++) {
+        remote.replaceRemote(offlineTestDocument(id: id));
+      }
+      await synchronizer.syncLibrary();
+      expect(remote.catalogFetchCount, 1);
+      expect(remote.syncScopes.map((scope) => scope!.length), [20, 20, 5]);
+      expect((await local.documentManifest()).length, 45);
+    },
+  );
+
+  test(
     'library sync downloads both documents and books for offline use',
     () async {
       remote.replaceRemote(

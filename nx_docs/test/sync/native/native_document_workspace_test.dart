@@ -105,7 +105,7 @@ void main() {
       await workspace.syncLibrary();
 
       expect(remote.syncCount, 2);
-      expect(remote.catalogFetchCount, 0);
+      expect(remote.catalogFetchCount, 1); // Header discovery precedes body pages.
       expect(
         (await local.readCatalog(
           const CatalogQuery.books(),

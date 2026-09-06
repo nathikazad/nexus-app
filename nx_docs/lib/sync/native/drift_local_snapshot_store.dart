@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:nx_offline/nx_offline_storage.dart';
 import 'package:nx_docs/sync/native/local_snapshot_store.dart';
 import 'package:nx_docs/sync/native/drift_document_mapper.dart';
 import 'package:nx_docs/sync/native/notes_database.dart';
@@ -6,13 +7,15 @@ import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/sync/sync_models.dart';
 
 class DriftLocalSnapshotStore implements LocalSnapshotStore {
-  const DriftLocalSnapshotStore({
+  DriftLocalSnapshotStore({
     required this.database,
     required this.accountKey,
     this.mapper = const DriftDocumentMapper(),
-  });
+    ContentFiles? files,
+  }) : files = files ?? ContentFiles.application('nx_docs:$accountKey');
 
   final NotesDatabase database;
+  final ContentFiles files;
   @override
   final String accountKey;
   final DriftDocumentMapper mapper;
@@ -31,7 +34,11 @@ class DriftLocalSnapshotStore implements LocalSnapshotStore {
             localId: Value<String>(snapshot.documentKey.localId),
             remoteId: Value<int?>(snapshot.documentKey.remoteId),
             documentJson: Value<String>(
-              mapper.documentToJsonString(snapshot.document),
+              await files.write(
+                'snapshots',
+                snapshot.snapshotId,
+                mapper.documentToJsonString(snapshot.document),
+              ),
             ),
             createdAt: Value<DateTime>(snapshot.createdAt),
             source: Value<String>(snapshot.source),
@@ -52,20 +59,24 @@ class DriftLocalSnapshotStore implements LocalSnapshotStore {
                 (table) => OrderingTerm.desc(table.createdAt),
               ]))
             .get();
-    return rows
-        .map(
-          (row) => LocalSnapshot(
-            snapshotId: row.snapshotId,
-            accountKey: row.accountKey,
-            documentKey: DocumentKey(
-              localId: row.localId,
-              remoteId: row.remoteId,
+    return Future.wait(
+      rows
+          .map(
+            (row) async => LocalSnapshot(
+              snapshotId: row.snapshotId,
+              accountKey: row.accountKey,
+              documentKey: DocumentKey(
+                localId: row.localId,
+                remoteId: row.remoteId,
+              ),
+              document: mapper.documentFromJsonString(
+                await files.read(row.documentJson),
+              ),
+              createdAt: row.createdAt,
+              source: row.source,
             ),
-            document: mapper.documentFromJsonString(row.documentJson),
-            createdAt: row.createdAt,
-            source: row.source,
-          ),
-        )
-        .toList();
+          )
+          .toList(),
+    );
   }
 }

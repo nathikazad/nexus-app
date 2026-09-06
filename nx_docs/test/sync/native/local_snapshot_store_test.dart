@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:drift/native.dart';
+import 'package:nx_offline/src/storage/content_files_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_docs/sync/native/drift_local_snapshot_store.dart';
 import 'package:nx_docs/sync/native/notes_database.dart';
@@ -17,11 +19,16 @@ void main() {
   group('DriftLocalSnapshotStore contract', () {
     runLocalSnapshotStoreContract(
       createStore: () async {
+        final directory = await Directory.systemTemp.createTemp(
+          'nx-snapshot-contract-',
+        );
+        addTearDown(() => directory.delete(recursive: true));
         final database = NotesDatabase(NativeDatabase.memory());
         addTearDown(database.close);
         return DriftLocalSnapshotStore(
           database: database,
           accountKey: 'prod:user-1',
+          files: DirectoryContentFiles(directory),
         );
       },
     );

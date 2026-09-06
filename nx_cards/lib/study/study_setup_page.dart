@@ -512,9 +512,16 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _order == StudyOrder.shuffle) {
         selected.shuffle(Random.secure());
       }
-      return selected
-          .take(min(_count, selected.length))
-          .toList(growable: false);
+      final hydrated = <StudyPrompt>[];
+      for (final prompt in selected.take(min(_count, selected.length))) {
+        hydrated.add(
+          StudyPrompt(
+            card: await hydrateStudyCard(ref, prompt.card),
+            cue: prompt.cue,
+          ),
+        );
+      }
+      return hydrated;
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -527,7 +534,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     }
   }
 
-  void _openStudySheet() {
+  Future<void> _openStudySheet() async {
     final cards =
         (_isBookStudy
                 ? _bookCandidates.map((prompt) => prompt.card)
@@ -537,11 +544,25 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final selected = cards
         .take(min(_count, cards.length))
         .toList(growable: false);
+    final hydrated = <StudyCard>[];
+    try {
+      for (final card in selected) {
+        hydrated.add(await hydrateStudyCard(ref, card));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open study sheet: $error')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => LanguageStudyPage(
           title: widget.title,
-          cards: selected,
+          cards: hydrated,
           itemLabel: _isBookStudy ? 'cards' : null,
         ),
       ),
@@ -575,12 +596,16 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         }
         return;
       }
+      final hydrated = <StudyCard>[];
+      for (final card in selected) {
+        hydrated.add(await hydrateStudyCard(ref, card));
+      }
       if (!mounted) return;
       final completed = await Navigator.of(context).push<bool>(
         MaterialPageRoute<bool>(
           builder: (_) => ScriptDrawPracticePage(
             title: widget.title,
-            cards: selected,
+            cards: hydrated,
             audioRepository: ref.read(cardAudioRepositoryProvider),
           ),
         ),

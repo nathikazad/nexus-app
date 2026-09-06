@@ -48,7 +48,11 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
     return _catalogs
         .putIfAbsent(
           query,
-          () => _NativeCatalogFeed(query: query, localStore: _localStore),
+          () => _NativeCatalogFeed(
+            query: query,
+            localStore: _localStore,
+            onUnused: () => _catalogs.remove(query),
+          ),
         )
         .watch();
   }
@@ -78,7 +82,9 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
 
   @override
   Future<void> ensureDocumentAvailable(int documentId) {
-    return openDocument(documentId).refresh();
+    final active = _sessions[documentId];
+    if (active != null) return active.refresh();
+    return _synchronizer.requestDocuments({documentId});
   }
 
   @override
@@ -152,10 +158,15 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
 }
 
 final class _NativeCatalogFeed {
-  _NativeCatalogFeed({required this.query, required LocalNotesStore localStore})
-    : _localStore = localStore;
+  _NativeCatalogFeed({
+    required this.query,
+    required LocalNotesStore localStore,
+    required this.onUnused,
+  }) : _localStore = localStore;
 
   final CatalogQuery query;
+  final void Function() onUnused;
+  int _listeners = 0;
   final LocalNotesStore _localStore;
   final StreamController<CatalogState> _states =
       StreamController<CatalogState>.broadcast(sync: true);
@@ -165,34 +176,43 @@ final class _NativeCatalogFeed {
   bool _closed = false;
 
   Stream<CatalogState> watch() async* {
-    if (!_started) {
-      _started = true;
-      final cached = await _localStore.readCatalog(query);
-      _state = CatalogState(
-        items: cached,
-        isInitialLoading: false,
-        isRefreshing: false,
-      );
-      _localSubscription = _localStore
-          .watchCatalog(query)
-          .listen(
-            (items) {
-              _emit(
-                _state.copyWith(
-                  items: items,
-                  isInitialLoading: false,
-                  isRefreshing: false,
-                  clearError: true,
-                ),
-              );
-            },
-            onError: (Object error, StackTrace stackTrace) {
-              _emit(_state.copyWith(error: error, isInitialLoading: false));
-            },
-          );
+    _listeners++;
+    try {
+      if (!_started) {
+        _started = true;
+        final cached = await _localStore.readCatalog(query);
+        _state = CatalogState(
+          items: cached,
+          isInitialLoading: false,
+          isRefreshing: false,
+        );
+        _localSubscription = _localStore
+            .watchCatalog(query)
+            .listen(
+              (items) {
+                _emit(
+                  _state.copyWith(
+                    items: items,
+                    isInitialLoading: false,
+                    isRefreshing: false,
+                    clearError: true,
+                  ),
+                );
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                _emit(_state.copyWith(error: error, isInitialLoading: false));
+              },
+            );
+      }
+      yield _state;
+      yield* _states.stream;
+    } finally {
+      _listeners--;
+      if (_listeners == 0 && !_closed) {
+        onUnused();
+        await close();
+      }
     }
-    yield _state;
-    yield* _states.stream;
   }
 
   Future<void> refresh() {

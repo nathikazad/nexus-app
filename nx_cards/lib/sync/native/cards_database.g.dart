@@ -9,6 +9,17 @@ class $LocalStudyCardsTable extends LocalStudyCards
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $LocalStudyCardsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _contentRefMeta = const VerificationMeta(
+    'contentRef',
+  );
+  @override
+  late final GeneratedColumn<String> contentRef = GeneratedColumn<String>(
+    'content_ref',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _accountKeyMeta = const VerificationMeta(
     'accountKey',
   );
@@ -237,6 +248,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
   );
   @override
   List<GeneratedColumn> get $columns => [
+    contentRef,
     accountKey,
     remoteId,
     modelType,
@@ -270,6 +282,12 @@ class $LocalStudyCardsTable extends LocalStudyCards
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('content_ref')) {
+      context.handle(
+        _contentRefMeta,
+        contentRef.isAcceptableOrUnknown(data['content_ref']!, _contentRefMeta),
+      );
+    }
     if (data.containsKey('account_key')) {
       context.handle(
         _accountKeyMeta,
@@ -446,6 +464,10 @@ class $LocalStudyCardsTable extends LocalStudyCards
   LocalStudyCardRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return LocalStudyCardRow(
+      contentRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_ref'],
+      ),
       accountKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}account_key'],
@@ -537,6 +559,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
 
 class LocalStudyCardRow extends DataClass
     implements Insertable<LocalStudyCardRow> {
+  final String? contentRef;
   final String accountKey;
   final int remoteId;
   final String modelType;
@@ -558,6 +581,7 @@ class LocalStudyCardRow extends DataClass
   final String syncState;
   final bool deletedLocally;
   const LocalStudyCardRow({
+    this.contentRef,
     required this.accountKey,
     required this.remoteId,
     required this.modelType,
@@ -582,6 +606,9 @@ class LocalStudyCardRow extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || contentRef != null) {
+      map['content_ref'] = Variable<String>(contentRef);
+    }
     map['account_key'] = Variable<String>(accountKey);
     map['remote_id'] = Variable<int>(remoteId);
     map['model_type'] = Variable<String>(modelType);
@@ -619,6 +646,9 @@ class LocalStudyCardRow extends DataClass
 
   LocalStudyCardsCompanion toCompanion(bool nullToAbsent) {
     return LocalStudyCardsCompanion(
+      contentRef: contentRef == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contentRef),
       accountKey: Value(accountKey),
       remoteId: Value(remoteId),
       modelType: Value(modelType),
@@ -660,6 +690,7 @@ class LocalStudyCardRow extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LocalStudyCardRow(
+      contentRef: serializer.fromJson<String?>(json['contentRef']),
       accountKey: serializer.fromJson<String>(json['accountKey']),
       remoteId: serializer.fromJson<int>(json['remoteId']),
       modelType: serializer.fromJson<String>(json['modelType']),
@@ -686,6 +717,7 @@ class LocalStudyCardRow extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'contentRef': serializer.toJson<String?>(contentRef),
       'accountKey': serializer.toJson<String>(accountKey),
       'remoteId': serializer.toJson<int>(remoteId),
       'modelType': serializer.toJson<String>(modelType),
@@ -710,6 +742,7 @@ class LocalStudyCardRow extends DataClass
   }
 
   LocalStudyCardRow copyWith({
+    Value<String?> contentRef = const Value.absent(),
     String? accountKey,
     int? remoteId,
     String? modelType,
@@ -731,6 +764,7 @@ class LocalStudyCardRow extends DataClass
     String? syncState,
     bool? deletedLocally,
   }) => LocalStudyCardRow(
+    contentRef: contentRef.present ? contentRef.value : this.contentRef,
     accountKey: accountKey ?? this.accountKey,
     remoteId: remoteId ?? this.remoteId,
     modelType: modelType ?? this.modelType,
@@ -758,6 +792,9 @@ class LocalStudyCardRow extends DataClass
   );
   LocalStudyCardRow copyWithCompanion(LocalStudyCardsCompanion data) {
     return LocalStudyCardRow(
+      contentRef: data.contentRef.present
+          ? data.contentRef.value
+          : this.contentRef,
       accountKey: data.accountKey.present
           ? data.accountKey.value
           : this.accountKey,
@@ -804,6 +841,7 @@ class LocalStudyCardRow extends DataClass
   @override
   String toString() {
     return (StringBuffer('LocalStudyCardRow(')
+          ..write('contentRef: $contentRef, ')
           ..write('accountKey: $accountKey, ')
           ..write('remoteId: $remoteId, ')
           ..write('modelType: $modelType, ')
@@ -829,7 +867,8 @@ class LocalStudyCardRow extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
+    contentRef,
     accountKey,
     remoteId,
     modelType,
@@ -850,11 +889,12 @@ class LocalStudyCardRow extends DataClass
     updatedAt,
     syncState,
     deletedLocally,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LocalStudyCardRow &&
+          other.contentRef == this.contentRef &&
           other.accountKey == this.accountKey &&
           other.remoteId == this.remoteId &&
           other.modelType == this.modelType &&
@@ -878,6 +918,7 @@ class LocalStudyCardRow extends DataClass
 }
 
 class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
+  final Value<String?> contentRef;
   final Value<String> accountKey;
   final Value<int> remoteId;
   final Value<String> modelType;
@@ -900,6 +941,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<bool> deletedLocally;
   final Value<int> rowid;
   const LocalStudyCardsCompanion({
+    this.contentRef = const Value.absent(),
     this.accountKey = const Value.absent(),
     this.remoteId = const Value.absent(),
     this.modelType = const Value.absent(),
@@ -923,6 +965,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.rowid = const Value.absent(),
   });
   LocalStudyCardsCompanion.insert({
+    this.contentRef = const Value.absent(),
     required String accountKey,
     required int remoteId,
     required String modelType,
@@ -955,6 +998,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
        suspended = Value(suspended),
        syncState = Value(syncState);
   static Insertable<LocalStudyCardRow> custom({
+    Expression<String>? contentRef,
     Expression<String>? accountKey,
     Expression<int>? remoteId,
     Expression<String>? modelType,
@@ -978,6 +1022,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (contentRef != null) 'content_ref': contentRef,
       if (accountKey != null) 'account_key': accountKey,
       if (remoteId != null) 'remote_id': remoteId,
       if (modelType != null) 'model_type': modelType,
@@ -1003,6 +1048,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   }
 
   LocalStudyCardsCompanion copyWith({
+    Value<String?>? contentRef,
     Value<String>? accountKey,
     Value<int>? remoteId,
     Value<String>? modelType,
@@ -1026,6 +1072,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Value<int>? rowid,
   }) {
     return LocalStudyCardsCompanion(
+      contentRef: contentRef ?? this.contentRef,
       accountKey: accountKey ?? this.accountKey,
       remoteId: remoteId ?? this.remoteId,
       modelType: modelType ?? this.modelType,
@@ -1053,6 +1100,9 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (contentRef.present) {
+      map['content_ref'] = Variable<String>(contentRef.value);
+    }
     if (accountKey.present) {
       map['account_key'] = Variable<String>(accountKey.value);
     }
@@ -1122,6 +1172,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   @override
   String toString() {
     return (StringBuffer('LocalStudyCardsCompanion(')
+          ..write('contentRef: $contentRef, ')
           ..write('accountKey: $accountKey, ')
           ..write('remoteId: $remoteId, ')
           ..write('modelType: $modelType, ')
@@ -1163,6 +1214,7 @@ abstract class _$CardsDatabase extends GeneratedDatabase {
 
 typedef $$LocalStudyCardsTableCreateCompanionBuilder =
     LocalStudyCardsCompanion Function({
+      Value<String?> contentRef,
       required String accountKey,
       required int remoteId,
       required String modelType,
@@ -1187,6 +1239,7 @@ typedef $$LocalStudyCardsTableCreateCompanionBuilder =
     });
 typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
     LocalStudyCardsCompanion Function({
+      Value<String?> contentRef,
       Value<String> accountKey,
       Value<int> remoteId,
       Value<String> modelType,
@@ -1219,6 +1272,11 @@ class $$LocalStudyCardsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get contentRef => $composableBuilder(
+    column: $table.contentRef,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get accountKey => $composableBuilder(
     column: $table.accountKey,
     builder: (column) => ColumnFilters(column),
@@ -1329,6 +1387,11 @@ class $$LocalStudyCardsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get contentRef => $composableBuilder(
+    column: $table.contentRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get accountKey => $composableBuilder(
     column: $table.accountKey,
     builder: (column) => ColumnOrderings(column),
@@ -1439,6 +1502,11 @@ class $$LocalStudyCardsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get contentRef => $composableBuilder(
+    column: $table.contentRef,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get accountKey => $composableBuilder(
     column: $table.accountKey,
     builder: (column) => column,
@@ -1557,6 +1625,7 @@ class $$LocalStudyCardsTableTableManager
               $$LocalStudyCardsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String?> contentRef = const Value.absent(),
                 Value<String> accountKey = const Value.absent(),
                 Value<int> remoteId = const Value.absent(),
                 Value<String> modelType = const Value.absent(),
@@ -1579,6 +1648,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<bool> deletedLocally = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalStudyCardsCompanion(
+                contentRef: contentRef,
                 accountKey: accountKey,
                 remoteId: remoteId,
                 modelType: modelType,
@@ -1603,6 +1673,7 @@ class $$LocalStudyCardsTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String?> contentRef = const Value.absent(),
                 required String accountKey,
                 required int remoteId,
                 required String modelType,
@@ -1625,6 +1696,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<bool> deletedLocally = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalStudyCardsCompanion.insert(
+                contentRef: contentRef,
                 accountKey: accountKey,
                 remoteId: remoteId,
                 modelType: modelType,

@@ -56,15 +56,16 @@ final class CardLibrarySynchronizer {
     final repository = _audioRepository;
     if (repository == null) return;
     final cards = (await _localStore.readDashboard()).cards;
-    final urls = <String>{
-      for (final card in cards)
-        if (card.content case final LanguageCardContent content) ...<String>{
+    for (final summary in cards) {
+      final card = await _localStore.getCard(summary.id);
+      if (card?.content case final LanguageCardContent content) {
+        await _downloadAudio(repository, {
           if (content.audioUrl case final url? when url.isNotEmpty) url,
           for (final example in content.examples)
             if (example.audioUrl case final url? when url.isNotEmpty) url,
-        },
-    };
-    await _downloadAudio(repository, urls);
+        });
+      }
+    }
   }
 
   Future<void> _downloadAudio(

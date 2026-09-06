@@ -129,7 +129,7 @@ packages:
     source: hosted
     version: "1.19.1"
   connectivity_plus:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: connectivity_plus
       sha256: "762c99f890ca8bf87f7337236f99edd42793843bc6c3631da294a76653a54bd0"
@@ -240,6 +240,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.4.1"
+  drift:
+    dependency: "direct dev"
+    description:
+      name: drift
+      sha256: bab55d542d63765f6250ee3e2c62e11bfa1145d4ec2ffa05353c8fb4e10b52c1
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.34.4"
+  drift_flutter:
+    dependency: transitive
+    description:
+      name: drift_flutter
+      sha256: "91acf4bee7c3c84467cba46455aa70e5292a3b889f4582645d74f2e5a8c106f2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.1"
   ed25519_edwards:
     dependency: transitive
     description:
@@ -719,6 +735,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  native_toolchain_c:
+    dependency: transitive
+    description:
+      name: native_toolchain_c
+      sha256: f9c168717100ae6d9fee9ffb0be379bf1f8b26b0f6bcbd4fdddcd931993a6a72
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.19.2"
   nested:
     dependency: transitive
     description:
@@ -785,6 +809,13 @@ packages:
     dependency: "direct main"
     description:
       path: "../nx_modules/nx_documents"
+      relative: true
+    source: path
+    version: "0.1.0"
+  nx_offline:
+    dependency: "direct main"
+    description:
+      path: "../nx_modules/nx_offline"
       relative: true
     source: path
     version: "0.1.0"
@@ -1085,7 +1116,7 @@ packages:
     source: hosted
     version: "3.0.1"
   shared_preferences:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: shared_preferences
       sha256: c3025c5534b01739267eb7d76959bbc25a6d10f6988e1c2a3036940133dd10bf
@@ -1241,6 +1272,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
+  sqlcipher_flutter_libs:
+    dependency: transitive
+    description:
+      name: sqlcipher_flutter_libs
+      sha256: "38d62d659d2fb8739bf25a42c9a350d1fdd6c29a5a61f13a946778ec75d27929"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.0+eol"
+  sqlite3:
+    dependency: transitive
+    description:
+      name: sqlite3
+      sha256: "4c7fe79840389aaeaf05fd093f795b631b5a98e2bd28d54e555c100f4a9c7a1c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.5.2"
+  sqlite3_flutter_libs:
+    dependency: transitive
+    description:
+      name: sqlite3_flutter_libs
+      sha256: "3ed7553eee7bb368f8950f58ba29f634e06e813c029aff6a0d60862b96de8454"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0+eol"
   stack_trace:
     dependency: transitive
     description:

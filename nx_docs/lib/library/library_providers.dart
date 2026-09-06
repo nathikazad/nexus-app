@@ -40,8 +40,8 @@ final offlineBooksProvider = StreamProvider<List<NxDocument>>((ref) {
   return _watchDocuments(ref, const CatalogQuery.books());
 });
 
-final offlineDocumentSearchProvider =
-    StreamProvider.family<List<NxDocument>, String>((ref, searchText) {
+final offlineDocumentSearchProvider = StreamProvider.autoDispose
+    .family<List<NxDocument>, String>((ref, searchText) {
       if (searchText.trim().isEmpty) {
         return Stream<List<NxDocument>>.value(const <NxDocument>[]);
       }

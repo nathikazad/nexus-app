@@ -7,6 +7,7 @@ import 'package:nx_books/core/theme/app_theme.dart';
 import 'package:nx_books/data/providers.dart';
 import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/features/books/notes/book_notes_page.dart';
+import 'package:nx_books/settings/books_settings_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class BooksRootShell extends ConsumerStatefulWidget {
@@ -39,6 +40,8 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
         final selectedId = ref.watch(selectedBookIdProvider);
         final selected = _bookById(rows, selectedId);
         return Scaffold(
+          floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+          floatingActionButton: const BooksSettingsButton(),
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -133,17 +136,21 @@ class _DesktopBookshelf extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final collectionState = ref.watch(bookCollectionStateProvider);
     final optimisticOrders = ref.watch(optimisticBookOrdersProvider);
     final reading = booksInLaneOrder(
       books,
       BookReadingState.reading,
       optimisticOrders[BookReadingState.reading]?.bookIds,
     );
-    final collection = booksInLaneOrder(
+    final toRead = booksInLaneOrder(
       books,
-      collectionState,
-      optimisticOrders[collectionState]?.bookIds,
+      BookReadingState.toRead,
+      optimisticOrders[BookReadingState.toRead]?.bookIds,
+    );
+    final read = booksInLaneOrder(
+      books,
+      BookReadingState.read,
+      optimisticOrders[BookReadingState.read]?.bookIds,
     );
     return Row(
       children: [
@@ -154,7 +161,7 @@ class _DesktopBookshelf extends ConsumerWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
+                  child: Row(
                     children: [
                       Expanded(
                         child: _BookSection(
@@ -167,24 +174,28 @@ class _DesktopBookshelf extends ConsumerWidget {
                           onOpenBook: onOpenInNotes,
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: _BookSection(
-                          key: ValueKey('lane-${collectionState.kgqlValue}'),
-                          title: 'Library',
-                          subtitle: collectionState == BookReadingState.toRead
-                              ? 'Books waiting to be read'
-                              : 'Finished books',
-                          state: collectionState,
-                          books: collection,
+                          key: const ValueKey('lane-to-read'),
+                          title: 'To Read',
+                          subtitle: 'Books waiting to be read',
+                          state: BookReadingState.toRead,
+                          books: toRead,
                           selectedId: selected?.id,
                           onOpenBook: onOpenInNotes,
-                          trailing: _CollectionSwitch(
-                            state: collectionState,
-                            onChanged: (state) => ref
-                                .read(bookCollectionStateProvider.notifier)
-                                .set(state),
-                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _BookSection(
+                          key: const ValueKey('lane-read'),
+                          title: 'Read',
+                          subtitle: 'Finished books',
+                          state: BookReadingState.read,
+                          books: read,
+                          selectedId: selected?.id,
+                          onOpenBook: onOpenInNotes,
                         ),
                       ),
                     ],
@@ -394,7 +405,7 @@ class _MobileTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.panel,
         border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
@@ -431,7 +442,7 @@ class _MainHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.bg,
         border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
@@ -441,7 +452,7 @@ class _MainHeader extends ConsumerWidget {
           height: 68,
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,7 +544,7 @@ class _DesktopTopicFilter extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(Icons.expand_more, size: 16, color: AppColors.muted),
+            Icon(Icons.expand_more, size: 16, color: AppColors.muted),
           ],
         ),
       ),
@@ -553,7 +564,7 @@ PopupMenuItem<String> _topicFilterMenuItem(
     child: Row(
       children: [
         Expanded(child: Text(label)),
-        if (active) const Icon(Icons.check, size: 17, color: AppColors.accent),
+        if (active) Icon(Icons.check, size: 17, color: AppColors.accent),
       ],
     ),
   );
@@ -670,7 +681,7 @@ class _MobileTopicChoice extends StatelessWidget {
         ),
       ),
       trailing: selected
-          ? const Icon(Icons.check, size: 18, color: AppColors.accent)
+          ? Icon(Icons.check, size: 18, color: AppColors.accent)
           : null,
       onTap: onTap,
     );
@@ -686,7 +697,6 @@ class _BookSection extends StatelessWidget {
     required this.books,
     required this.selectedId,
     required this.onOpenBook,
-    this.trailing,
   });
 
   final String title;
@@ -695,7 +705,6 @@ class _BookSection extends StatelessWidget {
   final List<NxBook> books;
   final int? selectedId;
   final Future<void> Function(NxBook book) onOpenBook;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -715,10 +724,6 @@ class _BookSection extends StatelessWidget {
                     count: books.length,
                   ),
                 ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 14),
-                  SizedBox(width: 210, child: trailing!),
-                ],
               ],
             ),
           ),
@@ -792,7 +797,7 @@ class _SectionHeader extends StatelessWidget {
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
           ],
         ),
@@ -843,7 +848,7 @@ class _MobileEmptySection extends StatelessWidget {
     child: Text(
       message,
       textAlign: TextAlign.center,
-      style: const TextStyle(color: AppColors.muted, fontSize: 12),
+      style: TextStyle(color: AppColors.muted, fontSize: 12),
     ),
   );
 }
@@ -891,7 +896,7 @@ class _BookCard extends ConsumerWidget {
                         book.title,
                         maxLines: compact ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                         ),
@@ -902,7 +907,7 @@ class _BookCard extends ConsumerWidget {
                           book.author,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.muted,
                             fontSize: 12,
                             height: 1.25,
@@ -1129,9 +1134,9 @@ class _BookDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final row = book;
     return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.panel),
+      decoration: BoxDecoration(color: AppColors.panel),
       child: row == null
-          ? const Center(
+          ? Center(
               child: Text(
                 'Select a book',
                 style: TextStyle(color: AppColors.muted),
@@ -1151,7 +1156,7 @@ class _BookDetail extends ConsumerWidget {
                         row.title,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           height: 1.18,
@@ -1164,7 +1169,7 @@ class _BookDetail extends ConsumerWidget {
                             : row.description,
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.muted,
                           fontSize: 13,
                           height: 1.3,
@@ -1176,7 +1181,7 @@ class _BookDetail extends ConsumerWidget {
                           row.author,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.muted,
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -1482,11 +1487,7 @@ class _ChapterProgressEditorState
             suffixIcon: _totalController.text.isNotEmpty
                 ? IconButton(
                     tooltip: 'Clear chapters',
-                    icon: const Icon(
-                      Icons.close,
-                      size: 16,
-                      color: AppColors.faint,
-                    ),
+                    icon: Icon(Icons.close, size: 16, color: AppColors.faint),
                     onPressed: () {
                       _totalController.clear();
                       _saveTotal('');
@@ -1503,7 +1504,7 @@ class _ChapterProgressEditorState
             children: [
               Text(
                 'Chapter ${current ?? 0} of $total',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.muted,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1512,7 +1513,7 @@ class _ChapterProgressEditorState
               const Spacer(),
               Text(
                 '${((current ?? 0) / total * 100).round()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.text,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -1577,7 +1578,7 @@ class _TopicTagsEditor extends ConsumerWidget {
           },
         ),
         if (selected.isEmpty && addable.isEmpty)
-          const Text(
+          Text(
             'No Topic tags',
             style: TextStyle(color: AppColors.muted, fontSize: 12),
           ),
@@ -1742,7 +1743,7 @@ class _MetaRow extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 32),
       padding: const EdgeInsets.only(bottom: 8),
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
       child: Row(
@@ -1750,7 +1751,7 @@ class _MetaRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+              style: TextStyle(color: AppColors.muted, fontSize: 13),
             ),
           ),
           const SizedBox(width: 12),
@@ -1789,7 +1790,7 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 7),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.muted,
           fontSize: 11,
           fontWeight: FontWeight.w800,
@@ -1821,7 +1822,7 @@ class _Pill extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.muted,
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
@@ -1832,7 +1833,7 @@ class _Pill extends StatelessWidget {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onRemove,
-                child: const SizedBox(
+                child: SizedBox(
                   width: 14,
                   height: 14,
                   child: Icon(Icons.close, size: 10, color: AppColors.faint),
@@ -1864,7 +1865,7 @@ class _CountBadge extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.muted,
           fontSize: 12,
           fontWeight: FontWeight.w800,
@@ -1938,7 +1939,7 @@ class _EmptyLane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(message, style: const TextStyle(color: AppColors.muted)),
+      child: Text(message, style: TextStyle(color: AppColors.muted)),
     );
   }
 }
@@ -1959,12 +1960,12 @@ class _ErrorState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: AppColors.red, size: 32),
+              Icon(Icons.error_outline, color: AppColors.red, size: 32),
               const SizedBox(height: 12),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.muted),
+                style: TextStyle(color: AppColors.muted),
               ),
               const SizedBox(height: 16),
               FilledButton(onPressed: onRetry, child: const Text('Retry')),

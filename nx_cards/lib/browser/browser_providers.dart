@@ -110,3 +110,22 @@ void invalidateCardsData(Ref ref) {
   ref.invalidate(languagesProvider);
   ref.invalidate(relatedBooksProvider);
 }
+
+final cardBodyProvider = FutureProvider.autoDispose
+    .family<StudyCard, StudyCard>((ref, summary) async {
+      if (!summary.isSummary) return summary;
+      final local = ref.watch(localCardsStoreProvider);
+      final card = await local?.getCard(summary.id);
+      if (card == null) {
+        throw StateError('Card ${summary.id} is unavailable offline.');
+      }
+      return card;
+    });
+
+Future<StudyCard> hydrateStudyCard(WidgetRef ref, StudyCard card) async {
+  if (!card.isSummary) return card;
+  final local = ref.read(localCardsStoreProvider);
+  final full = await local?.getCard(card.id);
+  if (full == null) throw StateError('Card ${card.id} is unavailable offline.');
+  return full;
+}

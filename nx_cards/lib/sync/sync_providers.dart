@@ -15,6 +15,7 @@ import 'package:nx_cards/sync/native/local_cards_store.dart';
 import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
 import 'package:nx_cards/sync/remote/kgql_sync_transport.dart';
 import 'package:nx_db/nx_db.dart';
+import 'package:nx_offline/nx_offline_storage.dart';
 
 final cardsOperationIdProvider = Provider<String Function()>((ref) {
   final random = Random.secure();
@@ -54,6 +55,7 @@ final localCardsStoreProvider = Provider<LocalCardsStore?>((ref) {
   return DriftLocalCardsStore(
     database: ref.watch(cardsDatabaseProvider(session.account.key)),
     account: session.account,
+    files: ContentFiles.application(session.account.key),
   );
 });
 

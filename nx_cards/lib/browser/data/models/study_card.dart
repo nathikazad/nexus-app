@@ -16,6 +16,7 @@ class StudyCard {
     this.sourceBookName,
     Set<int> linkedWordIds = const <int>{},
     this.updatedAt,
+    this.isSummary = false,
   }) : schedules = Map<StudyCue, CardSchedule>.unmodifiable(schedules),
        linkedWordIds = Set<int>.unmodifiable(linkedWordIds),
        tags = Map<String, List<String>>.unmodifiable({
@@ -27,6 +28,8 @@ class StudyCard {
            entry.key: List<CardReview>.unmodifiable(entry.value),
        });
 
+  /// Library projections must be hydrated before editing or reviewing.
+  final bool isSummary;
   final int id;
   final CardContent content;
   String get front => content.front;
@@ -125,9 +128,11 @@ class StudyCard {
     LearningStatus? learningStatus,
     Set<int>? linkedWordIds,
     DateTime? updatedAt,
+    bool? isSummary,
   }) {
     return StudyCard(
       id: id,
+      isSummary: isSummary ?? this.isSummary,
       content: content ?? this.content,
       schedules: schedules ?? this.schedules,
       reviewHistory: reviewHistory ?? this.reviewHistory,

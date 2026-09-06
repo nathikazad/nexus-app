@@ -1,5 +1,6 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
+import 'package:nx_expense/data/expense/expense_file_cache.dart';
 
 import 'package:nx_expense/data/expense/expense_set_model_request.dart';
 import 'package:nx_expense/data/teller/expense_timeline_api.dart';
@@ -16,11 +17,13 @@ String _dateOnlyYmd(DateTime d) =>
 class KgqlTransferRepository implements TransferRepository {
   KgqlTransferRepository({
     required GraphQLClient client,
+    this.cache,
     required Future<ModelType> Function() loadTransferSchema,
   }) : _client = client,
        _loadTransferSchema = loadTransferSchema;
 
   final GraphQLClient _client;
+  final ExpenseFileCache? cache;
   final Future<ModelType> Function() _loadTransferSchema;
 
   SetModelRequest _transferRequest(TransferUpsert u) {
@@ -45,8 +48,9 @@ class KgqlTransferRepository implements TransferRepository {
   }) async {
     final schema = await _loadTransferSchema();
     final struct = buildTransferStruct(schema);
-    final rows = await fetchKgqlModels(
+    final rows = await fetchStoredModels(
       _client,
+      cache: cache,
       filter: {
         'model_type': kTransferModelTypeName,
         'filters': [
@@ -63,8 +67,9 @@ class KgqlTransferRepository implements TransferRepository {
   Future<Transfer?> getById(int id) async {
     final schema = await _loadTransferSchema();
     final struct = buildTransferStruct(schema);
-    final m = await fetchKgqlModelById(
+    final m = await fetchStoredModelById(
       _client,
+      cache: cache,
       modelTypeName: kTransferModelTypeName,
       id: id,
       struct: struct,
@@ -75,12 +80,15 @@ class KgqlTransferRepository implements TransferRepository {
   @override
   Future<int> upsert(TransferUpsert payload) async {
     final req = _transferRequest(payload);
-    return setKgqlModel(_client, req);
+    final id = await setKgqlModel(_client, req);
+    await cache?.invalidate();
+    return id;
   }
 
   @override
   Future<void> deleteById(int id) async {
     await setKgqlModel(_client, SetModelRequest(id: id, delete: true));
+    await cache?.invalidate();
   }
 
   @override

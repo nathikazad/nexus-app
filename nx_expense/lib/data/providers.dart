@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:nx_offline/nx_offline_storage.dart';
+import 'package:nx_expense/data/expense/expense_file_cache.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/auth.dart';
@@ -33,24 +37,59 @@ final expenseGraphqlClientProvider = Provider<GraphQLClient>(
   (ref) => ref.watch(graphqlClientProvider),
 );
 
+final expenseFileCacheProvider = Provider<ExpenseFileCache?>((ref) {
+  if (kIsWeb) return null;
+  final user = ref.watch(authProvider).value;
+  if (user == null) return null;
+  final library = FileLibrary.application(
+    'nx_expense:nexus-primary:${user.userId}',
+  );
+  ref.onDispose(() => unawaited(library.close()));
+  return ExpenseFileCache(library);
+});
+
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
   return KgqlExpenseRepository(
     client: ref.watch(graphqlClientProvider),
-    loadExpenseSchema: () => ref.read(expenseSchemaProvider.future),
+    cache: ref.watch(expenseFileCacheProvider),
+    loadExpenseSchema: () =>
+        ref
+            .read(expenseFileCacheProvider)
+            ?.schema(
+              kExpenseModelTypeName,
+              () => ref.read(expenseSchemaProvider.future),
+            ) ??
+        ref.read(expenseSchemaProvider.future),
   );
 });
 
 final transferRepositoryProvider = Provider<TransferRepository>((ref) {
   return KgqlTransferRepository(
     client: ref.watch(graphqlClientProvider),
-    loadTransferSchema: () => ref.read(transferSchemaProvider.future),
+    cache: ref.watch(expenseFileCacheProvider),
+    loadTransferSchema: () =>
+        ref
+            .read(expenseFileCacheProvider)
+            ?.schema(
+              kTransferModelTypeName,
+              () => ref.read(transferSchemaProvider.future),
+            ) ??
+        ref.read(transferSchemaProvider.future),
   );
 });
 
 final orderRepositoryProvider = Provider<KgqlOrderRepository>((ref) {
   return KgqlOrderRepository(
     client: ref.watch(graphqlClientProvider),
-    loadOrderSchema: () => ref.read(orderSchemaProvider.future),
+    cache: ref.watch(expenseFileCacheProvider),
+    loadOrderSchema: () =>
+        ref
+            .read(expenseFileCacheProvider)
+            ?.schema(
+              kOrderModelTypeName,
+              () => ref.read(orderSchemaProvider.future),
+            ) ??
+        ref.read(orderSchemaProvider.future),
   );
 });
 

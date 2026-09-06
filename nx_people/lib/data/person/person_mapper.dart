@@ -50,12 +50,11 @@ Person personFromModel(Model model) {
     tags: tagValues.toSet().toList()..sort(),
     tagsBySystem: tagsBySystem,
     meetings: _actualMeetingNames(model),
+    actualMeetings: _actualMeetings(model),
     planned: _plannedMeetingNames(model),
     summary: summary,
     desires: _stringListFromRaw(model.attributes?[kPersonAttrDesires]),
-    currentThreads: _threadsFromRaw(
-      model.attributes?[kPersonAttrCurrentThreads],
-    ),
+    conversations: _conversations(model),
     logs: _logsFromRaw(model.attributes?[kPersonAttrLogs]),
     relatedIds: _relatedPeople(model),
     contacts: _contacts(model),
@@ -131,6 +130,17 @@ Map<String, dynamic> personFetchStruct(ModelType schema) {
       'value': true,
       'url': true,
       'link': true,
+    },
+    'Conversation': {
+      'id': true,
+      'name': true,
+      'description': true,
+      'provider': true,
+      'external_account_id': true,
+      'external_thread_id': true,
+      'last_message_at': true,
+      'last_synced_at': true,
+      'response_pending': true,
     },
     'Person': {'id': true, 'name': true, 'description': true},
   };
@@ -270,6 +280,17 @@ List<String> _actualMeetingNames(Model model) {
   return {...legacy, ...meetNames}.toList()..sort();
 }
 
+List<PersonMeeting> _actualMeetings(Model model) {
+  final rows = <PersonMeeting>[
+    for (final meet in model.relations?['Meet'] ?? const <Model>[])
+      if (_actualMeetingTime(meet) case final startTime?)
+        if (!_hasInactivePlanningStatus(meet) && meet.name.isNotEmpty)
+          PersonMeeting(name: meet.name, startTime: startTime),
+  ];
+  rows.sort((a, b) => b.startTime.compareTo(a.startTime));
+  return rows;
+}
+
 List<String> _plannedMeetingNames(Model model) {
   final meetRows = model.relations?['Meet'] ?? const <Model>[];
   return {
@@ -301,9 +322,12 @@ List<String> _stringListFromRaw(Object? raw) {
 }
 
 bool _hasActualMeetingTime(Model meet) {
-  return meet.attrDateTime(_meetStartTimeAttr) != null ||
-      meet.attrDateTime(_meetActualStartTimeAttr) != null;
+  return _actualMeetingTime(meet) != null;
 }
+
+DateTime? _actualMeetingTime(Model meet) =>
+    meet.attrDateTime(_meetActualStartTimeAttr) ??
+    meet.attrDateTime(_meetStartTimeAttr);
 
 bool _isPlannedMeet(Model meet) {
   return meet.attrDateTime(_meetScheduledStartTimeAttr) != null &&
@@ -410,15 +434,34 @@ String? _contactValueFromName(String name, String type) {
   return null;
 }
 
-List<PersonThread> _threadsFromRaw(Object? raw) {
-  final rows = _listOfMaps(raw);
-  return [
-    for (final row in rows)
-      PersonThread(
-        title: row['title']?.toString() ?? 'Thread',
-        body: row['body']?.toString() ?? row['description']?.toString() ?? '',
-      ),
+List<PersonConversation> _conversations(Model model) {
+  final linkedIds = {
+    for (final relation in model.relationsList ?? const <Relation>[])
+      if (relation.modelType == 'Conversation' &&
+          relation.relationName == 'has_conversation')
+        relation.modelId,
+  };
+  final rows = [
+    for (final row in model.relations?['Conversation'] ?? const <Model>[])
+      if (linkedIds.isEmpty || linkedIds.contains(row.id))
+        PersonConversation(
+          id: row.id,
+          name: row.name,
+          summary: row.description?.trim() ?? '',
+          provider: row.attrString('provider') ?? '',
+          externalAccountId: row.attrString('external_account_id') ?? '',
+          externalThreadId: row.attrString('external_thread_id') ?? '',
+          lastMessageAt: row.attrDateTime('last_message_at'),
+          lastSyncedAt: row.attrDateTime('last_synced_at'),
+          responsePending: row.attrBool('response_pending') ?? false,
+        ),
   ];
+  rows.sort(
+    (a, b) => (b.lastMessageAt ?? DateTime(0)).compareTo(
+      a.lastMessageAt ?? DateTime(0),
+    ),
+  );
+  return rows;
 }
 
 List<PersonLog> _logsFromRaw(Object? raw) {

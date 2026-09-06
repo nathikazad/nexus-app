@@ -54,19 +54,17 @@ final documentDemandProvider = FutureProvider.autoDispose.family<void, int>((
   await workspace.ensureDocumentAvailable(documentId);
 });
 
-final offlineDocumentProvider = StreamProvider.family<NxDocument?, int>((
-  ref,
-  documentId,
-) async* {
-  final session = ref.watch(documentSessionProvider(documentId));
-  if (session == null) {
-    yield null;
-    return;
-  }
-  await for (final state in _sessionStates(session)) {
-    yield state.document;
-  }
-});
+final offlineDocumentProvider = StreamProvider.autoDispose
+    .family<NxDocument?, int>((ref, documentId) async* {
+      final session = ref.watch(documentSessionProvider(documentId));
+      if (session == null) {
+        yield null;
+        return;
+      }
+      await for (final state in _sessionStates(session)) {
+        yield state.document;
+      }
+    });
 
 Stream<DocumentSessionState> _sessionStates(DocumentSession session) {
   late StreamSubscription<DocumentSessionState> subscription;

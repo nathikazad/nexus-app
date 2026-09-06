@@ -1,9 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_db/external_messages.dart';
 import 'package:nx_people/core/layout/is_desktop_layout.dart';
 import 'package:nx_people/core/theme/app_theme.dart';
 import 'package:nx_people/data/person/person_attr_keys.dart';
@@ -172,12 +172,7 @@ class _SectionBody extends StatelessWidget {
     return switch (section) {
       PeopleAppSection.people => _PeopleView(desktop: desktop),
       PeopleAppSection.meetings => _MeetingsView(desktop: desktop),
-      PeopleAppSection.pending => const _PlaceholderView(
-        icon: Icons.inbox_outlined,
-        title: 'Pending',
-        body:
-            'Follow-ups, promises, intros, and waiting-on-me items will live here.',
-      ),
+      PeopleAppSection.pending => _PendingView(desktop: desktop),
       PeopleAppSection.logs => _LogsView(desktop: desktop),
       PeopleAppSection.funnels => const _PlaceholderView(
         icon: Icons.filter_alt_outlined,
@@ -261,6 +256,10 @@ class _NavButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pendingCount = _pendingCount(ref.watch(recentPeopleProvider));
+    final badge = item.section == PeopleAppSection.pending && pendingCount > 0
+        ? pendingCount.toString()
+        : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
@@ -290,9 +289,9 @@ class _NavButton extends ConsumerWidget {
                     ),
                   ),
                 ),
-                if (item.badge != null)
+                if (badge != null)
                   _CountBadge(
-                    label: item.badge!,
+                    label: badge,
                     urgent: item.section == PeopleAppSection.pending,
                   ),
               ],
@@ -343,6 +342,393 @@ class _PeopleView extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
+}
+
+class _PendingView extends ConsumerWidget {
+  const _PendingView({required this.desktop});
+
+  final bool desktop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref
+        .watch(recentPeopleProvider)
+        .when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) =>
+              Center(child: Text('Could not load pending replies: $error')),
+          data: (people) {
+            final pending =
+                [
+                  for (final person in people)
+                    for (final conversation in person.conversations)
+                      if (conversation.responsePending)
+                        (person: person, conversation: conversation),
+                ]..sort(
+                  (a, b) => (b.conversation.lastMessageAt ?? DateTime(0))
+                      .compareTo(a.conversation.lastMessageAt ?? DateTime(0)),
+                );
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                desktop ? 40 : 20,
+                28,
+                desktop ? 40 : 20,
+                80,
+              ),
+              children: <Widget>[
+                const Text(
+                  'Pending replies',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${pending.length} conversation${pending.length == 1 ? '' : 's'} waiting on you.',
+                  style: const TextStyle(color: AppColors.muted),
+                ),
+                const SizedBox(height: 24),
+                if (pending.isEmpty)
+                  const _EmptyPanel(
+                    title: 'You are caught up',
+                    body:
+                        'Imported conversations marked as awaiting your reply will appear here.',
+                  )
+                else
+                  for (final row in pending)
+                    Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: ListTile(
+                        leading: _PersonAvatar(person: row.person, size: 42),
+                        title: Text(
+                          row.person.name,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(
+                          '${row.conversation.name}\n${row.conversation.summary}',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        isThreeLine: true,
+                        trailing: Text(
+                          row.conversation.lastMessageAt == null
+                              ? row.conversation.provider
+                              : _shortDate(row.conversation.lastMessageAt!),
+                          style: const TextStyle(
+                            color: AppColors.faint,
+                            fontSize: 11,
+                          ),
+                        ),
+                        onTap: () => _openConversation(
+                          context,
+                          row.person,
+                          row.conversation,
+                        ),
+                      ),
+                    ),
+              ],
+            );
+          },
+        );
+  }
+}
+
+Future<void> _openConversation(
+  BuildContext context,
+  Person person,
+  PersonConversation conversation,
+) {
+  return Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) =>
+          _ConversationPage(person: person, conversation: conversation),
+    ),
+  );
+}
+
+class _ConversationPage extends ConsumerWidget {
+  const _ConversationPage({required this.person, required this.conversation});
+
+  final Person person;
+  final PersonConversation conversation;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final messages = ref.watch(conversationMessagesProvider(conversation));
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              person.name,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              conversation.provider,
+              style: const TextStyle(fontSize: 11, color: AppColors.muted),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          IconButton(
+            tooltip: 'Add media',
+            onPressed: ref.watch(conversationAttachmentServiceProvider) == null
+                ? null
+                : () => _addConversationAttachments(
+                    context,
+                    ref,
+                    person,
+                    conversation,
+                  ),
+            icon: const Icon(Icons.attach_file),
+          ),
+          TextButton(
+            onPressed: () async {
+              await ref
+                  .read(conversationRepositoryProvider)
+                  .setResponsePending(
+                    personId: person.id,
+                    conversation: conversation,
+                    pending: !conversation.responsePending,
+                  );
+              _invalidatePeopleData(ref, personId: person.id);
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: Text(
+              conversation.responsePending ? 'Mark replied' : 'Needs reply',
+            ),
+          ),
+        ],
+      ),
+      body: messages.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) =>
+            Center(child: Text('Could not load messages: $error')),
+        data: (rows) => rows.isEmpty
+            ? const Center(
+                child: Text('No raw messages imported for this conversation.'),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+                itemCount: rows.length,
+                itemBuilder: (context, index) =>
+                    _MessageBubble(message: rows[index]),
+              ),
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends ConsumerWidget {
+  const _MessageBubble({required this.message});
+
+  final ExternalMessage message;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mine = message.fromCurrentUser;
+    final imageConfig = ref.watch(peopleImageConfigProvider);
+    return Align(
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: mine ? const Color(0xffe4f3e7) : AppColors.panel,
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (message.text.trim().isNotEmpty)
+              Text(message.text, style: const TextStyle(height: 1.4)),
+            for (final attachment in message.attachments)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _ConversationAttachment(
+                  attachment: attachment,
+                  imageConfig: imageConfig,
+                ),
+              ),
+            if (message.messageTime != null) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(
+                _shortDateTime(message.messageTime!),
+                style: const TextStyle(fontSize: 10, color: AppColors.faint),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConversationAttachment extends StatelessWidget {
+  const _ConversationAttachment({required this.attachment, this.imageConfig});
+
+  final Map<String, dynamic> attachment;
+  final PeopleImageConfig? imageConfig;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (attachment['name'] ?? attachment['filename'] ?? 'Attachment')
+        .toString();
+    final type = (attachment['content_type'] ?? attachment['mime_type'] ?? '')
+        .toString();
+    final rawUrl = attachment['url']?.toString() ?? '';
+    final uri = _absolutePeopleAssetUri(rawUrl, imageConfig?.baseUrl);
+    if (type.startsWith('image/') && uri != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          uri.toString(),
+          headers: imageConfig?.headers,
+          width: 240,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _AttachmentLabel(name: name, type: type),
+        ),
+      );
+    }
+    return _AttachmentLabel(name: name, type: type);
+  }
+}
+
+class _AttachmentLabel extends StatelessWidget {
+  const _AttachmentLabel({required this.name, required this.type});
+  final String name;
+  final String type;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      Icon(
+        type == 'application/pdf'
+            ? Icons.picture_as_pdf_outlined
+            : Icons.attach_file,
+        size: 16,
+        color: AppColors.muted,
+      ),
+      const SizedBox(width: 5),
+      Flexible(
+        child: Text(name, style: const TextStyle(color: AppColors.muted)),
+      ),
+    ],
+  );
+}
+
+Uri? _absolutePeopleAssetUri(String value, String? baseUrl) {
+  final parsed = Uri.tryParse(value);
+  if (parsed == null) return null;
+  if (parsed.hasScheme) return parsed;
+  final base = Uri.tryParse(baseUrl ?? '');
+  if (base == null || !base.hasScheme) return null;
+  return base.resolveUri(parsed);
+}
+
+Future<void> _importConversationJson(
+  BuildContext context,
+  WidgetRef ref,
+  Person person,
+) async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.custom,
+    allowedExtensions: const ['json'],
+    withData: true,
+  );
+  final bytes = result?.files.single.bytes;
+  if (bytes == null || !context.mounted) return;
+  try {
+    await ref
+        .read(conversationRepositoryProvider)
+        .importJson(personId: person.id, bytes: bytes);
+    _invalidatePeopleData(ref, personId: person.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Conversation synced.')));
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not import conversation: $error'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
+  }
+}
+
+Future<void> _addConversationAttachments(
+  BuildContext context,
+  WidgetRef ref,
+  Person person,
+  PersonConversation conversation,
+) async {
+  final picked = await FilePicker.platform.pickFiles(
+    allowMultiple: true,
+    withData: true,
+  );
+  if (picked == null || !context.mounted) return;
+  final uploader = ref.read(conversationAttachmentServiceProvider);
+  if (uploader == null) return;
+  try {
+    final uploaded = <Map<String, dynamic>>[];
+    for (final file in picked.files) {
+      final bytes = file.bytes;
+      if (bytes == null) continue;
+      uploaded.add(
+        await uploader.upload(
+          provider: conversation.provider,
+          externalAccountId: conversation.externalAccountId,
+          externalThreadId: conversation.externalThreadId,
+          filename: file.name,
+          bytes: bytes,
+        ),
+      );
+    }
+    if (uploaded.isNotEmpty) {
+      await ref
+          .read(conversationRepositoryProvider)
+          .addAttachments(
+            personId: person.id,
+            conversation: conversation,
+            attachments: uploaded,
+          );
+      ref.invalidate(conversationMessagesProvider(conversation));
+      _invalidatePeopleData(ref, personId: person.id);
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${uploaded.length} attachment${uploaded.length == 1 ? '' : 's'} added.',
+          ),
+        ),
+      );
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not add attachment: $error'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
+  }
+}
+
+String _shortDate(DateTime value) =>
+    '${value.toLocal().year}-${value.toLocal().month.toString().padLeft(2, '0')}-${value.toLocal().day.toString().padLeft(2, '0')}';
+
+String _shortDateTime(DateTime value) {
+  final local = value.toLocal();
+  return '${_shortDate(local)} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 }
 
 class _PeopleList extends ConsumerWidget {
@@ -1363,6 +1749,18 @@ class _TimelineAndMeetingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <Widget>[
+      for (final conversation in person.conversations)
+        InkWell(
+          onTap: () => _openConversation(context, person, conversation),
+          borderRadius: BorderRadius.circular(12),
+          child: _TimelineRow(
+            label: conversation.provider,
+            title: conversation.name,
+            body: conversation.summary.isEmpty
+                ? 'Open the imported message thread.'
+                : conversation.summary,
+          ),
+        ),
       for (final planned in person.planned.take(2))
         _TimelineRow(
           label: 'Planned check-in',
@@ -1634,14 +2032,16 @@ class _BackgroundEntry {
   final String body;
 }
 
-class _NextActionCard extends StatelessWidget {
+class _NextActionCard extends ConsumerWidget {
   const _NextActionCard({required this.person});
 
   final Person person;
 
   @override
-  Widget build(BuildContext context) {
-    final thread = person.currentThreads.firstOrNull;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final thread = person.conversations
+        .where((row) => row.responsePending)
+        .firstOrNull;
     return _InfoPanel(
       icon: Icons.inbox_outlined,
       title: 'Next action',
@@ -1650,12 +2050,12 @@ class _NextActionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            thread?.title ?? 'No open action',
+            thread?.name ?? 'No reply pending',
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(
-            thread?.body ?? 'Nothing pending with this person right now.',
+            thread?.summary ?? 'Nothing pending with this person right now.',
             style: const TextStyle(
               color: AppColors.muted,
               fontSize: 13,
@@ -1671,12 +2071,21 @@ class _NextActionCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: Text(
-                  'Due: ${person.nextFollowUp}',
+                  thread?.lastMessageAt == null
+                      ? 'Last sync: ${thread?.lastSyncedAt == null ? '—' : _shortDate(thread!.lastSyncedAt!)}'
+                      : 'Last message: ${_shortDate(thread!.lastMessageAt!)}',
                   style: const TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
               ),
-              TextButton(onPressed: () {}, child: const Text('Snooze')),
-              FilledButton(onPressed: () {}, child: const Text('Done')),
+              TextButton(
+                onPressed: () => _importConversationJson(context, ref, person),
+                child: const Text('Import / sync'),
+              ),
+              if (thread != null)
+                FilledButton(
+                  onPressed: () => _openConversation(context, person, thread),
+                  child: const Text('Open'),
+                ),
             ],
           ),
         ],
@@ -2850,6 +3259,7 @@ class _BottomTabs extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(peopleWorkspaceProvider).section;
+    final pendingCount = _pendingCount(ref.watch(recentPeopleProvider));
     return Container(
       decoration: BoxDecoration(
         color: AppColors.panel.withValues(alpha: 0.94),
@@ -2873,6 +3283,9 @@ class _BottomTabs extends ConsumerWidget {
               for (final item in _navItems)
                 _BottomTabButton(
                   item: item,
+                  showPending:
+                      item.section == PeopleAppSection.pending &&
+                      pendingCount > 0,
                   selected: selected == item.section,
                   onTap: () => ref
                       .read(peopleWorkspaceProvider.notifier)
@@ -2891,11 +3304,13 @@ class _BottomTabButton extends StatelessWidget {
     required this.item,
     required this.selected,
     required this.onTap,
+    this.showPending = false,
   });
 
   final _NavItem item;
   final bool selected;
   final VoidCallback onTap;
+  final bool showPending;
 
   @override
   Widget build(BuildContext context) {
@@ -2929,7 +3344,7 @@ class _BottomTabButton extends StatelessWidget {
                 ),
               ],
             ),
-            if (item.section == PeopleAppSection.pending)
+            if (showPending)
               const Positioned(top: 18, right: 22, child: _PendingDot()),
           ],
         ),
@@ -3539,6 +3954,7 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _summaryController;
   late final TextEditingController _desiresController;
+  late final List<_ContactDraftController> _contactControllers;
   late Map<String, List<String>> _tagAssignments;
   bool _saving = false;
 
@@ -3553,6 +3969,10 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
     _desiresController = TextEditingController(
       text: person?.desires.join('\n') ?? '',
     );
+    _contactControllers = <_ContactDraftController>[
+      for (final contact in person?.contacts ?? const <PersonContact>[])
+        _ContactDraftController.fromContact(contact),
+    ];
     _tagAssignments = _copyTagAssignments(
       person?.tagsBySystem ?? const <String, List<String>>{},
     );
@@ -3563,6 +3983,9 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
     _nameController.dispose();
     _summaryController.dispose();
     _desiresController.dispose();
+    for (final contact in _contactControllers) {
+      contact.dispose();
+    }
     super.dispose();
   }
 
@@ -3574,6 +3997,10 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
       name: _nameController.text.trim(),
       summary: _summaryController.text.trim(),
       desires: _parseDesiresInput(_desiresController.text),
+      contacts: <PersonContact>[
+        for (final contact in _contactControllers)
+          if (contact.value.text.trim().isNotEmpty) contact.toContact(),
+      ],
     );
     final existing = widget.person;
     final tagChanges = _changedTagAssignments(
@@ -3711,6 +4138,19 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
                           textInputAction: TextInputAction.newline,
                         ),
                         const SizedBox(height: 18),
+                        _ContactEditor(
+                          contacts: _contactControllers,
+                          enabled: !_saving,
+                          onAdd: () => setState(() {
+                            _contactControllers.add(_ContactDraftController());
+                          }),
+                          onRemove: (contact) => setState(() {
+                            _contactControllers.remove(contact);
+                            contact.dispose();
+                          }),
+                          onChanged: () => setState(() {}),
+                        ),
+                        const SizedBox(height: 18),
                         _EditableTagsField(
                           selectedTags: selectedTags,
                           onAdd: _saving ? null : _showAddTagPicker,
@@ -3775,6 +4215,133 @@ class _PersonFormSheetState extends ConsumerState<_PersonFormSheet> {
     );
   }
 }
+
+class _ContactDraftController {
+  _ContactDraftController({
+    this.id = 0,
+    this.type = 'whatsapp',
+    String value = '',
+  }) : value = TextEditingController(text: value);
+
+  factory _ContactDraftController.fromContact(PersonContact contact) =>
+      _ContactDraftController(
+        id: contact.id,
+        type: contact.type.trim().isEmpty
+            ? 'phone'
+            : contact.type.trim().toLowerCase(),
+        value: contact.value,
+      );
+
+  final int id;
+  String type;
+  final TextEditingController value;
+
+  PersonContact toContact() =>
+      PersonContact(id: id, type: type, value: value.text.trim());
+  void dispose() => value.dispose();
+}
+
+class _ContactEditor extends StatelessWidget {
+  const _ContactEditor({
+    required this.contacts,
+    required this.enabled,
+    required this.onAdd,
+    required this.onRemove,
+    required this.onChanged,
+  });
+
+  final List<_ContactDraftController> contacts;
+  final bool enabled;
+  final VoidCallback onAdd;
+  final ValueChanged<_ContactDraftController> onRemove;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const types = <String>['whatsapp', 'wechat', 'linkedin', 'email', 'phone'];
+    return _FormSection(
+      label: 'Contact identities',
+      icon: Icons.alternate_email,
+      child: Column(
+        children: <Widget>[
+          for (final contact in contacts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 118,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: types.contains(contact.type)
+                          ? contact.type
+                          : 'phone',
+                      items: <DropdownMenuItem<String>>[
+                        for (final type in types)
+                          DropdownMenuItem(
+                            value: type,
+                            child: Text(_contactDisplayLabel(type)),
+                          ),
+                      ],
+                      onChanged: enabled
+                          ? (value) {
+                              if (value != null) contact.type = value;
+                              onChanged();
+                            }
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextFormField(
+                      controller: contact.value,
+                      enabled: enabled,
+                      decoration: InputDecoration(
+                        hintText: contact.type == 'whatsapp'
+                            ? '+8613800138000'
+                            : contact.type == 'wechat'
+                            ? 'WeChat ID'
+                            : 'Identifier',
+                      ),
+                      validator: (value) {
+                        final text = (value ?? '').trim();
+                        if (contact.type == 'whatsapp' &&
+                            text.isNotEmpty &&
+                            !RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(text)) {
+                          return 'Use E.164, e.g. +8613800138000';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: enabled ? () => onRemove(contact) : null,
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                ],
+              ),
+            ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: enabled ? onAdd : null,
+              icon: const Icon(Icons.add),
+              label: const Text('Add contact'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _contactDisplayLabel(String type) => switch (type) {
+  'whatsapp' => 'WhatsApp',
+  'wechat' => 'WeChat',
+  'linkedin' => 'LinkedIn',
+  'email' => 'Email',
+  'phone' => 'Phone',
+  _ => 'Contact',
+};
 
 class _PersonFormField extends StatelessWidget {
   const _PersonFormField({
@@ -4728,8 +5295,22 @@ class _ContactIconBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final target = _contactLaunchUri(contact);
+    final isWeChat = _contactType(contact) == 'wechat';
     return IconButton(
-      onPressed: target == null ? null : () => launchUrl(target),
+      onPressed: target != null
+          ? () => launchUrl(target)
+          : isWeChat && contact.value.trim().isNotEmpty
+          ? () async {
+              await Clipboard.setData(
+                ClipboardData(text: contact.value.trim()),
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('WeChat ID copied.')),
+                );
+              }
+            }
+          : null,
       tooltip: _contactTooltip(contact, target),
       style: IconButton.styleFrom(
         backgroundColor: AppColors.subtle,
@@ -4765,6 +5346,12 @@ Widget _contactIcon(PersonContact contact) {
       ),
     );
   }
+  if (type == 'whatsapp') {
+    return const Icon(Icons.chat_outlined, size: 17, color: Color(0xff25d366));
+  }
+  if (type == 'wechat') {
+    return const Icon(Icons.forum_outlined, size: 17, color: Color(0xff07c160));
+  }
   return const Icon(Icons.link_outlined, size: 17);
 }
 
@@ -4776,6 +5363,8 @@ String _contactTooltip(PersonContact contact, Uri? target) {
     'email' => 'Email',
     'phone' => 'Phone',
     'linkedin' => 'LinkedIn',
+    'whatsapp' => 'WhatsApp',
+    'wechat' => 'WeChat (tap to copy)',
     _ => 'Contact',
   };
   final value = target?.toString() ?? contact.value.trim();
@@ -4793,6 +5382,10 @@ Uri? _contactLaunchUri(PersonContact contact) {
   }
   if (type == 'phone' && value.isNotEmpty) {
     return Uri(scheme: 'tel', path: value);
+  }
+  if (type == 'whatsapp' && value.isNotEmpty) {
+    final number = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (number.isNotEmpty) return Uri.parse('https://wa.me/$number');
   }
   final rawLink = url.isNotEmpty ? url : _derivedContactUrl(type, value);
   if (rawLink == null || rawLink.trim().isEmpty) return null;
@@ -4929,13 +5522,11 @@ class _NavItem {
     required this.section,
     required this.label,
     required this.icon,
-    this.badge,
   });
 
   final PeopleAppSection section;
   final String label;
   final IconData icon;
-  final String? badge;
 }
 
 const _navItems = <_NavItem>[
@@ -4953,7 +5544,6 @@ const _navItems = <_NavItem>[
     section: PeopleAppSection.pending,
     label: 'Pending',
     icon: Icons.inbox_outlined,
-    badge: '3',
   ),
   _NavItem(
     section: PeopleAppSection.logs,
@@ -5008,8 +5598,19 @@ Person? _personById(List<Person> people, int? id) {
 }
 
 bool _personHasPending(Person person) {
-  return person.status.toLowerCase().contains('follow');
+  return person.conversations.any(
+    (conversation) => conversation.responsePending,
+  );
 }
+
+int _pendingCount(AsyncValue<List<Person>> state) => switch (state) {
+  AsyncData(:final value) => value.fold<int>(
+    0,
+    (count, person) =>
+        count + person.conversations.where((row) => row.responsePending).length,
+  ),
+  _ => 0,
+};
 
 String _personListSubtitle(Person person) {
   final company = person.company.trim();
@@ -5157,22 +5758,49 @@ void _selectFirstPersonIfNeeded(WidgetRef ref, List<Person> people) {
 }
 
 List<_AgendaItem> _agendaFor(List<Person> people, int dayOffset) {
-  if (dayOffset == 0) {
-    return <_AgendaItem>[
-      for (final person in people)
-        if (person.logs.any((log) => log.time == 'Today'))
+  final selectedDate = DateUtils.dateOnly(
+    DateTime.now().add(Duration(days: dayOffset)),
+  );
+  final datedMeetings = <_AgendaItem>[
+    for (final person in people)
+      for (final meeting in person.actualMeetings)
+        if (DateUtils.isSameDay(meeting.startTime.toLocal(), selectedDate))
           _AgendaItem(
-            title: person.meetings.firstOrNull ?? 'Relationship check-in',
-            subtitle: 'Today touchpoint with ${person.company}',
-            time: 'Today',
+            title: meeting.name,
+            subtitle: dayOffset == 0
+                ? 'Today with ${person.name}'
+                : 'Past meeting with ${person.name}',
+            time: _compactUpdatedAt(
+              meeting.startTime.toLocal().toIso8601String(),
+            ),
             person: person,
             kind: _AgendaKind.meeting,
           ),
+  ];
+
+  if (dayOffset == 0) {
+    return <_AgendaItem>[
+      ...datedMeetings,
+      if (!people.any((person) => person.actualMeetings.isNotEmpty))
+        for (final person in people)
+          if (person.logs.any((log) => log.time == 'Today'))
+            _AgendaItem(
+              title: person.meetings.firstOrNull ?? 'Relationship check-in',
+              subtitle: 'Today touchpoint with ${person.company}',
+              time: 'Today',
+              person: person,
+              kind: _AgendaKind.meeting,
+            ),
       for (final person in people)
         if (person.nextFollowUp == 'Today')
           _AgendaItem(
             title: 'Follow up with ${person.name}',
-            subtitle: person.currentThreads.firstOrNull?.title ?? 'Open loop',
+            subtitle:
+                person.conversations
+                    .where((row) => row.responsePending)
+                    .firstOrNull
+                    ?.name ??
+                'Open loop',
             time: 'Due',
             person: person,
             kind: _AgendaKind.checkIn,
@@ -5194,6 +5822,12 @@ List<_AgendaItem> _agendaFor(List<Person> people, int dayOffset) {
     ].take(5).toList();
   }
 
+  if (datedMeetings.isNotEmpty ||
+      people.any((p) => p.actualMeetings.isNotEmpty)) {
+    return datedMeetings;
+  }
+
+  // Preserve the legacy fallback for backends that only expose meeting names.
   return <_AgendaItem>[
     for (final person in people)
       for (final meeting in person.meetings.take(1))

@@ -239,6 +239,49 @@ void main() {
       expect(mapped.contacts.single.name, 'LinkedIn: ollierubens');
     });
 
+    test('maps only has_conversation relations into compact conversations', () {
+      final person = Model(
+        id: 1,
+        name: 'Ollie Rubens',
+        modelTypeId: 1,
+        relations: {
+          'Conversation': [
+            Model(
+              id: 20,
+              name: 'WeChat · Ollie',
+              description: 'Shared a brief and is waiting for a reply.',
+              modelTypeId: 20,
+              attributes: const {
+                'provider': 'wechat',
+                'external_account_id': 'primary',
+                'external_thread_id': 'ollie-wechat',
+                'last_message_at': '2026-08-29T08:00:00Z',
+                'last_synced_at': '2026-08-29T09:00:00Z',
+                'response_pending': true,
+              },
+            ),
+            Model(id: 21, name: 'Unrelated', modelTypeId: 20),
+          ],
+        },
+        relationsList: [
+          Relation(
+            relationId: 50,
+            modelId: 20,
+            modelType: 'Conversation',
+            name: 'WeChat · Ollie',
+            relationName: 'has_conversation',
+          ),
+        ],
+      );
+
+      final mapped = personFromModel(person);
+
+      expect(mapped.conversations, hasLength(1));
+      expect(mapped.conversations.single.provider, 'wechat');
+      expect(mapped.conversations.single.externalThreadId, 'ollie-wechat');
+      expect(mapped.conversations.single.responsePending, isTrue);
+    });
+
     test('splits attended and planned Meet rows from Plannable fields', () {
       final person = Model(
         id: 1,

@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  connectivity_plus: ^7.3.1
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.2.0
@@ -37,10 +38,14 @@ dependencies:
     path: ../nx_modules/nx_db
   nx_documents:
     path: ../nx_modules/nx_documents
+  nx_offline:
+    path: ../nx_modules/nx_offline
+  shared_preferences: ^2.5.4
   url_launcher: ^6.3.2
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  drift: ^2.34.0
   flutter_test:
     sdk: flutter
 

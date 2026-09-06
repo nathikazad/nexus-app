@@ -56,7 +56,7 @@ class KgqlPeopleRepository implements PersonRepository {
 
   @override
   Future<int> createPerson(PersonDraft draft) async {
-    return setKgqlModel(
+    final id = await setKgqlModel(
       _client,
       setKgqlCreate(
         modelType: kPersonModelTypeName,
@@ -65,10 +65,13 @@ class KgqlPeopleRepository implements PersonRepository {
         attributes: _draftAttributes(draft),
       ),
     );
+    await _syncContacts(id, const <PersonContact>[], draft.contacts);
+    return id;
   }
 
   @override
   Future<void> updatePerson(int id, PersonDraft draft) async {
+    final existing = await getById(id);
     await setKgqlModel(
       _client,
       setKgqlUpdate(
@@ -78,6 +81,11 @@ class KgqlPeopleRepository implements PersonRepository {
         description: draft.summary.trim(),
         attributes: _draftAttributes(draft),
       ),
+    );
+    await _syncContacts(
+      id,
+      existing?.contacts ?? const <PersonContact>[],
+      draft.contacts,
     );
   }
 
@@ -273,7 +281,79 @@ class KgqlPeopleRepository implements PersonRepository {
   List<SetModelAttribute> _draftAttributes(PersonDraft draft) {
     return [SetModelAttribute(key: kPersonAttrDesires, value: draft.desires)];
   }
+
+  Future<void> _syncContacts(
+    int personId,
+    List<PersonContact> existing,
+    List<PersonContact> desired,
+  ) async {
+    final desiredIds = {
+      for (final contact in desired)
+        if (contact.id > 0) contact.id,
+    };
+    for (final contact in existing) {
+      if (contact.id > 0 && !desiredIds.contains(contact.id)) {
+        await setKgqlModel(_client, setKgqlDelete(contact.id));
+      }
+    }
+    for (final contact in desired) {
+      final type = contact.type.trim().toLowerCase();
+      final value = contact.value.trim();
+      if (type.isEmpty || value.isEmpty) continue;
+      final name = '${_contactTypeLabel(type)}: $value';
+      if (contact.id > 0) {
+        await setKgqlModel(
+          _client,
+          setKgqlUpdate(
+            id: contact.id,
+            modelType: 'Contact',
+            name: name,
+            description: contact.description,
+            attributes: <SetModelAttribute>[
+              SetModelAttribute(key: 'type', value: type),
+              SetModelAttribute(key: 'value', value: value),
+            ],
+          ),
+        );
+      } else {
+        final contactId = await setKgqlModel(
+          _client,
+          setKgqlCreate(
+            modelType: 'Contact',
+            name: name,
+            description: contact.description,
+            attributes: <SetModelAttribute>[
+              SetModelAttribute(key: 'type', value: type),
+              SetModelAttribute(key: 'value', value: value),
+            ],
+          ),
+        );
+        await setKgqlModel(
+          _client,
+          SetModelRequest(
+            id: personId,
+            relations: <ModelRelation>[
+              ModelRelation(
+                modelType: 'Contact',
+                relationName: 'has_contact',
+                link: <int>[contactId],
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
 }
+
+String _contactTypeLabel(String type) => switch (type) {
+  'whatsapp' => 'WhatsApp',
+  'wechat' => 'WeChat',
+  'linkedin' => 'LinkedIn',
+  'email' => 'Email',
+  'phone' => 'Phone',
+  _ => 'Contact',
+};
 
 Iterable<String> _tagNodeNames(TagNode node) sync* {
   yield node.name;

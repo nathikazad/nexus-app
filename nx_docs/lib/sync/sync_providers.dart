@@ -9,6 +9,7 @@ import 'package:nx_db/riverpod.dart';
 import 'package:nx_docs/account/account_providers.dart';
 import 'package:nx_docs/documents/document_data_providers.dart';
 import 'package:nx_docs/sync/clock.dart';
+import 'package:nx_docs/sync/storage_profile.dart';
 import 'package:nx_docs/sync/connectivity_monitor.dart';
 import 'package:nx_docs/sync/document_synchronizer.dart';
 import 'package:nx_docs/sync/id_generator.dart';
@@ -22,6 +23,7 @@ import 'package:nx_docs/sync/remote/document_remote_api.dart';
 import 'package:nx_docs/sync/remote/repository_document_remote_api.dart';
 import 'package:nx_docs/sync/remote/unavailable_document_remote_api.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
+import 'package:nx_offline/nx_offline_storage.dart';
 
 final offlineEnabledProvider = Provider<bool>((ref) => !kIsWeb);
 
@@ -43,7 +45,7 @@ final notesDatabaseProvider = Provider.family<NotesDatabase, String>((
   final safeName = accountKey.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
   final database = NotesDatabase(
     driftDatabase(
-      name: 'nx_notes_$safeName',
+      name: 'nx_notes_$safeName$storageProfileSuffix',
       web: DriftWebOptions(
         sqlite3Wasm: Uri.parse('sqlite3.wasm'),
         driftWorker: Uri.parse('drift_worker.js'),
@@ -63,6 +65,9 @@ final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
   return DriftLocalNotesStore(
     database: database,
     accountKey: session.accountKey,
+    files: ContentFiles.application(
+      'nx_docs:${session.accountKey}$storageProfileSuffix',
+    ),
   );
 });
 

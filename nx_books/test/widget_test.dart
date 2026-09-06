@@ -10,9 +10,13 @@ import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/domain/book/book_repository.dart';
 import 'package:nx_books/features/books/books_shell.dart';
 import 'package:nx_books/features/books/notes/book_notes_page.dart';
+import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_documents/nx_documents.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+
   test('book notes stay inside the nx_books route tree', () {
     expect(bookNotesPath(4195), '/books/4195/notes');
     expect(bookDetailsPath(4195), '/books/4195/details');
@@ -71,7 +75,7 @@ void main() {
     );
   });
 
-  testWidgets('desktop bookshelf keeps reading separate and switches library', (
+  testWidgets('desktop bookshelf shows all three state lanes side by side', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 820);
@@ -100,15 +104,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Currently Reading'), findsOneWidget);
-    expect(find.text('Library'), findsOneWidget);
-    expect(find.text('To Read'), findsWidgets);
-    expect(find.text('Read'), findsWidgets);
+    expect(find.text('To Read'), findsOneWidget);
+    expect(find.text('Read'), findsOneWidget);
     expect(find.text('Queued book'), findsOneWidget);
-    expect(find.text('Finished book'), findsNothing);
+    expect(find.text('Finished book'), findsOneWidget);
     expect(find.text('startup'), findsWidgets);
     expect(find.text('strategy'), findsWidgets);
     expect(find.text('Example Author'), findsWidgets);
     expect(find.text('25%'), findsWidgets);
+    final settingsButton = find.byKey(
+      const ValueKey<String>('books-settings-button'),
+    );
+    expect(settingsButton, findsOneWidget);
+    expect(tester.getCenter(settingsButton).dx, lessThan(70));
+    expect(tester.getCenter(settingsButton).dy, greaterThan(740));
+
+    await tester.tap(settingsButton);
+    await tester.pumpAndSettle();
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Light'), findsOneWidget);
+    expect(find.text('Dark'), findsOneWidget);
+    expect(find.text('Reader text'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('Offline library'), findsOneWidget);
+    expect(find.text('Sync now'), findsOneWidget);
+    expect(find.text('Log out'), findsOneWidget);
+    expect(find.text('Version 1.0.0 (1)'), findsOneWidget);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+    expect(
+      ProviderScope.containerOf(
+        tester.element(settingsButton),
+      ).read(booksDarkModeProvider),
+      isTrue,
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('books-text-larger')));
+    await tester.pumpAndSettle();
+    expect(find.text('110%'), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
 
     final first = tester.getTopLeft(find.byKey(const ValueKey('book-card-2')));
     final second = tester.getTopLeft(find.byKey(const ValueKey('book-card-1')));
@@ -117,12 +152,17 @@ void main() {
       isTrue,
     );
 
-    await tester.tap(find.byKey(const ValueKey('collection-read')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Currently Reading'), findsOneWidget);
-    expect(find.text('Queued book'), findsNothing);
-    expect(find.text('Finished book'), findsOneWidget);
+    final readingLane = tester.getRect(
+      find.byKey(const ValueKey('lane-reading')),
+    );
+    final toReadLane = tester.getRect(
+      find.byKey(const ValueKey('lane-to-read')),
+    );
+    final readLane = tester.getRect(find.byKey(const ValueKey('lane-read')));
+    expect(readingLane.left, lessThan(toReadLane.left));
+    expect(toReadLane.left, lessThan(readLane.left));
+    expect(readingLane.top, toReadLane.top);
+    expect(toReadLane.top, readLane.top);
   });
 
   testWidgets('mobile bookshelf shows reading above switchable library', (
@@ -677,6 +717,7 @@ Widget _testApp(BookRepository repo) {
   return ProviderScope(
     overrides: [
       bookRepositoryProvider.overrideWithValue(repo),
+      offlineBookHydrationEnabledProvider.overrideWithValue(false),
       bookNotesRepositoryProvider.overrideWithValue(_FakeDocumentRepository()),
       bookNotesImageBaseProvider.overrideWithValue(null),
     ],

@@ -1,4 +1,6 @@
 import 'package:nx_docs/sync/native/background_uploader.dart';
+import 'package:nx_docs/library/models/catalog_query.dart';
+import 'package:nx_docs/sync/storage_profile.dart';
 import 'package:nx_docs/sync/native/local_notes_store.dart';
 import 'package:nx_docs/sync/remote/document_remote_api.dart';
 import 'package:nx_docs/sync/sync_models.dart';
@@ -63,8 +65,43 @@ final class _DocumentPullReconciler implements offline.PullReconciler<int> {
   @override
   Future<void> pullAll() async {
     final manifest = await _localStore.documentManifest();
-    final bundle = await _remoteApi.syncDocuments(manifest: manifest);
-    await _localStore.applySyncBundle(bundle);
+    recordStorageMemory('before_download', documents: manifest.length);
+    // Discover lightweight headers first, then download a bounded page of
+    // bodies. Include known local IDs so server deletions are still checked.
+    final byId = {for (final item in manifest) item.documentId: item};
+    var total = 0;
+    var downloaded = 0;
+    await offline.pullLibrary<int>(
+      discover: () async {
+        final catalog = await _remoteApi.fetchCatalog(const CatalogQuery.all());
+        final ids = {for (final item in catalog) item.id, ...byId.keys};
+        total = ids.length;
+        return ids;
+      },
+      knownKeys: byId.keys,
+      compare: (a, b) => a.compareTo(b),
+      reconcilePage: (page) async {
+        final bundle = await _remoteApi.syncDocuments(
+          manifest: [
+            for (final id in page)
+              if (byId[id] case final item?) item,
+          ],
+          documentIds: page,
+        );
+        await _localStore.applySyncBundle(bundle);
+        downloaded += bundle.documents.length;
+        recordStorageMemory(
+          'download_page',
+          documents: total,
+          downloaded: downloaded,
+        );
+      },
+    );
+    recordStorageMemory(
+      'after_download',
+      documents: total,
+      downloaded: downloaded,
+    );
   }
 
   @override

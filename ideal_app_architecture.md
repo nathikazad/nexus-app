@@ -25,9 +25,7 @@ workflow come first; Flutter, Riverpod, KGQL, Drift, and HTTP remain details.
 ## Organize as a readable narrative
 
 Top-level folders name user-visible capabilities or essential product
-responsibilities. Avoid generic top-level buckets such as `core`, `data`,
-`domain`, `features`, and `utils`: they describe software categories but say
-almost nothing about the application.
+responsibilities.
 
 ```text
 lib/

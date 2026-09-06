@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_docs/sync/native/local_notes_store.dart';
 import 'package:nx_docs/library/models/catalog_query.dart';
@@ -292,17 +294,23 @@ void runLocalNotesStoreContract({
 
   test('document streams publish initial and changed values', () async {
     final emissions = <String?>[];
+    final initial = Completer<void>();
+    final changed = Completer<void>();
     final subscription = store
         .watchDocument(const DocumentKey(localId: 'local-1'))
         .map((value) => value?.document.document)
-        .listen(emissions.add);
-    await Future<void>.delayed(Duration.zero);
+        .listen((value) {
+          emissions.add(value);
+          if (!initial.isCompleted) initial.complete();
+          if (value == 'written' && !changed.isCompleted) changed.complete();
+        });
+    await initial.future.timeout(const Duration(seconds: 5));
 
     await store.saveDraftAndEnqueue(
       offlineLocalDocument(body: 'written'),
       operation: offlinePendingOperation(body: 'written'),
     );
-    await Future<void>.delayed(Duration.zero);
+    await changed.future.timeout(const Duration(seconds: 5));
     await subscription.cancel();
 
     expect(emissions, <String?>[null, 'written']);

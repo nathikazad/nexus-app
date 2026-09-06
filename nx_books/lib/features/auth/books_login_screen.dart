@@ -63,7 +63,7 @@ class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 22),
-                    const Text(
+                    Text(
                       'Nexus Books',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -73,7 +73,7 @@ class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Sign in to organize your reading queue.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: AppColors.muted),
@@ -142,10 +142,7 @@ class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
                       Text(
                         'Error: ${auth.error}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.red,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: AppColors.red, fontSize: 13),
                       ),
                     ],
                   ],
@@ -168,7 +165,7 @@ class _LoginLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.faint,
         fontSize: 11,
         fontWeight: FontWeight.w700,
