@@ -90,8 +90,9 @@ class _NotesPage extends ConsumerWidget {
                 identity: identity,
                 repository: ref.watch(bookNotesRepositoryProvider),
                 textScaleFactor: textScale,
-                onSelectionChanged: (text) =>
-                    ref.read(readingSelectionProvider).value = (identity, text),
+                onUseSelection: (text) =>
+                    ref.read(readingSelectionProvider).value =
+                        ReadingSelectionRequest(identity, text),
                 onOpenLink: (href) => _openNotesLink(context, href),
                 imageUrlResolver: imageBase == null
                     ? null

@@ -12,6 +12,7 @@ class DocumentReaderHost extends StatefulWidget {
     this.onOpenLink,
     this.textScaleFactor = 1,
     this.onSelectionChanged,
+    this.onUseSelection,
     super.key,
   });
 
@@ -21,6 +22,7 @@ class DocumentReaderHost extends StatefulWidget {
   final Future<bool> Function(String href)? onOpenLink;
   final double textScaleFactor;
   final ValueChanged<String>? onSelectionChanged;
+  final ValueChanged<String>? onUseSelection;
 
   @override
   State<DocumentReaderHost> createState() => _DocumentReaderHostState();
@@ -123,6 +125,7 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
             onOpenLink: widget.onOpenLink,
             textScaleFactor: widget.textScaleFactor,
             onSelectionChanged: widget.onSelectionChanged,
+            onUseSelection: widget.onUseSelection,
           ),
         ),
         if (_saveError != null)

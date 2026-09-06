@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +8,18 @@ import 'package:nx_db/riverpod.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:nx_voice/nx_voice.dart';
 import 'reading_companion_controller.dart';
+import 'reading_companion_history.dart';
+import 'reading_companion_conversation.dart';
+
+class ReadingSelectionRequest {
+  const ReadingSelectionRequest(this.identity, this.text);
+  final DocumentIdentity identity;
+  final String text;
+}
 
 final readingSelectionProvider =
-    Provider<ValueNotifier<(DocumentIdentity?, String)>>((ref) {
-      final value = ValueNotifier<(DocumentIdentity?, String)>((null, ''));
+    Provider<ValueNotifier<ReadingSelectionRequest?>>((ref) {
+      final value = ValueNotifier<ReadingSelectionRequest?>(null);
       ref.onDispose(value.dispose);
       return value;
     });
@@ -28,9 +35,13 @@ class ReadingCompanion extends ConsumerStatefulWidget {
 class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     with WidgetsBindingObserver {
   final _input = TextEditingController();
+  final _layoutButtonLink = LayerLink();
+  late final ValueNotifier<ReadingSelectionRequest?> _selectionRequests;
   ReadingCompanionController? _controller;
   bool _open = false;
-  bool _expanded = false;
+  bool _layoutPickerOpen = false;
+  bool _confirmClear = false;
+  int _panelLayoutIndex = 0;
   bool _loading = false;
   String _title = '';
   String _selection = '';
@@ -39,16 +50,25 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _selectionRequests = ref.read(readingSelectionProvider)
+      ..addListener(_selectionRequested);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) unawaited(_controller?.cancel());
+    // A microphone permission dialog temporarily makes the app inactive.
+    // Cancel only when actually backgrounded, not while granting permission.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      if (_controller?.recording == true) unawaited(_controller?.cancel());
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _selectionRequests.removeListener(_selectionRequested);
     _controller?.dispose();
     _input.dispose();
     super.dispose();
@@ -57,8 +77,10 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   Future<void> _show() async {
     setState(() {
       _open = true;
-      final selected = ref.read(readingSelectionProvider).value;
-      _selection = selected.$1 == widget.identity ? selected.$2 : '';
+      final selected = _selectionRequests.value;
+      _selection = selected != null && selected.identity == widget.identity
+          ? selected.text
+          : '';
     });
     if (_controller != null || _loading || widget.identity == null) return;
     final user = ref.read(authProvider).value;
@@ -102,28 +124,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
         final transcripts = rows.first.relations?['Transcript'];
         if (transcripts != null && transcripts.isNotEmpty) {
           dynamic history = transcripts.first.attributes?['messages'];
-          if (history is String) history = jsonDecode(history);
-          if (history is Map) {
-            final entries = history.entries.toList()
-              ..sort((a, b) => '${a.key}'.compareTo('${b.key}'));
-            for (final entry in entries.skip(
-              math.max(0, entries.length - 60),
-            )) {
-              final value = entry.value;
-              if (value is! Map || value['message'] is! String) continue;
-              final sender = value['sender'];
-              if (sender == 'system') continue;
-              controller.messages.add(
-                ReadingMessage(
-                  sender == 'agent' || sender == 'assistant'
-                      ? 'assistant'
-                      : 'user',
-                  value['message'] as String,
-                  turn: '${entry.key}',
-                ),
-              );
-            }
-          }
+          controller.messages.addAll(readingMessagesFromHistory(history));
         }
       }
     } catch (_) {
@@ -136,21 +137,80 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     }
   }
 
+  void _selectionRequested() {
+    final selected = _selectionRequests.value;
+    if (selected == null || selected.identity != widget.identity) return;
+    unawaited(_show());
+  }
+
   void _changed() {
     if (mounted) setState(() {});
   }
 
   void _close() {
     FocusManager.instance.primaryFocus?.unfocus();
-    unawaited(_controller?.cancel());
+    if (_controller?.recording == true) unawaited(_controller?.cancel());
     setState(() => _open = false);
+  }
+
+  Future<void> _clearTranscript() async {
+    final controller = _controller;
+    final identity = widget.identity;
+    if (controller == null || identity == null) return;
+    setState(() {
+      _confirmClear = false;
+      _loading = true;
+    });
+    final client = ref.read(graphqlClientProvider);
+    final cleared = await controller.clearTranscript(() async {
+      // Resolve fresh: the first reply may have created the transcript since
+      // this panel was opened. Clear only transcripts linked to this document.
+      final rows = await fetchKgqlModels(
+        client,
+        filter: {
+          'model_type': identity.modelType,
+          'filters': [
+            {'key': 'id', 'op': '=', 'value': '${identity.id}'},
+          ],
+        },
+        struct: const {
+          'id': true,
+          'Transcript': {'id': true},
+        },
+      );
+      if (rows.isEmpty) throw StateError('Document not found');
+      for (final transcript in rows.first.relations?['Transcript'] ?? []) {
+        await setKgqlModel(
+          client,
+          SetModelRequest(
+            id: transcript.id,
+            attributes: [
+              SetModelAttribute(key: 'messages', value: <String, dynamic>{}),
+            ],
+          ),
+        );
+      }
+    });
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (cleared) {
+        _input.clear();
+        _selection = '';
+        _selectionRequests.value = null;
+      }
+    });
   }
 
   Future<void> _send() async {
     final original = _input.text;
     final sent =
         await _controller?.send(original, selection: _selection) ?? false;
-    if (mounted && sent && _input.text == original) _input.clear();
+    if (mounted && sent) {
+      if (_input.text == original) _input.clear();
+      setState(() => _selection = '');
+      _selectionRequests.value = null;
+    }
   }
 
   @override
@@ -164,8 +224,29 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
           0.0,
           bounds.maxHeight - keyboard - MediaQuery.paddingOf(context).top,
         );
-        final width = math.min(bounds.maxWidth - 24, _expanded ? 560.0 : 400.0);
-        final height = math.min(usableHeight - 24, _expanded ? 760.0 : 540.0);
+        final layout = PanelLayout.values[_panelLayoutIndex];
+        final floatingWidth = math.max(0.0, bounds.maxWidth - 24);
+        final floatingHeight = math.max(0.0, usableHeight - 24);
+        final (width, height) = switch (layout) {
+          PanelLayout.compact => (
+            math.min(floatingWidth, 400.0),
+            math.min(floatingHeight, 540.0),
+          ),
+          PanelLayout.expanded => (
+            math.min(floatingWidth, 560.0),
+            math.min(floatingHeight, 760.0),
+          ),
+          PanelLayout.bottom => (
+            bounds.maxWidth,
+            math.min(usableHeight, math.max(420.0, usableHeight * 0.46)),
+          ),
+          PanelLayout.right => (math.min(bounds.maxWidth, 560.0), usableHeight),
+          PanelLayout.fullScreen => (bounds.maxWidth, usableHeight),
+        };
+        final docked =
+            layout == PanelLayout.bottom ||
+            layout == PanelLayout.right ||
+            layout == PanelLayout.fullScreen;
         return Stack(
           children: [
             widget.child,
@@ -182,14 +263,17 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
               ),
             if (_open && height > 0)
               Positioned(
-                right: 12,
-                bottom: keyboard + 12,
+                right: docked ? 0 : 12,
+                bottom: keyboard + (docked ? 0 : 12),
                 width: width,
                 height: height,
                 child: Material(
+                  key: const ValueKey('reading-companion-panel'),
                   elevation: 12,
                   color: colors.surface,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: layout == PanelLayout.fullScreen
+                      ? BorderRadius.zero
+                      : BorderRadius.circular(16),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
@@ -197,16 +281,33 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                         children: [
                           const SizedBox(width: 16),
                           const Expanded(child: Text('Reading companion')),
-                          IconButton(
-                            tooltip: _expanded ? 'Make smaller' : 'Expand',
-                            onPressed: () =>
-                                setState(() => _expanded = !_expanded),
-                            icon: Icon(
-                              _expanded
-                                  ? Icons.close_fullscreen
-                                  : Icons.open_in_full,
+                          CompositedTransformTarget(
+                            key: const ValueKey('panel-layout-button-anchor'),
+                            link: _layoutButtonLink,
+                            child: IconButton(
+                              tooltip: 'Change panel layout',
+                              onPressed: () => setState(
+                                () => _layoutPickerOpen = !_layoutPickerOpen,
+                              ),
+                              icon: PanelLayoutIcon(layout: layout),
                             ),
                           ),
+                          if (widget.identity != null)
+                            IconButton(
+                              tooltip: 'Clear conversation',
+                              onPressed:
+                                  _loading ||
+                                      controller == null ||
+                                      controller.busy ||
+                                      controller.recording
+                                  ? null
+                                  : () {
+                                      FocusManager.instance.primaryFocus
+                                          ?.unfocus();
+                                      setState(() => _confirmClear = true);
+                                    },
+                              icon: const Icon(Icons.delete_outline),
+                            ),
                           IconButton(
                             tooltip: 'Close companion',
                             onPressed: _close,
@@ -254,8 +355,10 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                 ),
                                 IconButton(
                                   tooltip: 'Clear selected passage',
-                                  onPressed: () =>
-                                      setState(() => _selection = ''),
+                                  onPressed: () {
+                                    setState(() => _selection = '');
+                                    _selectionRequests.value = null;
+                                  },
                                   icon: const Icon(Icons.close, size: 16),
                                 ),
                               ],
@@ -274,42 +377,13 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                   child: Padding(
                                     padding: EdgeInsets.all(20),
                                     child: Text(
-                                      'Ask a question, or hold the microphone to talk.\n\nTry “Explain the main idea with an example.”',
+                                      'Ask a question, or tap the microphone to record. Tap stop to send.\n\nTry “Explain the main idea with an example.”',
                                     ),
                                   ),
                                 )
-                              : ListView.builder(
-                                  reverse: true,
-                                  padding: const EdgeInsets.all(12),
-                                  itemCount: controller.messages.length,
-                                  itemBuilder: (context, index) {
-                                    final message =
-                                        controller.messages[controller
-                                                .messages
-                                                .length -
-                                            1 -
-                                            index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 14,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            message.role == 'user'
-                                                ? 'You'
-                                                : 'Companion',
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.labelSmall,
-                                          ),
-                                          SelectableText(message.text),
-                                        ],
-                                      ),
-                                    );
-                                  },
+                              : ReadingCompanionConversation(
+                                  messages: controller.messages,
+                                  busy: controller.busy,
                                 ),
                         ),
                         if (controller?.error case final error?)
@@ -326,28 +400,14 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Row(
                             children: [
-                              IconButton(
-                                tooltip: controller?.speakReplies == true
-                                    ? 'Mute spoken replies'
-                                    : 'Speak replies',
-                                onPressed: controller == null
-                                    ? null
-                                    : () => controller.setSpeakReplies(
-                                        !controller.speakReplies,
-                                      ),
-                                icon: Icon(
-                                  controller?.speakReplies == true
-                                      ? Icons.volume_up_outlined
-                                      : Icons.volume_off_outlined,
-                                ),
-                              ),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   controller?.recording == true
-                                      ? 'Recording… release to send'
+                                      ? 'Recording… tap stop to send'
                                       : controller?.busy == true
                                       ? 'Working…'
-                                      : 'Hold mic to talk · up to 60s',
+                                      : 'Tap mic to record · up to 60s · text replies',
                                   style: Theme.of(context).textTheme.labelSmall,
                                 ),
                               ),
@@ -356,7 +416,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                 IconButton(
                                   tooltip: 'Cancel turn',
                                   onPressed: controller!.cancel,
-                                  icon: const Icon(Icons.stop_circle_outlined),
+                                  icon: const Icon(Icons.close),
                                 ),
                             ],
                           ),
@@ -366,49 +426,19 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                           child: Row(
                             children: [
                               Expanded(
-                                child: TextField(
+                                child: ReadingQuestionField(
                                   controller: _input,
                                   enabled:
                                       !_loading &&
                                       controller != null &&
                                       !controller.recording,
-                                  minLines: 1,
-                                  maxLines: 3,
-                                  textInputAction: TextInputAction.send,
                                   onSubmitted: (_) => _send(),
-                                  decoration: const InputDecoration(
-                                    hintText: 'Ask about this…',
-                                  ),
                                 ),
                               ),
-                              Semantics(
-                                label: 'Hold to record a question',
-                                button: true,
-                                child: GestureDetector(
-                                  onLongPressStart:
-                                      !_loading && controller != null
-                                      ? (_) => controller.startRecording()
-                                      : null,
-                                  onLongPressEnd: (_) =>
-                                      controller?.stopRecording(),
-                                  onLongPressCancel: () =>
-                                      controller?.stopRecording(),
-                                  child: Tooltip(
-                                    message: 'Hold to talk; release to send',
-                                    child: SizedBox(
-                                      width: 48,
-                                      height: 48,
-                                      child: Icon(
-                                        controller?.recording == true
-                                            ? Icons.mic
-                                            : Icons.mic_none,
-                                        color: controller?.recording == true
-                                            ? colors.error
-                                            : colors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                              ReadingMicrophoneButton(
+                                controller: controller,
+                                enabled: !_loading,
+                                selection: _selection,
                               ),
                               IconButton(
                                 tooltip: 'Send question',
@@ -429,9 +459,208 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                   ),
                 ),
               ),
+            if (_layoutPickerOpen || _confirmClear)
+              Positioned.fill(
+                child: ModalBarrier(
+                  color: Colors.black26,
+                  dismissible: true,
+                  onDismiss: () => setState(() {
+                    _layoutPickerOpen = false;
+                    _confirmClear = false;
+                  }),
+                ),
+              ),
+            if (_layoutPickerOpen)
+              Positioned.fill(
+                child: CompositedTransformFollower(
+                  link: _layoutButtonLink,
+                  targetAnchor: Alignment.bottomLeft,
+                  followerAnchor: Alignment.topLeft,
+                  showWhenUnlinked: false,
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      key: const ValueKey('panel-layout-picker'),
+                      elevation: 16,
+                      borderRadius: BorderRadius.circular(24),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final option in PanelLayout.values)
+                            IconButton(
+                              tooltip: option.label,
+                              isSelected: option == layout,
+                              onPressed: () => setState(() {
+                                _panelLayoutIndex = option.index;
+                                _layoutPickerOpen = false;
+                              }),
+                              icon: PanelLayoutIcon(layout: option),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (_confirmClear)
+              Positioned.fill(
+                child: Center(
+                  child: AlertDialog(
+                    title: const Text('Clear this conversation?'),
+                    content: const Text(
+                      'Remove all messages for this book or chapter from this app and the saved database transcript. This cannot be undone.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => setState(() => _confirmClear = false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: _clearTranscript,
+                        child: const Text('Clear conversation'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         );
       },
     );
   }
+}
+
+class ReadingMicrophoneButton extends StatelessWidget {
+  const ReadingMicrophoneButton({
+    required this.controller,
+    this.enabled = true,
+    this.selection = '',
+    super.key,
+  });
+
+  final ReadingCompanionController? controller;
+  final bool enabled;
+  final String selection;
+
+  @override
+  Widget build(BuildContext context) {
+    final recording = controller?.recording == true;
+    return IconButton(
+      tooltip: recording ? 'Stop recording and send' : 'Record a question',
+      onPressed: !enabled || controller == null || controller!.busy
+          ? null
+          : () {
+              if (recording) {
+                unawaited(controller!.stopRecording());
+              } else {
+                FocusManager.instance.primaryFocus?.unfocus();
+                unawaited(controller!.startRecording(selection: selection));
+              }
+            },
+      icon: Icon(recording ? Icons.stop_circle : Icons.mic_none),
+      color: recording ? Theme.of(context).colorScheme.error : null,
+    );
+  }
+}
+
+enum PanelLayout {
+  compact('Compact panel'),
+  expanded('Expanded panel'),
+  bottom('Full-width bottom panel'),
+  right('Full-height right panel'),
+  fullScreen('Full-screen panel');
+
+  const PanelLayout(this.label);
+  final String label;
+}
+
+class PanelLayoutIcon extends StatelessWidget {
+  const PanelLayoutIcon({required this.layout, super.key});
+
+  final PanelLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return CustomPaint(
+      size: const Size.square(24),
+      painter: _PanelLayoutIconPainter(
+        layout: layout,
+        color: colors.onSurfaceVariant,
+        fillColor: colors.primary,
+      ),
+    );
+  }
+}
+
+class _PanelLayoutIconPainter extends CustomPainter {
+  const _PanelLayoutIconPainter({
+    required this.layout,
+    required this.color,
+    required this.fillColor,
+  });
+
+  final PanelLayout layout;
+  final Color color;
+  final Color fillColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final frame = Rect.fromLTWH(2, 2, size.width - 4, size.height - 4);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(frame, const Radius.circular(2)),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+    final panel = switch (layout) {
+      PanelLayout.compact => Rect.fromLTWH(13, 12, 7, 8),
+      PanelLayout.expanded => Rect.fromLTWH(10, 8, 10, 12),
+      PanelLayout.bottom => Rect.fromLTWH(2, 13, 20, 9),
+      PanelLayout.right => Rect.fromLTWH(11, 2, 11, 20),
+      PanelLayout.fullScreen => Rect.fromLTWH(2, 2, 20, 20),
+    };
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(panel, const Radius.circular(1.5)),
+      Paint()..color = fillColor.withValues(alpha: 0.8),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PanelLayoutIconPainter oldDelegate) =>
+      layout != oldDelegate.layout ||
+      color != oldDelegate.color ||
+      fillColor != oldDelegate.fillColor;
+}
+
+class ReadingQuestionField extends TextField {
+  ReadingQuestionField({
+    required TextEditingController controller,
+    super.enabled,
+    super.focusNode,
+    super.onSubmitted,
+    super.key,
+  }) : super(
+         controller: controller,
+         // Avoid stale predictive composing text returning after backspace
+         // on the tablet's Gboard keyboard. Do not rewrite composing ranges.
+         autocorrect: false,
+         enableSuggestions: false,
+         minLines: 1,
+         maxLines: 3,
+         textInputAction: TextInputAction.send,
+         decoration: InputDecoration(
+           hintText: 'Ask about this…',
+           suffixIcon: IconButton(
+             tooltip: 'Clear question and dismiss keyboard',
+             onPressed: () {
+               controller.clear();
+               FocusManager.instance.primaryFocus?.unfocus();
+             },
+             icon: const Icon(Icons.clear),
+           ),
+         ),
+       );
 }

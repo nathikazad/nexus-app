@@ -66,6 +66,47 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   });
 
+  testWidgets('reader offers selected text to AI without adding a highlight', (
+    tester,
+  ) async {
+    String? selectedForAi;
+    DocumentContent? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(390, 700)),
+          child: Scaffold(
+            body: DocumentReader(
+              content: _content(),
+              onChanged: (content) async => saved = content,
+              onUseSelection: (text) => selectedForAi = text,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+    editor.editorState.selection = Selection.single(
+      path: const <int>[1],
+      startOffset: 0,
+      endOffset: 4,
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('reader-use-selection')),
+    );
+    await tester.pump();
+
+    expect(selectedForAi, isNotNull);
+    expect(selectedForAi, isNotEmpty);
+    expect(saved, isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
   testWidgets('host loads a composite Book identity', (tester) async {
     final repository = _MemoryRepository(_content());
     await tester.pumpWidget(

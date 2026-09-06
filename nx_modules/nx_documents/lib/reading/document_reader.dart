@@ -21,6 +21,7 @@ class DocumentReader extends StatefulWidget {
     this.imageUrlResolver,
     this.textScaleFactor = 1,
     this.onSelectionChanged,
+    this.onUseSelection,
     super.key,
   });
 
@@ -30,6 +31,7 @@ class DocumentReader extends StatefulWidget {
   final String Function(String url)? imageUrlResolver;
   final double textScaleFactor;
   final ValueChanged<String>? onSelectionChanged;
+  final ValueChanged<String>? onUseSelection;
 
   @override
   State<DocumentReader> createState() => _DocumentReaderState();
@@ -171,6 +173,7 @@ class _DocumentReaderState extends State<DocumentReader> {
     return ReaderHighlightToolbar(
       editorState: _editorState,
       editorScrollController: _scrollController,
+      onUseSelection: widget.onUseSelection,
       child: editor,
     );
   }
@@ -291,12 +294,14 @@ class ReaderHighlightToolbar extends StatefulWidget {
     required this.editorState,
     required this.editorScrollController,
     required this.child,
+    this.onUseSelection,
     super.key,
   });
 
   final EditorState editorState;
   final EditorScrollController editorScrollController;
   final Widget child;
+  final ValueChanged<String>? onUseSelection;
 
   @override
   State<ReaderHighlightToolbar> createState() => _ReaderHighlightToolbarState();
@@ -304,7 +309,7 @@ class ReaderHighlightToolbar extends StatefulWidget {
 
 class _ReaderHighlightToolbarState extends State<ReaderHighlightToolbar> {
   static const _toolbarHeight = 42.0;
-  static const _toolbarWidth = 152.0;
+  static const _highlightToolbarWidth = 152.0;
   OverlayEntry? _overlayEntry;
   Selection? _selection;
   Timer? _showTimer;
@@ -352,9 +357,12 @@ class _ReaderHighlightToolbarState extends State<ReaderHighlightToolbar> {
     if (rects.isEmpty) return;
     final rect = rects.reduce((a, b) => a.top <= b.top ? a : b);
     final width = MediaQuery.sizeOf(context).width;
-    final left = (rect.center.dx - _toolbarWidth / 2).clamp(
+    final toolbarWidth = widget.onUseSelection == null
+        ? _highlightToolbarWidth
+        : _highlightToolbarWidth + 40;
+    final left = (rect.center.dx - toolbarWidth / 2).clamp(
       8.0,
-      width - _toolbarWidth - 8,
+      width - toolbarWidth - 8,
     );
     final top = rect.top - _toolbarHeight - 8;
     _overlayEntry?.remove();
@@ -365,6 +373,7 @@ class _ReaderHighlightToolbarState extends State<ReaderHighlightToolbar> {
         child: _HighlightToolbarSurface(
           editorState: widget.editorState,
           selection: selection,
+          onUseSelection: widget.onUseSelection,
           onClose: _hide,
         ),
       ),
@@ -384,11 +393,13 @@ class _HighlightToolbarSurface extends StatelessWidget {
     required this.editorState,
     required this.selection,
     required this.onClose,
+    this.onUseSelection,
   });
 
   final EditorState editorState;
   final Selection selection;
   final VoidCallback onClose;
+  final ValueChanged<String>? onUseSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -402,6 +413,27 @@ class _HighlightToolbarSurface extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
+            if (onUseSelection != null)
+              Tooltip(
+                message: 'Ask AI about selection',
+                preferBelow: false,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (_) => _useWithAi(),
+                  child: SizedBox(
+                    key: const ValueKey<String>('reader-use-selection'),
+                    width: 36,
+                    height: 36,
+                    child: Center(
+                      child: Icon(
+                        Icons.auto_awesome_outlined,
+                        size: 19,
+                        color: colorScheme.onInverseSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             _button(
               key: const ValueKey<String>('reader-highlight-clear'),
               tooltip: 'Remove highlight',
@@ -462,6 +494,12 @@ class _HighlightToolbarSurface extends StatelessWidget {
 
   void _apply(String? colorHex) {
     unawaited(_applyHighlight(editorState, selection, colorHex));
+    onClose();
+  }
+
+  void _useWithAi() {
+    final text = editorState.getTextInSelection(selection).join('\n').trim();
+    if (text.isNotEmpty) onUseSelection?.call(text);
     onClose();
   }
 }

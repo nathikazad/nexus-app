@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'packet_codec.dart';
 import 'socket_client.dart';
@@ -11,21 +12,35 @@ class DocumentAiSessionConfig {
     required this.authHeaders,
     this.clientApp = 'nx_notes',
     this.agentId = 'nx_notes',
+    this.selection = '',
   });
 
   final String clientApp;
   final String agentId;
+  final String selection;
   final String socketUrl;
   final String userId;
   final int documentId;
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
-  String get key => '$socketUrl|$userId|$documentId|$agentId';
+  String get key => '$socketUrl|$userId|$documentId|$agentId|$selection';
+
+  DocumentAiSessionConfig withSelection(String text) => DocumentAiSessionConfig(
+        socketUrl: socketUrl,
+        userId: userId,
+        documentId: documentId,
+        authHeaders: authHeaders,
+        clientApp: clientApp,
+        agentId: agentId,
+        selection: text.length > 6000 ? text.substring(0, 6000) : text,
+      );
 
   Map<String, String> get headers => <String, String>{
         'X-Client-App': clientApp,
         'X-Agent-Id': agentId,
         'X-Document-Id': documentId.toString(),
+        if (selection.isNotEmpty)
+          'X-Reading-Selection': base64Encode(utf8.encode(selection)),
       };
 }
 
