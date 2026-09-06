@@ -6,6 +6,7 @@ import 'package:nx_docs/sync/sync_providers.dart';
 import 'package:nx_docs/app/version_info.dart';
 import 'package:nx_docs/app/theme.dart';
 import 'package:nx_docs/documents/editor/document_text_scale.dart';
+import 'package:nx_docs/workspace/workspace_state.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 
 typedef LibrarySyncCallback = Future<void> Function();
@@ -100,6 +101,7 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
   Widget build(BuildContext context) {
     final isDark = ref.watch(appDarkModeProvider);
     final documentTextScale = ref.watch(documentTextScaleProvider);
+    final workspace = ref.watch(desktopWorkspaceProvider);
     final versionInfo = ref.watch(appVersionInfoProvider);
     final syncStatus = ref.watch(documentSyncStatusProvider).value;
     final syncInProgress =
@@ -172,6 +174,31 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
                         ? ref.read(documentTextScaleProvider.notifier).increase
                         : null,
                     icon: const Icon(Icons.add),
+                  ),
+                  const SizedBox(width: 8),
+                  _PanelVisibilityButton(
+                    key: const Key('settings-toggle-left-panel'),
+                    panelIsVisible: !workspace.sidebarCollapsed,
+                    tooltip: workspace.sidebarCollapsed
+                        ? 'Show left panel'
+                        : 'Hide left panel',
+                    icon: Icons.view_sidebar_outlined,
+                    onPressed: () => ref
+                        .read(desktopWorkspaceProvider.notifier)
+                        .toggleSidebar(),
+                  ),
+                  const SizedBox(width: 4),
+                  _PanelVisibilityButton(
+                    key: const Key('settings-toggle-right-panel'),
+                    panelIsVisible: !workspace.inspectorCollapsed,
+                    tooltip: workspace.inspectorCollapsed
+                        ? 'Show right panel'
+                        : 'Hide right panel',
+                    icon: Icons.view_sidebar_outlined,
+                    flipHorizontally: true,
+                    onPressed: () => ref
+                        .read(desktopWorkspaceProvider.notifier)
+                        .toggleInspector(),
                   ),
                 ],
               ),
@@ -248,6 +275,40 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
           child: const Text('Close'),
         ),
       ],
+    );
+  }
+}
+
+class _PanelVisibilityButton extends StatelessWidget {
+  const _PanelVisibilityButton({
+    required this.panelIsVisible,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.flipHorizontally = false,
+    super.key,
+  });
+
+  final bool panelIsVisible;
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool flipHorizontally;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final iconWidget = Icon(icon);
+    return IconButton.outlined(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        foregroundColor: panelIsVisible ? colors.primary : colors.onSurface,
+        backgroundColor: panelIsVisible ? colors.primaryContainer : null,
+      ),
+      icon: flipHorizontally
+          ? Transform.flip(flipX: true, child: iconWidget)
+          : iconWidget,
     );
   }
 }

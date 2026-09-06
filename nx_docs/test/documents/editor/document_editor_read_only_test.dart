@@ -271,6 +271,36 @@ void main() {
     expect(find.text('Restaurants, living-room furniture'), findsOneWidget);
   });
 
+  testWidgets('switching from edit to read mode dismisses the keyboard', (
+    tester,
+  ) async {
+    final workspace = FakeDocumentWorkspace(
+      documents: <NxDocument>[_document()],
+    );
+    addTearDown(workspace.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          documentImageAssetServiceProvider.overrideWithValue(null),
+          documentWorkspaceProvider.overrideWithValue(workspace),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: DocumentEditorBody(document: _document())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey<String>('title-display-1')));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    await tester.tap(find.byIcon(Icons.article_outlined));
+    await tester.pumpAndSettle();
+
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
   testWidgets('narrow long document shows a subtle scroll position dot', (
     tester,
   ) async {

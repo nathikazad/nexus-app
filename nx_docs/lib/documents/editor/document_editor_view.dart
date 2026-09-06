@@ -383,6 +383,9 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     if (_editorMode == mode) {
       return;
     }
+    if (mode == _DocumentEditorMode.read) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    }
     setState(() => _editorMode = mode);
   }
 

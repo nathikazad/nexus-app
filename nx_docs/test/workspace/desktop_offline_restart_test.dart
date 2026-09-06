@@ -117,6 +117,17 @@ void main() {
     expect(find.byType(DesktopWorkspace), findsOneWidget);
     expect(find.text('Desktop restart offline'), findsWidgets);
     expect(find.text('Another persistent document'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Collapse navigator'));
+    await tester.pumpAndSettle();
+    final collapsedSettings = find.byKey(const Key('notes-settings-button'));
+    expect(find.byTooltip('Expand navigator'), findsOneWidget);
+    expect(collapsedSettings, findsOneWidget);
+    expect(tester.getCenter(collapsedSettings).dx, lessThan(44));
+    expect(tester.getCenter(collapsedSettings).dy, greaterThan(800));
+
+    await tester.tap(find.byTooltip('Expand navigator'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Another persistent document').first);
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
     expect(

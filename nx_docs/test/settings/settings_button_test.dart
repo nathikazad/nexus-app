@@ -14,6 +14,7 @@ import 'package:nx_docs/sync/fake/fake_document_remote_api.dart';
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/documents/editor/document_text_scale.dart';
 import 'package:nx_docs/settings/settings_button.dart';
+import 'package:nx_docs/workspace/workspace_state.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -56,6 +57,11 @@ void main() {
     expect(find.text('Dark'), findsOneWidget);
     expect(find.text('Document text'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
+    expect(find.byKey(const Key('settings-toggle-left-panel')), findsOneWidget);
+    expect(
+      find.byKey(const Key('settings-toggle-right-panel')),
+      findsOneWidget,
+    );
     expect(find.text('Sync now'), findsOneWidget);
     expect(find.text('Version 0.1.0 (7)'), findsOneWidget);
     expect(find.text('Shorebird patch 7'), findsOneWidget);
@@ -69,6 +75,22 @@ void main() {
     expect(find.text('110%'), findsOneWidget);
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getDouble(DocumentTextScaleNotifier.preferenceKey), 1.1);
+
+    await tester.tap(find.byKey(const Key('settings-toggle-left-panel')));
+    await tester.pumpAndSettle();
+    var container = ProviderScope.containerOf(
+      tester.element(find.byType(DocsSettingsButton)),
+    );
+    expect(container.read(desktopWorkspaceProvider).sidebarCollapsed, isTrue);
+    expect(find.byTooltip('Show left panel'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings-toggle-right-panel')));
+    await tester.pumpAndSettle();
+    container = ProviderScope.containerOf(
+      tester.element(find.byType(DocsSettingsButton)),
+    );
+    expect(container.read(desktopWorkspaceProvider).inspectorCollapsed, isTrue);
+    expect(find.byTooltip('Show right panel'), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const Key('sync-now-button')));
     await tester.tap(find.byKey(const Key('sync-now-button')));
