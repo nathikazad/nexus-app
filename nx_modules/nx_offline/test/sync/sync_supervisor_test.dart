@@ -4,6 +4,47 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_offline/nx_offline.dart';
 
 void main() {
+  testWidgets(
+    'retry backs off, recovers without a connectivity event, and stops on close',
+    (tester) async {
+      var attempts = 0;
+      var failing = true;
+      final reconciler = _Reconciler<int>();
+      final supervisor = SyncSupervisor<int>(
+        reconciler: reconciler,
+        coalescingWindow: Duration.zero,
+        retryDelay: const Duration(seconds: 1),
+        prepare: () async {
+          attempts++;
+          if (failing) throw StateError('unreachable');
+        },
+      );
+      final first = supervisor.requestFull(SyncReason.manual);
+      final failed = expectLater(first, throwsStateError);
+      await tester.pump();
+      await failed;
+      expect(attempts, 1);
+      await tester.pump(const Duration(seconds: 1));
+      expect(attempts, 2);
+      await tester.pump(const Duration(seconds: 1));
+      expect(attempts, 2);
+      failing = false;
+      await tester.pump(const Duration(seconds: 1));
+      expect(attempts, 3);
+      expect(supervisor.status.activity, SyncActivity.idle);
+      expect(reconciler.fullCalls, 1);
+      failing = true;
+      final again = expectLater(
+        supervisor.requestFull(SyncReason.manual),
+        throwsStateError,
+      );
+      await tester.pump();
+      await again;
+      await supervisor.close();
+      await tester.pump(const Duration(minutes: 5));
+      expect(attempts, 4);
+    },
+  );
   test('coalesces many keyed requests into one serialized batch', () async {
     final reconciler = _Reconciler<int>();
     final supervisor = SyncSupervisor<int>(

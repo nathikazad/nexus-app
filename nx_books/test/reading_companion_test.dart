@@ -28,6 +28,25 @@ void main() {
     );
   });
   tearDown(() => controller.dispose());
+  test(
+    'offline questions and recording are rejected without sending',
+    () async {
+      final offline = ReadingCompanionController(
+        config: controller.config,
+        session: session,
+        microphone: mic,
+        hasNetwork: () async => false,
+      );
+      expect(await offline.send('Keep this question'), isFalse);
+      expect(offline.error, contains('require internet'));
+      expect(offline.busy, isFalse);
+      expect(session.sent, isEmpty);
+      await offline.startRecording();
+      expect(offline.recording, isFalse);
+      expect(session.audioStarts, 0);
+      offline.dispose();
+    },
+  );
 
   testWidgets('question field keeps deletions when typing resumes', (
     tester,

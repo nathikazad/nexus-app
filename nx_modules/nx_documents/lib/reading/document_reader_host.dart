@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nx_documents/documents/document_content.dart';
 import 'package:nx_documents/reading/document_reader.dart';
+import 'package:nx_documents/reading/reading_position.dart';
 
 class DocumentReaderHost extends StatefulWidget {
   const DocumentReaderHost({
@@ -13,6 +14,8 @@ class DocumentReaderHost extends StatefulWidget {
     this.textScaleFactor = 1,
     this.onSelectionChanged,
     this.onUseSelection,
+    this.loadPosition,
+    this.onPositionChanged,
     super.key,
   });
 
@@ -23,6 +26,8 @@ class DocumentReaderHost extends StatefulWidget {
   final double textScaleFactor;
   final ValueChanged<String>? onSelectionChanged;
   final ValueChanged<String>? onUseSelection;
+  final Future<ReadingPosition?> Function()? loadPosition;
+  final ValueChanged<ReadingPosition>? onPositionChanged;
 
   @override
   State<DocumentReaderHost> createState() => _DocumentReaderHostState();
@@ -30,6 +35,7 @@ class DocumentReaderHost extends StatefulWidget {
 
 class _DocumentReaderHostState extends State<DocumentReaderHost> {
   DocumentContent? _content;
+  ReadingPosition? _position;
   Object? _loadError;
   Object? _saveError;
   var _hasLoaded = false;
@@ -62,9 +68,16 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
     });
     try {
       final content = await widget.repository.load(widget.identity);
+      ReadingPosition? position;
+      try {
+        position = await widget.loadPosition?.call();
+      } catch (_) {
+        // A damaged bookmark must not prevent reading the document.
+      }
       if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _content = content;
+        _position = position;
         _hasLoaded = true;
       });
     } catch (error) {
@@ -119,8 +132,11 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
       children: <Widget>[
         Positioned.fill(
           child: DocumentReader(
+            key: ValueKey(content.identity),
             content: content,
             onChanged: _save,
+            initialPosition: _position,
+            onPositionChanged: widget.onPositionChanged,
             imageUrlResolver: widget.imageUrlResolver,
             onOpenLink: widget.onOpenLink,
             textScaleFactor: widget.textScaleFactor,

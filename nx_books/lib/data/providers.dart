@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'offline/reading_history_store.dart';
+import '../domain/book/reading_history.dart';
+import '../domain/book/reading_history_codec.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nx_offline/nx_offline_storage.dart';
@@ -53,6 +56,17 @@ final bookDocumentRepositoryProvider =
     });
 
 final offlineBookHydrationEnabledProvider = Provider<bool>((ref) => true);
+// An interface can prove disconnection, but only the request can prove that
+// the service is reachable. Failed requests are handled by the retry supervisor.
+final booksNetworkAvailableProvider = Provider<Future<bool> Function()>((ref) {
+  return () async => (await Connectivity().checkConnectivity()).any(
+    (value) => value != ConnectivityResult.none,
+  );
+});
+final readingHistoryStoreProvider = Provider<ReadingHistoryStore?>((ref) {
+  final library = ref.watch(booksFileLibraryProvider);
+  return library == null ? null : ReadingHistoryStore(library);
+});
 
 final downloadReportStoreProvider = Provider<DownloadReportStore?>((ref) {
   final user = ref.watch(authProvider).value;
@@ -91,8 +105,17 @@ final booksLibrarySyncProvider =
         return null;
       }
       final client = ref.watch(graphqlClientProvider);
+      final histories = ref.watch(readingHistoryStoreProvider);
+      final hasNetwork = ref.watch(booksNetworkAvailableProvider);
+      final refreshCatalog = ref.watch(refreshBookCatalogProvider);
       final sync = offline.SyncSupervisor<DocumentIdentity>(
-        prepare: ref.watch(refreshBookCatalogProvider),
+        retryDelay: const Duration(seconds: 5),
+        prepare: () async {
+          if (!await hasNetwork()) {
+            throw StateError('Offline. Sync will retry automatically.');
+          }
+          await refreshCatalog();
+        },
         reconciler: BooksLibraryPull(
           reportStore: ref.watch(downloadReportStoreProvider),
           onReportChanged: () {
@@ -102,12 +125,39 @@ final booksLibrarySyncProvider =
           discover: () async {
             final revisions = <DocumentIdentity, DateTime?>{};
             for (final type in ['Book', 'Document']) {
+              final historyGeneration = histories?.generation ?? 0;
               final models = await fetchKgqlModels(
                 client,
                 filter: {'model_type': type},
-                struct: const {'id': true, 'updated_at': true},
+                struct: const {
+                  'id': true,
+                  'name': true,
+                  'updated_at': true,
+                  'Transcript': {'id': true, 'messages': true},
+                },
               );
               for (final model in models) {
+                final identity = DocumentIdentity(
+                  id: model.id,
+                  modelType: type,
+                );
+                final transcripts = model.relations?['Transcript'];
+                if (histories != null &&
+                    histories.generation == historyGeneration) {
+                  await histories.saveDownloaded(
+                    identity,
+                    ReadingHistory(
+                      model.name,
+                      readingMessagesFromHistory(
+                        transcripts == null || transcripts.isEmpty
+                            ? null
+                            : transcripts.first.attributes?['messages'],
+                        limit: 100,
+                      ),
+                    ),
+                    historyGeneration,
+                  );
+                }
                 revisions[DocumentIdentity(id: model.id, modelType: type)] =
                     DateTime.tryParse(model.updatedAt ?? '');
               }

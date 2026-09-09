@@ -7,6 +7,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_documents/documents/document_content.dart';
 import 'package:nx_documents/reading/document_table.dart';
+import 'package:nx_documents/reading/reading_position.dart';
 import 'package:provider/provider.dart';
 
 const nxReaderHighlightYellow = '0x4cffeb3b';
@@ -22,6 +23,8 @@ class DocumentReader extends StatefulWidget {
     this.textScaleFactor = 1,
     this.onSelectionChanged,
     this.onUseSelection,
+    this.initialPosition,
+    this.onPositionChanged,
     super.key,
   });
 
@@ -32,6 +35,8 @@ class DocumentReader extends StatefulWidget {
   final double textScaleFactor;
   final ValueChanged<String>? onSelectionChanged;
   final ValueChanged<String>? onUseSelection;
+  final ReadingPosition? initialPosition;
+  final ValueChanged<ReadingPosition>? onPositionChanged;
 
   @override
   State<DocumentReader> createState() => _DocumentReaderState();
@@ -42,6 +47,10 @@ class _DocumentReaderState extends State<DocumentReader> {
   late EditorScrollController _scrollController;
   StreamSubscription<EditorTransactionValue>? _transactions;
   late String _contentFingerprint;
+  Timer? _positionTimer;
+  ReadingPosition? _lastPosition;
+  bool _restoringPosition = true;
+  ValueChanged<ReadingPosition>? _positionSink;
 
   @override
   void initState() {
@@ -55,8 +64,11 @@ class _DocumentReaderState extends State<DocumentReader> {
     final fingerprint = _fingerprint(widget.content);
     if (oldWidget.content.identity != widget.content.identity ||
         fingerprint != _contentFingerprint) {
+      final position = oldWidget.content.identity == widget.content.identity
+          ? _lastPosition
+          : null;
       _disposeEditor();
-      _createEditor();
+      _createEditor(position: position);
     }
   }
 
@@ -66,7 +78,9 @@ class _DocumentReaderState extends State<DocumentReader> {
     super.dispose();
   }
 
-  void _createEditor() {
+  void _createEditor({ReadingPosition? position}) {
+    final initialPosition = position ?? widget.initialPosition;
+    _positionSink = widget.onPositionChanged;
     _contentFingerprint = _fingerprint(widget.content);
     _editorState = EditorState(document: _documentFromContent(widget.content));
     _editorState.editable = false;
@@ -75,6 +89,24 @@ class _DocumentReaderState extends State<DocumentReader> {
       editorState: _editorState,
       shrinkWrap: false,
     );
+    final scroll = _scrollController;
+    _restoringPosition = true;
+    _lastPosition = null;
+    scroll.itemPositionsListener.itemPositions.addListener(_positionChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !identical(scroll, _scrollController)) return;
+      final position = initialPosition;
+      final count = _editorState.document.root.children.length;
+      if (position != null &&
+          count > 0 &&
+          scroll.itemScrollController.isAttached) {
+        scroll.itemScrollController.jumpTo(
+          index: position.index.clamp(0, count - 1),
+          alignment: position.alignment,
+        );
+      }
+      _restoringPosition = false;
+    });
     _transactions = _editorState.transactionStream.listen((event) {
       final (time, transaction, options) = event;
       if (time == TransactionTime.after &&
@@ -87,10 +119,41 @@ class _DocumentReaderState extends State<DocumentReader> {
   }
 
   void _disposeEditor() {
+    _positionTimer?.cancel();
+    if (_lastPosition case final position?) {
+      _positionSink?.call(position);
+    }
+    _scrollController.itemPositionsListener.itemPositions.removeListener(
+      _positionChanged,
+    );
     _editorState.selectionNotifier.removeListener(_selectionChanged);
     _transactions?.cancel();
     _scrollController.dispose();
     _editorState.dispose();
+  }
+
+  void _positionChanged() {
+    if (_restoringPosition) return;
+    final visible =
+        _scrollController.itemPositionsListener.itemPositions.value
+            .where(
+              (item) => item.itemTrailingEdge > 0 && item.itemLeadingEdge < 1,
+            )
+            .toList()
+          ..sort((a, b) => a.index.compareTo(b.index));
+    if (visible.isEmpty) return;
+    final first = visible.first;
+    if (first.index >= _editorState.document.root.children.length) return;
+    _lastPosition = ReadingPosition(
+      index: first.index,
+      alignment: first.itemLeadingEdge,
+    );
+    _positionTimer?.cancel();
+    _positionTimer = Timer(const Duration(milliseconds: 200), () {
+      if (_lastPosition case final position?) {
+        _positionSink?.call(position);
+      }
+    });
   }
 
   void _selectionChanged() {

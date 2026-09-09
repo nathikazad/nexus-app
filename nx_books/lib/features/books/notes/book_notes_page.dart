@@ -7,9 +7,15 @@ import 'package:nx_books/companion/reading_companion.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
+import 'package:nx_books/data/offline/reading_position_store.dart';
 
 final bookNotesRepositoryProvider = Provider<DocumentContentRepository>((ref) {
   return ref.watch(bookDocumentRepositoryProvider);
+});
+final bookNotesPositionStoreProvider = Provider<ReadingPositionStore?>((ref) {
+  final userId = ref.watch(authProvider).value?.userId;
+  return userId == null ? null : ReadingPositionStore('nexus-primary:$userId');
 });
 
 final bookNotesImageBaseProvider = Provider<Uri?>((ref) {
@@ -65,6 +71,7 @@ class _NotesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final imageBase = ref.watch(bookNotesImageBaseProvider);
     final textScale = ref.watch(booksTextScaleProvider);
+    final positions = ref.watch(bookNotesPositionStoreProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -89,6 +96,18 @@ class _NotesPage extends ConsumerWidget {
               child: DocumentReaderHost(
                 identity: identity,
                 repository: ref.watch(bookNotesRepositoryProvider),
+                loadPosition: positions == null
+                    ? null
+                    : () => positions.load(identity),
+                onPositionChanged: positions == null
+                    ? null
+                    : (position) {
+                        unawaited(
+                          positions
+                              .save(identity, position)
+                              .catchError((Object _) {}),
+                        );
+                      },
                 textScaleFactor: textScale,
                 onUseSelection: (text) =>
                     ref.read(readingSelectionProvider).value =

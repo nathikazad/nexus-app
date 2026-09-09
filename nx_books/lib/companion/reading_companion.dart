@@ -10,6 +10,8 @@ import 'package:nx_voice/nx_voice.dart';
 import 'reading_companion_controller.dart';
 import 'reading_companion_history.dart';
 import 'reading_companion_conversation.dart';
+import '../data/providers.dart';
+import '../data/offline/reading_history_store.dart';
 
 class ReadingSelectionRequest {
   const ReadingSelectionRequest(this.identity, this.text);
@@ -45,6 +47,27 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   bool _loading = false;
   String _title = '';
   String _selection = '';
+  ReadingHistoryStore? _historyStore;
+  Timer? _historySaveTimer;
+  DocumentIdentity? _historyIdentity;
+
+  void _saveHistory() {
+    final controller = _controller;
+    final identity = _historyIdentity;
+    if (controller == null || identity == null || _loading) return;
+    unawaited(
+      _historyStore
+          ?.save(identity, ReadingHistory(_title, List.of(controller.messages)))
+          .catchError((Object _) {
+            if (mounted && identical(controller, _controller)) {
+              setState(
+                () => controller.error =
+                    'Could not save this conversation for offline use.',
+              );
+            }
+          }),
+    );
+  }
 
   @override
   void initState() {
@@ -67,11 +90,30 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
 
   @override
   void dispose() {
+    _historySaveTimer?.cancel();
+    _saveHistory();
     WidgetsBinding.instance.removeObserver(this);
     _selectionRequests.removeListener(_selectionRequested);
     _controller?.dispose();
     _input.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant ReadingCompanion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.identity != widget.identity) {
+      _historySaveTimer?.cancel();
+      _saveHistory();
+      _controller?.removeListener(_changed);
+      _controller?.dispose();
+      _controller = null;
+      _loading = false;
+      _open = false;
+      _title = '';
+      _selection = '';
+      _input.clear();
+    }
   }
 
   Future<void> _show() async {
@@ -87,7 +129,9 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     final url = ref.read(sockWsUrlProvider);
     if (user == null || url == null) return;
     final identity = widget.identity!;
+    _historyIdentity = identity;
     final controller = ReadingCompanionController(
+      hasNetwork: ref.read(booksNetworkAvailableProvider),
       config: DocumentAiSessionConfig(
         socketUrl: url,
         userId: user.userId,
@@ -98,12 +142,25 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
             nexusAuthHeaders(user.preset, user.userId, forceRefresh: refresh),
       ),
     );
+    _historyStore = ref.read(readingHistoryStoreProvider);
     controller.addListener(_changed);
     setState(() {
       _controller = controller;
       _loading = true;
     });
     try {
+      final cached = await _historyStore?.load(identity);
+      if (!mounted || !identical(controller, _controller)) return;
+      if (cached != null) {
+        _title = cached.title;
+        controller.messages.addAll(cached.messages);
+        return;
+      }
+      if (!await ref.read(booksNetworkAvailableProvider)()) {
+        controller.error =
+            'No saved conversation for this chapter. Connect and use Sync now before travelling. New AI replies require internet.';
+        return;
+      }
       final rows = await fetchKgqlModels(
         ref.read(graphqlClientProvider),
         filter: {
@@ -118,7 +175,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
           'Transcript': {'id': true, 'messages': true},
         },
       ).timeout(const Duration(seconds: 12));
-      if (!mounted) return;
+      if (!mounted || !identical(controller, _controller)) return;
       if (rows.isNotEmpty) {
         _title = rows.first.name;
         final transcripts = rows.first.relations?['Transcript'];
@@ -128,12 +185,15 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
         }
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && identical(controller, _controller)) {
         controller.error =
             'History is unavailable. You can still try sending a question.';
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && identical(controller, _controller)) {
+        setState(() => _loading = false);
+        _saveHistory();
+      }
     }
   }
 
@@ -144,6 +204,15 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   }
 
   void _changed() {
+    _historySaveTimer?.cancel();
+    if (_controller?.busy == true) {
+      _historySaveTimer = Timer(
+        const Duration(milliseconds: 500),
+        _saveHistory,
+      );
+    } else {
+      _saveHistory();
+    }
     if (mounted) setState(() {});
   }
 
@@ -190,8 +259,9 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
           ),
         );
       }
+      await _historyStore?.save(identity, ReadingHistory(_title, const []));
     });
-    if (!mounted) return;
+    if (!mounted || !identical(controller, _controller)) return;
     setState(() {
       _loading = false;
       if (cleared) {
@@ -200,6 +270,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
         _selectionRequests.value = null;
       }
     });
+    if (cleared) _saveHistory();
   }
 
   Future<void> _send() async {
@@ -327,6 +398,12 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                           ),
                         )
                       else ...[
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Saved history is available offline. New AI replies require internet.',
+                          ),
+                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Align(

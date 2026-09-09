@@ -2,13 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:nx_voice/nx_voice.dart';
-
-class ReadingMessage {
-  const ReadingMessage(this.role, this.text, {this.turn});
-  final String role;
-  final String text;
-  final String? turn;
-}
+import '../domain/book/reading_history.dart';
+export '../domain/book/reading_history.dart';
 
 /// One document conversation, shared by typed and recorded turns.
 class ReadingCompanionController extends ChangeNotifier {
@@ -16,6 +11,7 @@ class ReadingCompanionController extends ChangeNotifier {
     required this.config,
     DocumentAiSession? session,
     NxMicrophoneOpusStreamer? microphone,
+    this.hasNetwork,
   }) : session = session ?? DocumentAiSession(),
        microphone = microphone ?? NxMicrophoneOpusStreamer() {
     this.session.onTextChunk = (packet) =>
@@ -32,6 +28,7 @@ class ReadingCompanionController extends ChangeNotifier {
   }
 
   final DocumentAiSessionConfig config;
+  final Future<bool> Function()? hasNetwork;
   final DocumentAiSession session;
   final NxMicrophoneOpusStreamer microphone;
   final messages = <ReadingMessage>[];
@@ -103,6 +100,8 @@ class ReadingCompanionController extends ChangeNotifier {
     busy = true;
     _notify();
     try {
+      if (!await _canConnect()) return false;
+      if (_disposed || generation != _generation) return false;
       await session.connect(config);
       if (_disposed || generation != _generation) return false;
       _acceptResponses = true;
@@ -133,6 +132,8 @@ class ReadingCompanionController extends ChangeNotifier {
     busy = true;
     _notify();
     try {
+      if (!await _canConnect()) return;
+      if (_disposed || !_held || generation != _generation) return;
       await session.connect(config.withSelection(selection));
       if (_disposed || !_held || generation != _generation) {
         busy = false;
@@ -172,6 +173,16 @@ class ReadingCompanionController extends ChangeNotifier {
     } catch (_) {
       _fail('Could not start recording. Try typing instead.');
     }
+  }
+
+  Future<bool> _canConnect() async {
+    if (await hasNetwork?.call() ?? true) return true;
+    busy = false;
+    _held = false;
+    error =
+        'New AI replies require internet. Saved conversations remain available; your question has not been sent.';
+    _notify();
+    return false;
   }
 
   Future<void> stopRecording() async {

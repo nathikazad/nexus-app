@@ -5,3 +5,4 @@ export 'documents/document_content.dart';
 export 'reading/document_reader.dart';
 export 'reading/document_reader_host.dart';
 export 'reading/document_table.dart';
+export 'reading/reading_position.dart';

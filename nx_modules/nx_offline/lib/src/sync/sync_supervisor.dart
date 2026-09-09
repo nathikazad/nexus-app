@@ -26,12 +26,18 @@ final class SyncSupervisor<K> implements SyncStatusSource {
     required PullReconciler<K> reconciler,
     SyncPreparation? prepare,
     this.coalescingWindow = const Duration(milliseconds: 50),
+    this.retryDelay,
   }) : _reconciler = reconciler,
        _prepare = prepare;
 
   final PullReconciler<K> _reconciler;
   final SyncPreparation? _prepare;
   final Duration coalescingWindow;
+
+  /// Opt-in automatic recovery; capped exponential backoff avoids tight loops.
+  final Duration? retryDelay;
+  Timer? _retryTimer;
+  int _failures = 0;
   final StreamController<SyncStatus> _statusController =
       StreamController<SyncStatus>.broadcast(sync: true);
 
@@ -108,6 +114,7 @@ final class SyncSupervisor<K> implements SyncStatusSource {
     _coalescingTimer?.cancel();
     _coalescingTimer = null;
     if (_closed || _activeRun != null || !_hasPending) return;
+    _retryTimer?.cancel();
     final run = _drain();
     _activeRun = run;
     unawaited(
@@ -156,6 +163,7 @@ final class SyncSupervisor<K> implements SyncStatusSource {
         for (final waiter in batch.waiters) {
           if (!waiter.isCompleted) waiter.complete();
         }
+        _failures = 0;
         _setStatus(
           SyncStatus(
             activity: SyncActivity.idle,
@@ -175,11 +183,26 @@ final class SyncSupervisor<K> implements SyncStatusSource {
             message: error.toString(),
           ),
         );
+        _scheduleRetry();
         break;
       } finally {
         if (identical(_activeBatch, batch)) _activeBatch = null;
       }
     }
+  }
+
+  void _scheduleRetry() {
+    final delay = retryDelay;
+    if (_closed || delay == null) return;
+    _retryTimer?.cancel();
+    final multiplier = 1 << _failures.clamp(0, 5);
+    _failures++;
+    _retryTimer = Timer(delay * multiplier, () {
+      if (!_closed) {
+        // A full reconciliation also recovers queued keys lost in a failed run.
+        unawaited(requestFull(SyncReason.timer).catchError((Object _) {}));
+      }
+    });
   }
 
   void _failPending(Object error, StackTrace stackTrace) {
@@ -205,6 +228,7 @@ final class SyncSupervisor<K> implements SyncStatusSource {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _retryTimer?.cancel();
     _coalescingTimer?.cancel();
     _coalescingTimer = null;
     final error = StateError('SyncSupervisor closed');

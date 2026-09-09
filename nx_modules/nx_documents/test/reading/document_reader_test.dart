@@ -4,6 +4,49 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_documents/nx_documents.dart';
 
 void main() {
+  testWidgets('reader restores and emits a viewport anchor across reopening', (
+    tester,
+  ) async {
+    ReadingPosition? saved;
+    final content = _content().copyWith(
+      plainText: List.generate(
+        100,
+        (i) => 'Paragraph $i with enough text to read.',
+      ).join('\n\n'),
+      jsonDocument: {},
+    );
+    Widget reader(ReadingPosition? position) => MaterialApp(
+      home: Scaffold(
+        body: DocumentReader(
+          content: content,
+          onChanged: (_) async {},
+          initialPosition: position,
+          onPositionChanged: (value) => saved = value,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      reader(const ReadingPosition(index: 25, alignment: 0)),
+    );
+    await tester.pumpAndSettle();
+    var editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+    expect(editor.editorScrollController!.visibleRangeNotifier.value.$1, 25);
+    editor.editorScrollController!.itemScrollController.jumpTo(
+      index: 40,
+      alignment: -0.01,
+    );
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(saved?.index, 40);
+    expect(saved?.alignment, closeTo(-0.01, 0.002));
+    final bookmark = saved;
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(reader(bookmark));
+    await tester.pumpAndSettle();
+    editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+    expect(editor.editorScrollController!.visibleRangeNotifier.value.$1, 40);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets('reader highlights text and emits only document content', (
     tester,
   ) async {

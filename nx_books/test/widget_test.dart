@@ -720,6 +720,7 @@ Widget _testApp(BookRepository repo) {
       offlineBookHydrationEnabledProvider.overrideWithValue(false),
       bookNotesRepositoryProvider.overrideWithValue(_FakeDocumentRepository()),
       bookNotesImageBaseProvider.overrideWithValue(null),
+      bookNotesPositionStoreProvider.overrideWithValue(null),
     ],
     child: MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
   );

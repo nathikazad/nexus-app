@@ -14,6 +14,7 @@ void main() {
         overrides: [
           bookNotesRepositoryProvider.overrideWithValue(repository),
           bookNotesImageBaseProvider.overrideWithValue(null),
+          bookNotesPositionStoreProvider.overrideWithValue(null),
         ],
         child: const MaterialApp(home: BookNotesPage(bookId: 4195)),
       ),
