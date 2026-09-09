@@ -86,7 +86,19 @@ class DirectoryContentFiles implements ContentFiles {
     await _checkPath(path);
     final destination = File('${directory.path}/$path');
     await destination.parent.create(recursive: true);
-    if (!await destination.exists()) {
+    var needsWrite = !await destination.exists();
+    if (!needsWrite) {
+      final existing = await destination.readAsBytes();
+      reads++;
+      bytesRead += existing.length;
+      final valid = existing.length > 65536
+          ? await Isolate.run(() => sha256.convert(existing).toString() == hash)
+          : sha256.convert(existing).toString() == hash;
+      // The destination is derived from the incoming bytes' checksum. Repair
+      // only that exact version; other versions and pending edits are untouched.
+      needsWrite = !valid;
+    }
+    if (needsWrite) {
       final staging = await destination.parent.createTemp('.staging-');
       final temporary = File('${staging.path}/content');
       try {
@@ -96,19 +108,6 @@ class DirectoryContentFiles implements ContentFiles {
       } finally {
         if (await temporary.exists()) await temporary.delete();
         await staging.delete();
-      }
-    } else {
-      final existing = await destination.readAsBytes();
-      reads++;
-      bytesRead += existing.length;
-      final valid = existing.length > 65536
-          ? await Isolate.run(() => sha256.convert(existing).toString() == hash)
-          : sha256.convert(existing).toString() == hash;
-      if (!valid) {
-        throw FileSystemException(
-          'Existing content is corrupt',
-          destination.path,
-        );
       }
     }
     return ContentReference(path, hash, bytes.length).encode();

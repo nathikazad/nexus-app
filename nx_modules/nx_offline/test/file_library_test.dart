@@ -165,7 +165,7 @@ void main() {
   });
 
   test(
-    'corruption is reported; it is never returned as an empty document',
+    'corruption is reported and exact bytes repair without changing pending metadata',
     () async {
       final item = await library.saveLocal('documents', '1', 'hello');
       final reference = ContentReference.decode(item.reference);
@@ -173,16 +173,33 @@ void main() {
         '${files.directory.path}/${reference.path}',
       ).writeAsString('xxxxx');
       await expectLater(library.read('documents', '1'), throwsFormatException);
-      await expectLater(
-        library.saveLocal('documents', '1', 'hello'),
-        throwsA(isA<FileSystemException>()),
-      );
+      await library.saveRemote('documents', '1', 'remote');
+      await expectLater(library.read('documents', '1'), throwsFormatException);
+      expect(await files.write('documents', '1', 'hello'), item.reference);
+      expect(await library.read('documents', '1'), 'hello');
       expect(
         (await library.metadata('documents', '1'))!.generation,
         item.generation,
       );
+      expect((await library.metadata('documents', '1'))!.pending, isTrue);
       await library.saveLocal('documents', '1', 'recovered');
       expect(await library.read('documents', '1'), 'recovered');
+    },
+  );
+
+  test(
+    'repair keeps other versions and does not rewrite valid content',
+    () async {
+      final old = await files.write('documents', '1', 'old');
+      final current = await files.write('documents', '1', 'current');
+      final path = ContentReference.decode(current).path;
+      await File('${files.directory.path}/$path').writeAsString('truncated');
+      expect(await files.write('documents', '1', 'current'), current);
+      expect(await files.read(current), 'current');
+      expect(await files.read(old), 'old');
+      final writes = files.writes;
+      await files.write('documents', '1', 'current');
+      expect(files.writes, writes);
     },
   );
 

@@ -70,11 +70,22 @@ void main() {
       final file = File('${directory.path}/$path');
       final original = await file.readAsString();
       await file.writeAsString(original.replaceAll('chapter 44', 'chapter zz'));
+      remote.failAt = 44;
       await expectLater(pull.pullAll(), throwsStateError);
       final damaged = await const PreferencesDownloadReportStore('test').load();
       expect(damaged?.phase, DownloadPhase.incomplete);
       expect(damaged?.verified, 44);
       expect(damaged?.failed, ['Document/44']);
+      remote.failAt = null;
+      remote.calls.clear();
+      await pull.pullAll();
+      expect(remote.calls, [44]);
+      expect(await file.readAsString(), original);
+      final repaired = await const PreferencesDownloadReportStore(
+        'test',
+      ).load();
+      expect(repaired?.phase, DownloadPhase.complete);
+      expect(repaired?.verified, 45);
     },
   );
 }
