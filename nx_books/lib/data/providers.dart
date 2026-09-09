@@ -5,6 +5,8 @@ import 'package:nx_offline/nx_offline_storage.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:nx_db/kgql.dart';
 import 'package:nx_books/data/offline/books_library_sync.dart';
+import 'package:nx_books/data/offline/preferences_download_report_store.dart';
+import 'package:nx_books/domain/book/download_report.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_books/data/book/kgql_book_repository.dart';
@@ -52,6 +54,16 @@ final bookDocumentRepositoryProvider =
 
 final offlineBookHydrationEnabledProvider = Provider<bool>((ref) => true);
 
+final downloadReportStoreProvider = Provider<DownloadReportStore?>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (kIsWeb || user == null) return null;
+  return PreferencesDownloadReportStore('nexus-primary:${user.userId}');
+});
+
+final downloadReportProvider = FutureProvider<DownloadReport?>((ref) async {
+  return ref.watch(downloadReportStoreProvider)?.load();
+});
+
 final refreshBookCatalogProvider = Provider<Future<void> Function()>((ref) {
   final repository = ref.watch(bookRepositoryProvider);
   return () async {
@@ -82,6 +94,10 @@ final booksLibrarySyncProvider =
       final sync = offline.SyncSupervisor<DocumentIdentity>(
         prepare: ref.watch(refreshBookCatalogProvider),
         reconciler: BooksLibraryPull(
+          reportStore: ref.watch(downloadReportStoreProvider),
+          onReportChanged: () {
+            if (ref.mounted) ref.invalidate(downloadReportProvider);
+          },
           repository: ref.watch(bookDocumentRepositoryProvider),
           discover: () async {
             final revisions = <DocumentIdentity, DateTime?>{};

@@ -5,6 +5,7 @@ import 'package:nx_books/data/providers.dart';
 import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_offline/nx_offline.dart';
+import 'download_report_view.dart';
 
 class BooksSettingsButton extends ConsumerWidget {
   const BooksSettingsButton({super.key});
@@ -169,6 +170,10 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
                       )
                     : const Icon(Icons.refresh),
                 label: Text(_refreshing ? 'Synchronizing…' : 'Sync now'),
+              ),
+              const SizedBox(height: 8),
+              DownloadReportView(
+                report: ref.watch(downloadReportProvider).value,
               ),
               if (_syncMessage != null) Text(_syncMessage!),
               const SizedBox(height: 20),

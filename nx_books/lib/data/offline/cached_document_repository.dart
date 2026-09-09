@@ -37,6 +37,7 @@ final class CachedDocumentContentRepository
   Future<void> ensureCached(
     DocumentIdentity identity, {
     DateTime? expectedRevision,
+    bool verifyContents = false,
   }) async {
     await migrateLegacy();
     final storage = library;
@@ -45,10 +46,11 @@ final class CachedDocumentContentRepository
       if (item != null &&
           (expectedRevision == null ||
               item.revision == expectedRevision.toUtc().toIso8601String()) &&
-          await storage.files.exists(item.reference)) {
+          await storage.files.exists(item.reference) &&
+          (!verifyContents || await _verify(identity))) {
         return;
       }
-    } else if (await _read(identity) != null) {
+    } else if (await _verify(identity)) {
       return;
     }
     final content = await _loadRemote(
@@ -58,6 +60,17 @@ final class CachedDocumentContentRepository
       throw StateError(
         'Document ${identity.modelType}/${identity.id} unavailable',
       );
+    }
+    if (verifyContents && !await _verify(identity)) {
+      throw StateError('Downloaded document could not be verified');
+    }
+  }
+
+  Future<bool> _verify(DocumentIdentity identity) async {
+    try {
+      return await _read(identity) != null;
+    } catch (_) {
+      return false;
     }
   }
 
