@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'backend_presets.dart';
+import 'session_availability.dart';
 
 class NexusOidcConfig {
   const NexusOidcConfig({
@@ -79,6 +80,9 @@ Future<NexusOidcConfig> fetchNexusOidcConfig(
         .get(uri)
         .timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) {
+      if (response.statusCode >= 500 || response.statusCode == 429) {
+        throw const AuthServiceUnavailable();
+      }
       throw Exception(
         'Authentication configuration is unavailable (${response.statusCode})',
       );

@@ -5,6 +5,14 @@ import 'backend_ping.dart';
 import 'backend_presets.dart';
 import 'oidc_service.dart';
 import 'user.dart';
+import 'session_availability.dart';
+
+typedef OidcSessionRestore =
+    Future<NexusIdentity?> Function(BackendPreset preset, String clientAppId);
+
+final oidcSessionRestoreProvider = Provider<OidcSessionRestore>(
+  (ref) => nexusOidcService.restore,
+);
 
 final retainAuthSessionWhenOfflineProvider = Provider<bool>((ref) => false);
 
@@ -52,10 +60,23 @@ class AuthController extends AsyncNotifier<User?> {
 
       if (preset != null && preset.requiresOidc) {
         print('[AuthController] Restoring OIDC session for ${preset.key}');
-        final identity = await nexusOidcService.restore(
-          preset,
-          ref.read(nexusClientAppIdProvider),
-        );
+        NexusIdentity? identity;
+        try {
+          identity = await ref.read(oidcSessionRestoreProvider)(
+            preset,
+            ref.read(nexusClientAppIdProvider),
+          );
+        } on AuthSessionRejected {
+          await _clearSessionPrefs(prefs);
+          return null;
+        } on AuthServiceUnavailable {
+          if (ref.read(retainAuthSessionWhenOfflineProvider) &&
+              userId != null &&
+              userId.isNotEmpty) {
+            return User(userId: userId, preset: preset);
+          }
+          rethrow;
+        }
         if (identity == null) {
           await _clearSessionPrefs(prefs);
           return null;
