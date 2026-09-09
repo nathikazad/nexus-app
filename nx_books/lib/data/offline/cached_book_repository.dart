@@ -8,56 +8,103 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Keeps the last successful bookshelf response available for offline reading.
 /// Mutations remain network-backed and are refreshed into this cache by the
 /// providers after they complete.
-final class CachedBookRepository implements BookRepository {
+final class CachedBookRepository implements BookRepository, BookCatalogRefresh {
   CachedBookRepository({
     required this.remote,
     required this.accountKey,
     this.library,
+    this.cacheFirst = true,
   });
 
   final BookRepository remote;
   final String accountKey;
   final FileLibrary? library;
+  final bool cacheFirst;
+  bool _booksDirty = false;
+  bool _tagsDirty = false;
+  int _mutationRevision = 0;
 
   String get _booksKey => 'nx_books.offline.$accountKey.books';
   String get _tagsKey => 'nx_books.offline.$accountKey.topic_tags';
 
   @override
   Future<List<NxBook>> listBooks() async {
+    final cached = await _loadBooks();
+    if (cacheFirst && cached != null && !_booksDirty) return cached;
     try {
-      final books = await remote.listBooks();
-      final storage = library;
-      if (storage != null) {
-        await _storeBooks(books);
-      } else {
-        final preferences = await SharedPreferences.getInstance();
-        await preferences.setString(
-          _booksKey,
-          jsonEncode(books.map(_bookToJson).toList()),
-        );
-      }
-      return books;
+      await refreshBooks();
+      return await _loadBooks() ?? cached ?? const [];
     } catch (_) {
-      final cached = await _loadBooks();
       if (cached != null) return cached;
       rethrow;
     }
   }
 
   @override
+  Future<void> refreshBooks() async {
+    final revision = _mutationRevision;
+    final books = await remote.listBooks();
+    if (revision != _mutationRevision) return;
+    if (library != null) {
+      await _storeBooks(books);
+    } else {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(
+        _booksKey,
+        jsonEncode(books.map(_bookToJson).toList()),
+      );
+    }
+    if (revision == _mutationRevision) _booksDirty = false;
+  }
+
+  @override
   Future<List<String>> listTopicTags() async {
+    final cached = await _loadTags();
+    if (cacheFirst && cached != null && !_tagsDirty) return cached;
     try {
-      final tags = await remote.listTopicTags();
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setString(_tagsKey, jsonEncode(tags));
-      return tags;
+      await refreshTopicTags();
+      return await _loadTags() ?? cached ?? const [];
     } catch (_) {
-      final preferences = await SharedPreferences.getInstance();
-      final encoded = preferences.getString(_tagsKey);
-      if (encoded == null) rethrow;
+      if (cached != null) return cached;
+      rethrow;
+    }
+  }
+
+  Future<List<String>?> _loadTags() async {
+    final preferences = await SharedPreferences.getInstance();
+    final encoded = preferences.getString(_tagsKey);
+    if (encoded == null) return null;
+    try {
       final decoded = jsonDecode(encoded);
-      if (decoded is! List) rethrow;
+      if (decoded is! List) return null;
       return [for (final tag in decoded) tag.toString()];
+    } on FormatException {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> refreshTopicTags() async {
+    final revision = _mutationRevision;
+    final tags = await remote.listTopicTags();
+    if (revision != _mutationRevision) return;
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_tagsKey, jsonEncode(tags));
+    if (revision == _mutationRevision) _tagsDirty = false;
+  }
+
+  Future<T> _mutate<T>(
+    Future<T> Function() mutation, {
+    bool tags = false,
+  }) async {
+    _mutationRevision++;
+    try {
+      final result = await mutation();
+      _booksDirty = true;
+      if (tags) _tagsDirty = true;
+      return result;
+    } finally {
+      _mutationRevision++;
     }
   }
 
@@ -110,38 +157,42 @@ final class CachedBookRepository implements BookRepository {
       ]);
 
   @override
-  Future<NxBook> createBook({String? title}) => remote.createBook(title: title);
+  Future<NxBook> createBook({String? title}) =>
+      _mutate(() => remote.createBook(title: title));
 
   @override
-  Future<void> deleteBook(int id) => remote.deleteBook(id);
+  Future<void> deleteBook(int id) => _mutate(() => remote.deleteBook(id));
 
   @override
   Future<void> updateBookChapterProgress({
     required int id,
     required int? totalChapters,
     required int? currentChapter,
-  }) => remote.updateBookChapterProgress(
-    id: id,
-    totalChapters: totalChapters,
-    currentChapter: currentChapter,
+  }) => _mutate(
+    () => remote.updateBookChapterProgress(
+      id: id,
+      totalChapters: totalChapters,
+      currentChapter: currentChapter,
+    ),
   );
 
   @override
   Future<void> updateBookRank({required int id, required int rank}) =>
-      remote.updateBookRank(id: id, rank: rank);
+      _mutate(() => remote.updateBookRank(id: id, rank: rank));
 
   @override
   Future<void> updateBookState({
     required int id,
     required BookReadingState state,
     required int rank,
-  }) => remote.updateBookState(id: id, state: state, rank: rank);
+  }) => _mutate(() => remote.updateBookState(id: id, state: state, rank: rank));
 
   @override
   Future<void> updateBookTopicTags({
     required int id,
     required List<String> tags,
-  }) => remote.updateBookTopicTags(id: id, tags: tags);
+  }) =>
+      _mutate(() => remote.updateBookTopicTags(id: id, tags: tags), tags: true);
 }
 
 Map<String, dynamic> _bookToJson(NxBook book) => <String, dynamic>{

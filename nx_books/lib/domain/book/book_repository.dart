@@ -1,5 +1,11 @@
 import 'book.dart';
 
+/// Explicit synchronization, separate from reads used to render the bookshelf.
+abstract interface class BookCatalogRefresh {
+  Future<void> refreshBooks();
+  Future<void> refreshTopicTags();
+}
+
 abstract class BookRepository {
   Future<List<NxBook>> listBooks();
   Future<List<String>> listTopicTags();

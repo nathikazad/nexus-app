@@ -475,7 +475,21 @@ class _MainHeader extends ConsumerWidget {
               const _DesktopTopicFilter(),
               const SizedBox(width: 8),
               OutlinedButton.icon(
-                onPressed: () => ref.invalidate(booksProvider),
+                onPressed: () async {
+                  try {
+                    await ref.read(refreshBookCatalogProvider)();
+                  } catch (_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Could not refresh. Saved books are still available.',
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
                 icon: const Icon(Icons.refresh, size: 17),
                 label: const Text('Refresh'),
               ),

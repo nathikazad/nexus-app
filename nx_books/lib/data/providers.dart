@@ -30,6 +30,7 @@ final booksFileLibraryProvider = Provider<FileLibrary?>((ref) {
 final bookRepositoryProvider = Provider<BookRepository>((ref) {
   final userId = ref.watch(authProvider).value?.userId ?? 'last-session';
   return CachedBookRepository(
+    cacheFirst: !kIsWeb,
     remote: KgqlBookRepository(client: ref.watch(graphqlClientProvider)),
     accountKey: userId,
     library: ref.watch(booksFileLibraryProvider),
@@ -51,6 +52,25 @@ final bookDocumentRepositoryProvider =
 
 final offlineBookHydrationEnabledProvider = Provider<bool>((ref) => true);
 
+final refreshBookCatalogProvider = Provider<Future<void> Function()>((ref) {
+  final repository = ref.watch(bookRepositoryProvider);
+  return () async {
+    if (repository case final BookCatalogRefresh refresh) {
+      await Future.wait([
+        refresh.refreshBooks().then((_) {
+          if (ref.mounted) ref.invalidate(booksProvider);
+        }),
+        refresh.refreshTopicTags().then((_) {
+          if (ref.mounted) ref.invalidate(topicTagsProvider);
+        }),
+      ]);
+    } else if (ref.mounted) {
+      ref.invalidate(booksProvider);
+      ref.invalidate(topicTagsProvider);
+    }
+  };
+});
+
 final booksLibrarySyncProvider =
     Provider<offline.SyncSupervisor<DocumentIdentity>?>((ref) {
       if (kIsWeb ||
@@ -60,6 +80,7 @@ final booksLibrarySyncProvider =
       }
       final client = ref.watch(graphqlClientProvider);
       final sync = offline.SyncSupervisor<DocumentIdentity>(
+        prepare: ref.watch(refreshBookCatalogProvider),
         reconciler: BooksLibraryPull(
           repository: ref.watch(bookDocumentRepositoryProvider),
           discover: () async {
