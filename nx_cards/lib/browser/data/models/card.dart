@@ -33,15 +33,24 @@ final class LanguageCardContent extends CardContent {
     required String originalScript,
     required this.transliteration,
     this.audioUrl,
-    this.examples = const <LanguageExample>[],
-  }) : super(front: english, back: originalScript);
+    List<LanguageExample> examples = const <LanguageExample>[],
+    // Keep the public named argument compatible while filtering reads.
+    // ignore: prefer_initializing_formals
+  }) : _examples = examples,
+       super(front: english, back: originalScript);
 
   String get english => front;
   String get originalScript => back;
 
   final String transliteration;
   final String? audioUrl;
-  final List<LanguageExample> examples;
+  final List<LanguageExample> _examples;
+
+  // A linked vocabulary item is not a usage example of itself. Keep the
+  // underlying relation, but suppress identical text in every example view.
+  List<LanguageExample> get examples => _examples
+      .where((example) => example.text.trim() != originalScript.trim())
+      .toList(growable: false);
 }
 
 final class LanguageExample {

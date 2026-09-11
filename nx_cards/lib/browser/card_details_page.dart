@@ -4,6 +4,7 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
+import 'package:nx_cards/browser/chinese_word_characters.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/language_examples.dart';
@@ -78,6 +79,10 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     final reviewedCues = _reviewedCues;
     final visibleCue = _visibleCue;
     final hasStats = reviewedCues.isNotEmpty;
+    final hasCharacterBreakdown =
+        card.isWordCard &&
+        card.language == 'Chinese' &&
+        RegExp(r'^[\u4e00-\u9fff]{2,}$').hasMatch(card.back);
     final hasExamples = languageContent?.examples.isNotEmpty == true;
     final availableTabs = <CardDetailsTab>[
       if (hasStats) CardDetailsTab.stats,
@@ -158,9 +163,14 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                       ),
                     ),
                 ],
-                if (card.linkedWordIds.isNotEmpty) ...[
+                if (card.linkedWordIds.isNotEmpty || hasCharacterBreakdown) ...[
                   const SizedBox(height: 20),
-                  Text('WORDS IN THIS PHRASE', style: monoLabel),
+                  Text(
+                    hasCharacterBreakdown
+                        ? 'CHARACTERS IN THIS WORD'
+                        : 'WORDS IN THIS PHRASE',
+                    style: monoLabel,
+                  ),
                   ...ref
                       .watch(cardsDashboardProvider)
                       .when(
@@ -171,18 +181,19 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                           const Text('Could not load linked words'),
                         ],
                         data: (dashboard) {
-                          final words =
-                              dashboard.cards
-                                  .where(
-                                    (word) =>
-                                        card.linkedWordIds.contains(word.id),
-                                  )
-                                  .toList()
-                                ..sort(
-                                  (a, b) => card.back
-                                      .indexOf(a.back)
-                                      .compareTo(card.back.indexOf(b.back)),
-                                );
+                          final words = hasCharacterBreakdown
+                              ? chineseWordCharacters(card, dashboard.cards)
+                              : (dashboard.cards
+                                    .where(
+                                      (word) =>
+                                          card.linkedWordIds.contains(word.id),
+                                    )
+                                    .toList()
+                                  ..sort(
+                                    (a, b) => card.back
+                                        .indexOf(a.back)
+                                        .compareTo(card.back.indexOf(b.back)),
+                                  ));
                           return <Widget>[
                             for (final word in words)
                               ListTile(

@@ -2,6 +2,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/browser.dart';
 
 void main() {
+  test(
+    'identical vocabulary is not shown as its own example, including cached JSON',
+    () {
+      for (final text in ['生日', '苹果']) {
+        final content = LanguageCardContent(
+          english: 'word',
+          originalScript: text,
+          transliteration: 'pinyin',
+          examples: [
+            LanguageExample.fromJson({
+              'text': text,
+              'translation': 'word',
+              'transliteration': 'pinyin',
+            }),
+            LanguageExample(
+              text: '我喜欢$text',
+              translation: 'I like it',
+              transliteration: 'pinyin',
+            ),
+          ],
+        );
+        expect(content.examples.map((e) => e.text), ['我喜欢$text']);
+      }
+    },
+  );
+
   test('basic content exposes an ordinary front and back', () {
     const content = BasicCardContent(front: 'Question', back: 'Answer');
 

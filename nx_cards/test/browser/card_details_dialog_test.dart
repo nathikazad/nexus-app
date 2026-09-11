@@ -46,6 +46,41 @@ void main() {
     expect(find.text('fraud'), findsOneWidget);
   });
 
+  testWidgets('tapping example text opens its phrase details', (tester) async {
+    final word = _card();
+    final example = (word.content as LanguageCardContent).examples.single;
+    final phrase = StudyCard(
+      id: 501,
+      modelTypeName: 'Phrase',
+      content: LanguageCardContent(
+        english: example.translation,
+        originalScript: example.text,
+        transliteration: example.transliteration,
+      ),
+      schedules: word.schedules,
+      reviewHistory: word.reviewHistory,
+      suspended: false,
+      linkedWordIds: {word.id},
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(cards: [word, phrase])),
+          ),
+        ],
+        child: MaterialApp(home: CardDetailsPage(card: word)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(example.text));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('WORDS IN THIS PHRASE'), findsOneWidget);
+    expect(find.text(example.translation), findsOneWidget);
+  });
+
   testWidgets('shows examples inline and hides empty stats navigation', (
     tester,
   ) async {
