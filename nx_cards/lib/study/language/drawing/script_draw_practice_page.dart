@@ -128,15 +128,15 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Flexible(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
+                                child: SingleChildScrollView(
                                   child: Text(
                                     _letter,
+                                    textAlign: TextAlign.center,
                                     key: const ValueKey<String>(
                                       'draw-practice-letter',
                                     ),
                                     style: TextStyle(
-                                      fontSize: 82,
+                                      fontSize: _card.isScriptCard ? 82 : 32,
                                       height: 1,
                                       fontWeight: FontWeight.w500,
                                       color: RecallPalette.of(context).ink,

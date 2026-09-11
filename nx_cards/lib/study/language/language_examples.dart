@@ -84,7 +84,7 @@ class _ExampleCard extends ConsumerWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                icon: const Icon(Icons.account_tree_outlined, size: 18),
+                icon: const Icon(Icons.menu_book_outlined, size: 18),
                 label: const Text('Words in this phrase'),
                 onPressed: () async {
                   final dashboard = await ref.read(

@@ -29,6 +29,7 @@ class CardDetailsPage extends ConsumerStatefulWidget {
 class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
   StudyCard? _loadedCard;
   StudyCue? _selectedCue;
+  bool _showNotes = false;
   late CardDetailsTab _selectedTab;
 
   @override
@@ -140,18 +141,22 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                 ],
                 if (card.notes?.trim().isNotEmpty == true) ...[
                   const SizedBox(height: 20),
-                  ExpansionTile(
-                    title: const Text('Notes'),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: SelectableText(
-                          card.notes!,
-                          style: const TextStyle(height: 1.5),
-                        ),
-                      ),
-                    ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.menu_book_outlined),
+                      label: const Text('Notes'),
+                      onPressed: () => setState(() => _showNotes = !_showNotes),
+                    ),
                   ),
+                  if (_showNotes)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: SelectableText(
+                        card.notes!,
+                        style: const TextStyle(height: 1.5),
+                      ),
+                    ),
                 ],
                 if (card.linkedWordIds.isNotEmpty) ...[
                   const SizedBox(height: 20),
@@ -185,7 +190,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                                 subtitle: Text(
                                   '${word.content is LanguageCardContent ? (word.content as LanguageCardContent).transliteration : ''} — ${word.front}',
                                 ),
-                                trailing: const Icon(Icons.chevron_right),
+                                trailing: const Icon(Icons.arrow_forward),
                                 onTap: () => Navigator.of(context).push(
                                   MaterialPageRoute<void>(
                                     builder: (_) => CardDetailsPage(
