@@ -26,6 +26,10 @@ void main() {
         )).single.title,
         'Book',
       );
+      expect(
+        (await restarted.listBooks()).single.bookLink,
+        '/books/1-book.epub',
+      );
       expect(await restarted.listTopicTags(), ['Topic']);
       expect(remote.reads, 1);
     },
@@ -127,6 +131,7 @@ class _Remote implements BookRepository {
       description: '',
       author: '',
       link: '',
+      bookLink: '/books/1-book.epub',
       tags: ['Topic'],
       readingState: BookReadingState.reading,
       rank: 0,

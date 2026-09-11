@@ -289,6 +289,7 @@ void main() {
         BookReadingState.reading,
         rank: 0,
         author: 'An Author',
+        bookLink: '/books/1-book-with-information.epub',
       ),
     ]);
 
@@ -300,6 +301,10 @@ void main() {
     expect(find.byType(BookNotesPage), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('book-details-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('open-book-file-button')),
       findsOneWidget,
     );
 
@@ -752,6 +757,7 @@ NxBook _book(
   int? currentChapter,
   String author = '',
   String link = '',
+  String bookLink = '',
 }) {
   final now = DateTime(2026, 6, 19, 12, 0).subtract(Duration(minutes: id));
   return NxBook(
@@ -760,6 +766,7 @@ NxBook _book(
     description: '',
     author: author,
     link: link,
+    bookLink: bookLink,
     tags: tags,
     readingState: state,
     rank: rank,

@@ -24,6 +24,7 @@ class NxBook {
     required this.description,
     required this.author,
     required this.link,
+    this.bookLink = '',
     required this.tags,
     required this.readingState,
     required this.rank,
@@ -39,6 +40,9 @@ class NxBook {
   final String description;
   final String author;
   final String link;
+
+  /// Nexus-hosted EPUB or PDF used by the offline reader launcher.
+  final String bookLink;
   final List<String> tags;
   final BookReadingState readingState;
   final int? rank;
@@ -66,6 +70,7 @@ class NxBook {
     String? description,
     String? author,
     String? link,
+    String? bookLink,
     List<String>? tags,
     BookReadingState? readingState,
     int? rank,
@@ -84,6 +89,7 @@ class NxBook {
       description: description ?? this.description,
       author: author ?? this.author,
       link: link ?? this.link,
+      bookLink: bookLink ?? this.bookLink,
       tags: tags ?? this.tags,
       readingState: readingState ?? this.readingState,
       rank: clearRank ? null : rank ?? this.rank,

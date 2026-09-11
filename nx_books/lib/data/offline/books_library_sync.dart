@@ -11,12 +11,14 @@ class BooksLibraryPull implements PullReconciler<DocumentIdentity> {
     required this.repository,
     this.reportStore,
     this.onReportChanged,
+    this.pullBookFiles,
   });
 
   final Future<Map<DocumentIdentity, DateTime?>> Function() discover;
   final CachedDocumentContentRepository repository;
   final DownloadReportStore? reportStore;
   final void Function()? onReportChanged;
+  final Future<void> Function()? pullBookFiles;
 
   Future<void> _report(
     DownloadPhase phase,
@@ -92,6 +94,7 @@ class BooksLibraryPull implements PullReconciler<DocumentIdentity> {
     if (failures.isNotEmpty) {
       throw StateError('${failures.length} documents could not be verified');
     }
+    await pullBookFiles?.call();
   }
 
   @override

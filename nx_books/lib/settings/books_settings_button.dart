@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:nx_books/core/theme/app_theme.dart';
 import 'package:nx_books/data/providers.dart';
 import 'package:nx_books/settings/books_preferences.dart';
@@ -45,6 +46,7 @@ class _BooksSettingsDialog extends ConsumerStatefulWidget {
 class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
   var _refreshing = false;
   String? _syncMessage;
+  String? _accountMessage;
 
   Future<void> _refresh() async {
     if (_refreshing) return;
@@ -80,10 +82,29 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
     await ref.read(authProvider.notifier).logout();
   }
 
+  Future<void> _copyAccessToken() async {
+    try {
+      final token = await nexusOidcService.accessToken();
+      await Clipboard.setData(ClipboardData(text: token));
+      if (mounted) {
+        setState(
+          () => _accountMessage =
+              'Access token copied. It expires automatically.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _accountMessage = 'Could not copy the access token.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final darkMode = ref.watch(booksDarkModeProvider);
     final textScale = ref.watch(booksTextScaleProvider);
+    final user = ref.watch(authProvider).value;
+    final bookFileReport = ref.watch(bookFileReportProvider).value;
     return AlertDialog(
       title: const Text('Settings'),
       content: ConstrainedBox(
@@ -175,6 +196,13 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
               DownloadReportView(
                 report: ref.watch(downloadReportProvider).value,
               ),
+              if (bookFileReport != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '${bookFileReport.verified}/${bookFileReport.total} attached book files verified'
+                  '${bookFileReport.failed.isEmpty ? '' : ' (${bookFileReport.failed.length} failed)'}.',
+                ),
+              ],
               if (_syncMessage != null) Text(_syncMessage!),
               const SizedBox(height: 20),
               const Divider(),
@@ -187,6 +215,24 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
                 icon: const Icon(Icons.logout),
                 label: const Text('Log out'),
               ),
+              if (user?.preset.requiresOidc ?? false) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  key: const ValueKey<String>('books-copy-token-button'),
+                  onPressed: _copyAccessToken,
+                  icon: const Icon(Icons.key_outlined),
+                  label: const Text('Copy upload token'),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Use this short-lived token with the Mac upload script.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+              if (_accountMessage != null) ...[
+                const SizedBox(height: 6),
+                Text(_accountMessage!),
+              ],
               const SizedBox(height: 20),
               const Divider(),
               const SizedBox(height: 12),

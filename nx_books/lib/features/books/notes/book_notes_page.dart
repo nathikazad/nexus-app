@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_books/data/providers.dart';
+import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_books/companion/reading_companion.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import 'dart:async';
 import 'package:nx_books/data/offline/reading_position_store.dart';
 
@@ -23,6 +25,20 @@ final bookNotesImageBaseProvider = Provider<Uri?>((ref) {
   return user == null ? null : Uri.parse(resolve(user.preset).imageHttp);
 });
 
+final bookFileOpenerProvider = Provider<Future<void> Function(String)>((ref) {
+  return (path) async {
+    final result = await OpenFilex.open(
+      path,
+      type: path.toLowerCase().endsWith('.pdf')
+          ? 'application/pdf'
+          : 'application/epub+zip',
+    );
+    if (result.type != ResultType.done) {
+      throw StateError(result.message);
+    }
+  };
+});
+
 String bookNotesPath(int bookId) => '/books/$bookId/notes';
 String bookDetailsPath(int bookId) => '/books/$bookId/details';
 String documentNotesPath(int documentId) => '/documents/$documentId/notes';
@@ -34,10 +50,19 @@ class BookNotesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NxBook? book;
+    for (final candidate
+        in ref.watch(booksProvider).value ?? const <NxBook>[]) {
+      if (candidate.id == bookId) {
+        book = candidate;
+        break;
+      }
+    }
     return _NotesPage(
       identity: DocumentIdentity(id: bookId, modelType: 'Book'),
       title: 'Book Notes',
       detailsPath: bookDetailsPath(bookId),
+      book: book,
     );
   }
 }
@@ -61,11 +86,13 @@ class _NotesPage extends ConsumerWidget {
     required this.identity,
     required this.title,
     this.detailsPath,
+    this.book,
   });
 
   final DocumentIdentity identity;
   final String title;
   final String? detailsPath;
+  final NxBook? book;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +103,13 @@ class _NotesPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(title),
         actions: [
+          if (book case final attached? when attached.bookLink.isNotEmpty)
+            IconButton(
+              key: const ValueKey<String>('open-book-file-button'),
+              tooltip: 'Open book',
+              onPressed: () => _openBookFile(context, ref, attached),
+              icon: const Icon(Icons.menu_book_outlined),
+            ),
           if (detailsPath case final path?)
             IconButton(
               key: const ValueKey<String>('book-details-button'),
@@ -122,6 +156,29 @@ class _NotesPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _openBookFile(
+  BuildContext context,
+  WidgetRef ref,
+  NxBook book,
+) async {
+  try {
+    final cache = ref.read(bookFileCacheProvider);
+    if (cache == null) throw StateError('Book files are unavailable here');
+    final path = await cache.openPath(book);
+    await ref.read(bookFileOpenerProvider)(path);
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not open this book. Connect to Nexus and sync it first.',
+          ),
+        ),
+      );
+    }
   }
 }
 

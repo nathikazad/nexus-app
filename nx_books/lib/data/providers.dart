@@ -9,6 +9,9 @@ import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:nx_db/kgql.dart';
 import 'package:nx_books/data/offline/books_library_sync.dart';
 import 'package:nx_books/data/offline/preferences_download_report_store.dart';
+import 'package:nx_books/data/offline/book_file_cache.dart';
+import 'package:nx_books/data/offline/preferences_book_file_report_store.dart';
+import 'package:nx_books/domain/book/book_file_report.dart';
 import 'package:nx_books/domain/book/download_report.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,6 +81,34 @@ final downloadReportProvider = FutureProvider<DownloadReport?>((ref) async {
   return ref.watch(downloadReportStoreProvider)?.load();
 });
 
+final bookFileReportStoreProvider = Provider<BookFileReportStore?>((ref) {
+  final user = ref.watch(authProvider).value;
+  if (kIsWeb || user == null) return null;
+  return PreferencesBookFileReportStore('nexus-primary:${user.userId}');
+});
+
+final bookFileReportProvider = FutureProvider<BookFileReport?>((ref) async {
+  return ref.watch(bookFileReportStoreProvider)?.load();
+});
+
+final bookFileCacheProvider = Provider<BookFileCache?>((ref) {
+  final user = ref.watch(authProvider).value;
+  final client = ref.watch(nexusHttpClientProvider);
+  if (kIsWeb || user == null || client == null) return null;
+  return BookFileCache(
+    accountKey: 'nexus-primary:${user.userId}',
+    origin: Uri.parse(resolve(user.preset).imageHttp),
+    client: client,
+    files: BinaryContentFiles.application(
+      'nx_books:nexus-primary:${user.userId}',
+    ),
+    reportStore: ref.watch(bookFileReportStoreProvider),
+    onReportChanged: () {
+      if (ref.mounted) ref.invalidate(bookFileReportProvider);
+    },
+  );
+});
+
 final refreshBookCatalogProvider = Provider<Future<void> Function()>((ref) {
   final repository = ref.watch(bookRepositoryProvider);
   return () async {
@@ -122,6 +153,14 @@ final booksLibrarySyncProvider =
             if (ref.mounted) ref.invalidate(downloadReportProvider);
           },
           repository: ref.watch(bookDocumentRepositoryProvider),
+          pullBookFiles: () async {
+            final cache = ref.read(bookFileCacheProvider);
+            if (cache != null) {
+              await cache.synchronize(
+                await ref.read(bookRepositoryProvider).listBooks(),
+              );
+            }
+          },
           discover: () async {
             final revisions = <DocumentIdentity, DateTime?>{};
             for (final type in ['Book', 'Document']) {

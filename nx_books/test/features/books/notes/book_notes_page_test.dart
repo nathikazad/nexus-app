@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_books/features/books/notes/book_notes_page.dart';
+import 'package:nx_books/data/providers.dart';
 import 'package:nx_documents/nx_documents.dart';
 
 void main() {
@@ -12,6 +13,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          booksProvider.overrideWith((ref) async => const []),
           bookNotesRepositoryProvider.overrideWithValue(repository),
           bookNotesImageBaseProvider.overrideWithValue(null),
           bookNotesPositionStoreProvider.overrideWithValue(null),
