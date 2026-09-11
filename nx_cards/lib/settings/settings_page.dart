@@ -154,21 +154,36 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               const SizedBox(height: 14),
               _SettingsCard(
                 child: SegmentedButton<AppAppearance>(
+                  style: const ButtonStyle(
+                    padding: WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                  showSelectedIcon: false,
                   segments: const [
                     ButtonSegment(
                       value: AppAppearance.system,
                       icon: Icon(Icons.brightness_auto_outlined),
-                      label: Text('System'),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('System', maxLines: 1),
+                      ),
                     ),
                     ButtonSegment(
                       value: AppAppearance.light,
                       icon: Icon(Icons.light_mode_outlined),
-                      label: Text('Light'),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('Light', maxLines: 1),
+                      ),
                     ),
                     ButtonSegment(
                       value: AppAppearance.dark,
                       icon: Icon(Icons.dark_mode_outlined),
-                      label: Text('Dark'),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('Dark', maxLines: 1),
+                      ),
                     ),
                   ],
                   selected: {_appearance},

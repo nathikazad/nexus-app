@@ -697,19 +697,34 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                   ),
                   const SizedBox(height: 22),
                   SegmentedButton<StudyMode>(
+                    style: const ButtonStyle(
+                      padding: WidgetStatePropertyAll(
+                        EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
+                    showSelectedIcon: false,
                     segments: const [
                       ButtonSegment(
                         value: StudyMode.study,
-                        label: Text('Study'),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Study', maxLines: 1),
+                        ),
                       ),
                       ButtonSegment(
                         value: StudyMode.recall,
-                        label: Text('Recall'),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Recall', maxLines: 1),
+                        ),
                       ),
                       ButtonSegment(
                         value: StudyMode.ai,
                         icon: Icon(Icons.auto_awesome_outlined),
-                        label: Text('AI'),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('AI', maxLines: 1),
+                        ),
                       ),
                     ],
                     selected: {_mode},
@@ -757,14 +772,26 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         number: '01',
                         title: 'Study format',
                         child: SegmentedButton<StudyPresentation>(
+                          style: const ButtonStyle(
+                            padding: WidgetStatePropertyAll(
+                              EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                          ),
+                          showSelectedIcon: false,
                           segments: const [
                             ButtonSegment(
                               value: StudyPresentation.sheet,
-                              label: Text('Study sheet'),
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text('Study sheet', maxLines: 1),
+                              ),
                             ),
                             ButtonSegment(
                               value: StudyPresentation.draw,
-                              label: Text('Draw'),
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text('Draw', maxLines: 1),
+                              ),
                             ),
                           ],
                           selected: {_studyPresentation},
@@ -1040,9 +1067,25 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       Text('REVIEW TIMING', style: monoLabel),
       const SizedBox(height: 8),
       SegmentedButton<RecallTiming>(
+        style: const ButtonStyle(
+          padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+        ),
+        showSelectedIcon: false,
         segments: const [
-          ButtonSegment(value: RecallTiming.allMatching, label: Text('All')),
-          ButtonSegment(value: RecallTiming.dueNow, label: Text('Due')),
+          ButtonSegment(
+            value: RecallTiming.allMatching,
+            label: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('All', maxLines: 1),
+            ),
+          ),
+          ButtonSegment(
+            value: RecallTiming.dueNow,
+            label: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('Due', maxLines: 1),
+            ),
+          ),
         ],
         selected: {_recallTiming},
         onSelectionChanged: (selection) =>

@@ -221,18 +221,30 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                     child: Divider(),
                   ),
                   SegmentedButton<CardDetailsTab>(
+                    style: const ButtonStyle(
+                      padding: WidgetStatePropertyAll(
+                        EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
                     segments: [
                       if (hasStats)
                         const ButtonSegment(
                           value: CardDetailsTab.stats,
-                          label: Text('Stats'),
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Stats', maxLines: 1),
+                          ),
                           icon: Icon(Icons.insights_outlined),
                         ),
                       if (hasExamples)
                         ButtonSegment(
                           value: CardDetailsTab.examples,
-                          label: Text(
-                            'Examples (${languageContent!.examples.length})',
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Examples (${languageContent!.examples.length})',
+                              maxLines: 1,
+                            ),
                           ),
                           icon: const Icon(Icons.menu_book_outlined),
                         ),
@@ -383,10 +395,13 @@ class _DirectionSelector extends StatelessWidget {
   Widget build(BuildContext context) => SingleChildScrollView(
     scrollDirection: Axis.horizontal,
     child: SegmentedButton<StudyCue>(
+      style: const ButtonStyle(
+        padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+      ),
       key: const ValueKey('review-direction-selector'),
       segments: [
         for (final cue in cues)
-          ButtonSegment(value: cue, label: Text(labelFor(cue))),
+          ButtonSegment(value: cue, label: Text(labelFor(cue), maxLines: 1)),
       ],
       selected: {selected},
       showSelectedIcon: false,
