@@ -220,20 +220,42 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                           child:
                                               _interaction ==
                                                   RecallInteraction.writing
-                                              ? SingleChildScrollView(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 14,
+                                              ? LayoutBuilder(
+                                                  builder:
+                                                      (
+                                                        context,
+                                                        constraints,
+                                                      ) => SingleChildScrollView(
+                                                        child: ConstrainedBox(
+                                                          constraints:
+                                                              BoxConstraints(
+                                                                minHeight:
+                                                                    constraints
+                                                                        .maxHeight,
+                                                              ),
+                                                          child: IntrinsicHeight(
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets.only(
+                                                                    top: 14,
+                                                                  ),
+                                                              child: WritingRecallCard(
+                                                                key:
+                                                                    ValueKey<
+                                                                      String
+                                                                    >(
+                                                                      'script-recall-${_prompt.cardId}-${_prompt.cue.storageKey}',
+                                                                    ),
+                                                                prompt: _prompt,
+                                                                revealed:
+                                                                    _revealed,
+                                                                audioRepository:
+                                                                    audioRepository,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
                                                       ),
-                                                  child: WritingRecallCard(
-                                                    key: ValueKey<String>(
-                                                      'script-recall-${_prompt.cardId}-${_prompt.cue.storageKey}',
-                                                    ),
-                                                    prompt: _prompt,
-                                                    revealed: _revealed,
-                                                    audioRepository:
-                                                        audioRepository,
-                                                  ),
                                                 )
                                               : LayoutBuilder(
                                                   builder: (context, constraints) => SingleChildScrollView(
