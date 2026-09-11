@@ -61,6 +61,15 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
   RecallPresentation _recallPresentation = RecallPresentation.standard;
   StudyCue? _cue = StudyCue.fromLanguage;
+  bool _combinedPrompt = false;
+
+  List<StudyCard> get _studyCards {
+    final latest = ref.read(cardsDashboardProvider).value?.cards;
+    if (latest == null) return widget.studyCards;
+    final ids = widget.studyCards.map((card) => card.id).toSet();
+    return latest.where((card) => ids.contains(card.id)).toList();
+  }
+
   final Set<LearningStatus> _learningStatuses = <LearningStatus>{
     LearningStatus.learning,
   };
@@ -130,6 +139,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _recallPresentation = recallPresentation;
         }
         if (cue != null) _cue = cue;
+        _combinedPrompt =
+            saved['combinedPrompt'] == true && _cue == StudyCue.fromLanguage;
         if (order != null) _order = order;
         if (statuses.isNotEmpty) {
           _learningStatuses
@@ -176,6 +187,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'studyPresentation': _studyPresentation.name,
         'recallPresentation': _recallPresentation.name,
         'cue': _cue?.name,
+        'combinedPrompt': _combinedPrompt,
         'learningStatuses': [
           for (final status in _learningStatuses) status.name,
         ],
@@ -224,7 +236,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final cue = _cue;
     if (cue == null) return const <StudyPrompt>[];
     return <StudyPrompt>[
-      for (final card in widget.studyCards)
+      for (final card in _studyCards)
         if (!card.suspended &&
             card.scheduleFor(cue).enabled &&
             _matchesRecallBaseFilters(card))
@@ -266,7 +278,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     };
   }
 
-  List<StudyCard> get _drawCandidates => widget.studyCards
+  List<StudyCard> get _drawCandidates => _studyCards
       .where(
         (card) =>
             card.content is LanguageCardContent &&
@@ -275,7 +287,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       )
       .toList(growable: false);
 
-  List<StudyCard> get _studySheetCandidates => widget.studyCards
+  List<StudyCard> get _studySheetCandidates => _studyCards
       .where(
         (card) =>
             card.content is LanguageCardContent &&
@@ -285,7 +297,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       .toList(growable: false);
 
   List<StudyPrompt> get _bookCandidates => <StudyPrompt>[
-    for (final card in widget.studyCards)
+    for (final card in _studyCards)
       if (!card.suspended &&
           card.scheduleFor(StudyCue.fromLanguage).enabled &&
           _matchesBookRecallRange(card))
@@ -316,8 +328,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   bool get _supportsDrawing =>
       !_isBookStudy &&
-      widget.studyCards.isNotEmpty &&
-      widget.studyCards.every((card) => card.isLanguageCard);
+      _studyCards.isNotEmpty &&
+      _studyCards.every((card) => card.isLanguageCard);
 
   String get _selectionTitle => 'Which cards?';
 
@@ -333,6 +345,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   void _selectCue(StudyCue cue) {
     setState(() {
       _cue = cue;
+      _combinedPrompt = false;
       _resetCount();
     });
     _rememberPreferences();
@@ -434,10 +447,26 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     _rememberPreferences();
   }
 
+  Future<void> _refreshSetup() async {
+    if (!mounted) return;
+    try {
+      await ref.read(cardsDashboardProvider.future);
+      if (!mounted) return;
+      setState(() => _count = _count.clamp(1, max(1, _availableCount)));
+      _rememberPreferences();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not refresh study setup: $error')),
+        );
+      }
+    }
+  }
+
   Future<void> _start() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
-    final completed = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => StudySessionPage(
           title: widget.title,
@@ -448,19 +477,19 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         ),
       ),
     );
-    if (completed == true && mounted) Navigator.of(context).pop();
+    await _refreshSetup();
   }
 
   Future<void> _startFastRecall() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
-    final completed = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) =>
             LanguageFastRecallPage(title: widget.title, prompts: prompts),
       ),
     );
-    if (completed == true && mounted) Navigator.of(context).pop();
+    await _refreshSetup();
   }
 
   Future<List<StudyPrompt>?> _latestSelectedPrompts() async {
@@ -518,6 +547,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           StudyPrompt(
             card: await hydrateStudyCard(ref, prompt.card),
             cue: prompt.cue,
+            showEnglishAndTransliteration: _combinedPrompt,
           ),
         );
       }
@@ -574,7 +604,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     setState(() => _starting = true);
     try {
       final dashboard = await ref.read(cardsDashboardProvider.future);
-      final eligibleIds = widget.studyCards.map((card) => card.id).toSet();
+      final eligibleIds = _studyCards.map((card) => card.id).toSet();
       final cards = dashboard.cards
           .where(
             (card) =>
@@ -601,7 +631,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         hydrated.add(await hydrateStudyCard(ref, card));
       }
       if (!mounted) return;
-      final completed = await Navigator.of(context).push<bool>(
+      await Navigator.of(context).push<bool>(
         MaterialPageRoute<bool>(
           builder: (_) => ScriptDrawPracticePage(
             title: widget.title,
@@ -610,7 +640,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           ),
         ),
       );
-      if (completed == true && mounted) Navigator.of(context).pop();
+      await _refreshSetup();
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -625,7 +655,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   Future<void> _startAiTutor() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
-    final completed = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => VoiceStudySessionPage(
           title: widget.title,
@@ -636,7 +666,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         ),
       ),
     );
-    if (completed == true && mounted) Navigator.of(context).pop();
+    await _refreshSetup();
   }
 
   @override
@@ -912,9 +942,21 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       for (final cue in StudyCue.values)
         ChoiceChip(
           label: Text(_cueLabel(cue)),
-          selected: _cue == cue,
+          selected: _cue == cue && !_combinedPrompt,
           onSelected: (_) => _selectCue(cue),
         ),
+      ChoiceChip(
+        label: const Text('Eng. + Transli.'),
+        selected: _combinedPrompt,
+        onSelected: (_) {
+          setState(() {
+            _cue = StudyCue.fromLanguage;
+            _combinedPrompt = true;
+            _resetCount();
+          });
+          _rememberPreferences();
+        },
+      ),
     ],
   );
 

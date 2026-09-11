@@ -638,15 +638,18 @@ void main() {
       expect(find.text('Standard'), findsOneWidget);
       expect(find.text('Fast'), findsOneWidget);
       await tester.tap(find.text('Write'));
-      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'English'));
+      await tester.ensureVisible(
+        find.widgetWithText(ChoiceChip, 'Eng. + Transli.'),
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ChoiceChip, 'English'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Eng. + Transli.'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Start recall'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Start recall'));
       await tester.pumpAndSettle();
       expect(find.text('Write your answer'), findsOneWidget);
+      expect(find.text('I am at home\nwǒ zài jiā'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('script-drawing-canvas')),
         findsOneWidget,
@@ -862,7 +865,7 @@ void main() {
     expect(find.text('Nothing due right now'), findsNothing);
   });
 
-  testWidgets('completed recall returns past setup to the category page', (
+  testWidgets('completed recall returns to setup with refreshed availability', (
     tester,
   ) async {
     final card = _recallFilterCard(
@@ -870,12 +873,13 @@ void main() {
       learningStatus: LearningStatus.learning,
       state: 'learning',
     );
+    var currentCards = [card];
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(cards: [card])),
+            (_) => Stream.value(CardsDashboard(cards: currentCards)),
           ),
         ],
         child: MaterialApp(
@@ -911,11 +915,32 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('End'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Return to categories'));
+    currentCards = [];
+    ProviderScope.containerOf(
+      tester.element(find.text('Return to study')),
+    ).invalidate(cardsDashboardProvider);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Return to study'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Noun category'), findsOneWidget);
-    expect(find.text('How do you want to study?'), findsNothing);
+    expect(find.text('Noun category'), findsNothing);
+    expect(find.text('How do you want to study?'), findsOneWidget);
+    expect(
+      tester
+          .widget<SegmentedButton<StudyMode>>(
+            find.byType(SegmentedButton<StudyMode>),
+          )
+          .selected,
+      {StudyMode.recall},
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Start recall'),
+          )
+          .onPressed,
+      isNull,
+    );
   });
 }
 

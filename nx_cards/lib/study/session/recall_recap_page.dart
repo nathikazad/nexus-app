@@ -125,7 +125,7 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Return to categories'),
+                    child: const Text('Return to study'),
                   ),
                 ],
               ),
