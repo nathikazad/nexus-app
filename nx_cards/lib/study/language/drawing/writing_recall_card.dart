@@ -61,21 +61,39 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Flexible(
-            child: Text(
-              widget.revealed ? _answer : widget.prompt.prompt,
-              key: ValueKey<String>(
-                widget.revealed
-                    ? 'writing-recall-answer'
-                    : 'writing-recall-prompt',
-              ),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 38,
-                height: 1.2,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.6,
-              ),
-            ),
+            child:
+                !widget.revealed && widget.prompt.cue == StudyCue.fromLanguage
+                ? FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _content.english.replaceAll(RegExp(r'\s+'), ' ').trim(),
+                      key: const ValueKey('writing-recall-prompt'),
+                      maxLines: 1,
+                      softWrap: false,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 38,
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.6,
+                      ),
+                    ),
+                  )
+                : Text(
+                    widget.revealed ? _answer : widget.prompt.prompt,
+                    key: ValueKey<String>(
+                      widget.revealed
+                          ? 'writing-recall-answer'
+                          : 'writing-recall-prompt',
+                    ),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 38,
+                      height: 1.2,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.6,
+                    ),
+                  ),
           ),
           if (widget.revealed)
             if (_audioUrl case final audioUrl?
@@ -88,6 +106,14 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
             ],
         ],
       ),
+      if (!widget.revealed && widget.prompt.showEnglishAndTransliteration) ...[
+        const SizedBox(height: 8),
+        Text(
+          _content.transliteration,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 24),
+        ),
+      ],
       if (widget.revealed) ...[
         const SizedBox(height: 8),
         Text(_content.transliteration, textAlign: TextAlign.center),

@@ -649,7 +649,8 @@ void main() {
       await tester.tap(find.text('Start recall'));
       await tester.pumpAndSettle();
       expect(find.text('Write your answer'), findsOneWidget);
-      expect(find.text('I am at home\nwǒ zài jiā'), findsOneWidget);
+      expect(find.text('I am at home'), findsOneWidget);
+      expect(find.text('wǒ zài jiā'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('script-drawing-canvas')),
         findsOneWidget,
