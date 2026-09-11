@@ -9,6 +9,7 @@ void main() {
     final model = Model(
       id: 5385,
       name: 'Why validate demand?',
+      description: 'A shared note for this card.',
       modelTypeId: 66,
       modelType: ModelType(id: 66, name: cardModelType),
       attributes: const <String, Object?>{
@@ -34,7 +35,9 @@ void main() {
 
     expect(card, isNotNull);
     expect(card, isNotNull);
-    expect(card!.sourceBookId, 4195);
+    expect(card!.notes, 'A shared note for this card.');
+    expect(card.copyWith(suspended: true).notes, card.notes);
+    expect(card.sourceBookId, 4195);
     expect(card.sourceBookName, 'The Four Steps to the Epiphany');
   });
 

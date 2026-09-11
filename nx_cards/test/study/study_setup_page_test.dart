@@ -207,7 +207,7 @@ void main() {
     );
 
     final setupCards = tester.widgetList<Card>(find.byType(Card)).toList();
-    expect(setupCards, hasLength(2));
+    expect(setupCards, hasLength(3));
     expect(
       find.descendant(
         of: find.byWidget(setupCards[0]),
@@ -579,6 +579,60 @@ void main() {
     );
   });
 
+  for (final type in ['Word', 'Verb', 'Phrase']) {
+    testWidgets('$type supports handwriting practice', (tester) async {
+      final card = StudyCard(
+        id: 90,
+        modelTypeName: type,
+        content: const LanguageCardContent(
+          english: 'I am at home',
+          originalScript: '我在家。',
+          transliteration: 'wǒ zài jiā',
+        ),
+        schedules: {
+          for (final cue in StudyCue.values)
+            cue: const CardSchedule.initial(enabled: true),
+        },
+        reviewHistory: {for (final cue in StudyCue.values) cue: <CardReview>[]},
+        suspended: false,
+        learningStatus: LearningStatus.learning,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardAudioRepositoryProvider.overrideWithValue(null),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(CardsDashboard(cards: [card])),
+            ),
+          ],
+          child: MaterialApp(
+            home: StudySetupPage(
+              title: type,
+              prompts: card.prompts.toList(),
+              studyCards: [card],
+              fromLanguage: 'English',
+              toLanguage: 'Chinese',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Draw'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start drawing'));
+      await tester.pumpAndSettle();
+      expect(find.text('我在家。'), findsOneWidget);
+      expect(find.textContaining('wǒ zài jiā'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('script-drawing-canvas')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('script drawing reuses study sheet filters and card count', (
     tester,
   ) async {
@@ -647,9 +701,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('ക'), findsOneWidget);
-    expect(find.text('Letter 1'), findsOneWidget);
+    expect(find.textContaining('Letter 1'), findsOneWidget);
     expect(find.byTooltip('Play pronunciation'), findsOneWidget);
-    expect(find.text('LETTER 1 OF 2'), findsOneWidget);
+    expect(find.text('CARD 1 OF 2'), findsOneWidget);
     final erase = tester.widget<OutlinedButton>(
       find.widgetWithText(OutlinedButton, 'Erase'),
     );
@@ -674,8 +728,8 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     expect(find.text('ഖ'), findsOneWidget);
-    expect(find.text('Letter 2'), findsOneWidget);
-    expect(find.text('LETTER 2 OF 2'), findsOneWidget);
+    expect(find.textContaining('Letter 2'), findsOneWidget);
+    expect(find.text('CARD 2 OF 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Quit drawing practice'));
     await tester.pumpAndSettle();
     expect(find.text('How do you want to study?'), findsOneWidget);

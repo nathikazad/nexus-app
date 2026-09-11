@@ -323,6 +323,17 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       widget.studyCards.isNotEmpty &&
       widget.studyCards.every((card) => card.isScriptCard);
 
+  bool get _supportsDrawing =>
+      !_isBookStudy &&
+      widget.studyCards.isNotEmpty &&
+      widget.studyCards.every((card) => card.isLanguageCard);
+
+  String get _selectionTitle => _isScriptStudy
+      ? 'Which letters?'
+      : widget.studyCards.every((card) => card.isPhraseCard)
+      ? 'Which phrases?'
+      : 'Which words?';
+
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
   String _cueLabel(StudyCue cue) => switch (cue) {
@@ -591,7 +602,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       if (selected.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No letters match this selection')),
+            const SnackBar(content: Text('No cards match this selection')),
           );
         }
         return;
@@ -722,7 +733,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                     ),
                   ] else if (_mode == StudyMode.study) ...[
-                    if (_isScriptStudy) ...[
+                    if (_supportsDrawing) ...[
                       _SetupCard(
                         number: '01',
                         title: 'Study format',
@@ -744,18 +755,16 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                       const SizedBox(height: 14),
                     ],
-                    if (!_isScriptStudy ||
+                    if (!_supportsDrawing ||
                         _studyPresentation == StudyPresentation.sheet) ...[
                       _SetupCard(
-                        number: _isScriptStudy ? '02' : '01',
-                        title: _isScriptStudy
-                            ? 'Which letters?'
-                            : 'Which words?',
+                        number: _supportsDrawing ? '02' : '01',
+                        title: _selectionTitle,
                         child: _recallFilterChoices(),
                       ),
                       const SizedBox(height: 14),
                       _SetupCard(
-                        number: _isScriptStudy ? '03' : '02',
+                        number: _supportsDrawing ? '03' : '02',
                         title: 'How many cards?',
                         child: _countControl(maxCount),
                       ),
@@ -771,7 +780,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     ] else ...[
                       _SetupCard(
                         number: '02',
-                        title: 'Which letters?',
+                        title: _selectionTitle,
                         child: _recallFilterChoices(),
                       ),
                       const SizedBox(height: 14),

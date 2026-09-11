@@ -4,9 +4,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
+import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
 
 void main() {
+  testWidgets('phrase shows notes and linked vocabulary', (tester) async {
+    final word = _card();
+    final phrase = StudyCard(
+      id: 500,
+      modelTypeName: 'Phrase',
+      notes: 'Learn this expression as a whole.',
+      content: const LanguageCardContent(
+        english: 'A phrase',
+        originalScript: 'ഒരു തട്ടിപ്പ്',
+        transliteration: 'oru thattippu',
+      ),
+      schedules: word.schedules,
+      reviewHistory: word.reviewHistory,
+      suspended: false,
+      linkedWordIds: {word.id},
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(cards: [word, phrase])),
+          ),
+        ],
+        child: MaterialApp(home: CardDetailsPage(card: phrase)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('WORDS IN THIS PHRASE'), findsOneWidget);
+    expect(find.textContaining('thattippu — fraud'), findsOneWidget);
+    await tester.tap(find.text('Notes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Learn this expression as a whole.'), findsOneWidget);
+    await tester.tap(find.text('തട്ടിപ്പ്'));
+    await tester.pumpAndSettle();
+    expect(find.text('fraud'), findsOneWidget);
+  });
+
   testWidgets('shows examples inline and hides empty stats navigation', (
     tester,
   ) async {

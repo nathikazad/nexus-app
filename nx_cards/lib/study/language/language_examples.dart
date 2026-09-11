@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_cards/browser/browser_providers.dart';
+import 'package:nx_cards/browser/card_details_page.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
@@ -35,7 +38,7 @@ class LanguageExamples extends StatelessWidget {
   }
 }
 
-class _ExampleCard extends StatelessWidget {
+class _ExampleCard extends ConsumerWidget {
   const _ExampleCard({
     required this.example,
     required this.audioRepository,
@@ -47,7 +50,7 @@ class _ExampleCard extends StatelessWidget {
   final String audioKey;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final audioUrl = example.audioUrl;
     final palette = RecallPalette.of(context);
     return DecoratedBox(
@@ -77,6 +80,41 @@ class _ExampleCard extends StatelessWidget {
             Text(
               example.translation,
               style: const TextStyle(color: RecallColors.muted),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.account_tree_outlined, size: 18),
+                label: const Text('Words in this phrase'),
+                onPressed: () async {
+                  final dashboard = await ref.read(
+                    cardsDashboardProvider.future,
+                  );
+                  final phrase = dashboard.cards
+                      .where(
+                        (card) =>
+                            card.isPhraseCard &&
+                            card.back == example.text &&
+                            card.front == example.translation,
+                      )
+                      .firstOrNull;
+                  if (!context.mounted) return;
+                  if (phrase == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sync the library to load this phrase.'),
+                      ),
+                    );
+                    return;
+                  }
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          CardDetailsPage(card: phrase, allowEdit: false),
+                    ),
+                  );
+                },
+              ),
             ),
             if (audioUrl?.isNotEmpty == true && audioRepository != null) ...[
               const SizedBox(height: 10),

@@ -22,6 +22,7 @@ StudyCard? studyCardFromModel(
   );
   return StudyCard(
     id: model.id,
+    notes: model.description,
     content: isLanguageCardModelType(modelTypeName)
         ? LanguageCardContent(
             english: front,

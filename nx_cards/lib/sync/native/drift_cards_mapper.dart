@@ -19,6 +19,7 @@ final class DriftCardsMapper {
     return LocalStudyCardsCompanion.insert(
       accountKey: accountKey,
       remoteId: card.id,
+      notes: Value(card.notes),
       modelType:
           card.modelTypeName ??
           (content is LanguageCardContent ? wordCardModelType : cardModelType),
@@ -55,6 +56,7 @@ final class DriftCardsMapper {
     final history = _jsonMap(row.reviewHistoryJson);
     return StudyCard(
       id: row.remoteId,
+      notes: row.notes,
       content: isLanguageCardModelType(row.modelType)
           ? LanguageCardContent(
               english: row.front,

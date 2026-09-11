@@ -138,6 +138,67 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                   const SizedBox(height: 14),
                   _CardField(label: 'Source book', value: sourceBook),
                 ],
+                if (card.notes?.trim().isNotEmpty == true) ...[
+                  const SizedBox(height: 20),
+                  ExpansionTile(
+                    title: const Text('Notes'),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SelectableText(
+                          card.notes!,
+                          style: const TextStyle(height: 1.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (card.linkedWordIds.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text('WORDS IN THIS PHRASE', style: monoLabel),
+                  ...ref
+                      .watch(cardsDashboardProvider)
+                      .when(
+                        loading: () => <Widget>[
+                          const LinearProgressIndicator(),
+                        ],
+                        error: (error, stack) => <Widget>[
+                          const Text('Could not load linked words'),
+                        ],
+                        data: (dashboard) {
+                          final words =
+                              dashboard.cards
+                                  .where(
+                                    (word) =>
+                                        card.linkedWordIds.contains(word.id),
+                                  )
+                                  .toList()
+                                ..sort(
+                                  (a, b) => card.back
+                                      .indexOf(a.back)
+                                      .compareTo(card.back.indexOf(b.back)),
+                                );
+                          return <Widget>[
+                            for (final word in words)
+                              ListTile(
+                                title: Text(word.back),
+                                subtitle: Text(
+                                  '${word.content is LanguageCardContent ? (word.content as LanguageCardContent).transliteration : ''} — ${word.front}',
+                                ),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => CardDetailsPage(
+                                      card: word,
+                                      allowEdit: false,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ];
+                        },
+                      ),
+                ],
                 if (visibleTab != null) ...[
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 26),

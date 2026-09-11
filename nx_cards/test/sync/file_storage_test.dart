@@ -37,6 +37,7 @@ void main() {
       ];
       final card = StudyCard(
         id: 1,
+        notes: 'Shared explanation survives offline storage.',
         content: BasicCardContent(front: 'front' * 1000, back: 'back' * 1000),
         schedules: const {},
         reviewHistory: {StudyCue.fromLanguage: history},
@@ -63,6 +64,7 @@ void main() {
       expect(full.isSummary, isFalse);
       expect(full.front, card.front);
       expect(full.back, card.back);
+      expect(full.notes, card.notes);
       expect(full.reviewHistoryFor(StudyCue.fromLanguage), hasLength(30));
       await store.saveCardAndEnqueue(
         full.copyWith(suspended: true),

@@ -5,6 +5,7 @@ import 'package:nx_cards/browser/data/models/study.dart';
 class StudyCard {
   StudyCard({
     required this.id,
+    this.notes,
     required this.content,
     required Map<StudyCue, CardSchedule> schedules,
     required Map<StudyCue, List<CardReview>> reviewHistory,
@@ -31,6 +32,7 @@ class StudyCard {
   /// Library projections must be hydrated before editing or reviewing.
   final bool isSummary;
   final int id;
+  final String? notes;
   final CardContent content;
   String get front => content.front;
   String get back => content.back;
@@ -132,6 +134,7 @@ class StudyCard {
   }) {
     return StudyCard(
       id: id,
+      notes: notes,
       isSummary: isSummary ?? this.isSummary,
       content: content ?? this.content,
       schedules: schedules ?? this.schedules,

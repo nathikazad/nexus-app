@@ -33,7 +33,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
 
   String get _sound {
     final content = _card.content;
-    return content is LanguageCardContent ? content.english : _card.front;
+    return content is LanguageCardContent
+        ? '${content.transliteration} · ${content.english}'
+        : _card.front;
   }
 
   String? get _audioUrl {
@@ -94,7 +96,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                   Row(
                     children: [
                       Text(
-                        'LETTER ${_index + 1} OF ${widget.cards.length}',
+                        'CARD ${_index + 1} OF ${widget.cards.length}',
                         key: const ValueKey<String>('draw-practice-progress'),
                         style: monoLabel,
                       ),
@@ -107,7 +109,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                   ),
                   const SizedBox(height: 12),
                   Container(
-                    height: 148,
+                    height: 180,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: RecallPalette.of(context).soft,
@@ -148,7 +150,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                 key: const ValueKey<String>(
                                   'draw-practice-sound',
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 15,

@@ -9,6 +9,15 @@ class $LocalStudyCardsTable extends LocalStudyCards
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $LocalStudyCardsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _contentRefMeta = const VerificationMeta(
     'contentRef',
   );
@@ -248,6 +257,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
   );
   @override
   List<GeneratedColumn> get $columns => [
+    notes,
     contentRef,
     accountKey,
     remoteId,
@@ -282,6 +292,12 @@ class $LocalStudyCardsTable extends LocalStudyCards
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     if (data.containsKey('content_ref')) {
       context.handle(
         _contentRefMeta,
@@ -464,6 +480,10 @@ class $LocalStudyCardsTable extends LocalStudyCards
   LocalStudyCardRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return LocalStudyCardRow(
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
       contentRef: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}content_ref'],
@@ -559,6 +579,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
 
 class LocalStudyCardRow extends DataClass
     implements Insertable<LocalStudyCardRow> {
+  final String? notes;
   final String? contentRef;
   final String accountKey;
   final int remoteId;
@@ -581,6 +602,7 @@ class LocalStudyCardRow extends DataClass
   final String syncState;
   final bool deletedLocally;
   const LocalStudyCardRow({
+    this.notes,
     this.contentRef,
     required this.accountKey,
     required this.remoteId,
@@ -606,6 +628,9 @@ class LocalStudyCardRow extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     if (!nullToAbsent || contentRef != null) {
       map['content_ref'] = Variable<String>(contentRef);
     }
@@ -646,6 +671,9 @@ class LocalStudyCardRow extends DataClass
 
   LocalStudyCardsCompanion toCompanion(bool nullToAbsent) {
     return LocalStudyCardsCompanion(
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
       contentRef: contentRef == null && nullToAbsent
           ? const Value.absent()
           : Value(contentRef),
@@ -690,6 +718,7 @@ class LocalStudyCardRow extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LocalStudyCardRow(
+      notes: serializer.fromJson<String?>(json['notes']),
       contentRef: serializer.fromJson<String?>(json['contentRef']),
       accountKey: serializer.fromJson<String>(json['accountKey']),
       remoteId: serializer.fromJson<int>(json['remoteId']),
@@ -717,6 +746,7 @@ class LocalStudyCardRow extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'notes': serializer.toJson<String?>(notes),
       'contentRef': serializer.toJson<String?>(contentRef),
       'accountKey': serializer.toJson<String>(accountKey),
       'remoteId': serializer.toJson<int>(remoteId),
@@ -742,6 +772,7 @@ class LocalStudyCardRow extends DataClass
   }
 
   LocalStudyCardRow copyWith({
+    Value<String?> notes = const Value.absent(),
     Value<String?> contentRef = const Value.absent(),
     String? accountKey,
     int? remoteId,
@@ -764,6 +795,7 @@ class LocalStudyCardRow extends DataClass
     String? syncState,
     bool? deletedLocally,
   }) => LocalStudyCardRow(
+    notes: notes.present ? notes.value : this.notes,
     contentRef: contentRef.present ? contentRef.value : this.contentRef,
     accountKey: accountKey ?? this.accountKey,
     remoteId: remoteId ?? this.remoteId,
@@ -792,6 +824,7 @@ class LocalStudyCardRow extends DataClass
   );
   LocalStudyCardRow copyWithCompanion(LocalStudyCardsCompanion data) {
     return LocalStudyCardRow(
+      notes: data.notes.present ? data.notes.value : this.notes,
       contentRef: data.contentRef.present
           ? data.contentRef.value
           : this.contentRef,
@@ -841,6 +874,7 @@ class LocalStudyCardRow extends DataClass
   @override
   String toString() {
     return (StringBuffer('LocalStudyCardRow(')
+          ..write('notes: $notes, ')
           ..write('contentRef: $contentRef, ')
           ..write('accountKey: $accountKey, ')
           ..write('remoteId: $remoteId, ')
@@ -868,6 +902,7 @@ class LocalStudyCardRow extends DataClass
 
   @override
   int get hashCode => Object.hashAll([
+    notes,
     contentRef,
     accountKey,
     remoteId,
@@ -894,6 +929,7 @@ class LocalStudyCardRow extends DataClass
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LocalStudyCardRow &&
+          other.notes == this.notes &&
           other.contentRef == this.contentRef &&
           other.accountKey == this.accountKey &&
           other.remoteId == this.remoteId &&
@@ -918,6 +954,7 @@ class LocalStudyCardRow extends DataClass
 }
 
 class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
+  final Value<String?> notes;
   final Value<String?> contentRef;
   final Value<String> accountKey;
   final Value<int> remoteId;
@@ -941,6 +978,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<bool> deletedLocally;
   final Value<int> rowid;
   const LocalStudyCardsCompanion({
+    this.notes = const Value.absent(),
     this.contentRef = const Value.absent(),
     this.accountKey = const Value.absent(),
     this.remoteId = const Value.absent(),
@@ -965,6 +1003,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.rowid = const Value.absent(),
   });
   LocalStudyCardsCompanion.insert({
+    this.notes = const Value.absent(),
     this.contentRef = const Value.absent(),
     required String accountKey,
     required int remoteId,
@@ -998,6 +1037,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
        suspended = Value(suspended),
        syncState = Value(syncState);
   static Insertable<LocalStudyCardRow> custom({
+    Expression<String>? notes,
     Expression<String>? contentRef,
     Expression<String>? accountKey,
     Expression<int>? remoteId,
@@ -1022,6 +1062,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (notes != null) 'notes': notes,
       if (contentRef != null) 'content_ref': contentRef,
       if (accountKey != null) 'account_key': accountKey,
       if (remoteId != null) 'remote_id': remoteId,
@@ -1048,6 +1089,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   }
 
   LocalStudyCardsCompanion copyWith({
+    Value<String?>? notes,
     Value<String?>? contentRef,
     Value<String>? accountKey,
     Value<int>? remoteId,
@@ -1072,6 +1114,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Value<int>? rowid,
   }) {
     return LocalStudyCardsCompanion(
+      notes: notes ?? this.notes,
       contentRef: contentRef ?? this.contentRef,
       accountKey: accountKey ?? this.accountKey,
       remoteId: remoteId ?? this.remoteId,
@@ -1100,6 +1143,9 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (contentRef.present) {
       map['content_ref'] = Variable<String>(contentRef.value);
     }
@@ -1172,6 +1218,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   @override
   String toString() {
     return (StringBuffer('LocalStudyCardsCompanion(')
+          ..write('notes: $notes, ')
           ..write('contentRef: $contentRef, ')
           ..write('accountKey: $accountKey, ')
           ..write('remoteId: $remoteId, ')
@@ -1214,6 +1261,7 @@ abstract class _$CardsDatabase extends GeneratedDatabase {
 
 typedef $$LocalStudyCardsTableCreateCompanionBuilder =
     LocalStudyCardsCompanion Function({
+      Value<String?> notes,
       Value<String?> contentRef,
       required String accountKey,
       required int remoteId,
@@ -1239,6 +1287,7 @@ typedef $$LocalStudyCardsTableCreateCompanionBuilder =
     });
 typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
     LocalStudyCardsCompanion Function({
+      Value<String?> notes,
       Value<String?> contentRef,
       Value<String> accountKey,
       Value<int> remoteId,
@@ -1272,6 +1321,11 @@ class $$LocalStudyCardsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get contentRef => $composableBuilder(
     column: $table.contentRef,
     builder: (column) => ColumnFilters(column),
@@ -1387,6 +1441,11 @@ class $$LocalStudyCardsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get contentRef => $composableBuilder(
     column: $table.contentRef,
     builder: (column) => ColumnOrderings(column),
@@ -1502,6 +1561,9 @@ class $$LocalStudyCardsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
   GeneratedColumn<String> get contentRef => $composableBuilder(
     column: $table.contentRef,
     builder: (column) => column,
@@ -1625,6 +1687,7 @@ class $$LocalStudyCardsTableTableManager
               $$LocalStudyCardsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String?> notes = const Value.absent(),
                 Value<String?> contentRef = const Value.absent(),
                 Value<String> accountKey = const Value.absent(),
                 Value<int> remoteId = const Value.absent(),
@@ -1648,6 +1711,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<bool> deletedLocally = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalStudyCardsCompanion(
+                notes: notes,
                 contentRef: contentRef,
                 accountKey: accountKey,
                 remoteId: remoteId,
@@ -1673,6 +1737,7 @@ class $$LocalStudyCardsTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String?> notes = const Value.absent(),
                 Value<String?> contentRef = const Value.absent(),
                 required String accountKey,
                 required int remoteId,
@@ -1696,6 +1761,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<bool> deletedLocally = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalStudyCardsCompanion.insert(
+                notes: notes,
                 contentRef: contentRef,
                 accountKey: accountKey,
                 remoteId: remoteId,
