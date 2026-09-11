@@ -39,12 +39,14 @@ class NexusBooksApp extends ConsumerWidget {
                     id: id,
                     modelType: parts.first == 'books' ? 'Book' : 'Document',
                   );
-            return ReadingCompanion(
-              key: ValueKey(
-                '${user.userId}:${identity?.modelType}:${identity?.id}',
+            return Overlay.wrap(
+              child: ReadingCompanion(
+                key: ValueKey(
+                  '${user.userId}:${identity?.modelType}:${identity?.id}',
+                ),
+                identity: identity,
+                child: child!,
               ),
-              identity: identity,
-              child: child!,
             );
           },
         ),
