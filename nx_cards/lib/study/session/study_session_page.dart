@@ -442,15 +442,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                   ),
                                                 ),
                                         ),
-                                        if (_revealed)
-                                          const Text(
-                                            'Did you recall it?',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: RecallColors.faint,
-                                            ),
-                                          ),
                                       ],
                                     ),
                                   ),

@@ -134,20 +134,25 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
       const SizedBox(height: 14),
       SizedBox(
         height: 230,
-        child: ScriptDrawingCanvas(
-          controller: _drawingController,
-          semanticsLabel: 'Write the answer for ${widget.prompt.prompt}',
-        ),
-      ),
-      const SizedBox(height: 10),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton.icon(
-          onPressed: _drawingController.hasStrokes
-              ? _drawingController.clear
-              : null,
-          icon: const Icon(Icons.delete_outline, size: 18),
-          label: const Text('Erase'),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ScriptDrawingCanvas(
+              controller: _drawingController,
+              semanticsLabel: 'Write the answer for ${widget.prompt.prompt}',
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                tooltip: 'Erase',
+                onPressed: _drawingController.hasStrokes
+                    ? _drawingController.clear
+                    : null,
+                icon: const Icon(Icons.delete_outline, size: 20),
+              ),
+            ),
+          ],
         ),
       ),
     ],
