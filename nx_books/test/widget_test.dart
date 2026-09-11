@@ -12,10 +12,49 @@ import 'package:nx_books/features/books/books_shell.dart';
 import 'package:nx_books/features/books/notes/book_notes_page.dart';
 import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_documents/nx_documents.dart';
+import 'package:nx_offline/nx_offline.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+
+  testWidgets('settings follows live sync through close and reopen', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final pull = _GatedPull();
+    final sync = SyncSupervisor<DocumentIdentity>(reconciler: pull);
+    addTearDown(() async {
+      if (!pull.finished.isCompleted) pull.finished.complete();
+      await sync.close();
+    });
+    final repo = _FakeBookRepository([]);
+    await tester.pumpWidget(_testApp(repo, sync: sync));
+    await tester.pumpAndSettle();
+    final initialReads = repo.listCalls;
+    final settings = find.byKey(const ValueKey('books-settings-button'));
+    await tester.tap(settings);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('books-sync-now-button')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(find.text('Synchronizing…'), findsOneWidget);
+    expect(repo.listCalls, initialReads);
+    await tester.tap(find.text('Close'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(settings);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Synchronizing…'), findsOneWidget);
+    pull.finished.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Synchronizing…'), findsNothing);
+    expect(find.text('Sync now'), findsOneWidget);
+  });
 
   test('book notes stay inside the nx_books route tree', () {
     expect(bookNotesPath(4195), '/books/4195/notes');
@@ -699,7 +738,7 @@ void main() {
   });
 }
 
-Widget _testApp(BookRepository repo) {
+Widget _testApp(BookRepository repo, {SyncSupervisor<DocumentIdentity>? sync}) {
   final router = GoRouter(
     initialLocation: '/books',
     routes: <RouteBase>[
@@ -723,12 +762,21 @@ Widget _testApp(BookRepository repo) {
     overrides: [
       bookRepositoryProvider.overrideWithValue(repo),
       offlineBookHydrationEnabledProvider.overrideWithValue(false),
+      if (sync != null) booksLibrarySyncProvider.overrideWithValue(sync),
       bookNotesRepositoryProvider.overrideWithValue(_FakeDocumentRepository()),
       bookNotesImageBaseProvider.overrideWithValue(null),
       bookNotesPositionStoreProvider.overrideWithValue(null),
     ],
     child: MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
   );
+}
+
+class _GatedPull implements PullReconciler<DocumentIdentity> {
+  final finished = Completer<void>();
+  @override
+  Future<void> pullAll() => finished.future;
+  @override
+  Future<void> pullKeys(Set<DocumentIdentity> keys) => pullAll();
 }
 
 class _FakeDocumentRepository implements DocumentContentRepository {
@@ -785,6 +833,7 @@ class _FakeBookRepository implements BookRepository {
   final List<NxBook> rows;
   final Completer<void>? rankUpdateGate;
   int _nextId = 1000;
+  int listCalls = 0;
 
   @override
   Future<NxBook> createBook({String? title}) async {
@@ -810,7 +859,10 @@ class _FakeBookRepository implements BookRepository {
   }
 
   @override
-  Future<List<NxBook>> listBooks() async => [...rows];
+  Future<List<NxBook>> listBooks() async {
+    listCalls++;
+    return [...rows];
+  }
 
   @override
   Future<List<String>> listTopicTags() async => const [

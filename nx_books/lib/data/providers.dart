@@ -163,6 +163,10 @@ final booksLibrarySyncProvider =
           onChanged: () {
             if (ref.mounted) {
               ref.invalidate(downloadReportProvider);
+            }
+          },
+          onCatalogChanged: () {
+            if (ref.mounted) {
               ref.invalidate(booksProvider);
               ref.invalidate(topicTagsProvider);
             }
@@ -184,6 +188,18 @@ final booksLibrarySyncProvider =
 final booksLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
   final sync = ref.watch(booksLibrarySyncProvider);
   return sync?.requestFull;
+});
+
+final booksSyncStatusProvider = StreamProvider<offline.SyncStatus>((
+  ref,
+) async* {
+  final sync = ref.watch(booksLibrarySyncProvider);
+  if (sync == null) {
+    yield const offline.SyncStatus.idle();
+    return;
+  }
+  yield sync.status;
+  yield* sync.statusChanges;
 });
 
 final booksOnlineChangesProvider = Provider<Stream<bool>?>((ref) {

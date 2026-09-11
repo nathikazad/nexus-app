@@ -17,12 +17,14 @@ final class BooksHashPull implements PullReconciler<DocumentIdentity> {
     required this.store,
     this.reportStore,
     this.onChanged,
+    this.onCatalogChanged,
     this.pullBookFiles,
   });
   final BooksSyncTransport transport;
   final BooksSyncStore store;
   final DownloadReportStore? reportStore;
   final void Function()? onChanged;
+  final void Function()? onCatalogChanged;
   final Future<void> Function()? pullBookFiles;
 
   Future<void> _report(
@@ -58,12 +60,20 @@ final class BooksHashPull implements PullReconciler<DocumentIdentity> {
       }
       total = manifest.length;
       final missing = <int>{};
-      for (final entry in manifest) {
-        if (await store.verified(entry)) {
-          verified++;
-        } else {
-          missing.add(entry.id);
+      for (var offset = 0; offset < manifest.length; offset += 8) {
+        final page = manifest.skip(offset).take(8).toList();
+        final results = await Future.wait(page.map(store.verified));
+        for (var i = 0; i < page.length; i++) {
+          if (results[i]) {
+            verified++;
+          } else {
+            missing.add(page[i].id);
+          }
         }
+        if (offset % 64 == 0) {
+          await _report(DownloadPhase.checking, total, verified, failed);
+        }
+        await Future<void>.delayed(Duration.zero);
       }
       await _report(DownloadPhase.downloading, total, verified, failed);
       if (missing.isNotEmpty) {
@@ -76,15 +86,19 @@ final class BooksHashPull implements PullReconciler<DocumentIdentity> {
               !received.add(entry.documentId)) {
             throw StateError('Unexpected document in sync response');
           }
-          try {
-            await store.apply(entry, generation, documentGeneration);
-            verified++;
-          } catch (_) {
-            failed.add('${entry.documentId}');
-          }
-          if (received.length % 25 == 0) {
-            await _report(DownloadPhase.downloading, total, verified, failed);
-          }
+        }
+        for (var offset = 0; offset < bundle.documents.length; offset += 25) {
+          final page = bundle.documents.skip(offset).take(25).toList();
+          final pageFailures = await store.applyBatch(
+            page,
+            generation,
+            documentGeneration,
+          );
+          // Report only committed work, never an in-flight transaction.
+          failed.addAll(pageFailures);
+          verified += page.length - pageFailures.length;
+          await _report(DownloadPhase.downloading, total, verified, failed);
+          await Future<void>.delayed(Duration.zero);
         }
         for (final id in missing.difference(received)) {
           // A deletion between the two requests is legitimate. Anything else
@@ -101,6 +115,7 @@ final class BooksHashPull implements PullReconciler<DocumentIdentity> {
         throw StateError('${failed.length} items could not be saved');
       }
       await store.publish(manifest, remote.topicTags, catalogGeneration);
+      onCatalogChanged?.call();
       await pullBookFiles?.call();
       await _report(DownloadPhase.complete, total, verified, failed);
     } catch (_) {

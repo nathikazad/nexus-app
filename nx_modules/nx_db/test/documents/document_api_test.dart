@@ -89,6 +89,7 @@ void main() {
     );
 
     expect(printNode(captured!.document), contains('syncDocuments'));
+    expect(captured!.fetchPolicy, FetchPolicy.noCache);
     expect(captured!.variables['documentIds'], <int>[7, 9]);
     expect(result.documents.single.documentId, 7);
     expect(result.documents.single.syncHash, 'new-hash');
@@ -110,7 +111,7 @@ void main() {
       when(() => client.query(any())).thenAnswer((invocation) async {
         final options = invocation.positionalArguments.single as QueryOptions;
         expect(options.variables['manifestOnly'], true);
-        expect(options.fetchPolicy, FetchPolicy.networkOnly);
+        expect(options.fetchPolicy, FetchPolicy.noCache);
         return QueryResult(
           options: options,
           source: QueryResultSource.network,

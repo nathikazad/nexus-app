@@ -157,7 +157,9 @@ Future<DocumentSyncResponse> syncDocuments(
         'manifestOnly': manifestOnly,
         if (domainId != null) 'domainId': domainId,
       },
-      fetchPolicy: FetchPolicy.networkOnly,
+      // The offline store owns these bulk payloads. Avoid normalizing and
+      // retaining another full copy in the interactive GraphQL cache.
+      fetchPolicy: FetchPolicy.noCache,
       queryRequestTimeout: requestTimeout,
     ),
   );

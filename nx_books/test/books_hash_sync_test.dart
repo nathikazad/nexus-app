@@ -87,6 +87,22 @@ void main() {
     expect((await report.load())?.verified, 820);
   });
 
+  test('progress does not republish the bookshelf', () async {
+    var progress = 0;
+    var published = 0;
+    final observed = BooksHashPull(
+      transport: transport,
+      store: store,
+      reportStore: report,
+      onChanged: () => progress++,
+      onCatalogChanged: () => published++,
+    );
+    await observed.pullAll();
+    expect(progress, greaterThan(1));
+    expect(published, 1);
+    expect((await report.load())!.phase, DownloadPhase.complete);
+  });
+
   test('chat-only hash change downloads only its parent', () async {
     await pull.pullAll();
     transport.entries[2] = _entry(2, 'changed', message: 'new answer');

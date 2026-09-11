@@ -25,10 +25,25 @@ class FileLibrary {
   final LibraryDatabase database;
   final ContentFiles files;
   Future<void> _writes = Future.value();
+  final Object _batchZone = Object();
+
+  /// Commit a bounded group of offline writes once. Files are still immutable
+  /// and finalized before their references commit. A failure rolls back all
+  /// index changes; orphaned immutable files are safe to reuse on retry.
+  /// The callback must await all its work and must not perform network requests.
+  Future<T> batchWrites<T>(Future<T> Function() work) {
+    if (Zone.current[_batchZone] == true) return work();
+    return _serialize(
+      () => database.transaction(
+        () => runZoned(work, zoneValues: {_batchZone: true}),
+      ),
+    );
+  }
 
   // Preserve invocation order, including slow file writes. A failed save must
   // not poison the queue for the next save.
   Future<T> _serialize<T>(Future<T> Function() work) {
+    if (Zone.current[_batchZone] == true) return work();
     final result = _writes.then((_) => work());
     _writes = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     return result;
@@ -154,7 +169,7 @@ class FileLibrary {
     final before = await metadata(collection, id);
     if (before?.pending == true) return;
     final reference = await files.write(collection, id, content);
-    await database.transaction(() async {
+    Future<void> publish() async {
       final current = await metadata(collection, id);
       if (current?.pending == true) return;
       await database.customStatement(
@@ -166,7 +181,13 @@ class FileLibrary {
       ''',
         [collection, id, reference, jsonEncode(summary), revision],
       );
-    });
+    }
+
+    if (Zone.current[_batchZone] == true) {
+      await publish();
+    } else {
+      await database.transaction(publish);
+    }
   });
 
   /// Every save advances a generation, including A → B → A edits. The file

@@ -10,6 +10,8 @@ class PreferencesDownloadReportStore implements DownloadReportStore {
   @override
   Future<DownloadReport?> load() async {
     final prefs = await SharedPreferences.getInstance();
+    // A second Flutter engine may have completed a lifecycle sync.
+    await prefs.reload();
     final value = prefs.getString(_key);
     if (value == null) return null;
     try {

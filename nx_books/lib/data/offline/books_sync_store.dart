@@ -27,6 +27,24 @@ final class BooksSyncStore {
 
   String _historyKey(DocumentIdentity id) => '${id.modelType}_${id.id}';
 
+  /// Only return results after this bounded page has committed. The caller
+  /// owns paging/progress; this layer owns the local transaction and merge.
+  Future<List<String>> applyBatch(
+    List<DocumentSyncEntry> entries,
+    int historyGeneration,
+    int documentGeneration,
+  ) => library.batchWrites(() async {
+    final failed = <String>[];
+    for (final entry in entries) {
+      try {
+        await apply(entry, historyGeneration, documentGeneration);
+      } catch (_) {
+        failed.add('${entry.documentId}');
+      }
+    }
+    return failed;
+  });
+
   Future<bool> verified(DocumentHashEntry entry) async {
     try {
       final id = identity(entry);

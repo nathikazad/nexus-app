@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -25,6 +26,51 @@ void main() {
     await library.close();
     await directory.delete(recursive: true);
   });
+
+  test(
+    'batch rollback publishes no partial references and permits retry',
+    () async {
+      await expectLater(
+        library.batchWrites(() async {
+          await library.saveRemote('documents', 'one', 'first');
+          await library.saveRemote('documents', 'two', 'second');
+          throw StateError('interrupted');
+        }),
+        throwsStateError,
+      );
+      expect(await library.read('documents', 'one'), isNull);
+      expect(await library.read('documents', 'two'), isNull);
+      await library.batchWrites(() async {
+        await library.saveRemote('documents', 'one', 'first');
+        await library.saveRemote('documents', 'two', 'second');
+      });
+      expect(await library.read('documents', 'one'), 'first');
+      expect(await library.read('documents', 'two'), 'second');
+    },
+  );
+
+  test(
+    'local edits queue behind a batch and remain protected afterward',
+    () async {
+      final entered = Completer<void>();
+      final resume = Completer<void>();
+      final batch = library.batchWrites(() async {
+        await library.saveRemote('documents', 'one', 'remote');
+        entered.complete();
+        await resume.future;
+      });
+      await entered.future;
+      final edit = library.saveLocal('documents', 'one', 'local');
+      resume.complete();
+      await batch;
+      await edit;
+      await library.batchWrites(
+        () => library.saveRemote('documents', 'one', 'old'),
+      );
+      expect(await library.read('documents', 'one'), 'local');
+      expect((await library.metadata('documents', 'one'))!.pending, isTrue);
+    },
+  );
 
   for (final collection in ['books', 'documents', 'expenses', 'cards']) {
     test(

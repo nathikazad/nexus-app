@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../domain/book/download_report.dart';
 
 class DownloadReportView extends StatelessWidget {
-  const DownloadReportView({required this.report, super.key});
+  const DownloadReportView({required this.report, this.syncing, super.key});
   final DownloadReport? report;
+  final bool? syncing;
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +22,9 @@ class DownloadReportView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(text, key: const ValueKey('books-download-readiness')),
-        if (value.phase == DownloadPhase.checking ||
-            value.phase == DownloadPhase.downloading)
+        if (syncing ??
+            (value.phase == DownloadPhase.checking ||
+                value.phase == DownloadPhase.downloading))
           const Text(
             'Sync is running. A large first sync may take several minutes; you can close Settings while it finishes.',
           ),

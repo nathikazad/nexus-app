@@ -33,6 +33,11 @@ void main() {
     expect(calls.length, 2);
     expect(calls.first['manifestOnly'], true);
     expect(calls.last['documentIds'], [42]);
+    expect(
+      client.cache.store.toMap(),
+      isEmpty,
+      reason: 'Bulk sync payloads belong only in the offline store',
+    );
     expect(KgqlBooksSyncTransport.requestTimeout, const Duration(minutes: 5));
   });
 }

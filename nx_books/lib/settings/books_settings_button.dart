@@ -54,16 +54,19 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
       _refreshing = true;
       _syncMessage = null;
     });
-    ref
-      ..invalidate(booksProvider)
-      ..invalidate(topicTagsProvider);
     try {
-      await Future.wait(<Future<Object?>>[
-        ref.read(booksProvider.future),
-        ref.read(topicTagsProvider.future),
-        if (ref.read(booksLibrarySyncProvider) case final sync?)
-          sync.requestFull(SyncReason.manual),
-      ]);
+      final sync = ref.read(booksLibrarySyncProvider);
+      if (sync != null) {
+        await sync.requestFull(SyncReason.manual);
+      } else {
+        ref
+          ..invalidate(booksProvider)
+          ..invalidate(topicTagsProvider);
+        await Future.wait([
+          ref.read(booksProvider.future),
+          ref.read(topicTagsProvider.future),
+        ]);
+      }
       if (mounted) setState(() => _syncMessage = 'Library synchronized.');
     } catch (_) {
       if (mounted) {
@@ -105,6 +108,12 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
     final textScale = ref.watch(booksTextScaleProvider);
     final user = ref.watch(authProvider).value;
     final bookFileReport = ref.watch(bookFileReportProvider).value;
+    final supervisor = ref.watch(booksLibrarySyncProvider);
+    final status =
+        ref.watch(booksSyncStatusProvider).value ?? supervisor?.status;
+    final syncing = supervisor == null
+        ? _refreshing
+        : status?.activity == SyncActivity.syncing;
     return AlertDialog(
       title: const Text('Settings'),
       content: ConstrainedBox(
@@ -183,18 +192,19 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
               const SizedBox(height: 12),
               FilledButton.tonalIcon(
                 key: const ValueKey<String>('books-sync-now-button'),
-                onPressed: _refreshing ? null : _refresh,
-                icon: _refreshing
+                onPressed: syncing ? null : _refresh,
+                icon: syncing
                     ? const SizedBox.square(
                         dimension: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.refresh),
-                label: Text(_refreshing ? 'Synchronizing…' : 'Sync now'),
+                label: Text(syncing ? 'Synchronizing…' : 'Sync now'),
               ),
               const SizedBox(height: 8),
               DownloadReportView(
                 report: ref.watch(downloadReportProvider).value,
+                syncing: syncing,
               ),
               if (bookFileReport != null) ...[
                 const SizedBox(height: 6),
@@ -253,7 +263,7 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
       ),
       actions: <Widget>[
         TextButton(
-          onPressed: _refreshing ? null : () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('Close'),
         ),
       ],
