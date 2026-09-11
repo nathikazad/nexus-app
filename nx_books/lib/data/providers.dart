@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'offline/reading_history_store.dart';
-import '../domain/book/reading_history.dart';
-import '../domain/book/reading_history_codec.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nx_offline/nx_offline_storage.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
-import 'package:nx_db/kgql.dart';
-import 'package:nx_books/data/offline/books_library_sync.dart';
+import 'package:nx_books/data/offline/books_hash_sync.dart';
+import 'package:nx_books/data/offline/books_sync_store.dart';
+import 'package:nx_books/data/book/kgql_books_sync_transport.dart';
 import 'package:nx_books/data/offline/preferences_download_report_store.dart';
 import 'package:nx_books/data/offline/book_file_cache.dart';
 import 'package:nx_books/data/offline/preferences_book_file_report_store.dart';
@@ -138,21 +137,36 @@ final booksLibrarySyncProvider =
       final client = ref.watch(graphqlClientProvider);
       final histories = ref.watch(readingHistoryStoreProvider);
       final hasNetwork = ref.watch(booksNetworkAvailableProvider);
-      final refreshCatalog = ref.watch(refreshBookCatalogProvider);
+      final library = ref.watch(booksFileLibraryProvider);
+      final catalog = ref.watch(bookRepositoryProvider);
+      if (library == null ||
+          histories == null ||
+          catalog is! CachedBookRepository) {
+        return null;
+      }
       final sync = offline.SyncSupervisor<DocumentIdentity>(
         retryDelay: const Duration(seconds: 5),
         prepare: () async {
           if (!await hasNetwork()) {
             throw StateError('Offline. Sync will retry automatically.');
           }
-          await refreshCatalog();
         },
-        reconciler: BooksLibraryPull(
+        reconciler: BooksHashPull(
+          transport: KgqlBooksSyncTransport(client),
+          store: BooksSyncStore(
+            library,
+            ref.watch(bookDocumentRepositoryProvider),
+            histories,
+            catalog,
+          ),
           reportStore: ref.watch(downloadReportStoreProvider),
-          onReportChanged: () {
-            if (ref.mounted) ref.invalidate(downloadReportProvider);
+          onChanged: () {
+            if (ref.mounted) {
+              ref.invalidate(downloadReportProvider);
+              ref.invalidate(booksProvider);
+              ref.invalidate(topicTagsProvider);
+            }
           },
-          repository: ref.watch(bookDocumentRepositoryProvider),
           pullBookFiles: () async {
             final cache = ref.read(bookFileCacheProvider);
             if (cache != null) {
@@ -160,48 +174,6 @@ final booksLibrarySyncProvider =
                 await ref.read(bookRepositoryProvider).listBooks(),
               );
             }
-          },
-          discover: () async {
-            final revisions = <DocumentIdentity, DateTime?>{};
-            for (final type in ['Book', 'Document']) {
-              final historyGeneration = histories?.generation ?? 0;
-              final models = await fetchKgqlModels(
-                client,
-                filter: {'model_type': type},
-                struct: const {
-                  'id': true,
-                  'name': true,
-                  'updated_at': true,
-                  'Transcript': {'id': true, 'messages': true},
-                },
-              );
-              for (final model in models) {
-                final identity = DocumentIdentity(
-                  id: model.id,
-                  modelType: type,
-                );
-                final transcripts = model.relations?['Transcript'];
-                if (histories != null &&
-                    histories.generation == historyGeneration) {
-                  await histories.saveDownloaded(
-                    identity,
-                    ReadingHistory(
-                      model.name,
-                      readingMessagesFromHistory(
-                        transcripts == null || transcripts.isEmpty
-                            ? null
-                            : transcripts.first.attributes?['messages'],
-                        limit: 100,
-                      ),
-                    ),
-                    historyGeneration,
-                  );
-                }
-                revisions[DocumentIdentity(id: model.id, modelType: type)] =
-                    DateTime.tryParse(model.updatedAt ?? '');
-              }
-            }
-            return revisions;
           },
         ),
       );

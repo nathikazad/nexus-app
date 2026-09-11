@@ -50,28 +50,33 @@ void main() {
     expect(find.textContaining('1 downloads need attention'), findsOneWidget);
   });
 
-  testWidgets('completed text verification explicitly excludes media and AI', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: DownloadReportView(
-            report: DownloadReport(
-              phase: DownloadPhase.complete,
-              total: 8,
-              verified: 8,
-              failed: [],
-              updatedAt: DateTime.utc(2026, 9, 9),
+  testWidgets(
+    'completed verification includes saved chats but excludes images',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DownloadReportView(
+              report: DownloadReport(
+                phase: DownloadPhase.complete,
+                total: 8,
+                verified: 8,
+                failed: [],
+                updatedAt: DateTime.utc(2026, 9, 9),
+              ),
             ),
           ),
         ),
-      ),
-    );
-    expect(find.text('8/8 book and document texts verified.'), findsOneWidget);
-    expect(
-      find.textContaining('Images and AI conversations are not included'),
-      findsOneWidget,
-    );
-  });
+      );
+      expect(
+        find.text('8/8 book and document texts verified.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('texts and saved AI conversations'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('images are not included'), findsOneWidget);
+    },
+  );
 }

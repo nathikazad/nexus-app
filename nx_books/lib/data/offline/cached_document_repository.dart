@@ -19,6 +19,8 @@ final class CachedDocumentContentRepository
   final FileLibrary? library;
   Future<void>? _migration;
   final Map<DocumentIdentity, Future<DocumentContent?>> _downloads = {};
+  int generation = 0;
+  final Map<DocumentIdentity, int> _writeEpoch = {};
 
   String _key(DocumentIdentity identity) =>
       'nx_books.offline.$accountKey.document.${identity.modelType}.${identity.id}';
@@ -76,12 +78,30 @@ final class CachedDocumentContentRepository
 
   @override
   Future<DocumentContent> save(DocumentContent content) async {
-    final saved = await remote.save(content);
-    await _write(saved);
-    return saved;
+    generation++;
+    try {
+      final saved = await remote.save(content);
+      await _write(saved);
+      return saved;
+    } finally {
+      generation++;
+    }
   }
 
-  Future<void> _write(DocumentContent content) async {
+  Future<bool> hasSyncedContent(DocumentIdentity identity, String hash) async {
+    final item = await library?.metadata(identity.modelType, '${identity.id}');
+    return item?.summary['syncHash'] == hash && await _verify(identity);
+  }
+
+  Future<void> cacheSynced(DocumentContent content, String hash) =>
+      _write(content, syncHash: hash);
+
+  Future<void> _write(DocumentContent content, {String? syncHash}) async {
+    _writeEpoch.update(
+      content.identity,
+      (value) => value + 1,
+      ifAbsent: () => 1,
+    );
     final encoded = jsonEncode(<String, dynamic>{
       'title': content.title,
       'plainText': content.plainText,
@@ -90,11 +110,29 @@ final class CachedDocumentContentRepository
     });
     final storage = library;
     if (storage != null) {
+      if (syncHash == null) {
+        // A background read of identical content must not discard the last
+        // server acknowledgment and force a redundant batch on the next sync.
+        try {
+          if (await storage.read(
+                content.identity.modelType,
+                '${content.identity.id}',
+              ) ==
+              encoded) {
+            return;
+          }
+        } catch (_) {
+          // A damaged copy still needs to be rewritten below.
+        }
+      }
       await storage.saveRemote(
         content.identity.modelType,
         '${content.identity.id}',
         encoded,
-        summary: {'title': content.title},
+        summary: {
+          'title': content.title,
+          if (syncHash != null) 'syncHash': syncHash,
+        },
         revision: content.updatedAt.toUtc().toIso8601String(),
       );
       return;
@@ -105,11 +143,17 @@ final class CachedDocumentContentRepository
 
   Future<DocumentContent?> _loadRemote(DocumentIdentity identity) =>
       _downloads.putIfAbsent(identity, () async {
+        final startedAt = _writeEpoch[identity];
+        final localGeneration = generation;
         try {
           final content = await remote
               .load(identity)
               .timeout(const Duration(seconds: 20));
-          if (content != null) await _write(content);
+          if (content != null &&
+              startedAt == _writeEpoch[identity] &&
+              localGeneration == generation) {
+            await _write(content);
+          }
           return content;
         } finally {
           _downloads.remove(identity);

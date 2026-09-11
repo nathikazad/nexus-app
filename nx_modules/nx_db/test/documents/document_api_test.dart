@@ -10,43 +10,48 @@ import '../_support/mock_graphql_client.dart';
 void main() {
   setUpAll(registerGraphqlFallbacks);
 
-  test('mutateDocument sends the client timestamp and parses the hash',
-      () async {
-    final client = MockGraphQLClient();
-    MutationOptions? captured;
-    when(() => client.mutate(any())).thenAnswer((invocation) async {
-      captured = invocation.positionalArguments.single as MutationOptions;
-      return QueryResult(
-        options: MutationOptions(document: gql('mutation { __typename }')),
-        source: QueryResultSource.network,
-        data: const <String, Object?>{
-          'mutateDocument': <String, Object?>{
-            'status': 'APPLIED',
-            'id': 42,
-            'updated_at': '2026-07-30T12:00:00',
-            'sync_hash': 'abc123',
+  test(
+    'mutateDocument sends the client timestamp and parses the hash',
+    () async {
+      final client = MockGraphQLClient();
+      MutationOptions? captured;
+      when(() => client.mutate(any())).thenAnswer((invocation) async {
+        captured = invocation.positionalArguments.single as MutationOptions;
+        return QueryResult(
+          options: MutationOptions(document: gql('mutation { __typename }')),
+          source: QueryResultSource.network,
+          data: const <String, Object?>{
+            'mutateDocument': <String, Object?>{
+              'status': 'APPLIED',
+              'id': 42,
+              'updated_at': '2026-07-30T12:00:00',
+              'sync_hash': 'abc123',
+            },
           },
-        },
+        );
+      });
+
+      final result = await mutateDocument(
+        client,
+        SetModelRequest(
+          id: 42,
+          attributes: <SetModelAttribute>[
+            SetModelAttribute(key: 'document', value: 'Changed'),
+          ],
+        ),
+        clientUpdatedAt: DateTime.utc(2026, 7, 30, 12),
       );
-    });
 
-    final result = await mutateDocument(
-      client,
-      SetModelRequest(
-        id: 42,
-        attributes: <SetModelAttribute>[
-          SetModelAttribute(key: 'document', value: 'Changed'),
-        ],
-      ),
-      clientUpdatedAt: DateTime.utc(2026, 7, 30, 12),
-    );
-
-    expect(printNode(captured!.document), contains('mutateDocument'));
-    expect(captured!.variables['clientUpdatedAt'], '2026-07-30T12:00:00.000Z');
-    expect(result.status, DocumentMutationStatus.applied);
-    expect(result.documentId, 42);
-    expect(result.syncHash, 'abc123');
-  });
+      expect(printNode(captured!.document), contains('mutateDocument'));
+      expect(
+        captured!.variables['clientUpdatedAt'],
+        '2026-07-30T12:00:00.000Z',
+      );
+      expect(result.status, DocumentMutationStatus.applied);
+      expect(result.documentId, 42);
+      expect(result.syncHash, 'abc123');
+    },
+  );
 
   test('syncDocuments sorts ids and parses changed and deleted rows', () async {
     final client = MockGraphQLClient();
@@ -89,4 +94,42 @@ void main() {
     expect(result.documents.single.syncHash, 'new-hash');
     expect(result.deletedIds, <int>[8]);
   });
+
+  test(
+    'manifest-only is network-backed and refuses a missing manifest',
+    () async {
+      final client = MockGraphQLClient();
+      final payload = <String, dynamic>{
+        'documents': [],
+        'deleted_ids': [],
+        'manifest': [
+          {'id': 42, 'model_type': 'Book', 'hash': 'v2:hash'},
+        ],
+        'topic_tags': ['Strategy'],
+      };
+      when(() => client.query(any())).thenAnswer((invocation) async {
+        final options = invocation.positionalArguments.single as QueryOptions;
+        expect(options.variables['manifestOnly'], true);
+        expect(options.fetchPolicy, FetchPolicy.networkOnly);
+        return QueryResult(
+          options: options,
+          source: QueryResultSource.network,
+          data: {'syncDocuments': payload},
+        );
+      });
+      final result = await syncDocuments(
+        client,
+        manifest: [],
+        manifestOnly: true,
+      );
+      expect(result.manifest.single.id, 42);
+      expect(result.manifest.single.hash, 'v2:hash');
+      expect(result.topicTags, ['Strategy']);
+      payload.remove('manifest');
+      await expectLater(
+        syncDocuments(client, manifest: [], manifestOnly: true),
+        throwsStateError,
+      );
+    },
+  );
 }

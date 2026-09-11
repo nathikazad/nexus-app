@@ -11,7 +11,6 @@ const kBookAttrTotalChapters = 'total_chapters';
 const kBookAttrCurrentChapter = 'current_chapter';
 const kBookAttrAuthor = 'author';
 const kBookAttrLink = 'link';
-const kBookAttrBookLink = 'book_link';
 const kBookAttrWordCount = 'word_count';
 const kBookAttrDocument = 'document';
 const kBookAttrJsonDocument = 'json_document';
@@ -31,7 +30,7 @@ class KgqlBookRepository implements BookRepository {
       filter: const {'model_type': kBookModelTypeName},
       struct: bookSummaryFetchStruct,
     );
-    return [for (final model in models) _bookFromModel(model)];
+    return [for (final model in models) bookFromModel(model)];
   }
 
   @override
@@ -195,7 +194,7 @@ class KgqlBookRepository implements BookRepository {
     kBookAttrCurrentChapter: true,
     kBookAttrAuthor: true,
     kBookAttrLink: true,
-    kBookAttrBookLink: true,
+    'book_file': true,
     'tags': true,
   };
 }
@@ -219,7 +218,9 @@ TagSystem? _findTagSystem(List<TagSystem> systems, String name) {
   return null;
 }
 
-NxBook _bookFromModel(Model model) {
+NxBook bookFromModel(Model model) {
+  final metadata = model.attributes?['book_file'];
+  final file = metadata is Map ? metadata : const {};
   final updatedAt =
       DateTime.tryParse(model.updatedAt ?? '') ??
       DateTime.tryParse(model.createdAt ?? '') ??
@@ -230,7 +231,9 @@ NxBook _bookFromModel(Model model) {
     description: model.description?.trim() ?? '',
     author: model.attrString(kBookAttrAuthor)?.trim() ?? '',
     link: model.attrString(kBookAttrLink)?.trim() ?? '',
-    bookLink: model.attrString(kBookAttrBookLink)?.trim() ?? '',
+    bookLink: (file['link'] as String?)?.trim() ?? '',
+    bookFileHash: file['sha256'] as String?,
+    bookFileSize: (file['size'] as num?)?.toInt(),
     tags: _flattenTags(model.tags),
     readingState: BookReadingState.fromKgql(
       model.attrString(kBookAttrReadingState),

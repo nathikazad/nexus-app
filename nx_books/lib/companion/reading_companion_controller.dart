@@ -44,6 +44,45 @@ class ReadingCompanionController extends ChangeNotifier {
   Timer? _timeout;
   Timer? _recordingLimit;
   int _responseStart = 0;
+  bool syncing = false;
+
+  Future<ReadingHistory?> syncHistory(
+    Future<ReadingHistory> Function() fetch,
+  ) async {
+    if (_disposed || recording || syncing) return null;
+    syncing = true;
+    busy = true;
+    _generation++;
+    _acceptResponses = false;
+    _timeout?.cancel();
+    error = null;
+    _notify();
+    try {
+      await session.disconnect();
+      final history = await fetch();
+      if (_disposed) return null;
+      if (history.messages.isEmpty && messages.isNotEmpty) {
+        throw StateError('The server has not saved this conversation yet');
+      }
+      messages
+        ..clear()
+        ..addAll(history.messages);
+      _responseStart = messages.length;
+      _pendingTypedWire = null;
+      _pendingTypedQuestion = null;
+      return history;
+    } catch (_) {
+      if (!_disposed) {
+        error =
+            'Could not sync the saved chat. Your current conversation is still here. Check your connection and try again.';
+      }
+      return null;
+    } finally {
+      syncing = false;
+      busy = false;
+      _notify();
+    }
+  }
 
   void _notify() {
     if (!_disposed) notifyListeners();

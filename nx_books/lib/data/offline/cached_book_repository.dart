@@ -23,6 +23,7 @@ final class CachedBookRepository implements BookRepository, BookCatalogRefresh {
   bool _booksDirty = false;
   bool _tagsDirty = false;
   int _mutationRevision = 0;
+  int get generation => _mutationRevision;
 
   String get _booksKey => 'nx_books.offline.$accountKey.books';
   String get _tagsKey => 'nx_books.offline.$accountKey.topic_tags';
@@ -156,6 +157,26 @@ final class CachedBookRepository implements BookRepository, BookCatalogRefresh {
           ),
       ]);
 
+  /// Publish a complete server manifest projection; transport stays outside
+  /// this repository. Called only after all required snapshots are available.
+  Future<void> cacheSyncedCatalog(
+    List<NxBook> books,
+    List<String> tags,
+    int startedAt,
+  ) async {
+    if (startedAt != _mutationRevision) {
+      throw StateError('Books changed during sync; retry after saving');
+    }
+    await _storeBooks(books);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_tagsKey, jsonEncode(tags));
+    if (startedAt != _mutationRevision) {
+      throw StateError('Books changed during sync; retry after saving');
+    }
+    _booksDirty = false;
+    _tagsDirty = false;
+  }
+
   @override
   Future<NxBook> createBook({String? title}) =>
       _mutate(() => remote.createBook(title: title));
@@ -202,6 +223,8 @@ Map<String, dynamic> _bookToJson(NxBook book) => <String, dynamic>{
   'author': book.author,
   'link': book.link,
   'bookLink': book.bookLink,
+  'bookFileHash': book.bookFileHash,
+  'bookFileSize': book.bookFileSize,
   'tags': book.tags,
   'readingState': book.readingState.kgqlValue,
   'rank': book.rank,
@@ -219,6 +242,8 @@ NxBook _bookFromJson(Map<String, dynamic> json) => NxBook(
   author: json['author']?.toString() ?? '',
   link: json['link']?.toString() ?? '',
   bookLink: json['bookLink']?.toString() ?? '',
+  bookFileHash: json['bookFileHash'] as String?,
+  bookFileSize: (json['bookFileSize'] as num?)?.toInt(),
   tags: [for (final tag in json['tags'] as List? ?? const []) tag.toString()],
   readingState: BookReadingState.fromKgql(json['readingState']),
   rank: (json['rank'] as num?)?.toInt(),

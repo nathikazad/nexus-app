@@ -42,7 +42,13 @@ class ReadingHistoryStore {
       ],
     });
     final key = _key(id);
-    if (_lastWrites[key] == raw) return;
+    if (_lastWrites[key] == raw) {
+      try {
+        if (await library.read('reading_history', key) == raw) return;
+      } catch (_) {
+        // The remembered write is not proof that its file is still intact.
+      }
+    }
     if (local) generation++;
     _lastWrites[key] = raw;
     try {
@@ -53,7 +59,7 @@ class ReadingHistoryStore {
     }
   }
 
-  Future<void> saveDownloaded(
+  Future<bool> saveDownloaded(
     DocumentIdentity id,
     ReadingHistory history,
     int startedAt,
@@ -63,8 +69,9 @@ class ReadingHistoryStore {
     // or discard a locally received tail the server has not yet persisted.
     if (generation != startedAt ||
         (old?.messages.length ?? 0) > history.messages.length) {
-      return;
+      return false;
     }
     await save(id, history, local: false);
+    return true;
   }
 }

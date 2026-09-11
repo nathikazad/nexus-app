@@ -22,11 +22,13 @@ query SyncDocuments(
   $manifest: JSON!
   $documentIds: [Int!]
   $domainId: Int
+  $manifestOnly: Boolean
 ) {
   syncDocuments(
     manifest: $manifest
     documentIds: $documentIds
     domainId: $domainId
+    manifestOnly: $manifestOnly
   )
 }
 ''';
@@ -65,10 +67,21 @@ final class DocumentSyncResponse {
   const DocumentSyncResponse({
     required this.documents,
     required this.deletedIds,
+    this.manifest = const [],
+    this.topicTags = const [],
   });
 
   final List<DocumentSyncEntry> documents;
   final List<int> deletedIds;
+  final List<DocumentHashEntry> manifest;
+  final List<String> topicTags;
+}
+
+final class DocumentHashEntry {
+  const DocumentHashEntry(this.id, this.modelType, this.hash);
+  final int id;
+  final String modelType;
+  final String hash;
 }
 
 Future<DocumentMutationResult> mutateDocument(
@@ -79,7 +92,8 @@ Future<DocumentMutationResult> mutateDocument(
   DbAuditContext? auditContext,
   String auditSourceKind = 'document',
 }) {
-  final context = auditContext ??
+  final context =
+      auditContext ??
       currentDbAuditContext() ??
       DbAuditContext.create(
         sourceKind: auditSourceKind,
@@ -106,8 +120,8 @@ Future<DocumentMutationResult> mutateDocument(
       'STALE' => DocumentMutationStatus.stale,
       'DELETED' => DocumentMutationStatus.deleted,
       final Object? value => throw StateError(
-          'Unknown mutateDocument status: $value',
-        ),
+        'Unknown mutateDocument status: $value',
+      ),
     };
     final id = payload['id'];
     if (id is! int) {
@@ -128,18 +142,23 @@ Future<DocumentSyncResponse> syncDocuments(
   required List<Map<String, Object?>> manifest,
   Set<int>? documentIds,
   int? domainId,
+  bool manifestOnly = false,
+  Duration? requestTimeout,
 }) async {
-  final sortedDocumentIds =
-      documentIds == null ? null : (documentIds.toList()..sort());
+  final sortedDocumentIds = documentIds == null
+      ? null
+      : (documentIds.toList()..sort());
   final result = await client.query(
     QueryOptions(
       document: gql(_syncDocumentsQuery),
       variables: <String, dynamic>{
         'manifest': manifest,
         'documentIds': sortedDocumentIds,
+        'manifestOnly': manifestOnly,
         if (domainId != null) 'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
+      queryRequestTimeout: requestTimeout,
     ),
   );
   if (result.hasException) throw result.exception!;
@@ -147,10 +166,23 @@ Future<DocumentSyncResponse> syncDocuments(
   final payload = _jsonMap(result.data?['syncDocuments']);
   final rawDocuments = payload['documents'];
   final rawDeletedIds = payload['deleted_ids'];
+  final rawManifest = payload['manifest'];
+  if (manifestOnly && rawManifest is! List) {
+    throw StateError(
+      'Missing server manifest; refusing an empty-library reconciliation',
+    );
+  }
   if (rawDocuments is! List || rawDeletedIds is! List) {
     throw StateError('Invalid syncDocuments response: $payload');
   }
   return DocumentSyncResponse(
+    manifest: [
+      for (final raw in rawManifest as List? ?? const []) _hashEntry(raw),
+    ],
+    topicTags: [
+      for (final tag in payload['topic_tags'] as List? ?? const [])
+        tag as String,
+    ],
     documents: <DocumentSyncEntry>[
       for (final raw in rawDocuments)
         if (raw is Map) _syncEntry(Map<String, dynamic>.from(raw)),
@@ -166,13 +198,32 @@ DocumentSyncEntry _syncEntry(Map<String, dynamic> json) {
   final id = json['id'];
   final hash = json['hash'];
   final document = json['document'];
-  if (id is! int || hash is! String || document is! Map) {
+  if (id is! int ||
+      hash is! String ||
+      hash.isEmpty ||
+      document is! Map ||
+      document['id'] != id) {
     throw StateError('Invalid synchronized document: $json');
   }
   return DocumentSyncEntry(
     documentId: id,
     syncHash: hash,
     document: Map<String, dynamic>.from(document),
+  );
+}
+
+DocumentHashEntry _hashEntry(Object? value) {
+  if (value is! Map ||
+      value['id'] is! int ||
+      value['model_type'] is! String ||
+      value['hash'] is! String ||
+      (value['hash'] as String).isEmpty) {
+    throw StateError('Invalid document hash entry');
+  }
+  return DocumentHashEntry(
+    value['id'] as int,
+    value['model_type'] as String,
+    value['hash'] as String,
   );
 }
 

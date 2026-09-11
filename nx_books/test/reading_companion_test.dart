@@ -29,6 +29,56 @@ void main() {
   });
   tearDown(() => controller.dispose());
   test(
+    'sync replaces a cut-off reply and ignores late stream chunks',
+    () async {
+      await controller.send('Explain scale');
+      controller.receive('Partial answer', '1');
+      final pending = Completer<ReadingHistory>();
+      final syncing = controller.syncHistory(() => pending.future);
+      expect(controller.syncing, isTrue);
+      expect(
+        await controller.syncHistory(() async => const ReadingHistory('', [])),
+        isNull,
+      );
+      controller.receive('late unwanted chunk', '1');
+      pending.complete(
+        const ReadingHistory('Scale', [
+          ReadingMessage('user', 'Explain scale'),
+          ReadingMessage('assistant', 'Complete saved answer'),
+        ]),
+      );
+      expect((await syncing)?.title, 'Scale');
+      expect(controller.messages.last.text, 'Complete saved answer');
+      controller.receive('another late chunk', '1');
+      expect(controller.messages.last.text, 'Complete saved answer');
+      expect(controller.busy, isFalse);
+      expect(controller.syncing, isFalse);
+    },
+  );
+
+  test(
+    'failed or empty server sync preserves the existing conversation',
+    () async {
+      controller.messages.add(
+        const ReadingMessage('assistant', 'Keep this reply'),
+      );
+      expect(
+        await controller.syncHistory(() async => throw StateError('Offline')),
+        isNull,
+      );
+      expect(controller.messages.single.text, 'Keep this reply');
+      expect(controller.error, contains('Could not sync'));
+      expect(
+        await controller.syncHistory(
+          () async => const ReadingHistory('Book', []),
+        ),
+        isNull,
+      );
+      expect(controller.messages.single.text, 'Keep this reply');
+      expect(controller.busy, isFalse);
+    },
+  );
+  test(
     'offline questions and recording are rejected without sending',
     () async {
       final offline = ReadingCompanionController(

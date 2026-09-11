@@ -71,7 +71,12 @@ final class BookFileCache {
     if (encoded != null) {
       try {
         final cached = _CachedBookFile.decode(encoded);
-        if (cached.link == link && await files.verify(cached.reference)) {
+        if (cached.link == link &&
+            (book.bookFileHash == null ||
+                cached.reference.hash == book.bookFileHash) &&
+            (book.bookFileSize == null ||
+                cached.reference.bytes == book.bookFileSize) &&
+            await files.verify(cached.reference)) {
           return files.localPath(cached.reference);
         }
       } catch (_) {
@@ -109,6 +114,10 @@ final class BookFileCache {
       extension,
       limited(),
     );
+    if ((book.bookFileHash != null && reference.hash != book.bookFileHash) ||
+        (book.bookFileSize != null && reference.bytes != book.bookFileSize)) {
+      throw StateError('Downloaded book does not match the server checksum');
+    }
     final saved = await preferences.setString(
       _key(book.id),
       _CachedBookFile(link, reference).encode(),

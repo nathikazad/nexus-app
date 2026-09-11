@@ -62,15 +62,43 @@ void main() {
     );
     expect(requests, 0);
   });
+
+  test(
+    'checks server checksum and size before acknowledging a download',
+    () async {
+      const hash =
+          '4b9d984d2b0cc5ef4d53caf2ef449f2bfd0cbf6a68d2e6b24c52f98e0d9e7b91';
+      final book = _book('/books/9-example.pdf', hash: hash, size: 6);
+      final bookCache = cache();
+      await bookCache.openPath(book);
+      await bookCache.openPath(book);
+      expect(requests, 1);
+      await expectLater(
+        bookCache.openPath(
+          _book('/books/9-example.pdf', hash: 'incorrect', size: 6),
+        ),
+        throwsStateError,
+      );
+      expect(requests, 2);
+      // The bad download must not replace the acknowledged metadata.
+      final preferences = await SharedPreferences.getInstance();
+      expect(
+        preferences.getString('nx_books.offline.test-account.book_file.9'),
+        contains(hash),
+      );
+    },
+  );
 }
 
-NxBook _book(String bookLink) => NxBook(
+NxBook _book(String bookLink, {String? hash, int? size}) => NxBook(
   id: 9,
   title: 'Example',
   description: '',
   author: '',
   link: '',
   bookLink: bookLink,
+  bookFileHash: hash,
+  bookFileSize: size,
   tags: const [],
   readingState: BookReadingState.reading,
   rank: 0,

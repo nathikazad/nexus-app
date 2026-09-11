@@ -21,13 +21,18 @@ class DownloadReportView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(text, key: const ValueKey('books-download-readiness')),
+        if (value.phase == DownloadPhase.checking ||
+            value.phase == DownloadPhase.downloading)
+          const Text(
+            'Sync is running. A large first sync may take several minutes; you can close Settings while it finishes.',
+          ),
         if (value.failed.isNotEmpty)
           Text('${value.failed.length} downloads need attention.'),
         Text(
           'Last check: ${value.updatedAt.toLocal().toString().split('.').first}',
         ),
         const Text(
-          'This check covers text. Images and AI conversations are not included.',
+          'This check covers texts and saved AI conversations. Attached book files are verified separately; images are not included.',
         ),
       ],
     );

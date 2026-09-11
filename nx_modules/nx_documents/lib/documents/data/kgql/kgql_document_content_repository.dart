@@ -33,7 +33,7 @@ class KgqlDocumentContentRepository implements DocumentContentRepository {
       },
     );
     if (model == null) return null;
-    return _contentFromModel(identity, model);
+    return documentContentFromModel(identity, model);
   }
 
   @override
@@ -61,7 +61,10 @@ class KgqlDocumentContentRepository implements DocumentContentRepository {
   }
 }
 
-DocumentContent _contentFromModel(DocumentIdentity identity, Model model) {
+DocumentContent documentContentFromModel(
+  DocumentIdentity identity,
+  Model model,
+) {
   return DocumentContent(
     identity: identity,
     title: model.name,

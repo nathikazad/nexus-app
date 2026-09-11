@@ -8,7 +8,7 @@ import 'package:nx_db/riverpod.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:nx_voice/nx_voice.dart';
 import 'reading_companion_controller.dart';
-import 'reading_companion_history.dart';
+import '../data/book/kgql_reading_history.dart';
 import 'reading_companion_conversation.dart';
 import '../data/providers.dart';
 import '../data/offline/reading_history_store.dart';
@@ -161,29 +161,13 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
             'No saved conversation for this chapter. Connect and use Sync now before travelling. New AI replies require internet.';
         return;
       }
-      final rows = await fetchKgqlModels(
+      final history = await fetchReadingHistory(
         ref.read(graphqlClientProvider),
-        filter: {
-          'model_type': identity.modelType,
-          'filters': [
-            {'key': 'id', 'op': '=', 'value': '${identity.id}'},
-          ],
-        },
-        struct: const {
-          'id': true,
-          'name': true,
-          'Transcript': {'id': true, 'messages': true},
-        },
-      ).timeout(const Duration(seconds: 12));
+        identity,
+      );
       if (!mounted || !identical(controller, _controller)) return;
-      if (rows.isNotEmpty) {
-        _title = rows.first.name;
-        final transcripts = rows.first.relations?['Transcript'];
-        if (transcripts != null && transcripts.isNotEmpty) {
-          dynamic history = transcripts.first.attributes?['messages'];
-          controller.messages.addAll(readingMessagesFromHistory(history));
-        }
-      }
+      _title = history.title;
+      controller.messages.addAll(history.messages);
     } catch (_) {
       if (mounted && identical(controller, _controller)) {
         controller.error =
@@ -201,6 +185,26 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     final selected = _selectionRequests.value;
     if (selected == null || selected.identity != widget.identity) return;
     unawaited(_show());
+  }
+
+  Future<void> _syncHistory() async {
+    final controller = _controller;
+    final identity = widget.identity;
+    if (_loading || controller == null || identity == null) return;
+    final client = ref.read(graphqlClientProvider);
+    final hasNetwork = ref.read(booksNetworkAvailableProvider);
+    _historySaveTimer?.cancel();
+    setState(() => _loading = true);
+    final history = await controller.syncHistory(() async {
+      if (!await hasNetwork()) throw StateError('Offline');
+      return fetchReadingHistory(client, identity);
+    });
+    if (!mounted || !identical(controller, _controller)) return;
+    setState(() {
+      if (history != null) _title = history.title;
+      _loading = false;
+    });
+    if (history != null) _saveHistory();
   }
 
   void _changed() {
@@ -352,6 +356,25 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                         children: [
                           const SizedBox(width: 16),
                           const Expanded(child: Text('Reading companion')),
+                          if (widget.identity != null)
+                            IconButton(
+                              tooltip: 'Sync conversation',
+                              onPressed:
+                                  _loading ||
+                                      controller == null ||
+                                      controller.recording
+                                  ? null
+                                  : _syncHistory,
+                              icon: controller?.syncing == true
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.sync),
+                            ),
                           CompositedTransformTarget(
                             key: const ValueKey('panel-layout-button-anchor'),
                             link: _layoutButtonLink,
@@ -492,7 +515,9 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                   controller?.recording == true)
                                 IconButton(
                                   tooltip: 'Cancel turn',
-                                  onPressed: controller!.cancel,
+                                  onPressed: _loading
+                                      ? null
+                                      : controller!.cancel,
                                   icon: const Icon(Icons.close),
                                 ),
                             ],
