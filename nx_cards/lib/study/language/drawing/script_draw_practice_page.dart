@@ -136,7 +136,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                       'draw-practice-letter',
                                     ),
                                     style: TextStyle(
-                                      fontSize: _card.isScriptCard ? 82 : 32,
+                                      fontSize: _letter.runes.length == 1
+                                          ? 82
+                                          : 32,
                                       height: 1,
                                       fontWeight: FontWeight.w500,
                                       color: RecallPalette.of(context).ink,

@@ -11,18 +11,20 @@ import 'package:nx_cards/browser/card_details_page.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/language_examples_page.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
-import 'package:nx_cards/study/language/drawing/script_recall_card.dart';
-import 'package:nx_cards/study/language/drawing/script_recall_policy.dart';
+import 'package:nx_cards/study/language/drawing/writing_recall_card.dart';
+import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 
 class StudySessionPage extends ConsumerStatefulWidget {
   const StudySessionPage({
     super.key,
     required this.title,
     required this.prompts,
+    this.interaction = RecallInteraction.standard,
   });
 
   final String title;
   final List<StudyPrompt> prompts;
+  final RecallInteraction interaction;
 
   @override
   ConsumerState<StudySessionPage> createState() => _StudySessionPageState();
@@ -33,7 +35,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
   bool _revealed = false;
   bool _saving = false;
   bool _ended = false;
-  bool _scriptDrawingReady = false;
   int _missCount = 0;
   final Map<int, CardRating> _ratings = <int, CardRating>{};
   Map<CardRating, ScheduledOutcome>? _outcomes;
@@ -45,8 +46,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
   }
 
   StudyCard get _card => _prompt.card;
-  RecallInteraction get _interaction =>
-      ScriptRecallPolicy.interactionFor(_prompt);
+  RecallInteraction get _interaction => widget.interaction;
 
   @override
   void initState() {
@@ -83,7 +83,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
         setState(() {
           _index++;
           _revealed = false;
-          _scriptDrawingReady = false;
           _outcomes = null;
         });
       }
@@ -220,17 +219,13 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                         Expanded(
                                           child:
                                               _interaction ==
-                                                  RecallInteraction
-                                                      .scriptDrawing
+                                                  RecallInteraction.writing
                                               ? SingleChildScrollView(
-                                                  physics: _revealed
-                                                      ? null
-                                                      : const NeverScrollableScrollPhysics(),
                                                   padding:
                                                       const EdgeInsets.only(
                                                         top: 14,
                                                       ),
-                                                  child: ScriptRecallCard(
+                                                  child: WritingRecallCard(
                                                     key: ValueKey<String>(
                                                       'script-recall-${_prompt.cardId}-${_prompt.cue.storageKey}',
                                                     ),
@@ -238,16 +233,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                     revealed: _revealed,
                                                     audioRepository:
                                                         audioRepository,
-                                                    onDrawingChanged: (ready) {
-                                                      if (_scriptDrawingReady !=
-                                                          ready) {
-                                                        setState(
-                                                          () =>
-                                                              _scriptDrawingReady =
-                                                                  ready,
-                                                        );
-                                                      }
-                                                    },
                                                   ),
                                                 )
                                               : LayoutBuilder(
@@ -478,12 +463,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                         const SizedBox(height: 18),
                         if (!_revealed)
                           FilledButton.icon(
-                            onPressed:
-                                _interaction ==
-                                        RecallInteraction.scriptDrawing &&
-                                    !_scriptDrawingReady
-                                ? null
-                                : _reveal,
+                            onPressed: _reveal,
                             icon: const Icon(
                               Icons.visibility_outlined,
                               size: 18,

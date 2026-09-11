@@ -13,7 +13,7 @@ import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/study/language/language_study_page.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
 import 'package:nx_cards/study/language/drawing/script_draw_practice_page.dart';
-import 'package:nx_cards/study/language/drawing/script_recall_policy.dart';
+import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 import 'package:nx_cards/study/session/study_session_page.dart';
 import 'package:nx_cards/tutor/voice_tutor_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,7 +26,7 @@ enum StudySourceKind { language, book }
 
 enum StudyPresentation { sheet, draw }
 
-enum RecallPresentation { standard, fast }
+enum RecallPresentation { standard, write, fast }
 
 enum RecallCardState { learning, relearning, retained, newCard }
 
@@ -150,11 +150,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             bookRecallMinimum.clamp(0, 100).toDouble(),
             bookRecallMaximum.clamp(0, 100).toDouble(),
           );
-        }
-        if (_mode == StudyMode.recall &&
-            _isScriptStudy &&
-            !ScriptRecallPolicy.allowedCues.contains(_cue)) {
-          _cue = StudyCue.fromLanguage;
         }
         final available = _availableCount;
         final savedCount = saved['count'];
@@ -319,20 +314,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   int get _reviewHistoryWindow =>
       ref.read(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
 
-  bool get _isScriptStudy =>
-      widget.studyCards.isNotEmpty &&
-      widget.studyCards.every((card) => card.isScriptCard);
-
   bool get _supportsDrawing =>
       !_isBookStudy &&
       widget.studyCards.isNotEmpty &&
       widget.studyCards.every((card) => card.isLanguageCard);
 
-  String get _selectionTitle => _isScriptStudy
-      ? 'Which letters?'
-      : widget.studyCards.every((card) => card.isPhraseCard)
-      ? 'Which phrases?'
-      : 'Which words?';
+  String get _selectionTitle => 'Which cards?';
 
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
@@ -423,11 +410,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   void _selectMode(StudyMode mode) {
     setState(() {
       _mode = mode;
-      if (_usesRecallFilters &&
-          _isScriptStudy &&
-          !ScriptRecallPolicy.allowedCues.contains(_cue)) {
-        _cue = StudyCue.fromLanguage;
-      }
       _resetCount();
     });
     _rememberPreferences();
@@ -456,7 +438,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     if (!mounted || prompts == null) return;
     final completed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => StudySessionPage(title: widget.title, prompts: prompts),
+        builder: (_) => StudySessionPage(
+          title: widget.title,
+          prompts: prompts,
+          interaction: _recallPresentation == RecallPresentation.write
+              ? RecallInteraction.writing
+              : RecallInteraction.standard,
+        ),
       ),
     );
     if (completed == true && mounted) Navigator.of(context).pop();
@@ -802,7 +790,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                     ],
                   ] else if (_mode == StudyMode.recall) ...[
-                    if (!_isScriptStudy) ...[
+                    ...[
                       _SetupCard(
                         number: '01',
                         title: 'Recall format',
@@ -811,6 +799,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                             ButtonSegment(
                               value: RecallPresentation.standard,
                               label: Text('Standard'),
+                            ),
+                            ButtonSegment(
+                              value: RecallPresentation.write,
+                              label: Text('Write'),
                             ),
                             ButtonSegment(
                               value: RecallPresentation.fast,
@@ -825,19 +817,19 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       const SizedBox(height: 14),
                     ],
                     _SetupCard(
-                      number: _isScriptStudy ? '01' : '02',
+                      number: '02',
                       title: 'What should be in front?',
                       child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: _isScriptStudy ? '02' : '03',
-                      title: _isScriptStudy ? 'Which letters?' : 'Which words?',
+                      number: '03',
+                      title: _selectionTitle,
                       child: _recallFilterChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: _isScriptStudy ? '03' : '04',
+                      number: '04',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
                     ),
@@ -845,16 +837,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     FilledButton.icon(
                       onPressed: _cue == null || maxCount == 0 || _starting
                           ? null
-                          : _recallPresentation == RecallPresentation.fast &&
-                                !_isScriptStudy
+                          : _recallPresentation == RecallPresentation.fast
                           ? _startFastRecall
                           : _start,
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         child: Text(
-                          _recallPresentation == RecallPresentation.fast &&
-                                  !_isScriptStudy
+                          _recallPresentation == RecallPresentation.fast
                               ? 'Start fast recall'
                               : 'Start recall',
                         ),
@@ -869,7 +859,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: '02',
-                      title: _isScriptStudy ? 'Which letters?' : 'Which words?',
+                      title: _selectionTitle,
                       child: _recallFilterChoices(),
                     ),
                     const SizedBox(height: 14),
@@ -903,10 +893,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     spacing: 8,
     runSpacing: 8,
     children: [
-      for (final cue
-          in _usesRecallFilters && _isScriptStudy
-              ? ScriptRecallPolicy.allowedCues
-              : StudyCue.values)
+      for (final cue in StudyCue.values)
         ChoiceChip(
           label: Text(_cueLabel(cue)),
           selected: _cue == cue,

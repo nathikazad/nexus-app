@@ -65,7 +65,7 @@ void main() {
     expect(find.text('Due'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('What should be in front?')).dy,
-      lessThan(tester.getTopLeft(find.text('Which words?')).dy),
+      lessThan(tester.getTopLeft(find.text('Which cards?')).dy),
     );
     final english = tester.widget<ChoiceChip>(
       find.widgetWithText(ChoiceChip, 'English'),
@@ -196,13 +196,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Which words?'), findsOneWidget);
+    expect(find.text('Which cards?'), findsOneWidget);
     expect(find.text('How many cards?'), findsOneWidget);
     expect(find.text('All words on one page'), findsNothing);
     expect(find.text('Choose the order'), findsNothing);
     expect(find.text('2 available'), findsOneWidget);
     expect(
-      tester.getTopLeft(find.text('Which words?')).dy,
+      tester.getTopLeft(find.text('Which cards?')).dy,
       lessThan(tester.getTopLeft(find.text('How many cards?')).dy),
     );
 
@@ -579,7 +579,7 @@ void main() {
     );
   });
 
-  for (final type in ['Word', 'Verb', 'Phrase']) {
+  for (final type in ['Word', 'Verb', 'Phrase', 'Script']) {
     testWidgets('$type supports handwriting practice', (tester) async {
       final card = StudyCard(
         id: 90,
@@ -629,6 +629,29 @@ void main() {
         find.byKey(const ValueKey<String>('script-drawing-canvas')),
         findsOneWidget,
       );
+      await tester.tap(find.byTooltip('Quit drawing practice'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Recall'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Recall'));
+      await tester.pumpAndSettle();
+      expect(find.text('Standard'), findsOneWidget);
+      expect(find.text('Fast'), findsOneWidget);
+      await tester.tap(find.text('Write'));
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'English'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'English'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Start recall'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start recall'));
+      await tester.pumpAndSettle();
+      expect(find.text('Write your answer'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('script-drawing-canvas')),
+        findsOneWidget,
+      );
+      expect(find.text('我在家。'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
@@ -670,7 +693,7 @@ void main() {
 
     expect(find.text('Study sheet'), findsOneWidget);
     expect(find.text('Draw'), findsOneWidget);
-    expect(find.text('Which letters?'), findsOneWidget);
+    expect(find.text('Which cards?'), findsOneWidget);
     expect(find.text('How many cards?'), findsOneWidget);
     expect(find.text('All letters on one page'), findsNothing);
     expect(find.text('Choose the order'), findsNothing);
@@ -678,7 +701,7 @@ void main() {
     await tester.tap(find.text('Draw'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Which letters?'), findsOneWidget);
+    expect(find.text('Which cards?'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'All'), findsOneWidget);
@@ -735,7 +758,7 @@ void main() {
     expect(find.text('How do you want to study?'), findsOneWidget);
   });
 
-  testWidgets('script recall only offers English and Malayalam prompts', (
+  testWidgets('script recall offers the same formats and prompts as words', (
     tester,
   ) async {
     final card = _scriptCard(
@@ -765,11 +788,12 @@ void main() {
 
     await tester.tap(find.text('Recall'));
     await tester.pumpAndSettle();
-    expect(find.text('Recall format'), findsNothing);
-    expect(find.text('Fast'), findsNothing);
+    expect(find.text('Recall format'), findsOneWidget);
+    expect(find.text('Write'), findsOneWidget);
+    expect(find.text('Fast'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'English'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'Malayalam'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsOneWidget);
   });
 
   testWidgets('recall includes matching cards even when they are not due', (

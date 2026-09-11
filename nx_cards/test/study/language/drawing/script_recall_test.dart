@@ -7,22 +7,23 @@ import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/session/study_session_page.dart';
+import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 
 void main() {
   testWidgets(
     'English Script recall uses drawing and reveals the right letter',
     (tester) async {
       final card = _scriptCard();
-      await _pumpRecall(tester, card, StudyCue.fromLanguage);
+      await _pumpRecall(tester, card, StudyCue.fromLanguage, writing: true);
 
-      expect(find.text('ka'), findsOneWidget);
-      expect(find.byTooltip('Play pronunciation'), findsOneWidget);
+      expect(find.text('Letter ka'), findsOneWidget);
+      expect(find.byTooltip('Play pronunciation'), findsNothing);
       expect(
         find.byKey(const ValueKey<String>('script-drawing-canvas')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey<String>('script-recall-answer')),
+        find.byKey(const ValueKey<String>('writing-recall-answer')),
         findsNothing,
       );
       expect(
@@ -31,7 +32,7 @@ void main() {
               find.widgetWithText(FilledButton, 'Show answer'),
             )
             .onPressed,
-        isNull,
+        isNotNull,
       );
 
       await tester.drag(
@@ -51,11 +52,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey<String>('script-recall-answer')),
+        find.byKey(const ValueKey<String>('writing-recall-answer')),
         findsOneWidget,
       );
       expect(find.text('ക'), findsOneWidget);
-      expect(find.text('ka'), findsNothing);
+      expect(find.text('ka'), findsOneWidget);
       expect(find.text('Compare your drawing with the answer'), findsOneWidget);
       expect(find.text('No'), findsOneWidget);
       expect(find.text('Yes'), findsOneWidget);
@@ -65,6 +66,53 @@ void main() {
       );
     },
   );
+
+  for (final language in ['Chinese', 'Malayalam', 'Spanish']) {
+    for (final type in ['Word', 'Verb', 'Phrase', 'Script']) {
+      for (final cue in StudyCue.values) {
+        testWidgets('$language $type can write with ${cue.name}', (
+          tester,
+        ) async {
+          final card = StudyCard(
+            id: 2,
+            modelTypeName: type,
+            tags: {
+              'Language': [language],
+            },
+            content: const LanguageCardContent(
+              english: 'student',
+              originalScript: '学生',
+              transliteration: 'xuésheng',
+            ),
+            schedules: {
+              for (final c in StudyCue.values)
+                c: const CardSchedule.initial(enabled: true),
+            },
+            reviewHistory: {},
+            suspended: false,
+          );
+          await _pumpRecall(tester, card, cue, writing: true);
+          expect(
+            find.text(StudyPrompt(card: card, cue: cue).prompt),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const ValueKey('script-drawing-canvas')),
+            findsOneWidget,
+          );
+          // A forgotten answer must still be revealable without drawing.
+          await tester.tap(find.text('Show answer'));
+          await tester.pumpAndSettle();
+          final answer = tester.widget<Text>(
+            find.byKey(const ValueKey('writing-recall-answer')),
+          );
+          expect(answer.data, cue == StudyCue.fromLanguage ? '学生' : 'student');
+          expect(find.text('Yes'), findsOneWidget);
+          expect(find.text('No'), findsOneWidget);
+        });
+      }
+    }
+  }
 
   testWidgets('Malayalam Script recall keeps the standard reveal flow', (
     tester,
@@ -89,8 +137,9 @@ void main() {
 Future<void> _pumpRecall(
   WidgetTester tester,
   StudyCard card,
-  StudyCue cue,
-) async {
+  StudyCue cue, {
+  bool writing = false,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -104,6 +153,9 @@ Future<void> _pumpRecall(
       child: MaterialApp(
         home: StudySessionPage(
           title: 'Malayalam Script',
+          interaction: writing
+              ? RecallInteraction.writing
+              : RecallInteraction.standard,
           prompts: [StudyPrompt(card: card, cue: cue)],
         ),
       ),

@@ -4,34 +4,31 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/drawing/script_drawing_canvas.dart';
 
-class ScriptRecallCard extends StatefulWidget {
-  const ScriptRecallCard({
+class WritingRecallCard extends StatefulWidget {
+  const WritingRecallCard({
     super.key,
     required this.prompt,
     required this.revealed,
-    required this.onDrawingChanged,
     this.audioRepository,
   });
 
   final StudyPrompt prompt;
   final bool revealed;
-  final ValueChanged<bool> onDrawingChanged;
   final CardAudioRepository? audioRepository;
 
   @override
-  State<ScriptRecallCard> createState() => _ScriptRecallCardState();
+  State<WritingRecallCard> createState() => _WritingRecallCardState();
 }
 
-class _ScriptRecallCardState extends State<ScriptRecallCard> {
+class _WritingRecallCardState extends State<WritingRecallCard> {
   final ScriptDrawingController _drawingController = ScriptDrawingController();
 
   LanguageCardContent get _content =>
       widget.prompt.card.content as LanguageCardContent;
 
-  String get _sound => _content.english.replaceFirst(
-    RegExp(r'^letter\s+', caseSensitive: false),
-    '',
-  );
+  String get _answer => widget.prompt.cue == StudyCue.fromLanguage
+      ? _content.originalScript
+      : _content.english;
 
   String? get _audioUrl {
     final value = _content.audioUrl?.trim();
@@ -55,7 +52,6 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
   void _drawingChanged() {
     if (!mounted) return;
     setState(() {});
-    widget.onDrawingChanged(_drawingController.hasStrokes);
   }
 
   @override
@@ -66,11 +62,11 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
         children: [
           Flexible(
             child: Text(
-              widget.revealed ? _content.originalScript : _sound,
+              widget.revealed ? _answer : widget.prompt.prompt,
               key: ValueKey<String>(
                 widget.revealed
-                    ? 'script-recall-answer'
-                    : 'script-recall-sound',
+                    ? 'writing-recall-answer'
+                    : 'writing-recall-prompt',
               ),
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -81,21 +77,32 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
               ),
             ),
           ),
-          if (_audioUrl case final audioUrl?
-              when widget.audioRepository != null) ...[
-            const SizedBox(width: 8),
-            PronunciationButton(
-              audioUrl: audioUrl,
-              repository: widget.audioRepository!,
-            ),
-          ],
+          if (widget.revealed)
+            if (_audioUrl case final audioUrl?
+                when widget.audioRepository != null) ...[
+              const SizedBox(width: 8),
+              PronunciationButton(
+                audioUrl: audioUrl,
+                repository: widget.audioRepository!,
+              ),
+            ],
         ],
       ),
+      if (widget.revealed) ...[
+        const SizedBox(height: 8),
+        Text(_content.transliteration, textAlign: TextAlign.center),
+        Text(
+          widget.prompt.cue == StudyCue.fromLanguage
+              ? _content.english
+              : _content.originalScript,
+          textAlign: TextAlign.center,
+        ),
+      ],
       const SizedBox(height: 8),
       Text(
         widget.revealed
             ? 'Compare your drawing with the answer'
-            : 'Draw the letter',
+            : 'Write your answer',
         style: const TextStyle(color: RecallColors.faint, fontSize: 12),
       ),
       const SizedBox(height: 14),
@@ -103,7 +110,7 @@ class _ScriptRecallCardState extends State<ScriptRecallCard> {
         height: 230,
         child: ScriptDrawingCanvas(
           controller: _drawingController,
-          semanticsLabel: 'Draw the letter for ${widget.prompt.prompt}',
+          semanticsLabel: 'Write the answer for ${widget.prompt.prompt}',
         ),
       ),
       const SizedBox(height: 10),
