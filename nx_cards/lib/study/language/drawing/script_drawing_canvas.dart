@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:nx_cards/app/theme.dart';
 
 class ScriptDrawingController extends ChangeNotifier {
@@ -25,7 +26,7 @@ class ScriptDrawingController extends ChangeNotifier {
   }
 }
 
-class ScriptDrawingCanvas extends StatelessWidget {
+class ScriptDrawingCanvas extends StatefulWidget {
   const ScriptDrawingCanvas({
     super.key,
     required this.controller,
@@ -36,28 +37,60 @@ class ScriptDrawingCanvas extends StatelessWidget {
   final String semanticsLabel;
 
   @override
+  State<ScriptDrawingCanvas> createState() => _ScriptDrawingCanvasState();
+}
+
+class _ScriptDrawingCanvasState extends State<ScriptDrawingCanvas> {
+  int? _activePointer;
+  ScriptDrawingController get controller => widget.controller;
+
+  @override
   Widget build(BuildContext context) => Semantics(
-    label: semanticsLabel,
+    label: widget.semanticsLabel,
     child: ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: GestureDetector(
+      child: RawGestureDetector(
         key: const ValueKey<String>('script-drawing-canvas'),
         behavior: HitTestBehavior.opaque,
-        onPanStart: (details) => controller.startStroke(details.localPosition),
-        onPanUpdate: (details) =>
-            controller.extendStroke(details.localPosition),
-        child: ListenableBuilder(
-          listenable: controller,
-          builder: (context, _) => CustomPaint(
-            key: const ValueKey<String>('script-drawing-paint'),
-            foregroundPainter: _StrokePainter(controller.strokes),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: RecallColors.line),
-                borderRadius: BorderRadius.circular(16),
+        // Writing owns gestures that start inside the canvas, so an ancestor
+        // scroll view cannot steal vertical strokes.
+        gestures: {
+          EagerGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<EagerGestureRecognizer>(
+                EagerGestureRecognizer.new,
+                (_) {},
               ),
-              child: const SizedBox.expand(),
+        },
+        child: Listener(
+          onPointerDown: (event) {
+            if (_activePointer != null) return;
+            _activePointer = event.pointer;
+            controller.startStroke(event.localPosition);
+          },
+          onPointerMove: (event) {
+            if (_activePointer == event.pointer) {
+              controller.extendStroke(event.localPosition);
+            }
+          },
+          onPointerUp: (event) {
+            if (_activePointer == event.pointer) _activePointer = null;
+          },
+          onPointerCancel: (event) {
+            if (_activePointer == event.pointer) _activePointer = null;
+          },
+          child: ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) => CustomPaint(
+              key: const ValueKey<String>('script-drawing-paint'),
+              foregroundPainter: _StrokePainter(controller.strokes),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: RecallColors.line),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const SizedBox.expand(),
+              ),
             ),
           ),
         ),

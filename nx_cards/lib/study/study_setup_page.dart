@@ -324,7 +324,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
   String _cueLabel(StudyCue cue) => switch (cue) {
-    StudyCue.fromLanguage => widget.fromLanguage,
+    StudyCue.fromLanguage =>
+      widget.fromLanguage == 'Front' ? 'English' : widget.fromLanguage,
     StudyCue.toLanguage => widget.toLanguage,
     StudyCue.transliteration => 'Transliteration',
   };
@@ -795,18 +796,33 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         number: '01',
                         title: 'Recall format',
                         child: SegmentedButton<RecallPresentation>(
+                          showSelectedIcon: false,
+                          style: const ButtonStyle(
+                            padding: WidgetStatePropertyAll(
+                              EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                          ),
                           segments: const [
                             ButtonSegment(
                               value: RecallPresentation.standard,
-                              label: Text('Standard'),
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text('Standard', maxLines: 1),
+                              ),
                             ),
                             ButtonSegment(
                               value: RecallPresentation.write,
-                              label: Text('Write'),
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text('Write', maxLines: 1),
+                              ),
                             ),
                             ButtonSegment(
                               value: RecallPresentation.fast,
-                              label: Text('Fast'),
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text('Fast', maxLines: 1),
+                              ),
                             ),
                           ],
                           selected: {_recallPresentation},
