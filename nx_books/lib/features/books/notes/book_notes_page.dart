@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../book_opening_indicator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_books/data/providers.dart';
@@ -181,6 +182,7 @@ Future<void> _openBookFile(
   NxBook book, {
   BookSource? reference,
 }) async {
+  final dismissLoading = showBookOpeningIndicator(context);
   try {
     final cache = ref.read(bookFileCacheProvider);
     if (cache == null) throw StateError('Book files are unavailable here');
@@ -195,6 +197,7 @@ Future<void> _openBookFile(
       final sourceLocation = sourceBook == null
           ? null
           : resolveEpubSource(sourceBook, reference!);
+      dismissLoading();
       if (context.mounted) {
         final excerpt = ref.read(epubCompanionContextProvider);
         excerpt.value = EpubCompanionContext(book.id, '');
@@ -236,6 +239,7 @@ Future<void> _openBookFile(
     }
     await ref.read(bookFileOpenerProvider)(path);
   } catch (_) {
+    dismissLoading();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -245,6 +249,8 @@ Future<void> _openBookFile(
         ),
       );
     }
+  } finally {
+    dismissLoading();
   }
 }
 

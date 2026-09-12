@@ -9,6 +9,7 @@ import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/features/books/notes/book_notes_page.dart';
 import 'package:nx_books/settings/books_settings_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'book_title_search.dart';
 
 class BooksRootShell extends ConsumerStatefulWidget {
   const BooksRootShell({super.key});
@@ -424,6 +425,7 @@ class _MobileTopBar extends ConsumerWidget {
               ),
             ),
             const _MobileTopicFilterButton(),
+            const _LibrarySearch(),
             IconButton(
               tooltip: 'Add book',
               onPressed: () => _showCreateBookDialog(context, ref),
@@ -474,25 +476,7 @@ class _MainHeader extends ConsumerWidget {
               ),
               const _DesktopTopicFilter(),
               const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  try {
-                    await ref.read(refreshBookCatalogProvider)();
-                  } catch (_) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Could not refresh. Saved books are still available.',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.refresh, size: 17),
-                label: const Text('Refresh'),
-              ),
+              const _LibrarySearch(),
               const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: () => _showCreateBookDialog(context, ref),
@@ -505,6 +489,19 @@ class _MainHeader extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _LibrarySearch extends ConsumerWidget {
+  const _LibrarySearch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => BookTitleSearch(
+    books: ref.watch(booksProvider).value ?? const [],
+    onOpen: (book) {
+      ref.read(selectedBookIdProvider.notifier).select(book.id);
+      context.push<void>(bookNotesPath(book.id));
+    },
+  );
 }
 
 class _DesktopTopicFilter extends ConsumerWidget {
