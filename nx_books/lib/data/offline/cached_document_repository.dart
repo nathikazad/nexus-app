@@ -106,6 +106,8 @@ final class CachedDocumentContentRepository
       'title': content.title,
       'plainText': content.plainText,
       'jsonDocument': content.jsonDocument,
+      'modelTypeName': content.modelTypeName,
+      'modelRelations': content.modelRelations.map((r) => r.toJson()).toList(),
       'updatedAt': content.updatedAt.toUtc().toIso8601String(),
     });
     final storage = library;
@@ -230,6 +232,11 @@ final class CachedDocumentContentRepository
       final document = json['jsonDocument'];
       return DocumentContent(
         identity: identity,
+        modelTypeName: json['modelTypeName'] as String?,
+        modelRelations: [
+          for (final r in json['modelRelations'] as List? ?? [])
+            DocumentModelRelation.fromJson(r as Map),
+        ],
         title: json['title']?.toString() ?? '',
         plainText: json['plainText']?.toString() ?? '',
         jsonDocument: document is Map

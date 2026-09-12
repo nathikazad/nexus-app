@@ -28,6 +28,8 @@ class KgqlDocumentContentRepository implements DocumentContentRepository {
         'name': true,
         'updated_at': true,
         'created_at': true,
+        'model_type': {'id': true, 'name': true},
+        'relations': {'model_id': true, 'model_type': true, 'relation_name': true},
         _documentAttribute: true,
         _jsonDocumentAttribute: true,
       },
@@ -67,6 +69,11 @@ DocumentContent documentContentFromModel(
 ) {
   return DocumentContent(
     identity: identity,
+    modelTypeName: model.modelType?.name,
+    modelRelations: [
+      for (final r in model.relationsList ?? <Relation>[])
+        DocumentModelRelation(r.modelId, r.modelType, r.relationName),
+    ],
     title: model.name,
     plainText: model.attrString('document') ?? '',
     jsonDocument: _jsonMap(model.attributes?['json_document']),

@@ -16,6 +16,13 @@ const nxReaderHighlightPink = '0x4ce91e63';
 
 typedef HeadingLinkActionResolver =
     ({IconData icon, String tooltip})? Function(String href);
+typedef HeadingAction = ({
+  IconData icon,
+  String tooltip,
+  Future<void> Function() onPressed,
+});
+typedef HeadingActionResolver =
+    HeadingAction? Function(DocumentContent content, Map<String, dynamic> data);
 
 class DocumentReader extends StatefulWidget {
   const DocumentReader({
@@ -23,6 +30,7 @@ class DocumentReader extends StatefulWidget {
     required this.onChanged,
     this.onOpenLink,
     this.headingLinkAction,
+    this.headingAction,
     this.imageUrlResolver,
     this.textScaleFactor = 1,
     this.onSelectionChanged,
@@ -36,6 +44,7 @@ class DocumentReader extends StatefulWidget {
   final Future<void> Function(DocumentContent content) onChanged;
   final Future<bool> Function(String href)? onOpenLink;
   final HeadingLinkActionResolver? headingLinkAction;
+  final HeadingActionResolver? headingAction;
   final String Function(String url)? imageUrlResolver;
   final double textScaleFactor;
   final ValueChanged<String>? onSelectionChanged;
@@ -287,6 +296,23 @@ class _DocumentReaderState extends State<DocumentReader> {
   }
 
   Widget? _headingLinkButton(BuildContext context, Node node) {
+    final action = widget.headingAction?.call(widget.content, node.attributes);
+    if (action != null) {
+      return IconButton(
+        tooltip: action.tooltip,
+        visualDensity: VisualDensity.compact,
+        icon: Icon(action.icon, size: 22),
+        onPressed: () async {
+          if (_openingLink || !mounted) return;
+          _openingLink = true;
+          try {
+            await action.onPressed();
+          } finally {
+            _openingLink = false;
+          }
+        },
+      );
+    }
     for (final insert
         in node.delta?.whereType<TextInsert>() ?? <TextInsert>[]) {
       final href = insert.attributes?[AppFlowyRichTextKeys.href];

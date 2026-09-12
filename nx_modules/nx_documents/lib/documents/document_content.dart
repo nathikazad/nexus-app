@@ -35,6 +35,8 @@ class DocumentContent {
     required this.plainText,
     required this.jsonDocument,
     required this.updatedAt,
+    this.modelTypeName,
+    this.modelRelations = const [],
   });
 
   final DocumentIdentity identity;
@@ -42,6 +44,10 @@ class DocumentContent {
   final String plainText;
   final Map<String, dynamic> jsonDocument;
   final DateTime updatedAt;
+
+  /// Actual subtype and links from KGQL, distinct from a broad lookup identity.
+  final String? modelTypeName;
+  final List<DocumentModelRelation> modelRelations;
 
   DocumentContent copyWith({
     String? title,
@@ -51,12 +57,31 @@ class DocumentContent {
   }) {
     return DocumentContent(
       identity: identity,
+      modelTypeName: modelTypeName,
+      modelRelations: modelRelations,
       title: title ?? this.title,
       plainText: plainText ?? this.plainText,
       jsonDocument: jsonDocument ?? this.jsonDocument,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+}
+
+class DocumentModelRelation {
+  const DocumentModelRelation(this.id, this.modelType, this.relationName);
+  final int id;
+  final String modelType;
+  final String? relationName;
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'model_type': modelType,
+    'relation_name': relationName,
+  };
+  factory DocumentModelRelation.fromJson(Map json) => DocumentModelRelation(
+    json['id'] as int,
+    json['model_type'] as String,
+    json['relation_name'] as String?,
+  );
 }
 
 abstract interface class DocumentContentRepository {

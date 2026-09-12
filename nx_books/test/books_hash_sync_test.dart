@@ -148,6 +148,60 @@ void main() {
     expect((await report.load())!.phase, DownloadPhase.complete);
   });
 
+  test(
+    'chapter source and actual parent metadata survive offline sync',
+    () async {
+      final entry = _entry(2, 'source-hash');
+      entry.document['model_type'] = {'id': 68, 'name': 'Book Chapter'};
+      entry.document['relations'] = [
+        {
+          'model_id': 1,
+          'model_type': 'Book',
+          'relation_name': 'book_book_chapter',
+        },
+      ];
+      final source = {
+        'version': 1,
+        'book_id': 1,
+        'sha256': 'a' * 64,
+        'resource': 'chapter.xhtml',
+        'quote': {'exact': 'Source passage'},
+      };
+      (entry.document['attributes'] as Map)['json_document'] = {
+        'document': {
+          'type': 'page',
+          'children': [
+            {
+              'type': 'heading',
+              'data': {
+                'level': 2,
+                'delta': [
+                  {'insert': 'Heading'},
+                ],
+                'book_source': source,
+              },
+            },
+          ],
+        },
+      };
+      transport.entries[2] = entry;
+      await pull.pullAll();
+      final content = (await store.documents.load(
+        const DocumentIdentity(id: 2, modelType: 'Document'),
+      ))!;
+      expect(content.modelTypeName, 'Book Chapter');
+      expect(content.modelRelations.single.id, 1);
+      expect(content.modelRelations.single.relationName, 'book_book_chapter');
+      expect(
+        content.jsonDocument['document']['children'][0]['data']['book_source'],
+        source,
+      );
+      expect(content.copyWith(plainText: 'Edited').modelRelations.single.id, 1);
+      await pull.pullAll();
+      expect(transport.downloads.length, 1);
+    },
+  );
+
   test('chat-only hash change downloads only its parent', () async {
     await pull.pullAll();
     transport.entries[2] = _entry(2, 'changed', message: 'new answer');

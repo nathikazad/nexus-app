@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  path: ^1.9.1
   nx_voice:
     path: ../nx_modules/nx_voice
   connectivity_plus: ^7.3.1

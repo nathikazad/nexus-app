@@ -11,6 +11,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:open_filex/open_filex.dart';
 import 'dart:async';
 import 'package:nx_books/epub/epub_reader_page.dart';
+import 'package:nx_books/epub/book_source.dart';
+import 'package:nx_books/epub/chapter_book_source.dart';
+import 'package:nx_books/epub/epub_source_resolver.dart';
 import 'package:nx_books/companion/epub_companion_context.dart';
 import 'package:nx_books/data/offline/reading_position_store.dart';
 
@@ -131,6 +134,17 @@ class _NotesPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: DocumentReaderHost(
                 identity: identity,
+                headingAction: (content, data) {
+                  final source = chapterBookSource(content, data);
+                  return source == null
+                      ? null
+                      : (
+                          icon: Icons.menu_book_outlined,
+                          tooltip: 'Open book source',
+                          onPressed: () =>
+                              _openBookSource(context, ref, source),
+                        );
+                },
                 repository: ref.watch(bookNotesRepositoryProvider),
                 loadPosition: positions == null
                     ? null
@@ -164,16 +178,23 @@ class _NotesPage extends ConsumerWidget {
 Future<void> _openBookFile(
   BuildContext context,
   WidgetRef ref,
-  NxBook book,
-) async {
+  NxBook book, {
+  BookSource? reference,
+}) async {
   try {
     final cache = ref.read(bookFileCacheProvider);
     if (cache == null) throw StateError('Book files are unavailable here');
     final path = await cache.openPath(book);
     if (path.toLowerCase().endsWith('.epub')) {
       final progress = ref.read(epubProgressRepositoryProvider);
-      final saved = await progress.load(book.id);
+      // A source link already supplies its destination. Font preferences are
+      // supplied separately by the app, so no progress lookup is needed here.
+      final saved = reference == null ? await progress.load(book.id) : null;
       final matching = saved?['sha256'] == book.bookFileHash ? saved : null;
+      final sourceBook = reference == null ? null : await loadLocalEpub(path);
+      final sourceLocation = sourceBook == null
+          ? null
+          : resolveEpubSource(sourceBook, reference!);
       if (context.mounted) {
         final excerpt = ref.read(epubCompanionContextProvider);
         excerpt.value = EpubCompanionContext(book.id, '');
@@ -190,12 +211,19 @@ Future<void> _openBookFile(
                       ),
                   path: path,
                   title: book.title,
-                  savedPosition: matching,
-                  onPositionChanged: (position) => progress.save(book.id, {
-                    ...position,
-                    'sha256': book.bookFileHash,
-                    'saved_at': DateTime.now().toUtc().toIso8601String(),
-                  }),
+                  savedPosition: reference == null
+                      ? matching
+                      : {'location': sourceLocation!.toJson()},
+                  loadBook: sourceBook == null
+                      ? loadLocalEpub
+                      : (_) async => sourceBook,
+                  onPositionChanged: reference != null
+                      ? null
+                      : (position) => progress.save(book.id, {
+                          ...position,
+                          'sha256': book.bookFileHash,
+                          'saved_at': DateTime.now().toUtc().toIso8601String(),
+                        }),
                 ),
               ),
             ),
@@ -220,7 +248,33 @@ Future<void> _openBookFile(
   }
 }
 
+Future<void> _openBookSource(
+  BuildContext context,
+  WidgetRef ref,
+  BookSource source,
+) async {
+  NxBook? book;
+  for (final candidate in ref.read(booksProvider).value ?? const <NxBook>[]) {
+    if (candidate.id == source.bookId) book = candidate;
+  }
+  if (book == null ||
+      book.bookFileHash != source.sha256 ||
+      !Uri.parse(book.bookLink).path.toLowerCase().endsWith('.epub')) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'This EPUB source is unavailable or the book file has changed. Sync the library and try again.',
+        ),
+      ),
+    );
+    return;
+  }
+  await _openBookFile(context, ref, book, reference: source);
+}
+
 Future<bool> _openNotesLink(BuildContext context, String href) async {
+  // Old experiment URLs are never sent to an external application.
+  if (Uri.tryParse(href)?.scheme == 'nx-epub') return true;
   final internalPath = notesPathForHref(href);
   if (internalPath != null) {
     context.push(internalPath);
