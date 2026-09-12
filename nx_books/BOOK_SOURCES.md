@@ -36,9 +36,8 @@ Responsibilities:
 
 The production data pilot is restricted to the three existing headings of
 chapter 5754 / book 4427 in domain 1. There are no pilot IDs in the active
-parsing/navigation code. The old uncommitted `chapter_epub_link.dart` parser and
-`EPUB_HEADER_LINK_PILOT.md` describe the superseded URL experiment and are not
-used by this implementation.
+parsing/navigation code. The superseded hardcoded URL experiment has been
+removed; these structured references remain the supported implementation.
 
 The guarded content script is
 `servers/pgdb/scripts/structured_seven_powers_sources.sql`. It verifies existing
