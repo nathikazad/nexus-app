@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:http/http.dart' as http;
 
@@ -41,13 +42,20 @@ class NexusOidcConfig {
         .whereType<String>()
         .toList(growable: false);
     final expectedScheme = clientAppId.replaceAll('_', '-');
+    final webRedirect =
+        kIsWeb &&
+        clientAppId == 'nx_hypnosis_web' &&
+        redirectUri.toString() == 'http://127.0.0.1:8769/auth.html' &&
+        logoutUri.toString() == 'http://127.0.0.1:8769/auth.html' &&
+        Uri.base.origin == redirectUri.origin;
     if (json['app_id'] != clientAppId ||
         issuer.scheme != 'https' ||
         clientId.isEmpty ||
         audience.isEmpty ||
         !allowedAudiences.contains(audience) ||
-        redirectUri.scheme != expectedScheme ||
-        logoutUri.scheme != expectedScheme ||
+        (!webRedirect &&
+            (redirectUri.scheme != expectedScheme ||
+                logoutUri.scheme != expectedScheme)) ||
         !scopes.contains('openid')) {
       throw const FormatException(
         'Nexus returned an invalid OIDC configuration',

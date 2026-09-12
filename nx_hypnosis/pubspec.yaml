@@ -35,6 +35,11 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   just_audio: ^0.10.6
+  nx_auth:
+    path: ../nx_modules/nx_auth
+  flutter_riverpod: ^3.2.0
+  http: ^1.2.2
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
@@ -57,10 +62,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-  assets:
-    - assets/desires.json
-    - assets/story.txt
-    - assets/hypnotizer.mp3
 
   # To add assets to your application, add an assets section, like this:
   # assets:

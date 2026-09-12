@@ -70,16 +70,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(data.desires.last.belief, 'I listen patiently.');
   });
-  test('Deleting a desire moves its tapes or removes them explicitly', () {
-    final data = sample();
-    data.removeDesire(data.desire('wealth'), moveTo: 'family');
-    expect(data.tapes.single.desireId, 'family');
-    expect(
-      () => data.removeDesire(data.desire('family'), moveTo: 'missing'),
-      throwsArgumentError,
-    );
-    expect(data.desires.length, 1);
-    data.removeDesire(data.desire('family'));
-    expect(data.tapes, isEmpty);
-  });
+  test(
+    'Deleting a desire moves its tapes or removes them explicitly',
+    () async {
+      final data = sample();
+      await data.removeDesire(data.desire('wealth'), moveTo: 'family');
+      expect(data.tapes.single.desireId, 'family');
+      expect(
+        data.removeDesire(data.desire('family'), moveTo: 'missing'),
+        throwsArgumentError,
+      );
+      expect(data.desires.length, 1);
+      await data.removeDesire(data.desire('family'));
+      expect(data.tapes, isEmpty);
+    },
+  );
 }

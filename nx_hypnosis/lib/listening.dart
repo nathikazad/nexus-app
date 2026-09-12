@@ -1,10 +1,22 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'desires.dart';
+import 'recording_source_web.dart'
+    if (dart.library.io) 'recording_source_io.dart';
 
 class Listening extends ChangeNotifier {
+  Listening({this.loadRecording});
+  final Future<Uint8List> Function(Tape)? loadRecording;
   AudioPlayer? _player;
+  String? _source;
+  Future<void> clearSource() async {
+    final old = _source;
+    _source = null;
+    if (old != null) await releaseRecordingSource(old);
+  }
+
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   Tape? tape;
   Duration position = Duration.zero;
@@ -64,7 +76,21 @@ class Listening extends ChangeNotifier {
         position = Duration.zero;
         duration = Duration.zero;
         _update();
-        await player.setAsset(item.audioAsset!);
+        await player.stop();
+        await clearSource();
+        if (loadRecording != null) {
+          final bytes = await loadRecording!(item);
+          if (_disposed || request != _generation) return;
+          final source = await recordingSource(bytes);
+          if (_disposed || request != _generation) {
+            await releaseRecordingSource(source);
+            return;
+          }
+          _source = source;
+          await player.setUrl(source);
+        } else {
+          await player.setAsset(item.audioAsset!);
+        }
       }
       if (_disposed || request != _generation) return;
       await player.setSpeed(speed);
@@ -74,6 +100,7 @@ class Listening extends ChangeNotifier {
       unawaited(_play());
     } catch (_) {
       if (request == _generation && !_disposed) {
+        tape = null;
         loading = false;
         error = 'The recording could not be loaded. Please try again.';
         _update();
@@ -120,6 +147,7 @@ class Listening extends ChangeNotifier {
     error = null;
     _update();
     await _player?.stop();
+    await clearSource();
   }
 
   @override
@@ -129,7 +157,9 @@ class Listening extends ChangeNotifier {
     for (final s in _subscriptions) {
       unawaited(s.cancel());
     }
-    unawaited(_player?.dispose());
+    unawaited(
+      (_player?.dispose() ?? Future<void>.value()).then((_) => clearSource()),
+    );
     super.dispose();
   }
 }

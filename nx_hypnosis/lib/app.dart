@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'desires.dart';
 import 'forms.dart';
 import 'listening.dart';
+import 'remote_collection.dart';
 
 const ink = Color(0xff262626);
 const muted = Color(0xff909090);
@@ -9,8 +10,9 @@ const paper = Color(0xfff8f8f7);
 const line = Color(0xffe6e6e4);
 
 class HypnosisApp extends StatelessWidget {
-  const HypnosisApp({super.key, required this.collection});
+  const HypnosisApp({super.key, required this.collection, this.onLogout});
   final HypnosisCollection collection;
+  final VoidCallback? onLogout;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'NX Hypnosis',
@@ -57,21 +59,43 @@ class HypnosisApp extends StatelessWidget {
         ),
       ),
     ),
-    home: HypnosisHome(collection: collection),
+    home: HypnosisHome(collection: collection, onLogout: onLogout),
   );
 }
 
 enum View { tapes, desires, desire, story, desireForm, storyForm }
 
 class HypnosisHome extends StatefulWidget {
-  const HypnosisHome({super.key, required this.collection});
+  const HypnosisHome({super.key, required this.collection, this.onLogout});
   final HypnosisCollection collection;
+  final VoidCallback? onLogout;
   @override
   State<HypnosisHome> createState() => _HypnosisHomeState();
 }
 
 class _HypnosisHomeState extends State<HypnosisHome> {
-  final listening = Listening();
+  late final listening = Listening(
+    loadRecording: widget.collection is RemoteCollection
+        ? (widget.collection as RemoteCollection).recording
+        : null,
+  );
+  bool saving = false;
+  Future<void> perform(Future<void> Function() action) async {
+    if (saving) return;
+    setState(() => saving = true);
+    try {
+      await action();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not save. Please try again.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
   View view = View.tapes;
   Desire? selectedDesire;
   Tape? selectedTape;
@@ -256,10 +280,10 @@ class _HypnosisHomeState extends State<HypnosisHome> {
 
   Widget tapesScreen() {
     const labels = {
-      'god': 'Faith',
-      'wealth': 'Wealth',
-      'son': 'Family',
-      'husband': 'Partnership',
+      'A faithful servant of God': 'Faith',
+      'A creator of wealth through service': 'Wealth',
+      'A responsible and loving son': 'Family',
+      'A loving and dependable husband': 'Partnership',
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,7 +320,7 @@ class _HypnosisHomeState extends State<HypnosisHome> {
               for (final entry in [
                 const MapEntry<String?, String>(null, 'All tapes'),
                 ...data.desires.map(
-                  (d) => MapEntry(d.id, labels[d.id] ?? d.title),
+                  (d) => MapEntry(d.id, labels[d.title] ?? d.title),
                 ),
               ])
                 Padding(
@@ -348,6 +372,14 @@ class _HypnosisHomeState extends State<HypnosisHome> {
         }),
       ),
       subtitle('Who you choose to become.'),
+      if (widget.onLogout != null)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: widget.onLogout,
+            child: const Text('Sign out'),
+          ),
+        ),
       LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 552;
@@ -454,9 +486,14 @@ class _HypnosisHomeState extends State<HypnosisHome> {
     if (result == '__delete__' && listening.tape?.desireId == desire.id) {
       await listening.close();
     }
-    data.removeDesire(desire, moveTo: result == '__delete__' ? null : result);
-    if (filter == desire.id) filter = null;
-    if (mounted) go(View.desires);
+    await perform(() async {
+      await data.removeDesire(
+        desire,
+        moveTo: result == '__delete__' ? null : result,
+      );
+      if (filter == desire.id) filter = null;
+      if (mounted) go(View.desires);
+    });
   }
 
   Widget desireScreen() {
@@ -539,19 +576,22 @@ class _HypnosisHomeState extends State<HypnosisHome> {
         surface(
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: t.story
-                .split(RegExp(r'\n\s*\n'))
-                .where((p) => p.trim().isNotEmpty)
-                .map(
-                  (p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 22),
-                    child: Text(
-                      p.trim(),
-                      style: const TextStyle(fontSize: 16, height: 1.85),
-                    ),
-                  ),
-                )
-                .toList(),
+            children:
+                (t.story.isEmpty
+                        ? "Your tape is saved as a draft. The narration has not been created yet."
+                        : t.story)
+                    .split(RegExp(r'\n\s*\n'))
+                    .where((p) => p.trim().isNotEmpty)
+                    .map(
+                      (p) => Padding(
+                        padding: const EdgeInsets.only(bottom: 22),
+                        child: Text(
+                          p.trim(),
+                          style: const TextStyle(fontSize: 16, height: 1.85),
+                        ),
+                      ),
+                    )
+                    .toList(),
           ),
           padding: 26,
         ),
@@ -568,40 +608,23 @@ class _HypnosisHomeState extends State<HypnosisHome> {
       key: ValueKey('desire-${editing ? selectedDesire?.id : 'new'}'),
       desire: editing ? selectedDesire : null,
       cancel: () => go(View.desires),
-      save: (title, belief) {
-        if (editing) {
-          selectedDesire!
-            ..title = title
-            ..belief = belief;
-        } else {
-          selectedDesire = Desire(
-            id: data.newId(),
-            title: title,
-            belief: belief,
-          );
-          data.desires.add(selectedDesire!);
-        }
-        go(View.desire);
-      },
+      save: (title, belief) => perform(() async {
+        selectedDesire = await data.saveDesire(
+          title,
+          belief,
+          id: editing ? selectedDesire?.id : null,
+        );
+        if (mounted) go(View.desire);
+      }),
     ),
     View.storyForm => StoryForm(
       desires: data.desires,
       initial: selectedDesire!.id,
       cancel: () => go(View.tapes),
-      create: (desireId, title, prompt) {
-        final d = data.desire(desireId);
-        selectedTape = Tape(
-          id: data.newId(),
-          desireId: desireId,
-          title: title,
-          prompt: prompt,
-          story: desireId == 'wealth'
-              ? data.sampleStory
-              : 'Let your hands rest. Let your shoulders settle.\n\n${d.belief}\n\nTake a moment to notice how these words feel.',
-        );
-        data.tapes.add(selectedTape!);
-        go(View.story);
-      },
+      create: (desireId, title, prompt) => perform(() async {
+        selectedTape = await data.createTape(desireId, title, prompt);
+        if (mounted) go(View.story);
+      }),
     ),
   };
 
@@ -625,7 +648,16 @@ class _HypnosisHomeState extends State<HypnosisHome> {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 816),
-                child: body(),
+                child: AbsorbPointer(
+                  absorbing: saving,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (saving) const LinearProgressIndicator(),
+                      body(),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

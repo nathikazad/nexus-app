@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
-
 class Desire {
   Desire({required this.id, required this.title, required this.belief});
   final String id;
@@ -25,7 +22,7 @@ class Tape {
   String? audioAsset;
 }
 
-/// Temporary demo collection. No KGQL calls or persistent storage.
+/// Collection model; RemoteCollection persists operations through Nexus.
 class HypnosisCollection {
   HypnosisCollection(this.desires, this.tapes, this.sampleStory);
   final List<Desire> desires;
@@ -37,30 +34,31 @@ class HypnosisCollection {
   List<Tape> forDesire(String id) =>
       tapes.where((t) => t.desireId == id).toList();
 
-  static Future<HypnosisCollection> load() async {
-    final raw =
-        jsonDecode(await rootBundle.loadString('assets/desires.json')) as List;
-    final story = await rootBundle.loadString('assets/story.txt');
-    return HypnosisCollection(
-      raw
-          .map(
-            (d) => Desire(id: d['id'], title: d['title'], belief: d['belief']),
-          )
-          .toList(),
-      [
-        Tape(
-          id: 'sample',
-          desireId: 'wealth',
-          title: 'Abundance through helping others',
-          story: story,
-          audioAsset: 'assets/hypnotizer.mp3',
-        ),
-      ],
-      story,
-    );
+  Future<Desire> saveDesire(String title, String belief, {String? id}) async {
+    if (id != null) {
+      final d = desire(id);
+      d.title = title;
+      d.belief = belief;
+      return d;
+    }
+    final d = Desire(id: newId(), title: title, belief: belief);
+    desires.add(d);
+    return d;
   }
 
-  void removeDesire(Desire item, {String? moveTo}) {
+  Future<Tape> createTape(String desireId, String title, String prompt) async {
+    final tape = Tape(
+      id: newId(),
+      desireId: desireId,
+      title: title,
+      prompt: prompt,
+      story: sampleStory,
+    );
+    tapes.add(tape);
+    return tape;
+  }
+
+  Future<void> removeDesire(Desire item, {String? moveTo}) async {
     if (moveTo != null) {
       if (moveTo == item.id || !desires.any((d) => d.id == moveTo)) {
         throw ArgumentError('Choose another existing desire.');
