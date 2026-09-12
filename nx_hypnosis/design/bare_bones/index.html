@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NX Hypnosis — Bare bones</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f5f5; color: #202020; font: 16px/1.55 system-ui, sans-serif; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; border: 1px solid #ccc; border-radius: 8px; background: white; color: inherit; min-height: 44px; padding: 9px 15px; }
+    button:hover { background: #eee; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid #222; outline-offset: 3px; }
+    body > header { max-width: 1080px; margin: auto; padding: 28px 32px 20px; border-bottom: 1px solid #ddd; }
+    h1 { margin: 0; font-size: 20px; letter-spacing: -.5px; }
+    header > p { margin: 6px 0 0; color: #666; font-size: 12px; max-width: 520px; }
+    nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 5; background: white; border-top: 1px solid #ccc; display: flex; justify-content: center; gap: 12px; padding: 10px 20px max(10px, env(safe-area-inset-bottom)); }
+    nav button { width: 180px; border-color: transparent; }
+    nav button[aria-current="page"] { background: #eee; border-color: #bbb; font-weight: 650; }
+    main { max-width: 1080px; margin: auto; padding: 28px 32px 120px; }
+    h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.7px; margin: 0 0 16px; max-width: 750px; }
+    h2:focus { outline: none; }
+    h3 { font-size: 18px; line-height: 1.35; margin: 0 0 12px; }
+    p { margin: 12px 0 20px; }
+    main > p { max-width: 720px; }
+    main > button { margin: 0 6px 12px 0; }
+    main > button:first-of-type, form button:not([type="button"]) { background: #222; border-color: #222; color: white; }
+    main > ul { list-style: none; padding: 0; margin: 24px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    li { min-width: 0; background: white; border: 1px solid #d5d5d5; border-radius: 12px; padding: 24px; }
+    li p { color: #555; font-size: 14px; }
+    li p:first-of-type { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    li p:last-of-type { font-size: 12px; }
+    li { display: flex; flex-wrap: wrap; align-content: start; gap: 0 4px; }
+    li h3, li p { flex-basis: 100%; }
+    li button { margin: 4px 4px 0 0; }
+    li button:first-of-type { font-weight: 600; }
+    form { max-width: 720px; background: white; border: 1px solid #ddd; border-radius: 12px; padding: 28px; margin-top: 24px; }
+    label { font-weight: 550; font-size: 14px; }
+    input:not([type="radio"]), textarea, select { display: block; width: 100%; padding: 12px; border: 1px solid #bbb; border-radius: 7px; background: white; color: #222; margin-top: 8px; min-height: 46px; }
+    textarea { resize: vertical; line-height: 1.65; }
+    input[type="radio"] { margin-right: 8px; }
+    label:has(input[type="radio"]) { display: block; padding: 10px 0; }
+    form > p:last-child { margin-bottom: 0; }
+    #library-filter { max-width: 380px; }
+    article { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 32px; max-width: 720px; margin: 24px 0; line-height: 1.85; }
+    article p { margin: 0 0 22px; }
+    article p:last-child { margin-bottom: 0; }
+    details { max-width: 720px; padding: 16px 20px; border: 1px solid #ddd; border-radius: 8px; background: white; }
+    summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+    #player { position: fixed; z-index: 4; bottom: 75px; left: 50%; transform: translateX(-50%); width: min(100% - 32px, 720px); background: white; border: 1px solid #aaa; border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 20px #00000012; }
+    #player[hidden] { display: none; }
+    #player h2 { font-size: 16px; margin-bottom: 10px; }
+    audio { display: block; width: 100%; height: 40px; }
+    #player > p { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin: 10px 0 0; }
+    #player button { font-size: 12px; padding: 8px; }
+    #player label { font-size: 11px; }
+    #speed { padding: 4px; min-height: 36px; margin-top: 2px; }
+    body:has(#player:not([hidden])) main { padding-bottom: 340px; }
+    #notice { position: fixed; bottom: 76px; right: 20px; z-index: 6; max-width: min(420px, calc(100% - 40px)); margin: 0; font-size: 13px; }
+    #notice:not(:empty) { padding: 14px; background: #fff; border: 1px solid #aaa; border-radius: 8px; }
+    body:has(#player:not([hidden])) #notice { bottom: 300px; }
+    @media (min-width: 900px) {
+      body > header { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+      header > p { order: 3; flex-basis: 100%; }
+      nav { position: static; padding: 0; border: 0; margin-left: auto; background: transparent; }
+      nav button { width: 120px; }
+      #player { bottom: 24px; }
+      #notice { bottom: 24px; }
+    }
+    @media (max-width: 599px) {
+      body { background: #fafafa; }
+      body > header { padding: 20px 20px 16px; }
+      main { padding: 24px 20px 115px; }
+      h2 { font-size: 25px; }
+      main > ul { grid-template-columns: 1fr; gap: 14px; margin-top: 18px; }
+      li { padding: 20px; }
+      form { padding: 20px; }
+      article { padding: 22px; }
+      #player { padding: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); }
+    }
+
+    /* Refined monochrome app shell. */
+    body { background: #f8f8f7; color: #242424; -webkit-font-smoothing: antialiased; }
+    body > header { max-width: 960px; padding: 24px 32px; border-bottom: 0; }
+    h1 { font-size: 16px; font-weight: 650; letter-spacing: -.6px; }
+    header > p { display: none; }
+    main { max-width: 880px; padding-top: 44px; }
+    .page-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    .eyebrow { font-size: 10px; letter-spacing: 1.8px; color: #858585; margin: 0 0 10px; font-weight: 600; }
+    h2 { font-size: 40px; font-weight: 550; letter-spacing: -1.6px; margin-bottom: 0; }
+    .page-intro { color: #858585; font-size: 15px; margin: 12px 0 36px; }
+    .icon-button { display: inline-grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 50%; font-size: 26px; background: #ececeb; }
+    .add-button { background: #262626; color: white; box-shadow: 0 2px 5px #00000012; }
+    .add-button:hover { background: #454545; }
+    main > ul.desire-grid { gap: 16px; margin: 0; }
+    .desire-grid > li { padding: 0; border: 0; background: transparent; display: block; }
+    .desire-card { text-align: left; width: 100%; min-height: 214px; padding: 24px; border: 1px solid #e8e8e6; border-radius: 18px; margin: 0; display: flex; flex-direction: column; background: white; box-shadow: 0 2px 3px #00000002; }
+    .desire-card:hover { background: white; border-color: #aaa; box-shadow: 0 5px 15px #00000006; }
+    .desire-symbol { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1px solid #ececeb; border-radius: 12px; color: #656565; font-size: 24px; margin-bottom: 24px; font-weight: 400; }
+    .desire-card strong { display: block; font-size: 19px; font-weight: 550; line-height: 1.35; max-width: 240px; letter-spacing: -.45px; }
+    .card-bottom { display: flex; align-items: center; justify-content: space-between; width: 100%; padding-top: 22px; margin-top: auto; color: #929292; }
+    .card-bottom small { font-size: 12px; font-weight: 400; }
+    .quiet-note { color: #aaa; font-size: 12px; text-align: center; margin: 32px 0; }
+    .detail-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; }
+    .back-link { border: none; background: transparent; padding: 0 8px 0 0; font-size: 13px; color: #777; }
+    .action-menu { position: relative; margin: 0; padding: 0; border: 0; background: none; }
+    .action-menu summary { list-style: none; width: 44px; height: 44px; display: grid; place-items: center; letter-spacing: 2px; }
+    .action-menu summary::-webkit-details-marker { display: none; }
+    .action-menu > div { position: absolute; z-index: 3; right: 0; top: 44px; width: 180px; padding: 6px; border: 1px solid #ddd; border-radius: 12px; background: white; box-shadow: 0 8px 28px #00000010; }
+    .action-menu button { display: block; width: 100%; border: 0; text-align: left; font-size: 13px; }
+    .belief-heading h2 { font-size: 32px; max-width: 580px; }
+    .belief-copy { font-size: 18px; line-height: 1.8; color: #666; margin: 24px 0 48px; }
+    .section-heading { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e4e4e2; padding-top: 24px; }
+    .section-heading h3 { margin: 0; font-size: 16px; font-weight: 550; }
+    main > ul.tape-list { display: block; margin-top: 16px; }
+    .tape-list li { display: flex; align-items: center; flex-wrap: nowrap; padding: 16px; margin-bottom: 10px; border-radius: 14px; border-color: #e6e6e4; gap: 12px; }
+    .tape-open { min-width: 0; flex: 1; border: 0; padding: 0; margin: 0; display: flex; align-items: center; gap: 16px; text-align: left; }
+    .tape-open:hover { background: transparent; }
+    .tape-open strong { font-size: 15px; font-weight: 550; display: block; }
+    .tape-open small { display: block; font-size: 11px; font-weight: 400; color: #999; margin-top: 6px; }
+    .tape-symbol { font-size: 28px; color: #777; }
+    .play-button { flex-shrink: 0; font-size: 20px; }
+    .empty { text-align: center; padding: 40px 20px; color: #777; }
+    .empty p { margin: 10px 0 5px; }
+    .empty small { color: #aaa; }
+    nav { gap: 8px; }
+    nav button { font-size: 13px; color: #999; }
+    nav button[aria-current="page"] { color: #222; border-color: transparent; background: #f1f1f0; }
+    form { border-color: #e5e5e3; border-radius: 18px; }
+    @media (max-width: 599px) {
+      body > header { padding: 22px 24px 8px; }
+      main { padding: 28px 24px 115px; }
+      h2 { font-size: 34px; }
+      .desire-card { min-height: 148px; padding: 20px; }
+      .desire-symbol { margin-bottom: 14px; width: 32px; height: 32px; font-size: 21px; }
+      .desire-card strong { font-size: 18px; max-width: none; }
+      .card-bottom { padding-top: 16px; }
+      .page-intro { margin-bottom: 28px; }
+      .belief-heading h2 { font-size: 28px; }
+      .belief-copy { font-size: 16px; }
+    }
+
+    .page-heading { align-items: flex-end; }
+    .page-heading .add-button { margin: 0 0 1px; flex: 0 0 44px; }
+    .icon-button { line-height: 1; vertical-align: middle; }
+    .icon-button svg { display: block; flex-shrink: 0; }
+    .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding: 3px 0 12px; margin: -6px 0 20px; scrollbar-width: none; }
+    .filter-chips::-webkit-scrollbar { display: none; }
+    .filter-chips button { flex-shrink: 0; white-space: nowrap; border-radius: 24px; padding: 10px 18px; font-size: 13px; border: 1px solid #e3e3e1; background: transparent; color: #777; font-weight: 500; }
+    .filter-chips button[aria-pressed="true"] { color: white; background: #292929; border-color: #292929; }
+    .filter-chips button:focus-visible { outline-offset: -3px; }
+    .desire-choices { border: 0; padding: 0; margin: 0 0 28px; display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .desire-choices legend { font-size: 14px; font-weight: 550; padding: 0 0 12px; }
+    .desire-choices label { display: flex; align-items: center; position: relative; border: 1px solid #e2e2e0; border-radius: 10px; padding: 12px; cursor: pointer; font-size: 12px; font-weight: 400; line-height: 1.5; min-height: 56px; }
+    .desire-choices label:has(:checked) { border-color: #333; background: #f4f4f2; }
+    .desire-choices input[type="radio"] { flex-shrink: 0; accent-color: #333; }
+    @media (max-width: 599px) { .desire-choices { grid-template-columns: 1fr; } }
+
+    .desire-card { min-height: 112px; justify-content: center; gap: 10px; }
+    .desire-count { color: #929292; font-size: 12px; font-weight: 400; }
+    @media (max-width: 599px) { .desire-card { min-height: 100px; } }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .manage-desires { background: transparent; border: 1px solid #dededc; border-radius: 24px; font-size: 13px; padding: 9px 16px; }
+    main > .back-link:first-of-type { background: transparent; color: #777; border: 0; margin-bottom: 20px; }
+    main > ul.desire-grid { gap: 8px; }
+    .desire-card { min-height: 72px; padding: 14px 18px; border-radius: 12px; gap: 4px; height: 100%; }
+    .desire-card strong { font-size: 16px; max-width: none; }
+    main { padding-bottom: 40px; }
+    #player { bottom: max(16px, env(safe-area-inset-bottom)); }
+    #notice { bottom: 20px; }
+    body:has(#player:not([hidden])) main { padding-bottom: 270px; }
+    body:has(#player:not([hidden])) #notice { bottom: 250px; }
+    @media (max-width: 599px) { main { padding-bottom: 36px; } .desire-card { min-height: 64px; } }
+
+    .story-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: 720px; }
+    .story-heading h2 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; }
+    .story-play { display: grid; place-items: center; flex: 0 0 52px; width: 52px; height: 52px; padding: 0; border-radius: 50%; border: 0; background: #262626; color: white; box-shadow: 0 3px 8px #00000012; }
+    .story-play svg { display: block; margin-left: -2px; }
+    .story-play:hover { background: #444; }
+    .story-play:disabled { background: #e8e8e6; color: #aaa; box-shadow: none; cursor: default; }
+    .story-meta { color: #909090; font-size: 12px; margin-top: 16px; }
+    @media (max-width:599px) { .story-heading { gap: 18px; } .story-heading h2 { font-size: 26px; } }
+
+    /* Each screen leads with its own title, without a duplicate brand masthead. */
+    main { padding-top: 36px; }
+    main > .back-link:first-of-type { margin: 0 0 20px; min-height: 36px; }
+    .detail-toolbar { margin-bottom: 24px; }
+    .eyebrow { display: none; }
+    .page-heading { align-items: center; }
+    .page-intro { margin-top: 10px; margin-bottom: 28px; }
+    @media (max-width:599px) {
+      main { padding-top: max(24px, env(safe-area-inset-top)); }
+      main > .back-link:first-of-type { margin-bottom: 16px; }
+    }
+    .manage-desires { padding: 0; width: 44px; height: 44px; }
+  </style>
+</head>
+<body>
+  <main id="screen"></main>
+  <section aria-label="Audio player" id="player" hidden>
+    <h2 id="playing-title">Now playing</h2>
+    <audio id="audio" controls preload="metadata"></audio>
+    <p>
+      <button type="button" id="backward">Back 15 seconds</button>
+      <button type="button" id="forward">Forward 15 seconds</button>
+      <label>Playback speed
+        <select id="speed">
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.25">1.25×</option>
+        </select>
+      </label>
+      <button type="button" id="close-player">Close player</button>
+    </p>
+  </section>
+  <p id="notice" role="status" aria-live="polite"></p>
+  <script id="sample-story" type="application/json">"Let your hands rest.\n\nFeel the surface beneath you carrying your weight. Let your jaw soften. Allow your shoulders to settle.\n\nAn easy breath comes in.\n\nAnd leaves in its own time.\n\n\nMorning light falls across your desk. Your tea is beside you, still warm. For a moment, you listen to the quiet of your home.\n\nYou open your bank account.\n\nThree hundred and twenty thousand dollars received this month.\n\nYou look at the number slowly. Then at the balance beneath it. The money is there. Your expenses are covered. There is money set aside for your team, for taxes, for the people you love.\n\nThere is room.\n\nYou feel your feet resting on the floor. Your breath leaves a little more easily.\n\nYou can take care of things.\n\nYou close your eyes for a moment.\n\nThank you, God. Thank you for helping me create something useful. For the people who helped me build it. For the opportunity to serve, and the abundance that has come with it.\n\nYou stay with that gratitude.\n\n\nThen you open your messages.\n\nOne begins, \u201cI wanted you to know what happened.\u201d\n\nYou read it slowly.\n\n\u201cFor years, I thought addiction was just who I was. With treatment, support, and the daily practice I built around your recordings, that started to change. I\u2019m six months sober now. Last night, I had dinner with my daughter. I was present for all of it. Thank you for being part of that.\u201d\n\nYou rest your hand beside the keyboard.\n\nDinner with his daughter.\n\nYou picture the ordinary things those words contain. Plates on a table. A conversation he can remember. Being there when she looks up.\n\nYou read the last sentence again.\n\n\nAnother message waits below it.\n\n\u201cI think I\u2019ve found the woman of my dreams. What surprises me most is how comfortable I feel being myself with her. Your stories became part of my practice of showing up honestly. I started going out, having conversations, and letting people know me. We spent Sunday cooking together. I\u2019m happy in a way that feels peaceful.\u201d\n\nYou smile at that.\n\nA kitchen. Two people making dinner. Someone who once felt alone allowing himself to be known.\n\nThese are the lives on the other side of your work.\n\n\nYou remember sitting with a single paragraph, asking whether it felt true to the person listening. Whether the character\u2019s courage felt possible. Whether the words left room for someone to choose their own next step.\n\nYou remember revising the voice until it felt warm and unhurried.\n\nThat care is still part of how you work.\n\nYou listen to what people want for themselves. You construct stories that help them rehearse confidence, patience, connection, and possibility. They carry something from those experiences into choices that belong to them.\n\nThey take the steps. You have made something that helps.\n\nAnd the business has grown around that value.\n\nPeople subscribe. They return to recordings they love. They recommend them to friends. Your team is paid well, and you have the resources to keep improving what you offer.\n\nThe income in your account comes from people choosing work they find valuable.\n\nYou allow yourself to receive it.\n\n\nYou deserve to be paid generously for the care and usefulness you bring. You can enjoy your wealth, provide for your family, give generously, and keep creating.\n\nThere is a quiet dignity in that.\n\nYou look once more at the messages, then set the phone down.\n\nThe cup is warm in your hands.\n\nYou feel grateful to God. Grateful for the people who trust you. Grateful that your abilities have found a way to serve.\n\nYour work is helping people move toward lives they want.\n\nYour own life holds security, freedom, and abundance.\n\nFor a few moments, you let yourself feel all of it.\n\n\nThere is nothing to prove in this breath.\n\nYou are here.\n\nAnd you can enjoy what you have built."</script>
+  <script>
+    'use strict';
+    const desires = [
+      {id: 'god', title: 'A faithful servant of God', belief: 'I am a faithful servant of God, living in submission to Him. I meet both favorable outcomes and disappointments with trust, humility, and acceptance. I offer my work and its fruits to Him. I remember Him throughout my day and recognize His presence in all things as they unfold.'},
+      {id: 'wealth', title: 'A creator of wealth through service', belief: 'I am capable of creating substantial wealth by helping people live out their deepest, most constructive desires. I create opportunities, experiences, and tools that help them grow into who they want to be. I receive the rewards of that contribution with confidence and gratitude, and use my wealth responsibly and generously.'},
+      {id: 'son', title: 'A responsible and loving son', belief: 'I am a dependable source of love, protection, and support for my mother. I make sure her needs are met and stay present in her life so she feels cared for and connected. Through my words and actions, she knows she can rely on me. She rests peacefully, knowing she is loved and that I am there for her.'},
+      {id: 'husband', title: 'A loving and dependable husband', belief: 'I am a loving, patient, and dependable husband. I speak to my wife with kindness and treat her feelings with care. I provide steady emotional and practical support, creating a home where she feels safe, loved, and free to be herself. She can express her femininity, speak honestly, and accept herself without fear of judgment. We face uncertainty together, and my consistent presence helps her feel secure in the life we are building.'}
+    ];
+    const sampleStory = JSON.parse(document.getElementById('sample-story').textContent);
+    const sampleAudio = '../../voice_test/output/hypnotizer_abundance_creator.mp3';
+    let tapes = [{id: 'sample', desireId: 'wealth', title: 'Abundance through helping others', prompt: 'An ordinary morning reflecting on meaningful work, customer messages, wealth, and gratitude to God.', story: sampleStory, audio: sampleAudio}];
+    let nextId = 1;
+    let playingId = null;
+    const screen = document.getElementById('screen');
+    const audio = document.getElementById('audio');
+    const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
+    const findDesire = id => desires.find(item => item.id === id);
+    const findTape = id => tapes.find(item => item.id === id);
+    const notice = message => { document.getElementById('notice').textContent = message; };
+    function show(html) {
+      screen.innerHTML = html;
+      screen.querySelectorAll('.icon-button').forEach(button => {
+        if (button.textContent.trim() === '+') button.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+      });
+      notice('');
+      window.scrollTo(0, 0);
+      const heading = screen.querySelector('h2');
+      heading.tabIndex = -1;
+      heading.focus();
+    }
+    function desireOptions(selected) {
+      return desires.map(d => `<option value="${escape(d.id)}" ${selected === d.id ? 'selected' : ''}>${escape(d.title)}</option>`).join('');
+    }
+    const symbols = {god: '✧', wealth: '↗', son: '⌂', husband: '♡'};
+    function tapeList(items) {
+      return items.length ? `<ul class="tape-list">${items.map(t => `<li><button class="tape-open" data-action="story" data-id="${t.id}"><span class="tape-symbol" aria-hidden="true">≋</span><span><strong>${escape(t.title)}</strong><small>${escape(findDesire(t.desireId).title)} · ${t.audio ? 'Ready to listen' : 'Draft'}</small></span></button>${t.audio ? `<button class="icon-button play-button" data-action="listen" data-id="${t.id}" aria-label="Play ${escape(t.title)}">▷</button>` : '<span class="draft-dot" aria-label="Draft">·</span>'}</li>`).join('')}</ul>` : '<div class="empty"><span aria-hidden="true">≋</span><p>Your first story starts here.</p><small>Create something you can return to.</small></div>';
+    }
+    function showDesires() {
+      show(`<button class="back-link" data-action="library">← Tapes</button><div class="page-heading"><div><p class="eyebrow">YOUR INNER WORLD</p><h2>Desires</h2></div><button class="icon-button add-button" data-action="add-desire" aria-label="Add desire" title="Add desire">+</button></div><p class="page-intro">Who you choose to become.</p>${desires.length ? `<ul class="desire-grid">${desires.map(d => { const count = tapes.filter(t => t.desireId === d.id).length; return `<li><button class="desire-card" data-action="desire" data-id="${d.id}"><strong>${escape(d.title)}</strong>${count ? `<small class="desire-count">${count} ${count === 1 ? 'tape' : 'tapes'}</small>` : ''}</button></li>`; }).join('')}</ul>` : '<div class="empty"><p>Make room for a new possibility.</p><small>Use + to add your first desire.</small></div>'}<p class="quiet-note">A belief to practice. A story to live into.</p>`);
+    }
+    function showDesire(id) {
+      const d = findDesire(id);
+      show(`<div class="detail-toolbar"><button class="back-link" data-action="desires">← Desires</button><details class="action-menu"><summary aria-label="Desire options" title="Desire options">•••</summary><div><button data-action="edit-desire" data-id="${id}">Edit desire</button><button data-action="delete-desire" data-id="${id}">Delete desire</button></div></details></div><div class="belief-heading"><span class="desire-symbol" aria-hidden="true">${symbols[id] || '✧'}</span><h2>${escape(d.title)}</h2></div><p class="belief-copy">${escape(d.belief)}</p><div class="section-heading"><h3>Your stories</h3><button class="icon-button" data-action="create" data-id="${id}" aria-label="Create a story" title="Create a story">+</button></div>${tapeList(tapes.filter(t => t.desireId === id))}`);
+    }
+    function editDesire(id) {
+      const d = findDesire(id);
+      show(`<h2>${d ? 'Edit' : 'Add'} desire</h2><form id="desire-form"><p><label>Title<br><input name="title" required maxlength="120" value="${escape(d?.title || '')}"></label></p><p><label>What do you want to believe?<br><textarea name="belief" rows="8" cols="36" required>${escape(d?.belief || '')}</textarea></label></p><button>Save desire</button> <button type="button" data-action="desires">Cancel</button></form>`);
+      document.getElementById('desire-form').onsubmit = event => {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        const title = data.get('title').trim(), belief = data.get('belief').trim();
+        if (!title || !belief) return notice('Enter a title and belief.');
+        if (d) Object.assign(d, {title, belief});
+        else desires.push({id: 'desire-' + nextId++, title, belief});
+        showDesire(d ? d.id : desires[desires.length - 1].id);
+      };
+    }
+    function deleteDesire(id) {
+      const d = findDesire(id), count = tapes.filter(t => t.desireId === id).length;
+      const others = desires.filter(item => item.id !== id);
+      show(`<h2>Delete ${escape(d.title)}?</h2><p>${count} linked tapes.</p><form id="delete-form">${count ? `<p><label><input type="radio" name="mode" value="delete" required> Delete the desire and its tapes</label></p>${others.length ? `<p><label><input type="radio" name="mode" value="move" required> Move tapes to another desire</label></p><label>Destination <select name="destination">${others.map(d => `<option value="${d.id}">${escape(d.title)}</option>`).join('')}</select></label>` : ''}` : ''}<p><button>Delete desire</button> <button type="button" data-action="desire" data-id="${id}">Cancel</button></p></form>`);
+      document.getElementById('delete-form').onsubmit = event => {
+        event.preventDefault();
+        const data = new FormData(event.target);
+        if (data.get('mode') === 'move') tapes.filter(t => t.desireId === id).forEach(t => t.desireId = data.get('destination'));
+        else {
+          if (tapes.some(t => t.desireId === id && t.id === playingId)) closePlayer();
+          tapes = tapes.filter(t => t.desireId !== id);
+        }
+        desires.splice(desires.indexOf(d), 1);
+        showDesires();
+      };
+    }
+    function desireChoices(selected) {
+      return `<fieldset class="desire-choices"><legend>Desire</legend>${desires.map(d => `<label><input type="radio" name="desire" value="${d.id}" ${selected === d.id ? 'checked' : ''} required><span>${escape(d.title)}</span></label>`).join('')}</fieldset>`;
+    }
+    function showTapes(filter = '') {
+      const labels = {god: 'Faith', wealth: 'Wealth', son: 'Family', husband: 'Partnership'};
+      show(`<div class="page-heading"><div><p class="eyebrow">MADE FOR YOU</p><h2>Tapes</h2></div><div class="header-actions"><button class="icon-button manage-desires" data-action="desires" aria-label="Desires" title="Desires"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg></button>${desires.length ? '<button class="icon-button add-button" data-action="create" aria-label="Create a story" title="Create a story">+</button>' : ''}</div></div><p class="page-intro">Words to return to.</p><div class="filter-chips" role="group" aria-label="Filter by desire"><button data-action="filter" data-id="" aria-pressed="${!filter}">All tapes</button>${desires.map(d => `<button data-action="filter" data-id="${d.id}" aria-pressed="${filter === d.id}" title="${escape(d.title)}">${escape(labels[d.id] || d.title)}</button>`).join('')}</div>${desires.length ? '' : '<p>Add a desire before creating a story.</p>'}${tapeList(tapes.filter(t => !filter || t.desireId === filter))}`);
+    }
+    function createStory(desireId) {
+      if (!desires.length) return showDesires();
+      show(`<h2>Create a story</h2><form id="create-form">${desireChoices(desireId || desires[0].id)}<p><label>Title<br><input name="title" required maxlength="120"></label></p><p><label>What would you like to experience? (optional)<br><textarea name="prompt" rows="5" cols="36"></textarea></label></p><p>This prototype creates an editable sample, rather than generating a new story.</p><button>Create sample story</button> <button type="button" data-action="library">Cancel</button></form>`);
+      document.getElementById('create-form').onsubmit = event => {
+        event.preventDefault();
+        const data = new FormData(event.target), title = data.get('title').trim();
+        if (!title) return notice('Enter a story title.');
+        const d = findDesire(data.get('desire'));
+        const t = {id: 'tape-' + nextId++, desireId: d.id, title, prompt: data.get('prompt').trim(), story: d.id === 'wealth' ? sampleStory : `Let your hands rest. Let your shoulders settle.\n\n${d.belief}\n\nTake a moment to notice how these words feel.`, audio: null};
+        tapes.push(t); showStory(t.id);
+      };
+    }
+    function showStory(id) {
+      const t = findTape(id);
+      show(`<button class="back-link" data-action="library">← Tapes</button><div class="story-heading"><h2>${escape(t.title)}</h2><button class="story-play" data-action="listen" data-id="${id}" aria-label="Play ${escape(t.title)}" title="${t.audio ? 'Play recording' : 'No recording yet'}" ${t.audio ? '' : 'disabled'}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.7c0-.8.9-1.3 1.6-.9l10 6.3c.7.4.7 1.4 0 1.8l-10 6.3c-.7.4-1.6-.1-1.6-.9z"/></svg></button></div><p class="story-meta">${escape(findDesire(t.desireId).title)} · ${t.audio ? 'Hypnotizer' : 'Draft · No recording yet'}</p><article aria-label="Transcript">${t.story.split(/\n\s*\n/).map(p => `<p>${escape(p)}</p>`).join('')}</article>`);
+    }
+    function editStory(id) {
+      const t = findTape(id);
+      show(`<h2>Edit story</h2><form id="story-form"><p><label>Title<br><input name="title" required value="${escape(t.title)}"></label></p>${desireChoices(t.desireId)}<p><label>Instructions<br><textarea name="prompt" rows="3" cols="36">${escape(t.prompt)}</textarea></label></p><p><label>Transcript<br><textarea name="story" rows="20" cols="36" required>${escape(t.story)}</textarea></label></p><p>Changing the transcript removes its recording from this draft.</p><button>Save story</button> <button type="button" data-action="story" data-id="${id}">Cancel</button></form>`);
+      document.getElementById('story-form').onsubmit = event => {
+        event.preventDefault(); const data = new FormData(event.target);
+        const title = data.get('title').trim(), story = data.get('story').trim();
+        if (!title || !story) return notice('Enter a title and transcript.');
+        if (story !== t.story) { t.audio = null; if (playingId === id) closePlayer(); }
+        Object.assign(t, {title, story, desireId: data.get('desire'), prompt: data.get('prompt').trim()});
+        if (playingId === id) document.getElementById('playing-title').textContent = t.title;
+        showStory(id);
+      };
+    }
+    function listen(id) {
+      const t = findTape(id);
+      document.getElementById('player').hidden = false;
+      document.getElementById('playing-title').textContent = t.title;
+      if (playingId !== id) { audio.src = t.audio; playingId = id; }
+      audio.playbackRate = Number(document.getElementById('speed').value);
+      audio.play().catch(() => notice('Press play in the audio player. If audio is unavailable, open this prototype from the NX Hypnosis workspace.'));
+    }
+    function closePlayer() { audio.pause(); audio.removeAttribute('src'); audio.load(); playingId = null; document.getElementById('player').hidden = true; }
+    screen.onclick = event => {
+      const b = event.target.closest('button[data-action]'); if (!b) return;
+      const id = b.dataset.id;
+      switch (b.dataset.action) {
+        case 'desires': return showDesires();
+        case 'library': return showTapes();
+        case 'filter': return showTapes(id);
+        case 'desire': return showDesire(id);
+        case 'add-desire': return editDesire();
+        case 'edit-desire': return editDesire(id);
+        case 'delete-desire': return deleteDesire(id);
+        case 'create': return createStory(id);
+        case 'story': return showStory(id);
+        case 'edit-story': return editStory(id);
+        case 'listen': return listen(id);
+        case 'record':
+          if (findTape(id).story === sampleStory) { findTape(id).audio = sampleAudio; showStory(id); notice('Existing Hypnotizer sample attached. No new audio was generated.'); }
+          else notice('Recording generation is a preview only. The existing audio matches the original wealth story; new transcripts need audio generation later.');
+          return;
+        case 'delete-story':
+          if (confirm('Delete this story and its recording from the prototype?')) { if (playingId === id) closePlayer(); tapes = tapes.filter(t => t.id !== id); showTapes(); }
+      }
+    };
+    document.getElementById('backward').onclick = () => { if (Number.isFinite(audio.duration)) audio.currentTime = Math.max(0, audio.currentTime - 15); };
+    document.getElementById('forward').onclick = () => { if (Number.isFinite(audio.duration)) audio.currentTime = Math.min(audio.duration, audio.currentTime + 15); };
+    document.getElementById('speed').onchange = event => { audio.playbackRate = Number(event.target.value); };
+    document.getElementById('close-player').onclick = closePlayer;
+    audio.onerror = () => notice('Audio could not load. Keep the voice_test/output folder alongside this prototype.');
+    showTapes();
+  </script>
+</body>
+</html>
