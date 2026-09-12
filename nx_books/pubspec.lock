@@ -26,14 +26,14 @@ packages:
     source: hosted
     version: "12.1.0"
   appflowy_editor:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       path: "../third_party/appflowy-editor"
       relative: true
     source: path
     version: "6.1.0"
   archive:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: archive
       sha256: a96e8b390886ee8abb49b7bd3ac8df6f451c621619f52a26e815fdcf568959ff
@@ -352,6 +352,28 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
+  epub_view:
+    dependency: "direct main"
+    description:
+      path: "../third_party/epub_view"
+      relative: true
+    source: path
+    version: "3.3.0"
+  epubx:
+    dependency: transitive
+    description:
+      path: "../third_party/epubx"
+      relative: true
+    source: path
+    version: "4.0.0"
+  equatable:
+    dependency: transitive
+    description:
+      name: equatable
+      sha256: "3bce007a596ff8b3119c45d68aaef631272537c03d30e5d4534dd24bf4c5eaa2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
   fake_async:
     dependency: transitive
     description:
@@ -413,6 +435,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.21.3+1"
+  flutter_html:
+    dependency: "direct dev"
+    description:
+      name: flutter_html
+      sha256: "38a2fd702ffdf3243fb7441ab58aa1bc7e6922d95a50db76534de8260638558d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -502,12 +532,11 @@ packages:
     source: hosted
     version: "4.1.0"
   flutter_sound:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: flutter_sound
-      sha256: "77f0252a2f08449d621f68b8fd617c3b391e7f862eaa94bb32f53cc2dc3bbe85"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../third_party/flutter_sound"
+      relative: true
+    source: path
     version: "9.30.0"
   flutter_sound_platform_interface:
     dependency: transitive
@@ -656,7 +685,7 @@ packages:
     source: hosted
     version: "2.0.2"
   html:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: html
       sha256: "6d1264f2dffa1b1101c25a91dff0dc2daee4c18e87cd8538729773c073dbf602"
@@ -688,13 +717,13 @@ packages:
     source: hosted
     version: "4.1.2"
   image:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: image
-      sha256: f9881ff4998044947ec38d098bc7c8316ae1186fa786eddffdb867b9bc94dfce
+      sha256: "1976370a4df3091bb0f72409c187ad1f9132a818bc6b95ca59c0bae1c75c688e"
       url: "https://pub.dev"
     source: hosted
-    version: "4.8.0"
+    version: "4.9.2"
   inject_js:
     dependency: transitive
     description:
@@ -815,6 +844,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.1.1"
+  list_counter:
+    dependency: transitive
+    description:
+      name: list_counter
+      sha256: c447ae3dfcd1c55f0152867090e67e219d42fe6d4f2807db4bbe8b8d69912237
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   listen:
     dependency: transitive
     description:
@@ -1346,6 +1383,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
+  quiver:
+    dependency: transitive
+    description:
+      name: quiver
+      sha256: ea0b925899e64ecdfbf9c7becb60d5b50e706ade44a85b2363be2a22d88117d2
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.2"
   record:
     dependency: transitive
     description:
@@ -1450,6 +1495,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
+  scrollable_positioned_list:
+    dependency: transitive
+    description:
+      name: scrollable_positioned_list
+      sha256: "1b54d5f1329a1e263269abc9e2543d90806131aa14fe7c6062a8054d57249287"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.8"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -1727,6 +1780,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_file:
+    dependency: transitive
+    description:
+      name: universal_file
+      sha256: d1a957fccaad2a32023b62fe435b273ee47aaf2eb804709795e4bf4afff50960
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   url_launcher:
     dependency: "direct main"
     description:

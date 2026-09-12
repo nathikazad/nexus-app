@@ -50,8 +50,19 @@ dependencies:
   open_filex: ^4.7.0
   url_launcher: ^6.3.2
   cupertino_icons: ^1.0.8
-
+  epub_view:
+    path: ../third_party/epub_view
+dependency_overrides:
+  # Same desktop-build fix used by nx_docs; mobile implementation unchanged.
+  flutter_sound:
+    path: ../third_party/flutter_sound
 dev_dependencies:
+  flutter_html: ^3.0.0
+  html: ^0.15.6
+  archive: ^4.0.9
+  image: ^4.8.0
+  appflowy_editor:
+    path: ../third_party/appflowy-editor
   drift: ^2.34.0
   flutter_test:
     sdk: flutter

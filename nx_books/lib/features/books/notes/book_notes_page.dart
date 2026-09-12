@@ -10,6 +10,7 @@ import 'package:nx_documents/nx_documents.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_filex/open_filex.dart';
 import 'dart:async';
+import 'package:nx_books/epub/epub_reader_page.dart';
 import 'package:nx_books/data/offline/reading_position_store.dart';
 
 final bookNotesRepositoryProvider = Provider<DocumentContentRepository>((ref) {
@@ -168,6 +169,16 @@ Future<void> _openBookFile(
     final cache = ref.read(bookFileCacheProvider);
     if (cache == null) throw StateError('Book files are unavailable here');
     final path = await cache.openPath(book);
+    if (path.toLowerCase().endsWith('.epub')) {
+      if (context.mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => EpubReaderPage(path: path, title: book.title),
+          ),
+        );
+      }
+      return;
+    }
     await ref.read(bookFileOpenerProvider)(path);
   } catch (_) {
     if (context.mounted) {
