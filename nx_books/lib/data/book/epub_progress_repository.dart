@@ -97,12 +97,15 @@ class EpubProgressRepository {
     }
   }
 
-  Future<Map<String, dynamic>?> load(int id) async {
+  Future<Map<String, dynamic>?> load(
+    int id, {
+    bool refreshRemote = true,
+  }) async {
     await _writes;
     final prefs = await SharedPreferences.getInstance();
     var entry = _decode(prefs.getString(_key(id)));
     // An unsent local position always wins over stale server data on reopen.
-    if (entry?['pending'] != true) {
+    if (refreshRemote && entry?['pending'] != true) {
       try {
         final value = await remote.load(id).timeout(const Duration(seconds: 3));
         await _writes;

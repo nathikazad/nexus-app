@@ -15,6 +15,22 @@ class EpubPageInfo {
   final bool atEnd;
 }
 
+/// A bounded text window in the currently rendered chapter. No book upload.
+String epubReadingWindow(String text, int character,
+    {int before = 100, int after = 400}) {
+  final words = RegExp(r'\S+').allMatches(text).toList();
+  if (words.isEmpty) return '';
+  var current = words.indexWhere((word) => word.end > character);
+  if (current < 0) current = words.length - 1;
+  final start = math.max(0, current - math.max(0, before)).toInt();
+  final end = math.min(words.length, current + math.max(1, after)).toInt();
+  final anchor = words[current].start;
+  // Also bound unusually long words/passages to the companion wire budget.
+  final left = math.max(words[start].start, anchor - 1200);
+  final right = math.min(words[end - 1].end, anchor + 4500);
+  return '${text.substring(left, anchor)}\n[Current reading position]\n${text.substring(anchor, right)}';
+}
+
 /// A source position within the existing HTML renderer, independent of pixels.
 class EpubLocation {
   const EpubLocation(this.block, [this.run = 0, this.character = 0]);
@@ -107,6 +123,29 @@ class PagedEpubContent extends StatefulWidget {
 }
 
 class PagedEpubContentState extends State<PagedEpubContent> {
+  String readingContext() {
+    final buffer = StringBuffer();
+    var character = 0;
+    var located = false;
+    for (final run in _runs) {
+      if (!located &&
+          (run.block > _anchor.block ||
+              (run.block == _anchor.block && run.index >= _anchor.run))) {
+        character = buffer.length +
+            (run.block == _anchor.block && run.index == _anchor.run
+                ? math.min(
+                    _anchor.character, run.render.text.toPlainText().length)
+                : 0);
+        located = true;
+      }
+      // Use only actual text ranges; nested WidgetSpans have their own runs.
+      final text = run.render.text.toPlainText();
+      buffer.writeln(text.replaceAll('\uFFFC', ' '));
+    }
+    if (!located) character = buffer.length;
+    return epubReadingWindow(buffer.toString(), character);
+  }
+
   final _contentKey = GlobalKey();
   final _blockKeys = <int, GlobalKey>{};
   List<Widget>? _blocks;

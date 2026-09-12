@@ -23,7 +23,9 @@ class EpubReaderPage extends StatefulWidget {
     required this.title,
     this.target,
     this.savedPosition,
+    this.textScaleFactor = 1,
     this.onPositionChanged,
+    this.onReadingContextChanged,
     this.loadBook = loadLocalEpub,
     super.key,
   });
@@ -31,7 +33,9 @@ class EpubReaderPage extends StatefulWidget {
   final String title;
   final String? target;
   final Map<String, dynamic>? savedPosition;
+  final double textScaleFactor;
   final Future<void> Function(Map<String, dynamic>)? onPositionChanged;
+  final ValueChanged<String>? onReadingContextChanged;
   final Future<EpubBook> Function(String path) loadBook;
 
   @override
@@ -42,21 +46,15 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
   late final EpubController _controller;
   final _opened = Stopwatch()..start();
   bool _ready = false;
-  double _font = 19;
   String? _lastPosition;
   bool _saveErrorShown = false;
 
   @override
   void initState() {
     super.initState();
-    final savedFont = widget.savedPosition?['font_size'];
-    if (savedFont is num && savedFont.isFinite) {
-      _font = savedFont.toDouble().clamp(13, 31);
-    }
     final location = EpubLocation.fromJson(widget.savedPosition?['location']);
     if (location != null) {
-      _lastPosition =
-          '${location.block}:${location.run}:${location.character}:$_font';
+      _lastPosition = '${location.block}:${location.run}:${location.character}';
     }
     _controller = EpubController(
       document: widget.loadBook(widget.path),
@@ -67,19 +65,15 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
   }
 
   void _savePosition() {
+    widget.onReadingContextChanged?.call(_controller.readingContext());
     final location = _controller.locationListenable.value;
     if (location == null || widget.onPositionChanged == null) return;
-    final signature =
-        '${location.block}:${location.run}:${location.character}:$_font';
+    final signature = '${location.block}:${location.run}:${location.character}';
     if (_lastPosition == signature) return;
     _lastPosition = signature;
     unawaited(
       widget
-          .onPositionChanged!({
-            'format': 'epub',
-            'location': location.toJson(),
-            'font_size': _font,
-          })
+          .onPositionChanged!({'format': 'epub', 'location': location.toJson()})
           .catchError((Object _) {
             _lastPosition = null;
             if (mounted && !_saveErrorShown) {
@@ -108,15 +102,32 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
     appBar: AppBar(
       title: Text(widget.title),
       actions: [
-        IconButton(
-          tooltip: 'Smaller text',
-          onPressed: _font > 13 ? () => setState(() => _font -= 2) : null,
-          icon: const Icon(Icons.text_decrease),
-        ),
-        IconButton(
-          tooltip: 'Larger text',
-          onPressed: _font < 31 ? () => setState(() => _font += 2) : null,
-          icon: const Icon(Icons.text_increase),
+        ValueListenableBuilder<EpubPageInfo?>(
+          valueListenable: _controller.pageListenable,
+          builder: (context, page, _) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: 'Previous page',
+                onPressed: page != null && !page.atStart
+                    ? _controller.previousPage
+                    : null,
+                icon: const Icon(Icons.chevron_left),
+              ),
+              if (page != null)
+                Text(
+                  '${page.page} of ${page.pages}',
+                  key: const ValueKey('epub-page-count'),
+                ),
+              IconButton(
+                tooltip: 'Next page',
+                onPressed: page != null && !page.atEnd
+                    ? _controller.nextPage
+                    : null,
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
         ),
         Builder(
           builder: (context) => IconButton(
@@ -166,7 +177,10 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
       builders: EpubViewBuilders<DefaultBuilderOptions>(
         options: DefaultBuilderOptions(
           loaderSwitchDuration: Duration.zero,
-          textStyle: TextStyle(fontSize: _font, height: 1.6),
+          textStyle: TextStyle(
+            fontSize: 19 * widget.textScaleFactor,
+            height: 1.6,
+          ),
         ),
         loaderBuilder: (_) => const Center(child: CircularProgressIndicator()),
         errorBuilder: (_, error) => Center(
@@ -179,42 +193,14 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
     ),
     bottomNavigationBar: SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: ValueListenableBuilder<EpubPageInfo?>(
-          valueListenable: _controller.pageListenable,
-          builder: (context, page, _) => Row(
-            children: [
-              IconButton(
-                tooltip: 'Previous page',
-                onPressed: page != null && !page.atStart
-                    ? _controller.previousPage
-                    : null,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Expanded(
-                child: EpubViewActualChapter(
-                  controller: _controller,
-                  loader: const Text('Opening EPUB…'),
-                  builder: (value) => Text(
-                    value?.chapter?.Title ?? 'Opening EPUB…',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-              if (page != null)
-                Text(
-                  'Page ${page.page} of ${page.pages}',
-                  key: const ValueKey('epub-page-count'),
-                ),
-              IconButton(
-                tooltip: 'Next page',
-                onPressed: page != null && !page.atEnd
-                    ? _controller.nextPage
-                    : null,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
+        padding: const EdgeInsets.fromLTRB(16, 12, 72, 12),
+        child: EpubViewActualChapter(
+          controller: _controller,
+          loader: const Text('Opening EPUB…'),
+          builder: (value) => Text(
+            value?.chapter?.Title ?? 'Opening EPUB…',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),

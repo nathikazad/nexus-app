@@ -138,6 +138,7 @@ void main() {
     tester,
   ) async {
     final book = await EpubReader.readBook(sampleEpub());
+    var passage = '';
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -147,6 +148,9 @@ void main() {
                 builder: (_) => EpubReaderPage(
                   path: 'test.epub',
                   title: 'Test book',
+                  textScaleFactor: 1.3,
+                  savedPosition: const {'font_size': 31},
+                  onReadingContextChanged: (text) => passage = text,
                   loadBook: (_) => Future.value(book),
                 ),
               ),
@@ -160,9 +164,33 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
     final view = tester.widget<EpubView>(find.byType(EpubView));
+    expect(view.builders.options.textStyle.fontSize, closeTo(24.7, 0.001));
+    expect(find.byTooltip('Smaller text'), findsNothing);
+    expect(find.byTooltip('Larger text'), findsNothing);
     expect(tester.getSize(find.byType(EpubView)).height, greaterThan(300));
     await tester.runAsync(() => view.controller.document);
     await tester.pumpAndSettle();
+    final pageCount = find.byKey(const ValueKey('epub-page-count'));
+    expect(
+      tester.getRect(find.byTooltip('Previous page')).right,
+      lessThanOrEqualTo(tester.getRect(pageCount).left),
+    );
+    expect(
+      tester.getRect(find.byTooltip('Next page')).left,
+      greaterThanOrEqualTo(tester.getRect(pageCount).right),
+    );
+    expect(
+      tester.getRect(pageCount).bottom,
+      lessThanOrEqualTo(tester.getRect(find.byType(EpubView)).top),
+    );
+    expect(
+      tester.getRect(find.byTooltip('Next page')).right,
+      lessThanOrEqualTo(
+        tester.getRect(find.byTooltip('Table of contents')).left,
+      ),
+    );
+    expect(tester.widget<Text>(pageCount).data, isNot(contains('Page')));
+    expect(passage, contains('First heading'));
     expect(
       find.textContaining('First heading', findRichText: true),
       findsWidgets,
@@ -171,6 +199,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Second chapter').last);
     await tester.pumpAndSettle();
+    expect(passage, contains('Second heading'));
+    expect(passage, isNot(contains('First heading')));
     expect(
       find.textContaining('Second heading', findRichText: true),
       findsWidgets,

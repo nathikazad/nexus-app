@@ -11,6 +11,7 @@ class DocumentReaderHost extends StatefulWidget {
     required this.repository,
     this.imageUrlResolver,
     this.onOpenLink,
+    this.headingLinkAction,
     this.textScaleFactor = 1,
     this.onSelectionChanged,
     this.onUseSelection,
@@ -23,6 +24,7 @@ class DocumentReaderHost extends StatefulWidget {
   final DocumentContentRepository repository;
   final String Function(String url)? imageUrlResolver;
   final Future<bool> Function(String href)? onOpenLink;
+  final HeadingLinkActionResolver? headingLinkAction;
   final double textScaleFactor;
   final ValueChanged<String>? onSelectionChanged;
   final ValueChanged<String>? onUseSelection;
@@ -139,6 +141,7 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
             onPositionChanged: widget.onPositionChanged,
             imageUrlResolver: widget.imageUrlResolver,
             onOpenLink: widget.onOpenLink,
+            headingLinkAction: widget.headingLinkAction,
             textScaleFactor: widget.textScaleFactor,
             onSelectionChanged: widget.onSelectionChanged,
             onUseSelection: widget.onUseSelection,

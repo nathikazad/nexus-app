@@ -59,6 +59,18 @@ final class BooksSyncStore {
         'reading_history',
         _historyKey(id),
       );
+      final epubReference = marker['epubHistoryReference'];
+      if (epubReference != null) {
+        final epubId = DocumentIdentity(id: entry.id, modelType: 'EpubBook');
+        final metadata = await library.metadata(
+          'reading_history',
+          _historyKey(epubId),
+        );
+        if (metadata?.reference != epubReference ||
+            await histories.load(epubId) == null) {
+          return false;
+        }
+      }
       return history?.reference == marker['historyReference'] &&
           await histories.load(id) != null;
     } catch (_) {
@@ -100,6 +112,28 @@ final class BooksSyncStore {
       'reading_history',
       _historyKey(id),
     );
+    String? epubReference;
+    final epub = entry.document['epub_transcript'];
+    if (type == 'Book' && epub is Map) {
+      final epubId = DocumentIdentity(
+        id: entry.documentId,
+        modelType: 'EpubBook',
+      );
+      if (!await histories.saveDownloaded(
+        epubId,
+        ReadingHistory(
+          model.name,
+          readingMessagesFromHistory(epub['messages'], limit: 100),
+        ),
+        historyGeneration,
+      )) {
+        throw StateError('EPUB conversation changed during sync; retry');
+      }
+      epubReference = (await library.metadata(
+        'reading_history',
+        _historyKey(epubId),
+      ))!.reference;
+    }
     // Publish the acknowledgment last. Interrupted writes are retried, never
     // advertised as current just because the HTTP request completed.
     await library.saveRemote(
@@ -109,10 +143,12 @@ final class BooksSyncStore {
         'hash': entry.syncHash,
         'modelType': id.modelType,
         'historyReference': reference!.reference,
+        if (epubReference != null) 'epubHistoryReference': epubReference,
         if (type == 'Book')
           'book': {
             ...entry.document,
             'transcripts': [],
+            'epub_transcript': null,
             'relations': [],
             'attributes': {...?model.attributes}
               ..remove('document')

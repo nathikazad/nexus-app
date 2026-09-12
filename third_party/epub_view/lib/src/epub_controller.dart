@@ -28,6 +28,8 @@ class EpubController {
 
   void nextPage() => _epubViewState?._pagedKey.currentState?.next();
   void previousPage() => _epubViewState?._pagedKey.currentState?.previous();
+  String readingContext() =>
+      _epubViewState?._pagedKey.currentState?.readingContext() ?? '';
 
   void jumpTo({required int index, double alignment = 0}) =>
       _epubViewState?._jumpTo(index, alignment: alignment);

@@ -146,10 +146,13 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
               ),
               const SizedBox(height: 18),
               Text(
-                'Reader text',
+                'Reading font size',
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 6),
+              const Text(
+                'Applies to book summaries, chapter summaries, and EPUBs. Saved on this device.',
+              ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[

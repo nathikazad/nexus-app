@@ -8,8 +8,10 @@ class Remote implements EpubProgressRemote {
   bool offline = false;
   Completer<void>? gate;
   int writes = 0;
+  int reads = 0;
   @override
   Future<Map<String, dynamic>?> load(int id) async {
+    reads++;
     if (offline) throw StateError('offline');
     return value;
   }
@@ -52,6 +54,17 @@ void main() {
     expect(epubProgressAttribute, 'book_file');
   });
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  test('source links use local preferences without a network request', () async {
+    final remote = Remote()..value = position(1);
+    final repo = EpubProgressRepository(account: 'a', remote: remote);
+    expect(await repo.load(1), position(1));
+    expect(remote.reads, 1);
+    remote.value = position(2);
+    expect(await repo.load(1, refreshRemote: false), position(1));
+    expect(await repo.load(2, refreshRemote: false), isNull);
+    expect(remote.reads, 1);
+    repo.dispose();
+  });
   test('offline progress survives reopening and syncs when online', () async {
     final remote = Remote()..offline = true;
     var repo = EpubProgressRepository(account: 'a', remote: remote);

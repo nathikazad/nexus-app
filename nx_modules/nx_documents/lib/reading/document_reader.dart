@@ -14,11 +14,15 @@ const nxReaderHighlightYellow = '0x4cffeb3b';
 const nxReaderHighlightGreen = '0x4c4caf50';
 const nxReaderHighlightPink = '0x4ce91e63';
 
+typedef HeadingLinkActionResolver =
+    ({IconData icon, String tooltip})? Function(String href);
+
 class DocumentReader extends StatefulWidget {
   const DocumentReader({
     required this.content,
     required this.onChanged,
     this.onOpenLink,
+    this.headingLinkAction,
     this.imageUrlResolver,
     this.textScaleFactor = 1,
     this.onSelectionChanged,
@@ -31,6 +35,7 @@ class DocumentReader extends StatefulWidget {
   final DocumentContent content;
   final Future<void> Function(DocumentContent content) onChanged;
   final Future<bool> Function(String href)? onOpenLink;
+  final HeadingLinkActionResolver? headingLinkAction;
   final String Function(String url)? imageUrlResolver;
   final double textScaleFactor;
   final ValueChanged<String>? onSelectionChanged;
@@ -51,6 +56,8 @@ class _DocumentReaderState extends State<DocumentReader> {
   ReadingPosition? _lastPosition;
   bool _restoringPosition = true;
   ValueChanged<ReadingPosition>? _positionSink;
+  final _linkRecognizers = <String, TapGestureRecognizer>{};
+  bool _openingLink = false;
 
   @override
   void initState() {
@@ -119,6 +126,10 @@ class _DocumentReaderState extends State<DocumentReader> {
   }
 
   void _disposeEditor() {
+    for (final recognizer in _linkRecognizers.values) {
+      recognizer.dispose();
+    }
+    _linkRecognizers.clear();
     _positionTimer?.cancel();
     if (_lastPosition case final position?) {
       _positionSink?.call(position);
@@ -216,6 +227,9 @@ class _DocumentReaderState extends State<DocumentReader> {
           );
     final builders = <String, BlockComponentBuilder>{
       ...standardBlockComponentBuilderMap,
+      HeadingBlockKeys.type: HeadingBlockComponentBuilder(
+        trailingBuilder: _headingLinkButton,
+      ),
       TableBlockKeys.type: NxReadTableBlockComponentBuilder(),
       if (widget.imageUrlResolver != null)
         ImageBlockKeys.type: _ResolvedImageBlockComponentBuilder(
@@ -251,18 +265,55 @@ class _DocumentReaderState extends State<DocumentReader> {
   ) {
     final href = text.attributes?[AppFlowyRichTextKeys.href] as String?;
     if (href == null || href.trim().isEmpty) return before;
+    if (node.type == HeadingBlockKeys.type &&
+        widget.headingLinkAction?.call(href) != null) {
+      return TextSpan(
+        text: text.text,
+        style: before.style?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+          decoration: TextDecoration.none,
+        ),
+      );
+    }
     return TextSpan(
       text: text.text,
       style: before.style,
       mouseCursor: SystemMouseCursors.click,
-      recognizer: TapGestureRecognizer()
-        ..onTap = () => unawaited(_openLink(href)),
+      recognizer: _linkRecognizers.putIfAbsent(
+        '${node.id}:$index:$href',
+        () => TapGestureRecognizer()..onTap = () => unawaited(_openLink(href)),
+      ),
     );
   }
 
+  Widget? _headingLinkButton(BuildContext context, Node node) {
+    for (final insert
+        in node.delta?.whereType<TextInsert>() ?? <TextInsert>[]) {
+      final href = insert.attributes?[AppFlowyRichTextKeys.href];
+      if (href is! String) continue;
+      final action = widget.headingLinkAction?.call(href);
+      if (action == null) continue;
+      return IconButton(
+        tooltip: action.tooltip,
+        visualDensity: VisualDensity.compact,
+        icon: Icon(action.icon, size: 22),
+        onPressed: () => unawaited(_openLink(href)),
+      );
+    }
+    return null;
+  }
+
   Future<void> _openLink(String href) async {
-    final handled = await widget.onOpenLink?.call(href) ?? false;
-    if (!handled) await editorLaunchUrl(href);
+    // Keep one activation in flight, including while its destination is open.
+    // Repeated clicks must not queue duplicate reader routes during file loading.
+    if (_openingLink || !mounted) return;
+    _openingLink = true;
+    try {
+      final handled = await widget.onOpenLink?.call(href) ?? false;
+      if (!handled && mounted) await editorLaunchUrl(href);
+    } finally {
+      _openingLink = false;
+    }
   }
 }
 

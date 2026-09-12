@@ -44,10 +44,12 @@ class HeadingBlockComponentBuilder extends BlockComponentBuilder {
   HeadingBlockComponentBuilder({
     super.configuration,
     this.textStyleBuilder,
+    this.trailingBuilder,
   });
 
   /// The text style of the heading block.
   final TextStyle Function(int level)? textStyleBuilder;
+  final Widget? Function(BuildContext context, Node node)? trailingBuilder;
 
   @override
   BlockComponentWidget build(BlockComponentContext blockComponentContext) {
@@ -58,6 +60,7 @@ class HeadingBlockComponentBuilder extends BlockComponentBuilder {
       node: node,
       configuration: configuration,
       textStyleBuilder: textStyleBuilder,
+      trailingBuilder: trailingBuilder,
       showActions: showActions(node),
       actionBuilder: (context, state) => actionBuilder(
         blockComponentContext,
@@ -80,10 +83,12 @@ class HeadingBlockComponentWidget extends BlockComponentStatefulWidget {
     super.actionTrailingBuilder,
     super.configuration = const BlockComponentConfiguration(),
     this.textStyleBuilder,
+    this.trailingBuilder,
   });
 
   /// The text style of the heading block.
   final TextStyle Function(int level)? textStyleBuilder;
+  final Widget? Function(BuildContext context, Node node)? trailingBuilder;
 
   @override
   State<HeadingBlockComponentWidget> createState() =>
@@ -171,6 +176,8 @@ class _HeadingBlockComponentWidgetState
               cursorWidth: editorState.editorStyle.cursorWidth,
             ),
           ),
+          if (widget.trailingBuilder?.call(context, node) case final trailing?)
+            trailing,
         ],
       ),
     );

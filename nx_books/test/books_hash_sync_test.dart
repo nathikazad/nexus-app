@@ -87,6 +87,51 @@ void main() {
     expect((await report.load())?.verified, 820);
   });
 
+  test(
+    'EPUB and summary histories sync separately and repair independently',
+    () async {
+      final entry = _entry(1, 'epub-hash', message: 'summary answer');
+      entry.document['epub_transcript'] = {
+        'id': 99,
+        'messages': {
+          '001': {'sender': 'Agent', 'message': 'EPUB answer'},
+        },
+      };
+      transport.entries[1] = entry;
+      await pull.pullAll();
+      const epubId = DocumentIdentity(id: 1, modelType: 'EpubBook');
+      const summaryId = DocumentIdentity(id: 1, modelType: 'Book');
+      expect(
+        (await store.histories.load(epubId))!.messages.single.text,
+        'EPUB answer',
+      );
+      expect(
+        (await store.histories.load(summaryId))!.messages.single.text,
+        'summary answer',
+      );
+      await pull.pullAll();
+      expect(transport.downloads.length, 1);
+      final metadata = (await library.metadata(
+        'reading_history',
+        'EpubBook_1',
+      ))!;
+      final file = File(
+        '${directory.path}/${ContentReference.decode(metadata.reference).path}',
+      );
+      await file.writeAsString('broken');
+      await pull.pullAll();
+      expect(transport.downloads.last, {1});
+      expect(
+        (await store.histories.load(epubId))!.messages.single.text,
+        'EPUB answer',
+      );
+      expect(
+        (await store.histories.load(summaryId))!.messages.single.text,
+        'summary answer',
+      );
+    },
+  );
+
   test('progress does not republish the bookshelf', () async {
     var progress = 0;
     var published = 0;

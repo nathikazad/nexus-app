@@ -12,6 +12,7 @@ import '../data/book/kgql_reading_history.dart';
 import 'reading_companion_conversation.dart';
 import '../data/providers.dart';
 import '../data/offline/reading_history_store.dart';
+import 'epub_companion_context.dart';
 
 class ReadingSelectionRequest {
   const ReadingSelectionRequest(this.identity, this.text);
@@ -39,6 +40,17 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   final _input = TextEditingController();
   final _layoutButtonLink = LayerLink();
   late final ValueNotifier<ReadingSelectionRequest?> _selectionRequests;
+  late final ValueNotifier<EpubCompanionContext?> _epubContext;
+  String get _questionContext => _epubContext.value?.text ?? _selection;
+
+  void _epubContextChanged() {
+    if (mounted) {
+      setState(() {
+        if (_epubContext.value != null) _selection = '';
+      });
+    }
+  }
+
   ReadingCompanionController? _controller;
   bool _open = false;
   bool _layoutPickerOpen = false;
@@ -73,6 +85,8 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _epubContext = ref.read(epubCompanionContextProvider)
+      ..addListener(_epubContextChanged);
     _selectionRequests = ref.read(readingSelectionProvider)
       ..addListener(_selectionRequested);
   }
@@ -93,6 +107,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     _historySaveTimer?.cancel();
     _saveHistory();
     WidgetsBinding.instance.removeObserver(this);
+    _epubContext.removeListener(_epubContextChanged);
     _selectionRequests.removeListener(_selectionRequested);
     _controller?.dispose();
     _input.dispose();
@@ -110,6 +125,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
       _controller = null;
       _loading = false;
       _open = false;
+      _confirmClear = false;
       _title = '';
       _selection = '';
       _input.clear();
@@ -120,7 +136,10 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     setState(() {
       _open = true;
       final selected = _selectionRequests.value;
-      _selection = selected != null && selected.identity == widget.identity
+      _selection =
+          _epubContext.value == null &&
+              selected != null &&
+              selected.identity == widget.identity
           ? selected.text
           : '';
     });
@@ -137,7 +156,9 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
         userId: user.userId,
         documentId: identity.id,
         clientApp: 'nx_books',
-        agentId: 'nx_books',
+        agentId: identity.modelType == 'EpubBook'
+            ? 'nx_books_epub'
+            : 'nx_books',
         authHeaders: (refresh) =>
             nexusAuthHeaders(user.preset, user.userId, forceRefresh: refresh),
       ),
@@ -238,21 +259,8 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     final cleared = await controller.clearTranscript(() async {
       // Resolve fresh: the first reply may have created the transcript since
       // this panel was opened. Clear only transcripts linked to this document.
-      final rows = await fetchKgqlModels(
-        client,
-        filter: {
-          'model_type': identity.modelType,
-          'filters': [
-            {'key': 'id', 'op': '=', 'value': '${identity.id}'},
-          ],
-        },
-        struct: const {
-          'id': true,
-          'Transcript': {'id': true},
-        },
-      );
-      if (rows.isEmpty) throw StateError('Document not found');
-      for (final transcript in rows.first.relations?['Transcript'] ?? []) {
+      final transcripts = await fetchReadingTranscripts(client, identity);
+      for (final transcript in transcripts) {
         await setKgqlModel(
           client,
           SetModelRequest(
@@ -278,9 +286,10 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   }
 
   Future<void> _send() async {
+    if (_epubContext.value?.text == '') return;
     final original = _input.text;
     final sent =
-        await _controller?.send(original, selection: _selection) ?? false;
+        await _controller?.send(original, selection: _questionContext) ?? false;
     if (mounted && sent) {
       if (_input.text == original) _input.clear();
       setState(() => _selection = '');
@@ -332,7 +341,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                 child: FloatingActionButton.small(
                   heroTag: 'reading-companion',
                   tooltip: 'Reading companion',
-                  onPressed: _show,
+                  onPressed: _epubContext.value?.text == '' ? null : _show,
                   child: const Icon(Icons.auto_awesome_outlined),
                 ),
               ),
@@ -432,7 +441,9 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              _selection.isNotEmpty
+                              _epubContext.value != null
+                                  ? 'Current EPUB passage · updated as you turn pages'
+                                  : _selection.isNotEmpty
                                   ? 'Selected passage · ${_title.isEmpty ? widget.identity!.modelType : _title}'
                                   : 'Current document · ${_title.isEmpty ? "${widget.identity!.modelType} #${widget.identity!.id}" : _title}',
                               maxLines: 2,
@@ -540,7 +551,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                               ReadingMicrophoneButton(
                                 controller: controller,
                                 enabled: !_loading,
-                                selection: _selection,
+                                selection: _questionContext,
                               ),
                               IconButton(
                                 tooltip: 'Send question',

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:open_filex/open_filex.dart';
 import 'dart:async';
 import 'package:nx_books/epub/epub_reader_page.dart';
+import 'package:nx_books/companion/epub_companion_context.dart';
 import 'package:nx_books/data/offline/reading_position_store.dart';
 
 final bookNotesRepositoryProvider = Provider<DocumentContentRepository>((ref) {
@@ -174,20 +175,34 @@ Future<void> _openBookFile(
       final saved = await progress.load(book.id);
       final matching = saved?['sha256'] == book.bookFileHash ? saved : null;
       if (context.mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => EpubReaderPage(
-              path: path,
-              title: book.title,
-              savedPosition: matching,
-              onPositionChanged: (position) => progress.save(book.id, {
-                ...position,
-                'sha256': book.bookFileHash,
-                'saved_at': DateTime.now().toUtc().toIso8601String(),
-              }),
+        final excerpt = ref.read(epubCompanionContextProvider);
+        excerpt.value = EpubCompanionContext(book.id, '');
+        try {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => Consumer(
+                builder: (context, ref, _) => EpubReaderPage(
+                  textScaleFactor: ref.watch(booksTextScaleProvider),
+                  onReadingContextChanged: (text) =>
+                      excerpt.value = EpubCompanionContext(
+                        book.id,
+                        'EPUB: ${book.title}\nCurrent reading passage (with nearby context):\n$text',
+                      ),
+                  path: path,
+                  title: book.title,
+                  savedPosition: matching,
+                  onPositionChanged: (position) => progress.save(book.id, {
+                    ...position,
+                    'sha256': book.bookFileHash,
+                    'saved_at': DateTime.now().toUtc().toIso8601String(),
+                  }),
+                ),
+              ),
             ),
-          ),
-        );
+          );
+        } finally {
+          excerpt.value = null;
+        }
       }
       return;
     }

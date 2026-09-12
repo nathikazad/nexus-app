@@ -128,7 +128,7 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
-    expect(find.text('Reader text'), findsOneWidget);
+    expect(find.text('Reading font size'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
     expect(find.text('Offline library'), findsOneWidget);
     expect(find.text('Sync now'), findsOneWidget);

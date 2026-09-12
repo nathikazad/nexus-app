@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_books/companion/reading_companion.dart';
+import 'package:nx_books/companion/epub_companion_context.dart';
 import 'package:nx_books/companion/reading_companion_controller.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:nx_voice/nx_voice.dart';
@@ -28,6 +29,47 @@ void main() {
     );
   });
   tearDown(() => controller.dispose());
+  testWidgets('EPUB context follows page changes while companion stays open', (
+    tester,
+  ) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final context = container.read(epubCompanionContextProvider);
+    context.value = const EpubCompanionContext(7, 'First EPUB page');
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: ReadingCompanion(
+            identity: DocumentIdentity(id: 7, modelType: 'Book'),
+            child: Scaffold(body: Text('Reader')),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Reading companion'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Current EPUB passage'), findsOneWidget);
+    expect(
+      tester
+          .widget<ReadingMicrophoneButton>(find.byType(ReadingMicrophoneButton))
+          .selection,
+      'First EPUB page',
+    );
+    context.value = const EpubCompanionContext(7, 'Second EPUB page');
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ReadingMicrophoneButton>(find.byType(ReadingMicrophoneButton))
+          .selection,
+      'Second EPUB page',
+    );
+    context.value = null;
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Current EPUB passage'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpWidget(const SizedBox());
+  });
   test(
     'sync replaces a cut-off reply and ignores late stream chunks',
     () async {
