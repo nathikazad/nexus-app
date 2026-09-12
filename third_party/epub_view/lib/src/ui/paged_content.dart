@@ -16,11 +16,25 @@ class EpubPageInfo {
 }
 
 /// A source position within the existing HTML renderer, independent of pixels.
-class _Anchor {
-  const _Anchor(this.block, [this.run = 0, this.character = 0]);
+class EpubLocation {
+  const EpubLocation(this.block, [this.run = 0, this.character = 0]);
   final int block;
   final int run;
   final int character;
+
+  Map<String, dynamic> toJson() => {
+        'version': 1,
+        'block': block,
+        'run': run,
+        'character': character,
+      };
+
+  static EpubLocation? fromJson(dynamic json) {
+    if (json is! Map || json['version'] != 1) return null;
+    final values = [json['block'], json['run'], json['character']];
+    if (values.any((value) => value is! int || value < 0)) return null;
+    return EpubLocation(values[0] as int, values[1] as int, values[2] as int);
+  }
 }
 
 class _Run {
@@ -71,6 +85,8 @@ class PagedEpubContent extends StatefulWidget {
     required this.onPage,
     this.onChapterChanged,
     this.initialBlock = 0,
+    this.initialLocation,
+    this.onLocation,
     this.headingBlocks = const {},
     super.key,
   });
@@ -79,6 +95,8 @@ class PagedEpubContent extends StatefulWidget {
   final Widget Function(BuildContext, int) blockBuilder;
   final Object revision;
   final int initialBlock;
+  final EpubLocation? initialLocation;
+  final ValueChanged<EpubLocation>? onLocation;
   final Set<int> headingBlocks;
   final ValueChanged<int> onPosition;
   final ValueChanged<EpubPageInfo> onPage;
@@ -96,7 +114,7 @@ class PagedEpubContentState extends State<PagedEpubContent> {
   List<double> _breaks = [];
   List<_Run> _runs = [];
   Map<int, Rect> _rects = {};
-  late _Anchor _anchor;
+  late EpubLocation _anchor;
   int _chapter = 0;
   int _page = 0;
   bool _lastPageRequested = false;
@@ -116,8 +134,11 @@ class PagedEpubContentState extends State<PagedEpubContent> {
     }.toList()
       ..sort();
     if (_starts.length == 1) _starts.add(widget.blockCount);
-    _anchor = _Anchor(widget.initialBlock);
-    _chapter = _chapterFor(widget.initialBlock);
+    final location = widget.initialLocation;
+    _anchor = location != null && location.block < widget.blockCount
+        ? location
+        : EpubLocation(widget.initialBlock);
+    _chapter = _chapterFor(_anchor.block);
   }
 
   int _chapterFor(int block) {
@@ -132,7 +153,7 @@ class PagedEpubContentState extends State<PagedEpubContent> {
     final index = block.clamp(0, math.max(0, widget.blockCount - 1)).toInt();
     if (_chapterFor(index) != _chapter) widget.onChapterChanged?.call();
     setState(() {
-      _anchor = _Anchor(index);
+      _anchor = EpubLocation(index);
       _chapter = _chapterFor(index);
       _breaks = [];
       _runs = [];
@@ -171,7 +192,7 @@ class PagedEpubContentState extends State<PagedEpubContent> {
     _publish();
   }
 
-  _Anchor _anchorAt(double y) {
+  EpubLocation _anchorAt(double y) {
     final block = _rects.entries
         .where((entry) => entry.value.bottom > y + 0.1)
         .firstOrNull
@@ -181,15 +202,16 @@ class PagedEpubContentState extends State<PagedEpubContent> {
       if (run.offset.dy + run.render.size.height > y + 0.1) {
         final position = run.render.getPositionForOffset(
             Offset(0, math.max(0, y - run.offset.dy) + 0.1));
-        return _Anchor(run.block, run.index, position.offset);
+        return EpubLocation(run.block, run.index, position.offset);
       }
     }
-    return _Anchor(block ?? _starts[_chapter]);
+    return EpubLocation(block ?? _starts[_chapter]);
   }
 
   void _publish() {
     if (!mounted || _breaks.isEmpty) return;
     widget.onPosition(_anchor.block);
+    widget.onLocation?.call(_anchor);
     widget.onPage(EpubPageInfo(
         _page + 1,
         _breaks.length - 1,

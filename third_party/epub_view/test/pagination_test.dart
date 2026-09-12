@@ -6,6 +6,51 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('saved location restores within a long paragraph after remount',
+      (tester) async {
+    EpubLocation? location;
+    EpubPageInfo? page;
+    var key = GlobalKey<PagedEpubContentState>();
+    final text = List.generate(1000, (i) => 'word$i').join(' ');
+    Future<void> mount(EpubLocation? initial) async {
+      await tester.pumpWidget(MaterialApp(
+          home: SizedBox(
+        width: 400,
+        height: 400,
+        child: PagedEpubContent(
+          key: key,
+          blockCount: 1,
+          chapterStarts: const [0],
+          revision: 1,
+          initialLocation: initial,
+          onPosition: (_) {},
+          onLocation: (value) => location = value,
+          onPage: (value) => page = value,
+          blockBuilder: (_, __) =>
+              Text(text, style: const TextStyle(fontSize: 20)),
+        ),
+      )));
+      await tester.pumpAndSettle();
+    }
+
+    await mount(null);
+    key.currentState!.next();
+    key.currentState!.next();
+    await tester.pumpAndSettle();
+    expect(page!.page, 3);
+    final saved = EpubLocation.fromJson(location!.toJson());
+    expect(saved!.character, greaterThan(0));
+    await tester.pumpWidget(const SizedBox());
+    key = GlobalKey<PagedEpubContentState>();
+    await mount(saved);
+    expect(page!.page, 3);
+    expect(location!.character, saved.character);
+    expect(EpubLocation.fromJson({'version': 2}), isNull);
+    expect(
+        EpubLocation.fromJson(
+            {'version': 1, 'block': -1, 'run': 0, 'character': 0}),
+        isNull);
+  });
   test('page ranges cover content without splitting a line or image', () {
     final spans = [
       for (var i = 0; i < 30; i++) PageSpan(i * 21.0, (i + 1) * 21.0)

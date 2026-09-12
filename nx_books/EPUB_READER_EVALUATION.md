@@ -147,3 +147,26 @@ jump directly to renderer positions rather than round-tripping generated CFIs.
 The real Seven Powers test activates its in-book contents link to Chapter 1
 and verifies the destination, then visits all 24 contents entries. App tests:
 85 passed (two optional tests skipped in the ordinary run); reader tests: 27.
+
+## Persistent resume
+
+Book.epub_reading_position stores an EPUB-specific JSON position: versioned
+renderer block/run/character location, attachment sha256, font size, UTC save
+time. It is not a fixed page number or a cross-engine CFI. The file hash prevents
+restoring a locator into a replaced attachment. A future renderer schema change
+must version/migrate the locator rather than reinterpret its indices.
+
+The renderer only exposes locations; the app reader only emits/accepts position
+data. A separate account/backend-scoped repository persists each change locally
+and coalesces authenticated KGQL writes in a durable latest-value outbox. It
+retries after failure and on normal library synchronization. Loading waits at
+most three seconds for a remote position before using local data. Background
+progress failures do not block library sync. A newer server timestamp supersedes
+an older pending offline position; simultaneous devices use last-write-wins,
+not server-side compare-and-swap (device clocks should be reasonably correct).
+
+Tests cover restart within a long paragraph, malformed locator versions, durable
+offline retry, in-flight page turns, account isolation and newer remote progress.
+88 app tests and 28 renderer tests pass. Hetzner Book type 59 has the additive
+attribute; live Seven Powers model 4427 accepted progress through the installed
+Mac app and authenticated KGQL API. No server restart was required.

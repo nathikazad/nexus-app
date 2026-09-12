@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'book/epub_progress_repository.dart';
 import 'offline/reading_history_store.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -42,6 +43,16 @@ final bookRepositoryProvider = Provider<BookRepository>((ref) {
     accountKey: userId,
     library: ref.watch(booksFileLibraryProvider),
   );
+});
+
+final epubProgressRepositoryProvider = Provider<EpubProgressRepository>((ref) {
+  final user = ref.watch(authProvider).value;
+  final repository = EpubProgressRepository(
+    account: '${user?.preset.key}:${user?.userId}',
+    remote: KgqlEpubProgressRemote(ref.watch(graphqlClientProvider)),
+  );
+  ref.onDispose(repository.dispose);
+  return repository;
 });
 
 final bookDocumentRepositoryProvider =
@@ -139,6 +150,7 @@ final booksLibrarySyncProvider =
       final hasNetwork = ref.watch(booksNetworkAvailableProvider);
       final library = ref.watch(booksFileLibraryProvider);
       final catalog = ref.watch(bookRepositoryProvider);
+      final epubProgress = ref.watch(epubProgressRepositoryProvider);
       if (library == null ||
           histories == null ||
           catalog is! CachedBookRepository) {
@@ -150,6 +162,7 @@ final booksLibrarySyncProvider =
           if (!await hasNetwork()) {
             throw StateError('Offline. Sync will retry automatically.');
           }
+          unawaited(epubProgress.flush().catchError((Object _) {}));
         },
         reconciler: BooksHashPull(
           transport: KgqlBooksSyncTransport(client),

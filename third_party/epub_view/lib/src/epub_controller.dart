@@ -1,7 +1,10 @@
 part of 'ui/epub_view.dart';
 
 class EpubController {
-  EpubController({required this.document, this.epubCfi});
+  EpubController({required this.document, this.epubCfi, this.initialLocation});
+
+  final EpubLocation? initialLocation;
+  final locationListenable = ValueNotifier<EpubLocation?>(null);
 
   Future<EpubBook> document;
   final String? epubCfi;
@@ -111,6 +114,7 @@ class EpubController {
     currentValueListenable.dispose();
     tableOfContentsListenable.dispose();
     pageListenable.dispose();
+    locationListenable.dispose();
   }
 
   Future<void> _loadDocument(Future<EpubBook> document) async {

@@ -380,6 +380,9 @@ class _EpubViewState extends State<EpubView> {
         blockCount: _paragraphs.length,
         chapterStarts: _chapterIndexes,
         initialBlock: _epubCfiReader!.paragraphIndexByCfiFragment ?? 0,
+        initialLocation: _controller.initialLocation,
+        onLocation: (location) =>
+            _controller.locationListenable.value = location,
         revision: (widget.builders.options as DefaultBuilderOptions).textStyle,
         headingBlocks: {
           for (var i = 0; i < _paragraphs.length; i++)

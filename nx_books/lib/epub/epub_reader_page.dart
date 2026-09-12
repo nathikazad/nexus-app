@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:epub_view/epub_view.dart';
 import 'package:flutter/foundation.dart';
@@ -21,12 +22,16 @@ class EpubReaderPage extends StatefulWidget {
     required this.path,
     required this.title,
     this.target,
+    this.savedPosition,
+    this.onPositionChanged,
     this.loadBook = loadLocalEpub,
     super.key,
   });
   final String path;
   final String title;
   final String? target;
+  final Map<String, dynamic>? savedPosition;
+  final Future<void> Function(Map<String, dynamic>)? onPositionChanged;
   final Future<EpubBook> Function(String path) loadBook;
 
   @override
@@ -38,18 +43,62 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
   final _opened = Stopwatch()..start();
   bool _ready = false;
   double _font = 19;
+  String? _lastPosition;
+  bool _saveErrorShown = false;
 
   @override
   void initState() {
     super.initState();
+    final savedFont = widget.savedPosition?['font_size'];
+    if (savedFont is num && savedFont.isFinite) {
+      _font = savedFont.toDouble().clamp(13, 31);
+    }
+    final location = EpubLocation.fromJson(widget.savedPosition?['location']);
+    if (location != null) {
+      _lastPosition =
+          '${location.block}:${location.run}:${location.character}:$_font';
+    }
     _controller = EpubController(
       document: widget.loadBook(widget.path),
       epubCfi: widget.target,
+      initialLocation: location,
+    );
+    _controller.locationListenable.addListener(_savePosition);
+  }
+
+  void _savePosition() {
+    final location = _controller.locationListenable.value;
+    if (location == null || widget.onPositionChanged == null) return;
+    final signature =
+        '${location.block}:${location.run}:${location.character}:$_font';
+    if (_lastPosition == signature) return;
+    _lastPosition = signature;
+    unawaited(
+      widget
+          .onPositionChanged!({
+            'format': 'epub',
+            'location': location.toJson(),
+            'font_size': _font,
+          })
+          .catchError((Object _) {
+            _lastPosition = null;
+            if (mounted && !_saveErrorShown) {
+              _saveErrorShown = true;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Could not save your reading position on this device.',
+                  ),
+                ),
+              );
+            }
+          }),
     );
   }
 
   @override
   void dispose() {
+    _controller.locationListenable.removeListener(_savePosition);
     _controller.dispose();
     super.dispose();
   }

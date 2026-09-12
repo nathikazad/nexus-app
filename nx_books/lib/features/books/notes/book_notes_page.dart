@@ -170,10 +170,22 @@ Future<void> _openBookFile(
     if (cache == null) throw StateError('Book files are unavailable here');
     final path = await cache.openPath(book);
     if (path.toLowerCase().endsWith('.epub')) {
+      final progress = ref.read(epubProgressRepositoryProvider);
+      final saved = await progress.load(book.id);
+      final matching = saved?['sha256'] == book.bookFileHash ? saved : null;
       if (context.mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => EpubReaderPage(path: path, title: book.title),
+            builder: (_) => EpubReaderPage(
+              path: path,
+              title: book.title,
+              savedPosition: matching,
+              onPositionChanged: (position) => progress.save(book.id, {
+                ...position,
+                'sha256': book.bookFileHash,
+                'saved_at': DateTime.now().toUtc().toIso8601String(),
+              }),
+            ),
           ),
         );
       }
