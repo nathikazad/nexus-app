@@ -7,8 +7,6 @@ import 'package:nx_db/kgql.dart';
 const kBookModelTypeName = 'Book';
 const kBookAttrReadingState = 'reading_state';
 const kBookAttrRank = 'rank';
-const kBookAttrTotalChapters = 'total_chapters';
-const kBookAttrCurrentChapter = 'current_chapter';
 const kBookAttrAuthor = 'author';
 const kBookAttrLink = 'link';
 const kBookAttrWordCount = 'word_count';
@@ -84,8 +82,6 @@ class KgqlBookRepository implements BookRepository {
       tags: const [],
       readingState: BookReadingState.toRead,
       rank: rank,
-      totalChapters: null,
-      currentChapter: null,
       wordCount: 0,
       updatedAt: now,
       updatedLabel: _relativeLabel(now),
@@ -139,35 +135,6 @@ class KgqlBookRepository implements BookRepository {
   }
 
   @override
-  Future<void> updateBookChapterProgress({
-    required int id,
-    required int? totalChapters,
-    required int? currentChapter,
-  }) async {
-    await _mutate(
-      SetModelRequest(
-        id: id,
-        attributes: [
-          if (totalChapters == null)
-            SetModelAttribute(key: kBookAttrTotalChapters, delete: true)
-          else
-            SetModelAttribute(
-              key: kBookAttrTotalChapters,
-              value: totalChapters,
-            ),
-          if (currentChapter == null)
-            SetModelAttribute(key: kBookAttrCurrentChapter, delete: true)
-          else
-            SetModelAttribute(
-              key: kBookAttrCurrentChapter,
-              value: currentChapter,
-            ),
-        ],
-      ),
-    );
-  }
-
-  @override
   Future<void> deleteBook(int id) async {
     await _mutate(SetModelRequest(id: id, delete: true));
   }
@@ -190,8 +157,6 @@ class KgqlBookRepository implements BookRepository {
     kBookAttrWordCount: true,
     kBookAttrReadingState: true,
     kBookAttrRank: true,
-    kBookAttrTotalChapters: true,
-    kBookAttrCurrentChapter: true,
     kBookAttrAuthor: true,
     kBookAttrLink: true,
     'book_file': true,
@@ -239,8 +204,6 @@ NxBook bookFromModel(Model model) {
       model.attrString(kBookAttrReadingState),
     ),
     rank: model.attrInt(kBookAttrRank),
-    totalChapters: model.attrInt(kBookAttrTotalChapters),
-    currentChapter: model.attrInt(kBookAttrCurrentChapter),
     wordCount: model.attrInt(kBookAttrWordCount) ?? 0,
     updatedAt: updatedAt,
     updatedLabel: _relativeLabel(updatedAt),

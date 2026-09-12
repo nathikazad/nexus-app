@@ -393,35 +393,6 @@ class BookMutationController {
     _ref.invalidate(topicTagsProvider);
   }
 
-  Future<void> updateChapterProgress(
-    NxBook book, {
-    required int? totalChapters,
-    required int? currentChapter,
-  }) async {
-    int? nextTotal = totalChapters;
-    int? nextCurrent = currentChapter;
-    if (nextTotal != null && nextTotal <= 0) {
-      nextTotal = null;
-      nextCurrent = null;
-    } else if (nextTotal != null) {
-      nextCurrent = (nextCurrent ?? book.currentChapter ?? 0).clamp(
-        0,
-        nextTotal,
-      );
-    } else {
-      nextCurrent = null;
-    }
-
-    await _ref
-        .read(bookRepositoryProvider)
-        .updateBookChapterProgress(
-          id: book.id,
-          totalChapters: nextTotal,
-          currentChapter: nextCurrent,
-        );
-    _ref.invalidate(booksProvider);
-  }
-
   Future<void> deleteBook(NxBook book) async {
     await _ref.read(bookRepositoryProvider).deleteBook(book.id);
     final selected = _ref.read(selectedBookIdProvider);

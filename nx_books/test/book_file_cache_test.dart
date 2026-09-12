@@ -102,8 +102,6 @@ NxBook _book(String bookLink, {String? hash, int? size}) => NxBook(
   tags: const [],
   readingState: BookReadingState.reading,
   rank: 0,
-  totalChapters: null,
-  currentChapter: null,
   wordCount: 0,
   updatedAt: DateTime.utc(2026),
   updatedLabel: '',

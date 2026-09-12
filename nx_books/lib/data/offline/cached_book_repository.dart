@@ -185,19 +185,6 @@ final class CachedBookRepository implements BookRepository, BookCatalogRefresh {
   Future<void> deleteBook(int id) => _mutate(() => remote.deleteBook(id));
 
   @override
-  Future<void> updateBookChapterProgress({
-    required int id,
-    required int? totalChapters,
-    required int? currentChapter,
-  }) => _mutate(
-    () => remote.updateBookChapterProgress(
-      id: id,
-      totalChapters: totalChapters,
-      currentChapter: currentChapter,
-    ),
-  );
-
-  @override
   Future<void> updateBookRank({required int id, required int rank}) =>
       _mutate(() => remote.updateBookRank(id: id, rank: rank));
 
@@ -228,8 +215,6 @@ Map<String, dynamic> _bookToJson(NxBook book) => <String, dynamic>{
   'tags': book.tags,
   'readingState': book.readingState.kgqlValue,
   'rank': book.rank,
-  'totalChapters': book.totalChapters,
-  'currentChapter': book.currentChapter,
   'wordCount': book.wordCount,
   'updatedAt': book.updatedAt.toUtc().toIso8601String(),
   'updatedLabel': book.updatedLabel,
@@ -247,8 +232,6 @@ NxBook _bookFromJson(Map<String, dynamic> json) => NxBook(
   tags: [for (final tag in json['tags'] as List? ?? const []) tag.toString()],
   readingState: BookReadingState.fromKgql(json['readingState']),
   rank: (json['rank'] as num?)?.toInt(),
-  totalChapters: (json['totalChapters'] as num?)?.toInt(),
-  currentChapter: (json['currentChapter'] as num?)?.toInt(),
   wordCount: (json['wordCount'] as num?)?.toInt() ?? 0,
   updatedAt:
       DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??

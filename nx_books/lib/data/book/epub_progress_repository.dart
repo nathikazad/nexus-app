@@ -5,7 +5,20 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const epubProgressAttribute = 'epub_reading_position';
+const epubProgressAttribute = 'book_file';
+const epubProgressKey = 'reading_position';
+
+Map<String, dynamic> bookFileWithPosition(
+  Map<String, dynamic> file,
+  Map<String, dynamic> position,
+) {
+  if (file['sha256'] != position['sha256'] || file['link'] is! String) {
+    throw StateError(
+      'The attached book changed; refusing to overwrite its metadata',
+    );
+  }
+  return {...file, epubProgressKey: position};
+}
 
 abstract interface class EpubProgressRemote {
   Future<Map<String, dynamic>?> load(int bookId);
@@ -16,8 +29,7 @@ class KgqlEpubProgressRemote implements EpubProgressRemote {
   KgqlEpubProgressRemote(this.client);
   final GraphQLClient client;
 
-  @override
-  Future<Map<String, dynamic>?> load(int bookId) async {
+  Future<Map<String, dynamic>> _loadFile(int bookId) async {
     final model = await fetchKgqlModelById(
       client,
       modelTypeName: 'Book',
@@ -26,17 +38,25 @@ class KgqlEpubProgressRemote implements EpubProgressRemote {
     );
     if (model == null) throw StateError('Book no longer exists');
     final value = model.attributes?[epubProgressAttribute];
+    if (value is! Map) throw StateError('Book has no attached file');
+    return Map<String, dynamic>.from(value);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> load(int bookId) async {
+    final value = (await _loadFile(bookId))[epubProgressKey];
     return value is Map ? Map<String, dynamic>.from(value) : null;
   }
 
   @override
   Future<void> save(int bookId, Map<String, dynamic> value) async {
+    final file = bookFileWithPosition(await _loadFile(bookId), value);
     await setKgqlModel(
       client,
       SetModelRequest(
         id: bookId,
         attributes: [
-          SetModelAttribute(key: epubProgressAttribute, value: value),
+          SetModelAttribute(key: epubProgressAttribute, value: file),
         ],
       ),
       auditSourceKind: 'nx_books_epub_progress',

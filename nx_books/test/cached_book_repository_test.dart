@@ -135,8 +135,6 @@ class _Remote implements BookRepository {
       tags: ['Topic'],
       readingState: BookReadingState.reading,
       rank: 0,
-      totalChapters: 3,
-      currentChapter: 1,
       wordCount: 10,
       updatedAt: DateTime.utc(2026),
       updatedLabel: '',

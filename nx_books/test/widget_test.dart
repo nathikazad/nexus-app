@@ -80,40 +80,6 @@ void main() {
     );
   });
 
-  test('book progress percent requires current and total chapters', () {
-    expect(
-      _book(
-        1,
-        'Progress',
-        BookReadingState.reading,
-        rank: 0,
-        totalChapters: 20,
-        currentChapter: 5,
-      ).progressPercent,
-      25,
-    );
-    expect(
-      _book(
-        2,
-        'Missing current',
-        BookReadingState.reading,
-        rank: 0,
-        totalChapters: 20,
-      ).progressPercent,
-      isNull,
-    );
-    expect(
-      _book(
-        3,
-        'Missing total',
-        BookReadingState.reading,
-        rank: 0,
-        currentChapter: 5,
-      ).progressPercent,
-      isNull,
-    );
-  });
-
   testWidgets('desktop bookshelf shows all three state lanes side by side', (
     tester,
   ) async {
@@ -132,8 +98,6 @@ void main() {
         author: 'Example Author',
         link: 'https://www.amazon.com/example/dp/1234567890',
         tags: const ['startup', 'strategy'],
-        totalChapters: 20,
-        currentChapter: 5,
       ),
       _book(3, 'Queued book', BookReadingState.toRead, rank: 0),
       _book(4, 'Finished book', BookReadingState.read, rank: 0),
@@ -150,7 +114,8 @@ void main() {
     expect(find.text('startup'), findsWidgets);
     expect(find.text('strategy'), findsWidgets);
     expect(find.text('Example Author'), findsWidgets);
-    expect(find.text('25%'), findsWidgets);
+    expect(find.text('25%'), findsNothing);
+    expect(find.text('Total chapters'), findsNothing);
     final settingsButton = find.byKey(
       const ValueKey<String>('books-settings-button'),
     );
@@ -675,48 +640,6 @@ void main() {
     await tester.pump();
   });
 
-  test('updating chapter progress clamps and clears values', () async {
-    final repo = _FakeBookRepository([
-      _book(
-        1,
-        'One',
-        BookReadingState.reading,
-        rank: 0,
-        totalChapters: 12,
-        currentChapter: 10,
-      ),
-    ]);
-    final container = ProviderContainer(
-      overrides: [bookRepositoryProvider.overrideWithValue(repo)],
-    );
-    addTearDown(container.dispose);
-
-    await container.read(booksProvider.future);
-    await container
-        .read(bookMutationControllerProvider)
-        .updateChapterProgress(
-          repo.rows.first,
-          totalChapters: 8,
-          currentChapter: 10,
-        );
-
-    var row = repo.rows.single;
-    expect(row.totalChapters, 8);
-    expect(row.currentChapter, 8);
-
-    await container
-        .read(bookMutationControllerProvider)
-        .updateChapterProgress(
-          row,
-          totalChapters: null,
-          currentChapter: row.currentChapter,
-        );
-
-    row = repo.rows.single;
-    expect(row.totalChapters, isNull);
-    expect(row.currentChapter, isNull);
-  });
-
   test('deleting a book removes it and clears selection', () async {
     final repo = _FakeBookRepository([
       _book(1, 'One', BookReadingState.reading, rank: 0),
@@ -801,8 +724,6 @@ NxBook _book(
   BookReadingState state, {
   required int? rank,
   List<String> tags = const [],
-  int? totalChapters,
-  int? currentChapter,
   String author = '',
   String link = '',
   String bookLink = '',
@@ -818,8 +739,6 @@ NxBook _book(
     tags: tags,
     readingState: state,
     rank: rank,
-    totalChapters: totalChapters,
-    currentChapter: currentChapter,
     wordCount: id * 100,
     updatedAt: now,
     updatedLabel: '${id}m ago',
@@ -895,20 +814,5 @@ class _FakeBookRepository implements BookRepository {
   }) async {
     final index = rows.indexWhere((book) => book.id == id);
     rows[index] = rows[index].copyWith(tags: tags);
-  }
-
-  @override
-  Future<void> updateBookChapterProgress({
-    required int id,
-    required int? totalChapters,
-    required int? currentChapter,
-  }) async {
-    final index = rows.indexWhere((book) => book.id == id);
-    rows[index] = rows[index].copyWith(
-      totalChapters: totalChapters,
-      clearTotalChapters: totalChapters == null,
-      currentChapter: currentChapter,
-      clearCurrentChapter: currentChapter == null,
-    );
   }
 }

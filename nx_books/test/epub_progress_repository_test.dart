@@ -29,6 +29,28 @@ Map<String, dynamic> position(int n) => {
 };
 
 void main() {
+  test('nested progress preserves every attachment metadata field', () {
+    final file = {
+      'link': '/books/book.epub',
+      'sha256': 'abc',
+      'size': 123,
+      'custom': {'keep': true},
+      'reading_position': {'old': true},
+    };
+    final progress = {...position(2), 'sha256': 'abc'};
+    final updated = bookFileWithPosition(file, progress);
+    expect(updated['reading_position'], progress);
+    expect(
+      {...updated}..remove('reading_position'),
+      {...file}..remove('reading_position'),
+    );
+    expect(file['reading_position'], {'old': true});
+    expect(
+      () => bookFileWithPosition(file, {...progress, 'sha256': 'different'}),
+      throwsStateError,
+    );
+    expect(epubProgressAttribute, 'book_file');
+  });
   setUp(() => SharedPreferences.setMockInitialValues({}));
   test('offline progress survives reopening and syncs when online', () async {
     final remote = Remote()..offline = true;
