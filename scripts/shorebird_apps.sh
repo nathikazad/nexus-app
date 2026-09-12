@@ -37,6 +37,7 @@ mobile_root="$(cd "$script_dir/.." && pwd)"
 
 apps=(
   nx_books
+  nx_hypnosis
   nx_cards
   nx_cooking
   nx_expense
@@ -51,6 +52,7 @@ apps=(
 display_name_for() {
   case "$1" in
     nx_books) printf 'Nexus Books' ;;
+    nx_hypnosis) printf 'NX Hypnosis' ;;
     nx_cards) printf 'Nexus Cards' ;;
     nx_cooking) printf 'Nexus Cooking' ;;
     nx_expense) printf 'Nexus Expense' ;;

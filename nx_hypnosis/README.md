@@ -57,3 +57,11 @@ flutter build macos --debug
 flutter build apk --debug
 flutter build ios --simulator --debug
 ```
+
+## iPhone releases
+
+Shorebird app `63b1569e-58ac-47a7-86af-fcc92ff4cf72` is initialized.
+Create a development-signed base with
+`scripts/shorebird_apps.sh release nx_hypnosis --export-method development --flutter-version 3.44.4`.
+Install the exported application with Xcode device tools. Subsequent compatible
+Dart-only changes can use `scripts/shorebird_apps.sh patch nx_hypnosis`.
