@@ -35,6 +35,10 @@ class EpubController {
   void jumpTo({required int index, double alignment = 0}) =>
       _epubViewState?._jumpTo(index, alignment: alignment);
 
+  /// Navigate a retained paginated reader without reloading its document.
+  void jumpToLocation(EpubLocation location) =>
+      _epubViewState?._pagedKey.currentState?.jumpToLocation(location);
+
   Future<void>? scrollTo({
     required int index,
     Duration duration = const Duration(milliseconds: 250),

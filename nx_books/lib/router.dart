@@ -5,6 +5,9 @@ import 'package:nx_books/features/auth/books_login_screen.dart';
 import 'package:nx_books/features/books/books_shell.dart';
 import 'package:nx_books/features/books/notes/book_notes_page.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_documents/nx_documents.dart';
+import 'companion/reading_route.dart';
+import 'epub/epub_route_page.dart';
 
 class BooksInitializingScreen extends StatelessWidget {
   const BooksInitializingScreen({super.key});
@@ -59,8 +62,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/books',
         builder: (context, state) => const BooksRootShell(),
       ),
-      GoRoute(
+      ReadingRoute(
         path: '/books/:bookId/notes',
+        readingIdentity: (state) => _readingIdentity(state, 'bookId', 'Book'),
         builder: (context, state) {
           final bookId = int.tryParse(state.pathParameters['bookId'] ?? '');
           if (bookId == null) return const BooksRootShell();
@@ -75,8 +79,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           return BookDetailPage(bookId: bookId);
         },
       ),
-      GoRoute(
+      ReadingRoute(
         path: '/documents/:documentId/notes',
+        readingIdentity: (state) =>
+            _readingIdentity(state, 'documentId', 'Document'),
         builder: (context, state) {
           final documentId = int.tryParse(
             state.pathParameters['documentId'] ?? '',
@@ -85,9 +91,47 @@ final routerProvider = Provider<GoRouter>((ref) {
           return DocumentNotesPage(documentId: documentId);
         },
       ),
+      ReadingRoute(
+        path: '/books/:bookId/reader',
+        isEpub: true,
+        readingIdentity: (state) => _epubRequest(state) == null
+            ? null
+            : _readingIdentity(state, 'bookId', 'EpubBook'),
+        builder: (context, state) {
+          final request = _epubRequest(state);
+          if (request == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Book reader')),
+              body: const Center(
+                child: Text('Open this EPUB from its book summary.'),
+              ),
+            );
+          }
+          // The stable reader host renders this route while retaining its
+          // renderer across pops. The route remains the source of visibility.
+          return const SizedBox.expand();
+        },
+      ),
     ],
   );
 });
+
+DocumentIdentity? _readingIdentity(
+  GoRouterState state,
+  String parameter,
+  String modelType,
+) {
+  final id = int.tryParse(state.pathParameters[parameter] ?? '');
+  return id == null ? null : DocumentIdentity(id: id, modelType: modelType);
+}
+
+EpubRouteRequest? _epubRequest(GoRouterState state) {
+  final request = state.extra;
+  return request is EpubRouteRequest &&
+          request.book.id.toString() == state.pathParameters['bookId']
+      ? request
+      : null;
+}
 
 String _routeDestination(GoRouterState state) {
   final path = state.uri.path;

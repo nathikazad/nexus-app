@@ -48,3 +48,12 @@ preview, and `apply=true` persists the update.
 Summary regeneration/importers must preserve or regenerate `book_source` when
 replacing heading nodes. Normal node serialization preserves it, but a complete
 document replacement cannot automatically infer equivalent new headings.
+
+`importer/book_summaries.py compile` supports an `epub_sources` catalog in the
+package manifest and a `heading_sources` JSON sidecar on each chapter. Supply
+the original file with `--epub`; it is not copied. The compiler matches every
+heading by ordinal, rendered text, and level, attaches references before
+hashing, and validates using `test/importer_source_validation_test.dart` (the
+same resolver used by the app). Unlinked headings require explicit reasons.
+Import compares the source hash against the live Book's `book_file.sha256`.
+See `importer/README.md` for the package contract.

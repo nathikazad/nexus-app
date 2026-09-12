@@ -111,3 +111,39 @@ individual book import.
 ```bash
 python3 -m unittest discover -s importer/tests -v
 ```
+# EPUB heading source metadata
+
+Linked EPUB packages add `"epub_sources": "sources/epub-anchors.json"` at the
+top level of `book.json`, and `"heading_sources": "chapters/ch01.sources.json"`
+to each chapter. Compile with `--epub /absolute/path/to/original.epub`. The source
+file is read, not copied; ordinary summary packages remain supported.
+
+Catalog shape (produced by the book-summary skill's extractor):
+
+```json
+{"schema_version":1,"format":"epub","sha256":"<file SHA-256>","anchors":{
+  "src-example":{"resource":"OPS/ch1.xhtml","fragment":"intro","quote":{"exact":"Source heading"}}
+}}
+```
+
+Heading sidecar shape:
+
+```json
+{"schema_version":1,"headings":[
+  {"ordinal":1,"level":2,"text":"Summary heading","source_id":"src-example"},
+  {"ordinal":2,"level":2,"text":"Synthesis","unlinked_reason":"No single source passage"}
+]}
+```
+
+Cover every detailed heading in document order, excluding the generated H1.
+Text means rendered plain text, not Markdown syntax. The compiler rejects stale
+heading mappings, unknown IDs, incorrect file hashes and unsafe paths, then
+attaches `data.book_source` before hashing. It invokes a local Flutter batch
+test to verify AppFlowy round-trips and resolve each source with the actual
+reader. The compiled `source_coverage` reports linked and explicitly unlinked
+headings. Import checks the uploaded `book_file.sha256` and reference ownership;
+it never adds EPUB metadata to Book overview headings or short summaries.
+
+Run unit tests with `python3 -m unittest discover -s importer/tests -t .`.
+Set `NX_SOURCE_INTEGRATION=1` to include real Flutter conversion/resolution tests.
+Those tests use a temporary synthetic EPUB and make no production requests.

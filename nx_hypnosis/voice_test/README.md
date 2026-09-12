@@ -48,3 +48,32 @@ point; audio quality has not been validated until a live sample is generated and
 References: [speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/convert),
 [voice settings](https://elevenlabs.io/docs/api-reference/voices/settings/get),
 [default voices](https://elevenlabs.io/docs/help-center/product/voices/my-voices/what-are-default-voices).
+
+## Slower copy with longer pauses
+
+Keep the exact existing narration and lower its tempo without changing pitch:
+
+```sh
+python3 slow_recording.py output/hypnotizer_abundance_creator.mp3 \
+  output/hypnotizer_abundance_creator_075x_pauses.mp3 --tempo 0.75 --minimum-pause 2.5
+```
+
+Requires FFmpeg. This extends existing quiet gaps of at least 0.7 seconds to
+at least 2.5 seconds after slowing, and adds opening/closing silence. It does
+not regenerate the voice or spend API credits. A JSON sidecar records the
+render settings and duration. Use a new output filename for each variation.
+
+## Headphone refinement
+
+`refine_recording.py` starts from the original narration, applies a gentle 75 Hz
+high-pass and a −4.5 dB bass shelf at 180 Hz, and preserves the 0.75 tempo.
+Only long existing quiet gaps (at least 1.95 seconds after slowing) are extended
+to four seconds. Insertions occur in the middle of those gaps with 80 ms cosine
+fades to and from zero, avoiding the earlier hard splice at silence endings.
+The script verifies zero-valued join endpoints and unclipped PCM, and writes a
+settings sidecar. Preview on headphones before replacing production audio.
+
+```sh
+python3 refine_recording.py output/hypnotizer_abundance_creator.mp3 \
+  output/hypnotizer_abundance_creator_075x_soft_pauses_light_bass.mp3
+```

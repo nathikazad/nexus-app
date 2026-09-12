@@ -22,6 +22,7 @@ if __package__ in (None, ""):
         ImporterError,
         SshGraphQLKgqlClient,
     )
+    from importer.heading_sources import SourceError
 else:
     from .book_importer import (
         BookImporter,
@@ -34,6 +35,7 @@ else:
         ImporterError,
         SshGraphQLKgqlClient,
     )
+    from .heading_sources import SourceError
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -50,6 +52,7 @@ def _parser() -> argparse.ArgumentParser:
         "--nexus-mobile", type=Path, default=DEFAULT_NEXUS_MOBILE
     )
     compile_parser.add_argument("--flutter", type=Path)
+    compile_parser.add_argument("--epub", type=Path, help="Original EPUB for validating heading sources; not copied into the package.")
 
     import_parser = subcommands.add_parser(
         "import",
@@ -79,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = compiler.compile(
             args.package_directory,
             args.output_directory,
+            epub_path=args.epub.expanduser().resolve() if args.epub else None,
         )
         print(manifest)
         return 0
@@ -108,6 +112,6 @@ def main(argv: list[str] | None = None) -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except ImporterError as error:
+    except (ImporterError, SourceError) as error:
         print(f"error: {error}", file=sys.stderr)
         raise SystemExit(1)

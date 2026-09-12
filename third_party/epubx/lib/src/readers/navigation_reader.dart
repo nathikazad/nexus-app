@@ -34,7 +34,14 @@ class NavigationReader {
   static Future<EpubNavigation> readNavigation(
       Archive epubArchive, String contentDirectoryPath, EpubPackage package) async {
     var result = EpubNavigation();
-    if (package.Version == EpubVersion.Epub2) {
+    final navItem = package.Manifest!.Items!.firstWhereOrNull(
+        (item) => (item.Properties ?? '').split(RegExp(r'\s+')).contains('nav'));
+    // Some EPUB 3 conversions retain an NCX instead of a navigation document.
+    // Prefer the EPUB 3 nav when present; otherwise honor the declared NCX.
+    final ncxId = package.Spine?.TableOfContents;
+    final hasNcx = package.Manifest!.Items!.any((item) =>
+        item.Id == ncxId && item.MediaType == 'application/x-dtbncx+xml');
+    if (package.Version == EpubVersion.Epub2 || (navItem == null && hasNcx)) {
       var tocId = package.Spine!.TableOfContents;
       if (tocId == null || tocId.isEmpty) {
         throw Exception('EPUB parsing error: TOC ID is empty.');
@@ -120,9 +127,7 @@ class NavigationReader {
     } else {
       //Version 3
 
-      var tocManifestItem = package.Manifest!.Items!
-          .cast<EpubManifestItem?>()
-          .firstWhere((element) => element!.Properties == 'nav', orElse: () => null);
+      var tocManifestItem = navItem;
       if (tocManifestItem == null) {
         throw Exception('EPUB parsing error: TOC item, not found in EPUB manifest.');
       }

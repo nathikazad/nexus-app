@@ -19,6 +19,11 @@ import urllib.request
 import urllib.error
 import uuid
 
+from .heading_sources import (
+    FlutterSourceValidator, SourceError, attach_sources, blocks,
+    load_catalog, read_package_json, validate_reference,
+)
+
 
 SHORT_MARKER = "<!-- SHORT_SUMMARY -->"
 DETAILED_MARKER = "<!-- DETAILED_SUMMARY -->"
@@ -350,13 +355,16 @@ class FlutterMarkdownConverter:
 
 
 class BookPackageCompiler:
-    def __init__(self, converter: MarkdownConverter) -> None:
+    def __init__(self, converter: MarkdownConverter, source_validator=None) -> None:
         self.converter = converter
+        self.source_validator = source_validator
 
     def compile(
         self,
         package_directory: Path,
         output_directory: Path | None = None,
+        *,
+        epub_path: Path | None = None,
     ) -> Path:
         package_dir = package_directory.expanduser().resolve()
         config_path = package_dir / "book.json"
@@ -367,6 +375,12 @@ class BookPackageCompiler:
         except json.JSONDecodeError as error:
             raise ImporterError(f"Invalid book.json: {error}") from error
         book, chapters = self._validate_config(config)
+        catalog = None
+        if "epub_sources" in config:
+            catalog = load_catalog(package_dir, config["epub_sources"], epub_path)
+            book["source_sha256"] = catalog["sha256"]
+        if catalog is None and any("heading_sources" in c for c in chapters):
+            raise SourceError("Heading mappings require epub_sources in book.json")
         build_dir = (
             output_directory.expanduser().resolve()
             if output_directory
@@ -398,12 +412,23 @@ class BookPackageCompiler:
                     "short_summary": short,
                     "detailed_markdown": detailed_path,
                     "short_markdown": short_path,
+                    "source_catalog": catalog,
+                    "source_book_id": book["kgql_id"],
+                    "heading_mapping": read_package_json(package_dir, chapter.get("heading_sources"))
+                        if catalog is not None else None,
                 }
             )
         self.converter.convert(markdown_dir)
         compiled_chapters = [
             self._compile_chapter(item) for item in prepared
         ]
+        if catalog is not None:
+            validator = self.source_validator
+            if validator is None:
+                if not isinstance(self.converter, FlutterMarkdownConverter):
+                    raise SourceError("Linked compilation requires a source validator")
+                validator = FlutterSourceValidator(self.converter.nexus_mobile, self.converter.flutter)
+            validator.validate(epub_path, compiled_chapters)
         manifest = {
             "schema_version": MANIFEST_SCHEMA_VERSION,
             "book": book,
@@ -454,6 +479,8 @@ class BookPackageCompiler:
                 raise ImporterError(f"Invalid chapter entry: {raw!r}")
             seen_numbers.add(number)
             chapter = {"number": number, "title": title, "file": file}
+            if "heading_sources" in raw:
+                chapter["heading_sources"] = raw["heading_sources"]
             source_words = raw.get("source_words")
             if source_words is not None:
                 if not isinstance(source_words, int) or source_words <= 0:
@@ -511,6 +538,14 @@ class BookPackageCompiler:
             or short_children[1].get("type") != "paragraph"
         ):
             raise ImporterError(f"{name}: short AppFlowy structure mismatch")
+        coverage = None
+        if chapter.get("source_catalog") is not None:
+            coverage = attach_sources(detailed, chapter["heading_mapping"],
+                                      chapter["source_catalog"], chapter["source_book_id"])
+            # Keep the inspectable AppFlowy artifact consistent with the manifest.
+            detailed_path.with_suffix(".appflowy.json").write_text(
+                json.dumps(detailed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
         stored = copy.deepcopy(detailed)
         stored["document"]["children"] = stored["document"]["children"][1:]
         plain = appflowy_plain_text(stored)
@@ -552,6 +587,7 @@ class BookPackageCompiler:
             "plain_text": plain,
             "description": description_excerpt(plain),
             "publish": disabled_publish_state(stored),
+            **({"source_coverage": coverage} if coverage is not None else {}),
         }
 
 
@@ -772,6 +808,7 @@ _CHAPTER_STRUCT = {
 }
 _BOOK_STRUCT = {
     **_DOCUMENT_STRUCT,
+    "book_file": True,
     "reading_state": True,
     "rank": True,
     "current_chapter": True,
@@ -1088,6 +1125,23 @@ class BookImporter:
             raise ImporterError(
                 f"Book {book_id} name changed: {book.get('name')!r}"
             )
+        expected_hash = manifest["book"].get("source_sha256")
+        for chapter in manifest["chapters"]:
+            for block in blocks(chapter["kgql_json_document"]["document"]):
+                reference = block.get("data", {}).get("book_source")
+                if reference is None:
+                    continue
+                try:
+                    validate_reference(reference)
+                except SourceError as error:
+                    raise ImporterError(str(error)) from error
+                if (block.get("type") != "heading" or reference["book_id"] != book_id
+                        or reference["sha256"] != expected_hash):
+                    raise ImporterError("Chapter source identity/hash/type mismatch")
+        if expected_hash is not None:
+            attachment = book.get("book_file")
+            if not isinstance(attachment, Mapping) or attachment.get("sha256") != expected_hash:
+                raise ImporterError("Uploaded Book EPUB hash differs from the summary source; upload the matching EPUB first")
         return book
 
     def _exact_chapters(self, name: str) -> list[dict[str, Any]]:
@@ -1246,6 +1300,7 @@ class BookImporter:
             )
         updated = self._get_book(manifest)
         preserved_fields = (
+            "book_file",
             "name",
             "tags",
             "reading_state",

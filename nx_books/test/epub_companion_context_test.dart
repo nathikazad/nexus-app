@@ -1,32 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_books/companion/epub_companion_context.dart';
 import 'package:epub_view/src/ui/paged_content.dart';
 
 void main() {
-  test('reader shows companion independently of its underlying route', () {
-    for (final path in ['/books', '/books/1/details', '/books/1/notes']) {
-      expect(
-        shouldShowReadingCompanion(
-          Uri.parse(path),
-          const EpubCompanionContext(1, ''),
-        ),
-        isTrue,
-      );
-    }
-    expect(shouldShowReadingCompanion(Uri.parse('/books'), null), isFalse);
-  });
-  test('AI is limited to summary routes, not library, settings or details', () {
-    for (final path in [
-      '/books',
-      '/books/1/details',
-      '/login',
-      '/initializing',
-    ]) {
-      expect(isReadingSummaryPath(Uri.parse(path)), isFalse);
-    }
-    expect(isReadingSummaryPath(Uri.parse('/books/1/notes')), isTrue);
-    expect(isReadingSummaryPath(Uri.parse('/documents/2/notes')), isTrue);
-  });
   test('EPUB window follows position and stays bounded', () {
     final text = List.generate(2000, (i) => 'word$i').join(' ');
     final window = epubReadingWindow(text, text.indexOf('word500'));

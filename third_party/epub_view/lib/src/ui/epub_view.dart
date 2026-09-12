@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:epub_view/src/data/link_target.dart';
+import 'package:epub_view/src/data/image_target.dart';
 import 'package:epub_view/src/data/epub_cfi_reader.dart';
 import 'package:epub_view/src/data/epub_parser.dart';
 import 'package:epub_view/src/data/models/chapter.dart';
@@ -338,10 +339,16 @@ class _EpubViewState extends State<EpubView> {
               tagsToExtend: {"img"},
               builder: (imageContext) {
                 final source = imageContext.attributes['src'];
-                if (source == null) return const SizedBox.shrink();
-                final url = Uri.decodeFull(source).replaceAll('../', '');
-                final bytes = document.Content?.Images?[url]?.Content;
-                if (bytes == null) return const SizedBox.shrink();
+                final filename = chapters[paragraphs[index].chapterIndex].ContentFileName;
+                final images = document.Content?.Images;
+                final key = source == null || filename == null || images == null
+                    ? null : resolveEpubImageKey(source, filename, images.keys);
+                final bytes = key == null ? null : images?[key]?.Content;
+                if (bytes == null) {
+                  final alt = imageContext.attributes['alt']?.trim();
+                  return Text(alt == null || alt.isEmpty
+                      ? 'Image unavailable' : 'Image unavailable: $alt');
+                }
                 final content =
                     bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
                 final provider = ResizeImage.resizeIfNeeded(

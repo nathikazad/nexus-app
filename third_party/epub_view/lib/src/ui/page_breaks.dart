@@ -21,16 +21,19 @@ List<double> pageBreaks(
     while (changed) {
       changed = false;
       for (final span in spans) {
+        // A malformed EPUB can expose a whole table, quote, or nested HTML
+        // placeholder as one atomic render span. There is no legal break that
+        // keeps an item taller than the viewport intact, so let the viewport
+        // clip it into contiguous slices. The next page resumes at the exact
+        // vertical offset, preserving all content instead of failing the book.
+        if (span.bottom - span.top > pageHeight + 0.01) continue;
         if (span.top < end - 0.01 && span.bottom > end + 0.01) {
           end = span.top;
           changed = true;
         }
       }
     }
-    if (end <= start + 0.01) {
-      throw StateError(
-          'An item is taller than the page. Reduce the text size or enlarge the window.');
-    }
+    if (end <= start + 0.01) end = math.min(start + pageHeight, contentHeight);
     breaks.add(end);
   }
   if (breaks.length == 1) breaks.add(0);

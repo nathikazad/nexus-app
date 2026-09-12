@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
@@ -12,7 +13,6 @@ import '../data/book/kgql_reading_history.dart';
 import 'reading_companion_conversation.dart';
 import '../data/providers.dart';
 import '../data/offline/reading_history_store.dart';
-import 'epub_companion_context.dart';
 
 class ReadingSelectionRequest {
   const ReadingSelectionRequest(this.identity, this.text);
@@ -28,9 +28,19 @@ final readingSelectionProvider =
     });
 
 class ReadingCompanion extends ConsumerStatefulWidget {
-  const ReadingCompanion({required this.child, this.identity, super.key});
+  const ReadingCompanion({
+    required this.child,
+    this.identity,
+    this.visible = true,
+    this.passage,
+    this.sessionKey,
+    super.key,
+  });
   final Widget child;
   final DocumentIdentity? identity;
+  final bool visible;
+  final ValueListenable<String>? passage;
+  final Object? sessionKey;
   @override
   ConsumerState<ReadingCompanion> createState() => _ReadingCompanionState();
 }
@@ -40,13 +50,12 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   final _input = TextEditingController();
   final _layoutButtonLink = LayerLink();
   late final ValueNotifier<ReadingSelectionRequest?> _selectionRequests;
-  late final ValueNotifier<EpubCompanionContext?> _epubContext;
-  String get _questionContext => _epubContext.value?.text ?? _selection;
+  String get _questionContext => widget.passage?.value ?? _selection;
 
   void _epubContextChanged() {
     if (mounted) {
       setState(() {
-        if (_epubContext.value != null) _selection = '';
+        if (widget.passage != null) _selection = '';
       });
     }
   }
@@ -85,8 +94,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _epubContext = ref.read(epubCompanionContextProvider)
-      ..addListener(_epubContextChanged);
+    widget.passage?.addListener(_epubContextChanged);
     _selectionRequests = ref.read(readingSelectionProvider)
       ..addListener(_selectionRequested);
   }
@@ -107,7 +115,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     _historySaveTimer?.cancel();
     _saveHistory();
     WidgetsBinding.instance.removeObserver(this);
-    _epubContext.removeListener(_epubContextChanged);
+    widget.passage?.removeListener(_epubContextChanged);
     _selectionRequests.removeListener(_selectionRequested);
     _controller?.dispose();
     _input.dispose();
@@ -117,7 +125,13 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   @override
   void didUpdateWidget(covariant ReadingCompanion oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.identity != widget.identity) {
+    if (oldWidget.passage != widget.passage) {
+      oldWidget.passage?.removeListener(_epubContextChanged);
+      widget.passage?.addListener(_epubContextChanged);
+    }
+    if (oldWidget.identity != widget.identity ||
+        oldWidget.passage != widget.passage ||
+        oldWidget.sessionKey != widget.sessionKey) {
       _historySaveTimer?.cancel();
       _saveHistory();
       _controller?.removeListener(_changed);
@@ -125,6 +139,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
       _controller = null;
       _loading = false;
       _open = false;
+      _layoutPickerOpen = false;
       _confirmClear = false;
       _title = '';
       _selection = '';
@@ -137,7 +152,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
       _open = true;
       final selected = _selectionRequests.value;
       _selection =
-          _epubContext.value == null &&
+          widget.passage == null &&
               selected != null &&
               selected.identity == widget.identity
           ? selected.text
@@ -203,6 +218,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   }
 
   void _selectionRequested() {
+    if (!widget.visible || widget.passage != null) return;
     final selected = _selectionRequests.value;
     if (selected == null || selected.identity != widget.identity) return;
     unawaited(_show());
@@ -286,7 +302,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
   }
 
   Future<void> _send() async {
-    if (_epubContext.value?.text == '') return;
+    if (widget.passage?.value == '') return;
     final original = _input.text;
     final sent =
         await _controller?.send(original, selection: _questionContext) ?? false;
@@ -334,18 +350,20 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
         return Stack(
           children: [
             widget.child,
-            if (!_open)
+            if (widget.visible && !_open)
               Positioned(
                 right: 16,
                 bottom: keyboard + 16 + MediaQuery.paddingOf(context).bottom,
                 child: FloatingActionButton.small(
-                  heroTag: 'reading-companion',
+                  // This is a persistent overlay, not a route-owned hero.
+                  // Route flights can otherwise leave an invisible placeholder.
+                  heroTag: null,
                   tooltip: 'Reading companion',
-                  onPressed: _epubContext.value?.text == '' ? null : _show,
+                  onPressed: widget.passage?.value == '' ? null : _show,
                   child: const Icon(Icons.auto_awesome_outlined),
                 ),
               ),
-            if (_open && height > 0)
+            if (widget.visible && _open && height > 0)
               Positioned(
                 right: docked ? 0 : 12,
                 bottom: keyboard + (docked ? 0 : 12),
@@ -441,7 +459,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              _epubContext.value != null
+                              widget.passage != null
                                   ? 'Current EPUB passage · updated as you turn pages'
                                   : _selection.isNotEmpty
                                   ? 'Selected passage · ${_title.isEmpty ? widget.identity!.modelType : _title}'

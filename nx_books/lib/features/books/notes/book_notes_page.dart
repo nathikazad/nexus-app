@@ -15,7 +15,8 @@ import 'package:nx_books/epub/epub_reader_page.dart';
 import 'package:nx_books/epub/book_source.dart';
 import 'package:nx_books/epub/chapter_book_source.dart';
 import 'package:nx_books/epub/epub_source_resolver.dart';
-import 'package:nx_books/companion/epub_companion_context.dart';
+import 'package:nx_books/epub/epub_route_page.dart';
+import 'package:nx_books/epub/retained_epub.dart';
 import 'package:nx_books/data/offline/reading_position_store.dart';
 
 final bookNotesRepositoryProvider = Provider<DocumentContentRepository>((ref) {
@@ -186,54 +187,34 @@ Future<void> _openBookFile(
   try {
     final cache = ref.read(bookFileCacheProvider);
     if (cache == null) throw StateError('Book files are unavailable here');
-    final path = await cache.openPath(book);
+    final warm = ref.read(activeEpubCacheProvider).forBook(book);
+    final path = warm?.path ?? await cache.openPath(book);
     if (path.toLowerCase().endsWith('.epub')) {
       final progress = ref.read(epubProgressRepositoryProvider);
       // A source link already supplies its destination. Font preferences are
       // supplied separately by the app, so no progress lookup is needed here.
-      final saved = reference == null ? await progress.load(book.id) : null;
+      final saved = reference == null && warm == null
+          ? await progress.load(book.id)
+          : null;
       final matching = saved?['sha256'] == book.bookFileHash ? saved : null;
-      final sourceBook = reference == null ? null : await loadLocalEpub(path);
-      final sourceLocation = sourceBook == null
+      final sourceBook = warm?.loadedBook ?? await loadLocalEpub(path);
+      final sourceLocation = reference == null
           ? null
-          : resolveEpubSource(sourceBook, reference!);
+          : resolveEpubSource(sourceBook, reference);
       dismissLoading();
       if (context.mounted) {
-        final excerpt = ref.read(epubCompanionContextProvider);
-        excerpt.value = EpubCompanionContext(book.id, '');
-        try {
-          await Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => Consumer(
-                builder: (context, ref, _) => EpubReaderPage(
-                  textScaleFactor: ref.watch(booksTextScaleProvider),
-                  onReadingContextChanged: (text) =>
-                      excerpt.value = EpubCompanionContext(
-                        book.id,
-                        'EPUB: ${book.title}\nCurrent reading passage (with nearby context):\n$text',
-                      ),
-                  path: path,
-                  title: book.title,
-                  savedPosition: reference == null
-                      ? matching
-                      : {'location': sourceLocation!.toJson()},
-                  loadBook: sourceBook == null
-                      ? loadLocalEpub
-                      : (_) async => sourceBook,
-                  onPositionChanged: reference != null
-                      ? null
-                      : (position) => progress.save(book.id, {
-                          ...position,
-                          'sha256': book.bookFileHash,
-                          'saved_at': DateTime.now().toUtc().toIso8601String(),
-                        }),
-                ),
-              ),
-            ),
-          );
-        } finally {
-          excerpt.value = null;
-        }
+        await context.push<void>(
+          '/books/${book.id}/reader',
+          extra: EpubRouteRequest(
+            book: book,
+            path: path,
+            savedPosition: reference == null
+                ? matching
+                : {'location': sourceLocation!.toJson()},
+            loadedBook: sourceBook,
+            saveProgress: reference == null,
+          ),
+        );
       }
       return;
     }

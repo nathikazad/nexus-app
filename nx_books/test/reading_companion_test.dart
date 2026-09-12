@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_books/companion/reading_companion.dart';
-import 'package:nx_books/companion/epub_companion_context.dart';
 import 'package:nx_books/companion/reading_companion_controller.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:nx_voice/nx_voice.dart';
@@ -34,15 +33,16 @@ void main() {
   ) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
-    final context = container.read(epubCompanionContextProvider);
-    context.value = const EpubCompanionContext(7, 'First EPUB page');
+    final passage = ValueNotifier<String>('First EPUB page');
+    addTearDown(passage.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
+        child: MaterialApp(
           home: ReadingCompanion(
-            identity: DocumentIdentity(id: 7, modelType: 'Book'),
-            child: Scaffold(body: Text('Reader')),
+            identity: const DocumentIdentity(id: 7, modelType: 'EpubBook'),
+            passage: passage,
+            child: const Scaffold(body: Text('Reader')),
           ),
         ),
       ),
@@ -56,7 +56,7 @@ void main() {
           .selection,
       'First EPUB page',
     );
-    context.value = const EpubCompanionContext(7, 'Second EPUB page');
+    passage.value = 'Second EPUB page';
     await tester.pumpAndSettle();
     expect(
       tester
@@ -64,9 +64,6 @@ void main() {
           .selection,
       'Second EPUB page',
     );
-    context.value = null;
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Current EPUB passage'), findsNothing);
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpWidget(const SizedBox());
   });

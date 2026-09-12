@@ -27,6 +27,9 @@ class EpubReaderPage extends StatefulWidget {
     this.onPositionChanged,
     this.onReadingContextChanged,
     this.loadBook = loadLocalEpub,
+    this.navigationRequest,
+    this.active = true,
+    this.onBack,
     super.key,
   });
   final String path;
@@ -37,6 +40,9 @@ class EpubReaderPage extends StatefulWidget {
   final Future<void> Function(Map<String, dynamic>)? onPositionChanged;
   final ValueChanged<String>? onReadingContextChanged;
   final Future<EpubBook> Function(String path) loadBook;
+  final Object? navigationRequest;
+  final bool active;
+  final VoidCallback? onBack;
 
   @override
   State<EpubReaderPage> createState() => _EpubReaderPageState();
@@ -48,6 +54,24 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
   bool _ready = false;
   String? _lastPosition;
   bool _saveErrorShown = false;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void didUpdateWidget(covariant EpubReaderPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.navigationRequest != oldWidget.navigationRequest ||
+        (widget.active && !oldWidget.active)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !widget.active) return;
+        final target = EpubLocation.fromJson(widget.savedPosition?['location']);
+        if (widget.navigationRequest != oldWidget.navigationRequest &&
+            target != null) {
+          _controller.jumpToLocation(target);
+        }
+        _savePosition();
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -65,6 +89,7 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
   }
 
   void _savePosition() {
+    if (!widget.active) return;
     widget.onReadingContextChanged?.call(_controller.readingContext());
     final location = _controller.locationListenable.value;
     if (location == null || widget.onPositionChanged == null) return;
@@ -99,7 +124,11 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    key: _scaffoldKey,
     appBar: AppBar(
+      leading: widget.onBack == null
+          ? null
+          : BackButton(onPressed: widget.onBack),
       title: Text(widget.title),
       actions: [
         ValueListenableBuilder<EpubPageInfo?>(
@@ -149,7 +178,7 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
           itemBuilder: (context, index, chapter, count) => ListTile(
             title: Text(chapter.title?.trim() ?? 'Section ${index + 1}'),
             onTap: () {
-              Navigator.of(context).pop();
+              _scaffoldKey.currentState?.closeEndDrawer();
               _controller.jumpTo(index: chapter.startIndex);
             },
           ),

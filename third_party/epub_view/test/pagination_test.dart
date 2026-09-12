@@ -122,11 +122,9 @@ void main() {
     expect(pageBreaks(250, 100, [const PageSpan(80, 170)]), [0, 80, 180, 250]);
   });
 
-  test(
-      'oversize atomic content fails explicitly instead of clipping or looping',
-      () {
-    expect(
-        () => pageBreaks(300, 100, [const PageSpan(0, 200)]), throwsStateError);
+  test('oversize atomic content is covered by contiguous viewport slices', () {
+    expect(pageBreaks(300, 100, [const PageSpan(0, 200)]),
+        [0, 100, 200, 300]);
   });
 
   testWidgets('font and dimension changes reflow around the current text',

@@ -258,13 +258,15 @@ class PagedEpubContentState extends State<PagedEpubContent> {
     return math.max(0, _starts.length - 2);
   }
 
-  void jumpTo(int block) {
+  void jumpTo(int block) => jumpToLocation(EpubLocation(block));
+
+  void jumpToLocation(EpubLocation location) {
     if (!mounted) return;
     _releaseTrackedImages();
-    final index = block.clamp(0, math.max(0, widget.blockCount - 1)).toInt();
+    final index = location.block.clamp(0, math.max(0, widget.blockCount - 1)).toInt();
     if (_chapterFor(index) != _chapter) widget.onChapterChanged?.call();
     setState(() {
-      _anchor = EpubLocation(index);
+      _anchor = EpubLocation(index, location.run, location.character);
       _chapter = _chapterFor(index);
       _breaks = [];
       _runs = [];
