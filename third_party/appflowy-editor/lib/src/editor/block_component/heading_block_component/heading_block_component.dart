@@ -139,7 +139,9 @@ class _HeadingBlockComponentWidgetState
       // make the width of the rich text as small as possible to avoid
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // Trailing actions have a larger touch target than their glyph. Center
+        // the heading and action together instead of aligning their top edges.
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.start,
         textDirection: textDirection,
         children: [

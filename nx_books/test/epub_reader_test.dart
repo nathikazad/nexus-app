@@ -172,11 +172,11 @@ void main() {
     await tester.pumpAndSettle();
     final pageCount = find.byKey(const ValueKey('epub-page-count'));
     expect(
-      tester.getRect(find.byTooltip('Previous page')).right,
+      tester.getRect(find.byTooltip('Previous book page')).right,
       lessThanOrEqualTo(tester.getRect(pageCount).left),
     );
     expect(
-      tester.getRect(find.byTooltip('Next page')).left,
+      tester.getRect(find.byTooltip('Next book page')).left,
       greaterThanOrEqualTo(tester.getRect(pageCount).right),
     );
     expect(
@@ -184,13 +184,71 @@ void main() {
       lessThanOrEqualTo(tester.getRect(find.byType(EpubView)).top),
     );
     expect(
-      tester.getRect(find.byTooltip('Next page')).right,
+      tester.getRect(find.byTooltip('Next book page')).right,
       lessThanOrEqualTo(
         tester.getRect(find.byTooltip('Table of contents')).left,
       ),
     );
     expect(tester.widget<Text>(pageCount).data, isNot(contains('Page')));
+    final chapterPageCount = find.byKey(
+      const ValueKey('epub-chapter-page-count'),
+    );
+    final chapterName = find.byKey(const ValueKey('epub-chapter-name'));
+    expect(
+      tester.getRect(find.byTooltip('Previous chapter page')).left,
+      closeTo(tester.getRect(chapterName).right, 8),
+    );
+    expect(
+      DefaultTextStyle.of(tester.element(chapterPageCount)).style,
+      DefaultTextStyle.of(tester.element(chapterName)).style,
+    );
+    expect(
+      tester.getCenter(chapterPageCount).dx,
+      greaterThan(tester.getCenter(chapterName).dx),
+    );
+    expect(
+      tester.getCenter(chapterPageCount).dy,
+      closeTo(tester.getCenter(chapterName).dy, 1),
+    );
+    // Native image decoding completes outside the test's fake clock.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pumpAndSettle();
+    expect(view.controller.bookPageListenable.value?.pages, 2);
+    expect(tester.widget<Text>(chapterPageCount).data, '1 of 1');
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (w) => w is IconButton && w.tooltip == 'Next chapter page',
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (w) => w is IconButton && w.tooltip == 'Next book page',
+            ),
+          )
+          .onPressed,
+      isNotNull,
+    );
     expect(passage, contains('First heading'));
+    await tester.tap(find.byTooltip('Next book page'));
+    await tester.pumpAndSettle();
+    expect(view.controller.bookPageListenable.value!.page, 2);
+    expect(passage, contains('Second heading'));
+    expect(tester.widget<Text>(chapterPageCount).data, '1 of 1');
+    await tester.tap(find.byTooltip('Previous book page'));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pumpAndSettle();
+    expect(view.controller.bookPageListenable.value!.page, 1);
     expect(
       find.textContaining('First heading', findRichText: true),
       findsWidgets,
@@ -210,6 +268,45 @@ void main() {
     expect(find.text('Open test book'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'real book computes a whole-book total without moving the reader',
+    (tester) async {
+      final book = await tester.runAsync(() => loadLocalEpub(realPath!));
+      final controller = EpubController(document: Future.value(book));
+      final elapsed = Stopwatch()..start();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EpubView(controller: controller, paginated: true),
+          ),
+        ),
+      );
+      for (
+        var i = 0;
+        i < 300 && controller.bookPageListenable.value == null;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(controller.bookPageListenable.value, isNotNull);
+      expect(controller.bookPageListenable.value!.page, 1);
+      expect(
+        controller.bookPageListenable.value!.pages,
+        greaterThan(controller.pageListenable.value!.pages),
+      );
+      debugPrint(
+        'Whole book: ${controller.bookPageListenable.value!.pages} pages, ${elapsed.elapsedMilliseconds}ms test layout',
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+    },
+    skip: realPath == null,
+  );
 
   testWidgets('real book renders and visits every contents entry', (
     tester,

@@ -352,6 +352,7 @@ class _EpubViewState extends State<EpubView> {
                     .add(provider);
                 final page =
                     context.findAncestorStateOfType<PagedEpubContentState>();
+                page?.trackImage(provider);
                 return ConstrainedBox(
                   constraints: BoxConstraints(
                       maxHeight: page == null
@@ -392,6 +393,7 @@ class _EpubViewState extends State<EpubView> {
         },
         onPosition: _pagedPosition,
         onPage: (page) => _controller.pageListenable.value = page,
+        onBookPage: (page) => _controller.bookPageListenable.value = page,
         onChapterChanged: _releaseImages,
         blockBuilder: (context, index) => widget.builders.chapterBuilder(
           context,

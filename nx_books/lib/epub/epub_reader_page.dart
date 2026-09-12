@@ -103,24 +103,26 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
       title: Text(widget.title),
       actions: [
         ValueListenableBuilder<EpubPageInfo?>(
-          valueListenable: _controller.pageListenable,
+          valueListenable: _controller.bookPageListenable,
           builder: (context, page, _) => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                tooltip: 'Previous page',
+                tooltip: 'Previous book page',
                 onPressed: page != null && !page.atStart
                     ? _controller.previousPage
                     : null,
                 icon: const Icon(Icons.chevron_left),
               ),
-              if (page != null)
-                Text(
-                  '${page.page} of ${page.pages}',
+              Tooltip(
+                message: page == null ? 'Calculating book pages' : 'Whole book',
+                child: Text(
+                  page == null ? '…' : '${page.page} of ${page.pages}',
                   key: const ValueKey('epub-page-count'),
                 ),
+              ),
               IconButton(
-                tooltip: 'Next page',
+                tooltip: 'Next book page',
                 onPressed: page != null && !page.atEnd
                     ? _controller.nextPage
                     : null,
@@ -194,13 +196,49 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
     bottomNavigationBar: SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 72, 12),
-        child: EpubViewActualChapter(
-          controller: _controller,
-          loader: const Text('Opening EPUB…'),
-          builder: (value) => Text(
-            value?.chapter?.Title ?? 'Opening EPUB…',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        child: SizedBox(
+          height: 48,
+          child: Row(
+            children: [
+              Flexible(
+                child: EpubViewActualChapter(
+                  controller: _controller,
+                  loader: const Text('Opening EPUB…'),
+                  builder: (value) => Text(
+                    value?.chapter?.Title ?? 'Opening EPUB…',
+                    key: const ValueKey('epub-chapter-name'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              ValueListenableBuilder<EpubPageInfo?>(
+                valueListenable: _controller.pageListenable,
+                builder: (context, page, _) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Previous chapter page',
+                      onPressed: page != null && !page.atStart
+                          ? _controller.previousPage
+                          : null,
+                      icon: const Icon(Icons.chevron_left),
+                    ),
+                    Text(
+                      page == null ? '…' : '${page.page} of ${page.pages}',
+                      key: const ValueKey('epub-chapter-page-count'),
+                    ),
+                    IconButton(
+                      tooltip: 'Next chapter page',
+                      onPressed: page != null && !page.atEnd
+                          ? _controller.nextPage
+                          : null,
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

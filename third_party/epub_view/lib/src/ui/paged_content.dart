@@ -104,6 +104,9 @@ class PagedEpubContent extends StatefulWidget {
     this.initialLocation,
     this.onLocation,
     this.headingBlocks = const {},
+    this.onBookPage,
+    this.onMeasured,
+    this.measureOnly = false,
     super.key,
   });
   final int blockCount;
@@ -117,6 +120,9 @@ class PagedEpubContent extends StatefulWidget {
   final ValueChanged<int> onPosition;
   final ValueChanged<EpubPageInfo> onPage;
   final VoidCallback? onChapterChanged;
+  final ValueChanged<EpubPageInfo?>? onBookPage;
+  final ValueChanged<int>? onMeasured;
+  final bool measureOnly;
 
   @override
   State<PagedEpubContent> createState() => PagedEpubContentState();
@@ -162,6 +168,71 @@ class PagedEpubContentState extends State<PagedEpubContent> {
   String? _error;
   Size viewport = Size.zero;
   double _dragDistance = 0;
+  final _chapterCounts = <int, int>{};
+  Object? _bookSignature;
+  final _images = <ImageProvider, (ImageStream, ImageStreamListener)>{};
+  final _pendingImages = <ImageProvider>{};
+
+  /// Pagination must wait for decoded image dimensions, not a timed guess.
+  void trackImage(ImageProvider provider) {
+    if (_images.containsKey(provider)) return;
+    _pendingImages.add(provider);
+    final stream = provider.resolve(createLocalImageConfiguration(context));
+    final listener = ImageStreamListener((image, _) {
+      image.dispose();
+      _pendingImages.remove(provider);
+      if (mounted) _scheduleMeasure();
+    }, onError: (Object error, StackTrace? stack) {
+      _pendingImages.remove(provider);
+      if (mounted) _scheduleMeasure();
+    });
+    _images[provider] = (stream, listener);
+    stream.addListener(listener);
+  }
+
+  void _releaseTrackedImages() {
+    for (final entry in _images.entries) {
+      entry.value.$1.removeListener(entry.value.$2);
+      // Measurements must not accumulate decoded images across the book.
+      if (widget.measureOnly) entry.key.evict();
+    }
+    _images.clear();
+    _pendingImages.clear();
+  }
+
+  @override
+  void dispose() {
+    _releaseTrackedImages();
+    super.dispose();
+  }
+
+  void _recordCount(int chapter, int count, Object? signature) {
+    if (!mounted || signature != _bookSignature) return;
+    if (_chapterCounts[chapter] != count) {
+      setState(() => _chapterCounts[chapter] = count);
+    }
+    _publishBook();
+  }
+
+  void _publishBook() {
+    if (widget.onBookPage == null) return;
+    if (_chapterCounts.length != _starts.length - 1 || _breaks.isEmpty) {
+      widget.onBookPage!(null);
+      return;
+    }
+    var preceding = 0;
+    var total = 0;
+    for (var i = 0; i < _starts.length - 1; i++) {
+      final count = _chapterCounts[i]!;
+      total += count;
+      if (i < _chapter) preceding += count;
+    }
+    widget.onBookPage!(EpubPageInfo(
+        preceding + _page + 1,
+        total,
+        _chapter == 0 && _page == 0,
+        _chapter == _starts.length - 2 && _page == _breaks.length - 2));
+  }
 
   @override
   void initState() {
@@ -189,6 +260,7 @@ class PagedEpubContentState extends State<PagedEpubContent> {
 
   void jumpTo(int block) {
     if (!mounted) return;
+    _releaseTrackedImages();
     final index = block.clamp(0, math.max(0, widget.blockCount - 1)).toInt();
     if (_chapterFor(index) != _chapter) widget.onChapterChanged?.call();
     setState(() {
@@ -251,11 +323,9 @@ class PagedEpubContentState extends State<PagedEpubContent> {
     if (!mounted || _breaks.isEmpty) return;
     widget.onPosition(_anchor.block);
     widget.onLocation?.call(_anchor);
-    widget.onPage(EpubPageInfo(
-        _page + 1,
-        _breaks.length - 1,
-        _chapter == 0 && _page == 0,
-        _chapter == _starts.length - 2 && _page == _breaks.length - 2));
+    widget.onPage(EpubPageInfo(_page + 1, _breaks.length - 1, _page == 0,
+        _page == _breaks.length - 2));
+    _publishBook();
   }
 
   void _scheduleMeasure() {
@@ -345,6 +415,12 @@ class PagedEpubContentState extends State<PagedEpubContent> {
         _lastPageRequested = false;
       });
       _publish();
+      if (_pendingImages.isEmpty) {
+        widget.onMeasured?.call(breaks.length - 1);
+        if (widget.onBookPage != null) {
+          _recordCount(_chapter, breaks.length - 1, _bookSignature);
+        }
+      }
     } catch (error) {
       setState(() => _error = error.toString());
     }
@@ -354,6 +430,20 @@ class PagedEpubContentState extends State<PagedEpubContent> {
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
         viewport = constraints.biggest;
+        final bookSignature =
+            (viewport, widget.revision, MediaQuery.textScalerOf(context));
+        if (_bookSignature != bookSignature) {
+          _bookSignature = bookSignature;
+          _chapterCounts.clear();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _bookSignature == bookSignature) _publishBook();
+          });
+        }
+        final probeChapter = widget.onBookPage == null || _breaks.isEmpty
+            ? null
+            : Iterable<int>.generate(_starts.length - 1)
+                .where((i) => i != _chapter && !_chapterCounts.containsKey(i))
+                .firstOrNull;
         final signature = (
           viewport,
           widget.revision,
@@ -373,7 +463,8 @@ class PagedEpubContentState extends State<PagedEpubContent> {
             ? viewport.height
             : (_breaks[_page + 1] - start).clamp(0.0, viewport.height);
         return Focus(
-          autofocus: true,
+          autofocus: !widget.measureOnly,
+          canRequestFocus: !widget.measureOnly,
           onKeyEvent: (_, event) {
             if (event is! KeyDownEvent) return KeyEventResult.ignored;
             if ([
@@ -406,6 +497,33 @@ class PagedEpubContentState extends State<PagedEpubContent> {
               }
             },
             child: Stack(children: [
+              if (probeChapter != null)
+                Positioned.fill(
+                  child: ExcludeFocus(
+                    child: ExcludeSemantics(
+                      child: Offstage(
+                        child: SizedBox(
+                          width: viewport.width,
+                          height: viewport.height,
+                          child: PagedEpubContent(
+                            key: ValueKey((bookSignature, probeChapter)),
+                            measureOnly: true,
+                            blockCount: widget.blockCount,
+                            chapterStarts: widget.chapterStarts,
+                            initialBlock: _starts[probeChapter],
+                            blockBuilder: widget.blockBuilder,
+                            revision: widget.revision,
+                            headingBlocks: widget.headingBlocks,
+                            onPosition: (_) {},
+                            onPage: (_) {},
+                            onMeasured: (count) => _recordCount(
+                                probeChapter, count, bookSignature),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Align(
                   alignment: Alignment.topLeft,
                   child: SizedBox(

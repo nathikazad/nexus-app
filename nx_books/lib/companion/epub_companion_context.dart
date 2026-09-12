@@ -15,6 +15,10 @@ final epubCompanionContextProvider =
       return context;
     });
 
+/// An imperatively opened reader need not change the underlying router URI.
+bool shouldShowReadingCompanion(Uri uri, EpubCompanionContext? epub) =>
+    epub != null || isReadingSummaryPath(uri);
+
 bool isReadingSummaryPath(Uri uri) {
   final parts = uri.pathSegments;
   return parts.length == 3 &&

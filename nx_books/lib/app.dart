@@ -34,15 +34,16 @@ class NexusBooksApp extends ConsumerWidget {
           ]),
           builder: (context, _) {
             if (user == null) return child!;
-            if (!isReadingSummaryPath(
+            final epub = ref.read(epubCompanionContextProvider).value;
+            if (!shouldShowReadingCompanion(
               router.routeInformationProvider.value.uri,
+              epub,
             )) {
               return child!;
             }
             final parts =
                 router.routeInformationProvider.value.uri.pathSegments;
             final id = parts.length > 1 ? int.tryParse(parts[1]) : null;
-            final epub = ref.read(epubCompanionContextProvider).value;
             final identity = epub != null
                 ? DocumentIdentity(id: epub.bookId, modelType: 'EpubBook')
                 : id == null

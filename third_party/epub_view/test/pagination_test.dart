@@ -6,6 +6,61 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('whole-book pagination counts sequentially and reflows',
+      (tester) async {
+    final key = GlobalKey<PagedEpubContentState>();
+    EpubPageInfo? chapter;
+    EpubPageInfo? book;
+    var maxMounted = 0;
+    Future<void> show(double font) async {
+      await tester.pumpWidget(MaterialApp(
+          home: Center(
+              child: SizedBox(
+        width: 400,
+        height: 300,
+        child: PagedEpubContent(
+          key: key,
+          blockCount: 3,
+          chapterStarts: const [0, 1, 2],
+          revision: font,
+          onPosition: (_) {},
+          onPage: (p) => chapter = p,
+          onBookPage: (p) => book = p,
+          blockBuilder: (_, i) => Text(List.filled(130, 'chapter$i').join(' '),
+              style: TextStyle(fontSize: font)),
+        ),
+      ))));
+      for (var i = 0; i < 20; i++) {
+        await tester.pump();
+        final mounted = find
+            .byType(PagedEpubContent, skipOffstage: false)
+            .evaluate()
+            .length;
+        if (mounted > maxMounted) maxMounted = mounted;
+      }
+      await tester.pumpAndSettle();
+    }
+
+    await show(18);
+    final pages = chapter!.pages;
+    expect(book!.pages, pages * 3);
+    expect(book!.page, 1);
+    expect(maxMounted, lessThanOrEqualTo(2));
+    expect(find.byType(PagedEpubContent, skipOffstage: false), findsOneWidget);
+    key.currentState!.jumpTo(1);
+    await tester.pumpAndSettle();
+    expect(chapter!.page, 1);
+    expect(book!.page, pages + 1);
+    key.currentState!.previous();
+    await tester.pumpAndSettle();
+    expect(chapter!.page, pages);
+    expect(book!.page, pages);
+    final total = book!.pages;
+    await show(26);
+    expect(book!.pages, greaterThan(total));
+    expect(maxMounted, lessThanOrEqualTo(2));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('saved location restores within a long paragraph after remount',
       (tester) async {
     EpubLocation? location;

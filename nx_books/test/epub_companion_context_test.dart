@@ -3,6 +3,18 @@ import 'package:nx_books/companion/epub_companion_context.dart';
 import 'package:epub_view/src/ui/paged_content.dart';
 
 void main() {
+  test('reader shows companion independently of its underlying route', () {
+    for (final path in ['/books', '/books/1/details', '/books/1/notes']) {
+      expect(
+        shouldShowReadingCompanion(
+          Uri.parse(path),
+          const EpubCompanionContext(1, ''),
+        ),
+        isTrue,
+      );
+    }
+    expect(shouldShowReadingCompanion(Uri.parse('/books'), null), isFalse);
+  });
   test('AI is limited to summary routes, not library, settings or details', () {
     for (final path in [
       '/books',

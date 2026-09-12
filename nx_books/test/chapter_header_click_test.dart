@@ -118,6 +118,13 @@ void main() {
       final icon = find.byTooltip('Open book source');
       expect(icon, findsOneWidget);
       expect(
+        tester
+            .getCenter(find.descendant(of: icon, matching: find.byType(Icon)))
+            .dy,
+        closeTo(tester.getCenter(target).dy, 1),
+        reason: 'The icon glyph is vertically centered on the heading',
+      );
+      expect(
         tester.getCenter(icon).dx,
         greaterThan(tester.getCenter(target).dx),
       );

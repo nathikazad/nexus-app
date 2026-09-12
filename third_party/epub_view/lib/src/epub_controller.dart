@@ -25,6 +25,7 @@ class EpubController {
 
   final tableOfContentsListenable = ValueNotifier<List<EpubViewChapter>>([]);
   final pageListenable = ValueNotifier<EpubPageInfo?>(null);
+  final bookPageListenable = ValueNotifier<EpubPageInfo?>(null);
 
   void nextPage() => _epubViewState?._pagedKey.currentState?.next();
   void previousPage() => _epubViewState?._pagedKey.currentState?.previous();
@@ -116,6 +117,7 @@ class EpubController {
     currentValueListenable.dispose();
     tableOfContentsListenable.dispose();
     pageListenable.dispose();
+    bookPageListenable.dispose();
     locationListenable.dispose();
   }
 
