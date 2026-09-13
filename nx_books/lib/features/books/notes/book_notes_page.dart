@@ -136,6 +136,9 @@ class _NotesPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: DocumentReaderHost(
                 identity: identity,
+                showScrollIndicator: (content) =>
+                    content.modelTypeName == 'Book Chapter' ||
+                    content.modelTypeName == 'Book',
                 headingAction: (content, data) {
                   final source = chapterBookSource(content, data);
                   return source == null

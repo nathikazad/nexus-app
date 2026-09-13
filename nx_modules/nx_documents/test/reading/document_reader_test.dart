@@ -4,6 +4,50 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_documents/nx_documents.dart';
 
 void main() {
+  testWidgets(
+    'scroll indicator is opt-in, follows position, and hides for short notes',
+    (tester) async {
+      final indicator = find.byKey(const ValueKey('reader-scroll-indicator'));
+      Widget reader({bool enabled = false, int paragraphs = 100}) =>
+          MaterialApp(
+            home: Scaffold(
+              body: DocumentReader(
+                content: _content().copyWith(
+                  plainText: List.generate(
+                    paragraphs,
+                    (i) => 'Paragraph $i to read.',
+                  ).join('\n\n'),
+                  jsonDocument: {},
+                ),
+                onChanged: (_) async {},
+                showScrollIndicator: enabled,
+              ),
+            ),
+          );
+      await tester.pumpWidget(reader());
+      await tester.pumpAndSettle();
+      expect(indicator, findsNothing);
+      await tester.pumpWidget(reader(enabled: true));
+      await tester.pumpAndSettle();
+      expect(indicator, findsOneWidget);
+      final initialY = tester.getTopLeft(indicator).dy;
+      expect(tester.getSize(indicator), const Size(3, 18));
+      expect(
+        find.ancestor(of: indicator, matching: find.byType(IgnorePointer)),
+        findsWidgets,
+      );
+      final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+      editor.editorScrollController!.itemScrollController.jumpTo(index: 50);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(indicator).dy, greaterThan(initialY + 100));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(reader(enabled: true, paragraphs: 1));
+      await tester.pumpAndSettle();
+      expect(indicator, findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   testWidgets('reader restores and emits a viewport anchor across reopening', (
     tester,
   ) async {

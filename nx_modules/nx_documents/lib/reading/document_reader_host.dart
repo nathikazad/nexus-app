@@ -18,6 +18,7 @@ class DocumentReaderHost extends StatefulWidget {
     this.onUseSelection,
     this.loadPosition,
     this.onPositionChanged,
+    this.showScrollIndicator,
     super.key,
   });
 
@@ -32,6 +33,7 @@ class DocumentReaderHost extends StatefulWidget {
   final ValueChanged<String>? onUseSelection;
   final Future<ReadingPosition?> Function()? loadPosition;
   final ValueChanged<ReadingPosition>? onPositionChanged;
+  final bool Function(DocumentContent content)? showScrollIndicator;
 
   @override
   State<DocumentReaderHost> createState() => _DocumentReaderHostState();
@@ -141,6 +143,8 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
             onChanged: _save,
             initialPosition: _position,
             onPositionChanged: widget.onPositionChanged,
+            showScrollIndicator:
+                widget.showScrollIndicator?.call(content) ?? false,
             imageUrlResolver: widget.imageUrlResolver,
             onOpenLink: widget.onOpenLink,
             headingLinkAction: widget.headingLinkAction,

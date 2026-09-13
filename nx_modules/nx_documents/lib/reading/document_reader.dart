@@ -37,6 +37,7 @@ class DocumentReader extends StatefulWidget {
     this.onUseSelection,
     this.initialPosition,
     this.onPositionChanged,
+    this.showScrollIndicator = false,
     super.key,
   });
 
@@ -51,6 +52,7 @@ class DocumentReader extends StatefulWidget {
   final ValueChanged<String>? onUseSelection;
   final ReadingPosition? initialPosition;
   final ValueChanged<ReadingPosition>? onPositionChanged;
+  final bool showScrollIndicator;
 
   @override
   State<DocumentReader> createState() => _DocumentReaderState();
@@ -260,7 +262,68 @@ class _DocumentReaderState extends State<DocumentReader> {
       editorState: _editorState,
       editorScrollController: _scrollController,
       onUseSelection: widget.onUseSelection,
-      child: editor,
+      child: Stack(
+        children: [
+          Positioned.fill(child: editor),
+          if (widget.showScrollIndicator)
+            Positioned(
+              top: 4,
+              bottom: 4,
+              right: 0,
+              width: 3,
+              child: IgnorePointer(
+                child: ValueListenableBuilder(
+                  valueListenable:
+                      _scrollController.itemPositionsListener.itemPositions,
+                  builder: (context, positions, _) {
+                    final count = _editorState.document.root.children.length;
+                    final visible =
+                        positions
+                            .where(
+                              (item) =>
+                                  item.index < count &&
+                                  item.itemTrailingEdge > 0 &&
+                                  item.itemLeadingEdge < 1,
+                            )
+                            .toList()
+                          ..sort((a, b) => a.index.compareTo(b.index));
+                    if (visible.isEmpty) return const SizedBox.shrink();
+                    final first = visible.first;
+                    final last = visible.last;
+                    // Block-relative progress avoids measuring every paragraph
+                    // in AppFlowy's lazily laid-out document.
+                    final start =
+                        first.index +
+                        (-first.itemLeadingEdge /
+                                (first.itemTrailingEdge -
+                                    first.itemLeadingEdge))
+                            .clamp(0.0, 1.0);
+                    final end =
+                        last.index +
+                        ((1 - last.itemLeadingEdge) /
+                                (last.itemTrailingEdge - last.itemLeadingEdge))
+                            .clamp(0.0, 1.0);
+                    final travel = count - (end - start);
+                    if (travel <= 0.001) return const SizedBox.shrink();
+                    final progress = (start / travel).clamp(0.0, 1.0);
+                    return Align(
+                      alignment: Alignment(0, progress * 2 - 1),
+                      child: Container(
+                        key: const ValueKey('reader-scroll-indicator'),
+                        width: 3,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: colorScheme.onSurface.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
