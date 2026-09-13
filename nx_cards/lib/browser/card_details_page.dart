@@ -4,19 +4,18 @@ import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
-import 'package:nx_cards/browser/chinese_word_characters.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/language_examples.dart';
 
-enum CardDetailsTab { stats, examples }
+enum CardDetailsTab { examples, stats }
 
 class CardDetailsPage extends ConsumerStatefulWidget {
   const CardDetailsPage({
     super.key,
     required this.card,
     this.allowEdit = true,
-    this.initialTab = CardDetailsTab.stats,
+    this.initialTab = CardDetailsTab.examples,
   });
 
   final StudyCard card;
@@ -31,12 +30,32 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
   StudyCard? _loadedCard;
   StudyCue? _selectedCue;
   bool _showNotes = false;
+  bool _savingStatus = false;
+  LearningStatus? _updatedStatus;
   late CardDetailsTab _selectedTab;
 
   @override
   void initState() {
     super.initState();
     _selectedTab = widget.initialTab;
+  }
+
+  Future<void> _changeStatus(StudyCard card, LearningStatus status) async {
+    if (_savingStatus || card.learningStatus == status) return;
+    setState(() => _savingStatus = true);
+    try {
+      await ref.read(cardLibraryProvider).setLearningStatus(card, status);
+      ref.invalidate(cardsDashboardProvider);
+      if (mounted) setState(() => _updatedStatus = status);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not move card: $error')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingStatus = false);
+    }
   }
 
   List<StudyCue> get _reviewedCues => [
@@ -68,7 +87,9 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
         ),
       );
     }
-    final card = body?.value ?? widget.card;
+    final card = (body?.value ?? widget.card).copyWith(
+      learningStatus: _updatedStatus,
+    );
     _loadedCard = card;
     final languageContent = switch (card.content) {
       final LanguageCardContent content => content,
@@ -79,14 +100,10 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     final reviewedCues = _reviewedCues;
     final visibleCue = _visibleCue;
     final hasStats = reviewedCues.isNotEmpty;
-    final hasCharacterBreakdown =
-        card.isWordCard &&
-        card.language == 'Chinese' &&
-        RegExp(r'^[\u4e00-\u9fff]{2,}$').hasMatch(card.back);
     final hasExamples = languageContent?.examples.isNotEmpty == true;
     final availableTabs = <CardDetailsTab>[
-      if (hasStats) CardDetailsTab.stats,
       if (hasExamples) CardDetailsTab.examples,
+      if (hasStats) CardDetailsTab.stats,
     ];
     final visibleTab = availableTabs.contains(_selectedTab)
         ? _selectedTab
@@ -130,6 +147,29 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                 ),
                 const SizedBox(height: 16),
                 _CardContent(card: card, languageContent: languageContent),
+                const SizedBox(height: 16),
+                SegmentedButton<LearningStatus>(
+                  key: const ValueKey('card-learning-status'),
+                  segments: const [
+                    ButtonSegment(
+                      value: LearningStatus.learning,
+                      label: Text('Current'),
+                    ),
+                    ButtonSegment(
+                      value: LearningStatus.learnt,
+                      label: Text('Past'),
+                    ),
+                    ButtonSegment(
+                      value: LearningStatus.notStarted,
+                      label: Text('Future'),
+                    ),
+                  ],
+                  selected: {card.learningStatus},
+                  showSelectedIcon: false,
+                  onSelectionChanged: _savingStatus
+                      ? null
+                      : (selection) => _changeStatus(card, selection.single),
+                ),
                 if (audioUrl?.isNotEmpty == true &&
                     audioRepository != null) ...[
                   const SizedBox(height: 14),
@@ -163,14 +203,9 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                       ),
                     ),
                 ],
-                if (card.linkedWordIds.isNotEmpty || hasCharacterBreakdown) ...[
+                if (card.linkedWordIds.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  Text(
-                    hasCharacterBreakdown
-                        ? 'CHARACTERS IN THIS WORD'
-                        : 'WORDS IN THIS PHRASE',
-                    style: monoLabel,
-                  ),
+                  Text('CONTAINS', style: monoLabel),
                   ...ref
                       .watch(cardsDashboardProvider)
                       .when(
@@ -181,19 +216,18 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                           const Text('Could not load linked words'),
                         ],
                         data: (dashboard) {
-                          final words = hasCharacterBreakdown
-                              ? chineseWordCharacters(card, dashboard.cards)
-                              : (dashboard.cards
-                                    .where(
-                                      (word) =>
-                                          card.linkedWordIds.contains(word.id),
-                                    )
-                                    .toList()
-                                  ..sort(
-                                    (a, b) => card.back
-                                        .indexOf(a.back)
-                                        .compareTo(card.back.indexOf(b.back)),
-                                  ));
+                          final words =
+                              (dashboard.cards
+                                  .where(
+                                    (word) =>
+                                        card.linkedWordIds.contains(word.id),
+                                  )
+                                  .toList()
+                                ..sort(
+                                  (a, b) => card.back
+                                      .indexOf(a.back)
+                                      .compareTo(card.back.indexOf(b.back)),
+                                ));
                           return <Widget>[
                             for (final word in words)
                               ListTile(
@@ -227,15 +261,6 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                       ),
                     ),
                     segments: [
-                      if (hasStats)
-                        const ButtonSegment(
-                          value: CardDetailsTab.stats,
-                          label: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text('Stats', maxLines: 1),
-                          ),
-                          icon: Icon(Icons.insights_outlined),
-                        ),
                       if (hasExamples)
                         ButtonSegment(
                           value: CardDetailsTab.examples,
@@ -247,6 +272,15 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                             ),
                           ),
                           icon: const Icon(Icons.menu_book_outlined),
+                        ),
+                      if (hasStats)
+                        const ButtonSegment(
+                          value: CardDetailsTab.stats,
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Stats', maxLines: 1),
+                          ),
+                          icon: Icon(Icons.insights_outlined),
                         ),
                     ],
                     selected: {visibleTab},

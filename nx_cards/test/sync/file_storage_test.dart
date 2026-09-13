@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -8,6 +9,54 @@ import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/src/storage/content_files_native.dart';
 
 void main() {
+  test(
+    'hash sync skips unchanged content, repairs missing files and preserves pending edits',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('nx-card-hash-');
+      final db = CardsDatabase(NativeDatabase.memory());
+      addTearDown(() async {
+        await db.close();
+        await dir.delete(recursive: true);
+      });
+      final files = DirectoryContentFiles(Directory('${dir.path}/content'));
+      final store = DriftLocalCardsStore(
+        database: db,
+        files: files,
+        account: const AccountIdentity(
+          serverId: 'test',
+          userId: '1',
+          application: 'cards',
+        ),
+      );
+      final card = StudyCard(
+        id: 1,
+        content: const BasicCardContent(front: 'A', back: 'B'),
+        schedules: const {},
+        reviewHistory: const {},
+        suspended: false,
+      );
+      const hash = CardHash(1, 'server-v1');
+      expect(await store.verifiedCard(hash), false);
+      await store.applyCardBatch([HashedCard(card, hash.hash)]);
+      expect(await store.verifiedCard(hash), true);
+      expect(await store.verifiedCard(const CardHash(1, 'changed')), false);
+      await Directory('${dir.path}/content').delete(recursive: true);
+      expect(await store.verifiedCard(hash), false);
+      await store.applyCardBatch([HashedCard(card, hash.hash)]);
+      expect(await store.verifiedCard(hash), true);
+      await store.saveCardAndEnqueue(
+        card.copyWith(suspended: true),
+        operationId: 'edit',
+        mutationType: MutationType.update,
+        createdAt: DateTime.now(),
+      );
+      expect(await store.verifiedCard(hash), false);
+      await store.applyCardBatch([HashedCard(card, hash.hash)]);
+      await store.publishCardManifest([]);
+      expect((await store.getCard(1))!.suspended, true);
+      expect(await store.verifiedCard(hash), false);
+    },
+  );
   test(
     'cards migrate losslessly; dashboard reads projections, opening reads one body',
     () async {

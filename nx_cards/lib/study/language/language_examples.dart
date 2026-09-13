@@ -59,16 +59,17 @@ class _ExampleCard extends ConsumerWidget {
     }
     final phrase = dashboard.cards
         .where(
-          (card) =>
-              card.isPhraseCard &&
-              card.back == example.text &&
-              card.front == example.translation,
+          (card) => example.cardId != null
+              ? card.id == example.cardId
+              : card.content is LanguageCardContent &&
+                    card.back == example.text &&
+                    card.front == example.translation,
         )
         .firstOrNull;
     if (!context.mounted) return;
     if (phrase == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sync the library to load this phrase.')),
+        const SnackBar(content: Text('Sync the library to load this card.')),
       );
       return;
     }
@@ -120,7 +121,7 @@ class _ExampleCard extends ConsumerWidget {
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     icon: const Icon(Icons.menu_book_outlined, size: 18),
-                    label: const Text('Open phrase'),
+                    label: const Text('Open card'),
                     onPressed: () => _openPhrase(context, ref),
                   ),
                 ),

@@ -727,9 +727,20 @@ void main() {
     await tester.tap(find.text('Start drawing'));
     await tester.pumpAndSettle();
 
-    expect(find.text('ക'), findsOneWidget);
-    expect(find.textContaining('Letter 1'), findsOneWidget);
+    final firstLetter = tester
+        .widget<Text>(
+          find.byKey(const ValueKey<String>('draw-practice-letter')),
+        )
+        .data!;
+    expect(firstLetter, isIn(['ക', 'ഖ']));
     expect(find.byTooltip('Play pronunciation'), findsOneWidget);
+    await tester.tap(find.byTooltip('Hide character'));
+    await tester.pumpAndSettle();
+    expect(find.text(firstLetter).hitTestable(), findsNothing);
+    expect(find.byTooltip('Play pronunciation'), findsOneWidget);
+    await tester.tap(find.byTooltip('Show character'));
+    await tester.pumpAndSettle();
+    expect(find.text(firstLetter).hitTestable(), findsOneWidget);
     expect(find.text('CARD 1 OF 2'), findsOneWidget);
     final erase = tester.widget<OutlinedButton>(
       find.widgetWithText(OutlinedButton, 'Erase'),
@@ -754,8 +765,7 @@ void main() {
     await tester.tap(find.text('Erase'));
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.text('ഖ'), findsOneWidget);
-    expect(find.textContaining('Letter 2'), findsOneWidget);
+    expect(find.text(firstLetter == 'ക' ? 'ഖ' : 'ക'), findsOneWidget);
     expect(find.text('CARD 2 OF 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Quit drawing practice'));
     await tester.pumpAndSettle();

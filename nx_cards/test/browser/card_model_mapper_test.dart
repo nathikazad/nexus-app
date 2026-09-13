@@ -5,6 +5,50 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_db/kgql.dart';
 
 void main() {
+  test('same relationship supports contains and examples at every level', () {
+    Model row(int id, String text, String type, List<Relation> links) => Model(
+      id: id,
+      name: text,
+      modelTypeId: id,
+      modelType: ModelType(id: id, name: type),
+      attributes: {
+        attrCardDetails: {'front': text, 'back': text},
+        attrLanguageDetails: {'transliteration': text, 'examples': []},
+      },
+      relationsList: links,
+    );
+    Relation link(int id, String type, String direction) => Relation(
+      relationId: id,
+      modelId: id,
+      modelType: type,
+      relationName: wordPhrasesRelation,
+      relation: direction,
+    );
+    final character = row(1, '午', 'Word', [link(2, 'Word', 'parent')]);
+    final word = row(2, '下午', 'Word', [
+      link(1, 'Word', 'child'),
+      link(3, 'Phrase', 'parent'),
+    ]);
+    final phrase = row(3, '下午见', 'Phrase', [link(2, 'Word', 'child')]);
+    final models = {1: character, 2: word, 3: phrase};
+    final mapped = models.map(
+      (id, model) =>
+          MapEntry(id, studyCardFromModel(model, relatedModels: models)!),
+    );
+    expect(mapped[1]!.linkedWordIds, isEmpty);
+    expect(mapped[2]!.linkedWordIds, {1});
+    expect(mapped[3]!.linkedWordIds, {2});
+    final examples = (mapped[1]!.content as LanguageCardContent).examples;
+    expect(examples.single.text, '下午');
+    expect(examples.single.cardId, 2);
+    expect(LanguageExample.fromJson(examples.single.toJson()).cardId, 2);
+    expect(
+      (mapped[2]!.content as LanguageCardContent).examples.single.cardId,
+      3,
+    );
+    expect((mapped[3]!.content as LanguageCardContent).examples, isEmpty);
+  });
+
   test('maps a deckless Book flashcard and preserves its source', () {
     final model = Model(
       id: 5385,

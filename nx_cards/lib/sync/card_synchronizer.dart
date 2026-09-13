@@ -52,19 +52,34 @@ final class CardLibrarySynchronizer {
   /// This deliberately reads the local store instead of only inspecting the
   /// latest sync bundle. A transient download failure must be retried by the
   /// next sync even when the card snapshot has not changed.
-  Future<void> prefetchAudio() async {
+  Future<void>? _audioPrefetch;
+
+  Future<void> prefetchAudio() => _audioPrefetch ??= _prefetchAudio()
+      .whenComplete(() => _audioPrefetch = null);
+
+  Future<void> _prefetchAudio() async {
     final repository = _audioRepository;
     if (repository == null) return;
     final cards = (await _localStore.readDashboard()).cards;
+    final urls = <String>{};
     for (final summary in cards) {
       final card = await _localStore.getCard(summary.id);
       if (card?.content case final LanguageCardContent content) {
-        await _downloadAudio(repository, {
+        urls.addAll({
           if (content.audioUrl case final url? when url.isNotEmpty) url,
           for (final example in content.examples)
             if (example.audioUrl case final url? when url.isNotEmpty) url,
         });
       }
+    }
+    final list = urls.toList();
+    for (var offset = 0; offset < list.length; offset += 4) {
+      await Future.wait(
+        list
+            .skip(offset)
+            .take(4)
+            .map((url) => _downloadAudio(repository, {url})),
+      );
     }
   }
 
@@ -99,7 +114,32 @@ final class _CardPullReconciler implements PullReconciler<int> {
 
   @override
   Future<void> pullAll() async {
-    await _localStore.applyCardSnapshot(await _requireTransport().syncCards());
+    final transport = _requireTransport();
+    final store = _localStore;
+    if (transport is HashCardsSyncTransport && store is HashCardsStore) {
+      final hashTransport = transport as HashCardsSyncTransport;
+      final hashStore = store as HashCardsStore;
+      final generation = hashStore.editGeneration;
+      final remote = await hashTransport.cardManifest();
+      final manifest = await reconcileHashManifest<int, CardHash, HashedCard>(
+        manifest: remote.manifest,
+        keyOf: (entry) => entry.id,
+        valueKeyOf: (entry) => entry.card.id,
+        verified: hashStore.verifiedCard,
+        download: (ids) async {
+          final bundle = await hashTransport.downloadCards(ids);
+          return HashDownload(bundle.cards, deleted: bundle.deletedIds);
+        },
+        applyBatch: (page) =>
+            hashStore.applyCardBatch(page, expectedGeneration: generation),
+      );
+      await hashStore.publishCardManifest(
+        manifest,
+        expectedGeneration: generation,
+      );
+    } else {
+      await store.applyCardSnapshot(await transport.syncCards());
+    }
     _afterPull();
   }
 

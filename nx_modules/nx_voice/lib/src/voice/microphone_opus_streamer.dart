@@ -37,6 +37,11 @@ class NxMicrophoneOpusStreamer {
       return true;
     }
 
+    // permission_handler has no macOS implementation. The recording plugin
+    // already provides native AVFoundation permission checks and prompts.
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
+      return _recorder.hasPermission();
+    }
     final status = await Permission.microphone.status;
     debugPrint('[nx_voice mic] permission_handler status=$status');
     if (status.isGranted) return true;

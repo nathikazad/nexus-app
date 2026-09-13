@@ -9,6 +9,8 @@ const verbCardModelType = 'Verb';
 const scriptCardModelType = 'Script';
 const bookModelType = 'Book';
 
+// Historical database name; now LanguageFlashcard -> LanguageFlashcard.
+// From contains to; the reverse is Examples. Keep the name to preserve links.
 const wordPhrasesRelation = 'word_phrases';
 const verbPhraseConjugationRelation = 'verb_phrase_conjugation';
 const wordCategoryTagSystem = 'Word Category';

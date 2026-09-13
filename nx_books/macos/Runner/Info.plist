@@ -39,5 +39,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record spoken questions for your reading companion.</string>
 </dict>
 </plist>

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:opus_dart/opus_dart.dart';
-import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
+import 'opus_loader_web.dart' if (dart.library.io) 'opus_loader.dart';
 
 class NxOpusCodec {
   static bool _initialized = false;
@@ -13,7 +13,7 @@ class NxOpusCodec {
       _initialized = true;
       return;
     }
-    initOpus(await opus_flutter.load());
+    initOpus(await loadOpusLibrary());
     _initialized = true;
   }
 

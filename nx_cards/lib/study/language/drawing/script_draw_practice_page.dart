@@ -23,6 +23,7 @@ class ScriptDrawPracticePage extends StatefulWidget {
 class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
   final ScriptDrawingController _drawingController = ScriptDrawingController();
   int _index = 0;
+  bool _letterVisible = true;
 
   StudyCard get _card => widget.cards[_index];
 
@@ -121,60 +122,85 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                         horizontal: 24,
                         vertical: 12,
                       ),
-                      child: Stack(
-                        alignment: Alignment.center,
+                      child: Row(
                         children: [
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: SingleChildScrollView(
-                                  child: Text(
-                                    _letter,
-                                    textAlign: TextAlign.center,
-                                    key: const ValueKey<String>(
-                                      'draw-practice-letter',
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: _letter.runes.length == 1
-                                          ? 82
-                                          : 32,
-                                      height: 1,
-                                      fontWeight: FontWeight.w500,
-                                      color: RecallPalette.of(context).ink,
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Visibility(
+                                    visible: _letterVisible,
+                                    maintainSize: true,
+                                    maintainAnimation: true,
+                                    maintainState: true,
+                                    child: SingleChildScrollView(
+                                      child: Text(
+                                        _letter,
+                                        textAlign: TextAlign.center,
+                                        key: const ValueKey<String>(
+                                          'draw-practice-letter',
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: _letter.runes.length == 1
+                                              ? 82
+                                              : 32,
+                                          height: 1,
+                                          fontWeight: FontWeight.w500,
+                                          color: RecallPalette.of(context).ink,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _sound,
-                                key: const ValueKey<String>(
-                                  'draw-practice-sound',
+                                const SizedBox(height: 8),
+                                Text(
+                                  _sound,
+                                  key: const ValueKey<String>(
+                                    'draw-practice-sound',
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: RecallColors.muted,
+                                    letterSpacing: 0.2,
+                                  ),
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: RecallColors.muted,
-                                  letterSpacing: 0.2,
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton.filledTonal(
+                                tooltip: _letterVisible
+                                    ? 'Hide character'
+                                    : 'Show character',
+                                onPressed: () => setState(
+                                  () => _letterVisible = !_letterVisible,
+                                ),
+                                icon: Icon(
+                                  _letterVisible
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                 ),
                               ),
+                              if (_audioUrl case final audioUrl?
+                                  when widget.audioRepository != null) ...[
+                                const SizedBox(height: 8),
+                                PronunciationButton(
+                                  key: ValueKey<String>(
+                                    'draw-practice-audio-${_card.id}',
+                                  ),
+                                  audioUrl: audioUrl,
+                                  repository: widget.audioRepository!,
+                                ),
+                              ],
                             ],
                           ),
-                          if (_audioUrl case final audioUrl?
-                              when widget.audioRepository != null)
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: PronunciationButton(
-                                key: ValueKey<String>(
-                                  'draw-practice-audio-${_card.id}',
-                                ),
-                                audioUrl: audioUrl,
-                                repository: widget.audioRepository!,
-                              ),
-                            ),
                         ],
                       ),
                     ),
@@ -185,7 +211,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                   Expanded(
                     child: ScriptDrawingCanvas(
                       controller: _drawingController,
-                      semanticsLabel: 'Drawing area for $_letter',
+                      semanticsLabel: _letterVisible
+                          ? 'Drawing area for $_letter'
+                          : 'Drawing area',
                     ),
                   ),
                   const SizedBox(height: 16),

@@ -40,15 +40,25 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
+
+  Future<void> createHashSchema() => customStatement('''
+    CREATE TABLE IF NOT EXISTS card_sync_hashes (
+      account_key TEXT NOT NULL, card_id INTEGER NOT NULL,
+      hash TEXT NOT NULL, content_ref TEXT,
+      PRIMARY KEY (account_key, card_id)
+    )
+  ''');
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
+      await createHashSchema();
       await DriftOutboxPersistence.createSchema(this);
     },
     onUpgrade: (migrator, from, to) async {
+      if (from < 12) await createHashSchema();
       if (from < 11) {
         await migrator.addColumn(localStudyCards, localStudyCards.notes);
       }

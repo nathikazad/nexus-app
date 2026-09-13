@@ -29,6 +29,7 @@ const languageCardStruct = <String, dynamic>{
     'model_type': true,
     'name': true,
     'relation_name': true,
+    'relation': true,
   },
 };
 

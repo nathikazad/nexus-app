@@ -209,8 +209,13 @@ class ReadingCompanionController extends ChangeNotifier {
         () => unawaited(stopRecording()),
       );
       _notify();
-    } catch (_) {
-      _fail('Could not start recording. Try typing instead.');
+    } catch (error, stack) {
+      debugPrint(
+        '[reading companion] recording startup failed: $error\n$stack',
+      );
+      _fail(
+        'Could not start recording (${error.runtimeType}). Try typing instead.',
+      );
     }
   }
 

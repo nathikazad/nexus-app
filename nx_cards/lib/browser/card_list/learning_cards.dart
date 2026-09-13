@@ -14,6 +14,7 @@ class LearningCardsTab extends ConsumerWidget {
     required this.emptyText,
     required this.dashboard,
     this.showScheduleStatus = false,
+    this.showLearningStatus = false,
     this.previousStatus,
     this.previousActionLabel,
     this.nextStatus,
@@ -24,6 +25,7 @@ class LearningCardsTab extends ConsumerWidget {
   final String emptyText;
   final CardsDashboard dashboard;
   final bool showScheduleStatus;
+  final bool showLearningStatus;
   final LearningStatus? previousStatus;
   final String? previousActionLabel;
   final LearningStatus? nextStatus;
@@ -63,6 +65,7 @@ class LearningCardsTab extends ConsumerWidget {
                             ),
                             card: card,
                             showScheduleStatus: showScheduleStatus,
+                            showLearningStatus: showLearningStatus,
                             previousStatus: previousStatus,
                             previousActionLabel: previousActionLabel,
                             nextStatus: nextStatus,
@@ -83,6 +86,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
     super.key,
     required this.card,
     required this.showScheduleStatus,
+    required this.showLearningStatus,
     this.previousStatus,
     this.previousActionLabel,
     this.nextStatus,
@@ -91,6 +95,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
 
   final StudyCard card;
   final bool showScheduleStatus;
+  final bool showLearningStatus;
   final LearningStatus? previousStatus;
   final String? previousActionLabel;
   final LearningStatus? nextStatus;
@@ -252,6 +257,20 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                               ],
                             ],
                           ),
+                          if (widget.showLearningStatus)
+                            Text(
+                              switch (widget.card.learningStatus) {
+                                LearningStatus.learning => 'Current',
+                                LearningStatus.learnt => 'Past',
+                                LearningStatus.notStarted => 'Future',
+                              },
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           const SizedBox(height: 4),
                           Text(
                             [
@@ -303,7 +322,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                     ),
                     const SizedBox(width: 12),
                     Icon(
-                      Icons.drag_indicator,
+                      _canDrag ? Icons.drag_indicator : Icons.chevron_right,
                       size: 17,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

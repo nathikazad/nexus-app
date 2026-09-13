@@ -16,7 +16,7 @@ StudyCard? studyCardFromModel(
   final back = cardDetails['back']?.toString().trim() ?? '';
   final languageDetails = _jsonMap(model.attributes?[attrLanguageDetails]);
   final modelTypeName = model.modelType?.name;
-  final relatedExamples = _languageExamplesFromPhraseRelations(
+  final relatedExamples = _languageExamplesFromRelations(
     model,
     relatedModels,
   );
@@ -53,30 +53,40 @@ StudyCard? studyCardFromModel(
   );
 }
 
-Set<int> _linkedWordIds(Model model) {
-  if (model.modelType?.name != phraseCardModelType) return const <int>{};
-  return <int>{
-    for (final relation in model.relationsList ?? const <Relation>[])
-      if ((relation.relationName == wordPhrasesRelation ||
-              relation.relationName == verbPhraseConjugationRelation) &&
-          (relation.modelType == wordCardModelType ||
-              relation.modelType == verbCardModelType))
-        relation.modelId,
-  };
+// The legacy field name is retained for the offline cache. It now holds all
+// outgoing language-card links (Contains), including word -> character.
+Set<int> _linkedWordIds(Model model) => <int>{
+  for (final relation in model.relationsList ?? const <Relation>[])
+    if (_isContains(model, relation)) relation.modelId,
+};
+
+bool _isContains(Model model, Relation relation) {
+  if (relation.relationName == wordPhrasesRelation) {
+    if (relation.relation != null) return relation.relation == 'child';
+    // Compatibility with snapshots made before the relationship was widened.
+    return model.modelType?.name == phraseCardModelType;
+  }
+  return relation.relationName == verbPhraseConjugationRelation &&
+      model.modelType?.name == phraseCardModelType;
 }
 
-List<LanguageExample> _languageExamplesFromPhraseRelations(
+bool _isExample(Model model, Relation relation) {
+  if (relation.relationName == wordPhrasesRelation) {
+    if (relation.relation != null) return relation.relation == 'parent';
+    return model.modelType?.name == wordCardModelType ||
+        model.modelType?.name == verbCardModelType;
+  }
+  return relation.relationName == verbPhraseConjugationRelation &&
+      model.modelType?.name == verbCardModelType;
+}
+
+List<LanguageExample> _languageExamplesFromRelations(
   Model model,
   Map<int, Model> relatedModels,
 ) {
-  if (model.modelType?.name != wordCardModelType &&
-      model.modelType?.name != verbCardModelType) {
-    return const <LanguageExample>[];
-  }
   final examples = <LanguageExample>[];
   for (final relation in model.relationsList ?? const <Relation>[]) {
-    if (relation.relationName != wordPhrasesRelation &&
-        relation.relationName != verbPhraseConjugationRelation) {
+    if (!_isExample(model, relation)) {
       continue;
     }
     final relatedModel = relatedModels[relation.modelId];
@@ -93,6 +103,7 @@ List<LanguageExample> _languageExamplesFromPhraseRelations(
     }
     examples.add(
       LanguageExample(
+        cardId: relation.modelId,
         text: text,
         transliteration: transliteration,
         translation: translation,

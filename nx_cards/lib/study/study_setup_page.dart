@@ -614,7 +614,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 _matchesRecallFilters(card),
           )
           .toList(growable: true);
-      if (_order == StudyOrder.shuffle) cards.shuffle(Random.secure());
+      cards.shuffle(Random.secure());
       final selected = cards
           .take(min(_count, cards.length))
           .toList(growable: false);

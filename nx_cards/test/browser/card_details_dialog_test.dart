@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,109 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
 
 void main() {
+  testWidgets('saved word example opens by id and contains links back', (
+    tester,
+  ) async {
+    StudyCard make(
+      int id,
+      String text, {
+      Set<int> contains = const {},
+      List<LanguageExample> examples = const [],
+    }) => StudyCard(
+      id: id,
+      modelTypeName: 'Word',
+      content: LanguageCardContent(
+        english: text,
+        originalScript: text,
+        transliteration: text,
+        examples: examples,
+      ),
+      schedules: {},
+      reviewHistory: {},
+      suspended: false,
+      linkedWordIds: contains,
+    );
+    final character = make(
+      1,
+      '午',
+      examples: [
+        const LanguageExample(
+          cardId: 2,
+          text: '下午',
+          transliteration: 'xiàwǔ',
+          translation: 'afternoon',
+        ),
+      ],
+    );
+    // Different display text demonstrates that navigation uses the saved ID.
+    final word = make(2, '下午 updated', contains: {1});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(CardsDashboard(cards: [character, word])),
+          ),
+        ],
+        child: MaterialApp(home: CardDetailsPage(card: character)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下午'));
+    await tester.pumpAndSettle();
+    expect(find.text('CONTAINS'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ListTile, '午'));
+    await tester.pumpAndSettle();
+    expect(find.text('EXAMPLES'), findsOneWidget);
+    expect(find.text('下午'), findsOneWidget);
+  });
+
+  testWidgets(
+    'moves a card between all placements and keeps failed saves unchanged',
+    (tester) async {
+      final library = _StatusLibrary();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardAudioRepositoryProvider.overrideWithValue(null),
+            cardLibraryProvider.overrideWithValue(library),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(const CardsDashboard(cards: [])),
+            ),
+          ],
+          child: MaterialApp(
+            home: CardDetailsPage(card: _card(), allowEdit: false),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      SegmentedButton<LearningStatus> selector() =>
+          tester.widget(find.byKey(const ValueKey('card-learning-status')));
+      expect(selector().selected, {LearningStatus.notStarted});
+      for (final entry in {
+        'Current': LearningStatus.learning,
+        'Past': LearningStatus.learnt,
+        'Future': LearningStatus.notStarted,
+      }.entries) {
+        await tester.tap(find.text(entry.key));
+        await tester.pumpAndSettle();
+        expect(selector().selected, {entry.value});
+        expect(library.savedStatus, entry.value);
+        expect(library.savedCard?.id, 20);
+      }
+      library.pending = Completer<void>();
+      await tester.tap(find.text('Current'));
+      await tester.pump();
+      expect(selector().onSelectionChanged, isNull);
+      expect(selector().selected, {LearningStatus.notStarted});
+      library.pending!.completeError(StateError('Save failed'));
+      await tester.pumpAndSettle();
+      expect(selector().selected, {LearningStatus.notStarted});
+      expect(selector().onSelectionChanged, isNotNull);
+      expect(find.textContaining('Could not move card'), findsOneWidget);
+    },
+  );
+
   testWidgets('phrase shows notes and linked vocabulary', (tester) async {
     final word = _card();
     final phrase = StudyCard(
@@ -36,7 +141,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('WORDS IN THIS PHRASE'), findsOneWidget);
+    expect(find.text('CONTAINS'), findsOneWidget);
     expect(find.textContaining('thattippu — fraud'), findsOneWidget);
     await tester.tap(find.text('Notes'));
     await tester.pumpAndSettle();
@@ -77,7 +182,7 @@ void main() {
     await tester.tap(find.text(example.text));
     await tester.pump();
     await tester.pumpAndSettle();
-    expect(find.text('WORDS IN THIS PHRASE'), findsOneWidget);
+    expect(find.text('CONTAINS'), findsOneWidget);
     expect(find.text(example.translation), findsOneWidget);
   });
 
@@ -159,6 +264,14 @@ void main() {
 
     expect(find.text('Stats'), findsOneWidget);
     expect(find.text('Examples (1)'), findsOneWidget);
+    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Examples (1)')).dx,
+      lessThan(tester.getTopLeft(find.text('Stats')).dx),
+    );
+    await tester.ensureVisible(find.text('Stats'));
+    await tester.tap(find.text('Stats'));
+    await tester.pumpAndSettle();
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
     expect(
       find.byKey(const ValueKey('review-direction-selector')),
@@ -199,7 +312,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
-        child: MaterialApp(home: CardDetailsPage(card: card)),
+        child: MaterialApp(
+          home: CardDetailsPage(card: card, initialTab: CardDetailsTab.stats),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -250,7 +365,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
-        child: MaterialApp(home: CardDetailsPage(card: card)),
+        child: MaterialApp(
+          home: CardDetailsPage(card: card, initialTab: CardDetailsTab.stats),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -323,3 +440,19 @@ CardReview _review(String id, DateTime reviewedAt, {required int rating}) =>
       elapsedSeconds: const Duration(days: 2).inSeconds,
       scheduledSeconds: const Duration(days: 4).inSeconds,
     );
+
+final class _StatusLibrary implements CardLibrary {
+  StudyCard? savedCard;
+  LearningStatus? savedStatus;
+  Completer<void>? pending;
+
+  @override
+  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
+    if (pending case final operation?) await operation.future;
+    savedCard = card;
+    savedStatus = status;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}

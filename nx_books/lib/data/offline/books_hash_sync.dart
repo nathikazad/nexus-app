@@ -54,66 +54,52 @@ final class BooksHashPull implements PullReconciler<DocumentIdentity> {
     try {
       final catalogGeneration = store.catalog.generation;
       final remote = await transport.manifest();
-      final manifest = [...remote.manifest];
-      if (manifest.map((entry) => entry.id).toSet().length != manifest.length) {
-        throw StateError('Duplicate documents in server manifest');
-      }
-      total = manifest.length;
-      final missing = <int>{};
-      for (var offset = 0; offset < manifest.length; offset += 8) {
-        final page = manifest.skip(offset).take(8).toList();
-        final results = await Future.wait(page.map(store.verified));
-        for (var i = 0; i < page.length; i++) {
-          if (results[i]) {
-            verified++;
-          } else {
-            missing.add(page[i].id);
-          }
-        }
-        if (offset % 64 == 0) {
-          await _report(DownloadPhase.checking, total, verified, failed);
-        }
-        await Future<void>.delayed(Duration.zero);
-      }
-      await _report(DownloadPhase.downloading, total, verified, failed);
-      if (missing.isNotEmpty) {
-        final generation = store.histories.generation;
-        final documentGeneration = store.documents.generation;
-        final bundle = await transport.download(missing);
-        final received = <int>{};
-        for (final entry in bundle.documents) {
-          if (!missing.contains(entry.documentId) ||
-              !received.add(entry.documentId)) {
-            throw StateError('Unexpected document in sync response');
-          }
-        }
-        for (var offset = 0; offset < bundle.documents.length; offset += 25) {
-          final page = bundle.documents.skip(offset).take(25).toList();
-          final pageFailures = await store.applyBatch(
-            page,
-            generation,
-            documentGeneration,
+      // Capture local edit generations immediately before the download.
+      var generation = store.histories.generation;
+      var documentGeneration = store.documents.generation;
+      final manifest =
+          await reconcileHashManifest<
+            int,
+            DocumentHashEntry,
+            DocumentSyncEntry
+          >(
+            manifest: remote.manifest,
+            keyOf: (entry) => entry.id,
+            valueKeyOf: (entry) => entry.documentId,
+            verified: store.verified,
+            download: (ids) async {
+              generation = store.histories.generation;
+              documentGeneration = store.documents.generation;
+              final bundle = await transport.download(ids);
+              return HashDownload(
+                bundle.documents,
+                deleted: bundle.deletedIds.toSet(),
+              );
+            },
+            applyBatch: (page) async => [
+              for (final id in await store.applyBatch(
+                page,
+                generation,
+                documentGeneration,
+              ))
+                int.parse(id),
+            ],
+            report: (downloading, count, done, failures) async {
+              total = count;
+              verified = done;
+              failed
+                ..clear()
+                ..addAll(failures.map((id) => '$id'));
+              await _report(
+                downloading
+                    ? DownloadPhase.downloading
+                    : DownloadPhase.checking,
+                total,
+                verified,
+                failed,
+              );
+            },
           );
-          // Report only committed work, never an in-flight transaction.
-          failed.addAll(pageFailures);
-          verified += page.length - pageFailures.length;
-          await _report(DownloadPhase.downloading, total, verified, failed);
-          await Future<void>.delayed(Duration.zero);
-        }
-        for (final id in missing.difference(received)) {
-          // A deletion between the two requests is legitimate. Anything else
-          // is an incomplete response and must not certify offline readiness.
-          if (bundle.deletedIds.contains(id)) {
-            manifest.removeWhere((e) => e.id == id);
-            total--;
-          } else {
-            failed.add('$id');
-          }
-        }
-      }
-      if (failed.isNotEmpty) {
-        throw StateError('${failed.length} items could not be saved');
-      }
       await store.publish(manifest, remote.topicTags, catalogGeneration);
       onCatalogChanged?.call();
       await pullBookFiles?.call();

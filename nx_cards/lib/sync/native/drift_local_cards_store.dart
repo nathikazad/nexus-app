@@ -1,3 +1,4 @@
+import '../remote/cards_sync_transport.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:nx_offline/nx_offline_storage.dart';
@@ -11,7 +12,8 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/nx_offline_drift.dart';
 
-final class DriftLocalCardsStore implements LocalCardsStore, QueuedCardReader {
+final class DriftLocalCardsStore
+    implements LocalCardsStore, QueuedCardReader, HashCardsStore {
   DriftLocalCardsStore({
     required this.database,
     required this.account,
@@ -22,6 +24,9 @@ final class DriftLocalCardsStore implements LocalCardsStore, QueuedCardReader {
   final CardsDatabase database;
   final ContentFiles? files;
   Future<void>? _migration;
+  @override
+  int get editGeneration => _editGeneration;
+  int _editGeneration = 0;
 
   Future<LocalStudyCardsCompanion> _cardToCompanion(
     StudyCard card, {
@@ -190,6 +195,80 @@ final class DriftLocalCardsStore implements LocalCardsStore, QueuedCardReader {
   }
 
   @override
+  Future<bool> verifiedCard(CardHash entry) async {
+    final rows = await database
+        .customSelect(
+          'SELECT h.hash, c.content_ref FROM card_sync_hashes h '
+          'JOIN local_study_cards c ON c.account_key = h.account_key AND c.remote_id = h.card_id '
+          'WHERE h.account_key = ? AND h.card_id = ? AND h.content_ref IS c.content_ref',
+          variables: [Variable(_accountKey), Variable(entry.id)],
+        )
+        .get();
+    if (rows.isEmpty || rows.single.read<String>('hash') != entry.hash) {
+      return false;
+    }
+    final ref = rows.single.readNullable<String>('content_ref');
+    return ref == null ? files == null : await files?.exists(ref) == true;
+  }
+
+  Future<void> _clearHash(int id) => database.customStatement(
+    'DELETE FROM card_sync_hashes WHERE account_key = ? AND card_id = ?',
+    [_accountKey, id],
+  );
+
+  @override
+  Future<List<int>> applyCardBatch(
+    List<HashedCard> cards, {
+    int? expectedGeneration,
+  }) async {
+    await database.transaction(() async {
+      if (expectedGeneration != null && expectedGeneration != editGeneration) {
+        return;
+      }
+      for (final entry in cards) {
+        // Never certify a server hash for a locally edited body.
+        if (await _hasPendingCard(entry.card.id)) continue;
+        final row = await _cardToCompanion(
+          entry.card,
+          accountKey: _accountKey,
+          syncState: CardLocalSyncState.synced,
+        );
+        await database
+            .into(database.localStudyCards)
+            .insertOnConflictUpdate(row);
+        await database.customStatement(
+          'INSERT OR REPLACE INTO card_sync_hashes(account_key, card_id, hash, content_ref) VALUES (?, ?, ?, ?)',
+          [_accountKey, entry.card.id, entry.hash, row.contentRef.value],
+        );
+      }
+    });
+    return [];
+  }
+
+  @override
+  Future<void> publishCardManifest(
+    List<CardHash> manifest, {
+    int? expectedGeneration,
+  }) async {
+    if (expectedGeneration != null && expectedGeneration != editGeneration) {
+      return;
+    }
+    final ids = manifest.map((entry) => entry.id).toSet();
+    await database.transaction(() async {
+      final rows = await (database.select(
+        database.localStudyCards,
+      )..where((t) => t.accountKey.equals(_accountKey))).get();
+      for (final row in rows) {
+        if (!ids.contains(row.remoteId) &&
+            !await _hasPendingCard(row.remoteId)) {
+          await _clearHash(row.remoteId);
+          await _deleteCard(row.remoteId);
+        }
+      }
+    });
+  }
+
+  @override
   Future<void> applyCardSnapshot(List<StudyCard> cards) {
     return database.transaction(() => _applyCardSnapshot(cards));
   }
@@ -198,6 +277,8 @@ final class DriftLocalCardsStore implements LocalCardsStore, QueuedCardReader {
     final remoteIds = <int>{for (final card in cards) card.id};
     for (final card in cards) {
       if (await _hasPendingCard(card.id)) continue;
+      _editGeneration++;
+      await _clearHash(card.id);
       await database
           .into(database.localStudyCards)
           .insertOnConflictUpdate(
@@ -235,6 +316,8 @@ final class DriftLocalCardsStore implements LocalCardsStore, QueuedCardReader {
       throw ArgumentError('Cards currently enqueue only update or delete');
     }
     await database.transaction(() async {
+      _editGeneration++;
+      await _clearHash(card.id);
       await database
           .into(database.localStudyCards)
           .insertOnConflictUpdate(

@@ -59,14 +59,17 @@ final class LanguageExample {
     required this.transliteration,
     required this.translation,
     this.audioUrl,
+    this.cardId,
   });
 
+  final int? cardId;
   final String text;
   final String transliteration;
   final String translation;
   final String? audioUrl;
 
   Map<String, Object?> toJson() => <String, Object?>{
+    if (cardId != null) 'card_id': cardId,
     'text': text,
     'transliteration': transliteration,
     'translation': translation,
@@ -75,6 +78,7 @@ final class LanguageExample {
 
   factory LanguageExample.fromJson(Map<String, dynamic> json) =>
       LanguageExample(
+        cardId: (json['card_id'] as num?)?.toInt(),
         text: json['text']?.toString().trim() ?? '',
         transliteration: json['transliteration']?.toString().trim() ?? '',
         translation: json['translation']?.toString().trim() ?? '',

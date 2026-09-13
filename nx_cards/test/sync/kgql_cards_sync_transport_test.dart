@@ -5,6 +5,87 @@ import 'package:nx_cards/sync/remote/kgql_sync_transport.dart';
 import 'package:nx_cards/browser/browser.dart';
 
 void main() {
+  test(
+    'hash download preserves embedded examples, tags and source links',
+    () async {
+      Request? captured;
+      final transport = KgqlCardsSyncTransport(
+        _client((request) {
+          captured = request;
+          return {
+            'syncCards': {
+              'manifest': [
+                {'id': 11, 'hash': 'v2:abc'},
+              ],
+              'deleted_ids': [],
+              'cards': [
+                {
+                  'id': 11,
+                  'hash': 'v2:abc',
+                  'card': {
+                    'id': 11,
+                    'name': 'day',
+                    'model_type_id': 3,
+                    'model_type': {'id': 3, 'name': 'Word'},
+                    'attributes': {
+                      'card_details': {'front': 'day', 'back': '日'},
+                      'language_details': {'transliteration': 'rì'},
+                    },
+                    'tags': {
+                      'Language': ['Chinese'],
+                      'Word Category': ['Noun'],
+                    },
+                    'relations': [
+                      {
+                        'model_id': 12,
+                        'model_type': 'Word',
+                        'name': 'birthday',
+                        'relation_name': 'word_phrases',
+                        'relation': 'parent',
+                        'related_attributes': {
+                          'card_details': {'front': 'birthday', 'back': '生日'},
+                          'language_details': {
+                            'transliteration': 'shēngrì',
+                            'audio_url': '/birthday.mp3',
+                          },
+                        },
+                      },
+                      {
+                        'model_id': 50,
+                        'model_type': 'Book',
+                        'name': 'Chinese',
+                        'relation_name': 'flashcard_book',
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          };
+        }),
+      );
+      final bundle = await transport.downloadCards({11});
+      expect(printNode(captured!.operation.document), contains('syncCards'));
+      expect(captured!.variables['ids'], [11]);
+      final card = bundle.cards.single.card;
+      expect(card.sourceBookId, 50);
+      expect(card.tags['Word Category'], ['Noun']);
+      final example = (card.content as LanguageCardContent).examples.single;
+      expect(example.cardId, 12);
+      expect(example.text, '生日');
+      expect(example.audioUrl, '/birthday.mp3');
+    },
+  );
+  test('missing manifest is an error, never an empty library', () async {
+    final transport = KgqlCardsSyncTransport(
+      _client(
+        (_) => {
+          'syncCards': {'cards': [], 'deleted_ids': []},
+        },
+      ),
+    );
+    await expectLater(transport.cardManifest(), throwsA(anything));
+  });
   test('mutateCard sends the complete JSON scheduling aggregate', () async {
     Request? captured;
     final transport = KgqlCardsSyncTransport(

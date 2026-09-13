@@ -320,6 +320,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.18.0"
+  nx_opus_macos:
+    dependency: "direct main"
+    description:
+      path: "../nx_opus_macos"
+      relative: true
+    source: path
+    version: "0.1.0"
   opus_dart:
     dependency: "direct main"
     description:

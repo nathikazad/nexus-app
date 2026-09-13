@@ -6,6 +6,7 @@ import 'package:nx_cards/browser/browser_error.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/browser/card_list/learning_cards.dart';
+import 'package:nx_cards/browser/card_list/card_search.dart';
 import 'package:nx_cards/browser/card_list/study_launcher.dart';
 import 'package:nx_cards/browser/language/language_category_order.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
@@ -252,7 +253,7 @@ class _LanguageCategoryCard extends StatelessWidget {
   }
 }
 
-class LanguageCategoryPage extends ConsumerWidget {
+class LanguageCategoryPage extends ConsumerStatefulWidget {
   const LanguageCategoryPage({
     super.key,
     required this.category,
@@ -263,7 +264,32 @@ class LanguageCategoryPage extends ConsumerWidget {
   final String? language;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LanguageCategoryPage> createState() =>
+      _LanguageCategoryPageState();
+}
+
+class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
+  final _searchController = TextEditingController();
+  bool _searching = false;
+  String get category => widget.category;
+  String? get language => widget.language;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _closeSearch() {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _searching = false;
+      _searchController.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dashboard = ref.watch(cardsDashboardProvider);
     final historyWindow =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
@@ -372,50 +398,105 @@ class LanguageCategoryPage extends ConsumerWidget {
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 900),
-                    child: TabBar(
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      tabs: [
-                        Tab(text: 'Current  ${learning.length}'),
-                        Tab(text: 'Past  ${learnt.length}'),
-                        Tab(text: 'Future  ${notStarted.length}'),
-                      ],
-                    ),
+                    child: _searching
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: TextField(
+                              key: const ValueKey('card-search-field'),
+                              controller: _searchController,
+                              autofocus: true,
+                              onChanged: (_) => setState(() {}),
+                              decoration: InputDecoration(
+                                hintText: 'Search all cards in $category',
+                                prefixIcon: const Icon(Icons.search),
+                                suffixIcon: IconButton(
+                                  tooltip: 'Close search',
+                                  onPressed: _closeSearch,
+                                  icon: const Icon(Icons.close),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: TabBar(
+                                  isScrollable: false,
+                                  labelPadding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  tabAlignment: TabAlignment.fill,
+                                  labelStyle: const TextStyle(fontSize: 12),
+                                  tabs: [
+                                    Tab(text: 'Current  ${learning.length}'),
+                                    Tab(text: 'Past  ${learnt.length}'),
+                                    Tab(text: 'Future  ${notStarted.length}'),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Search all cards',
+                                onPressed: () =>
+                                    setState(() => _searching = true),
+                                icon: const Icon(Icons.search),
+                              ),
+                            ],
+                          ),
                   ),
                 ),
                 Expanded(
-                  child: TabBarView(
+                  child: IndexedStack(
+                    index: _searching ? 1 : 0,
                     children: [
-                      LearningCardsTab(
-                        cards: learning,
-                        showScheduleStatus: true,
-                        emptyText: category == 'Script'
-                            ? 'No letters are currently being learned.'
-                            : 'No words are currently being learned.',
-                        previousStatus: LearningStatus.notStarted,
-                        previousActionLabel: '←',
-                        nextStatus: LearningStatus.learnt,
-                        actionLabel: '✓',
-                        dashboard: data,
+                      TabBarView(
+                        children: [
+                          LearningCardsTab(
+                            cards: learning,
+                            showScheduleStatus: true,
+                            emptyText: category == 'Script'
+                                ? 'No letters are currently being learned.'
+                                : 'No words are currently being learned.',
+                            previousStatus: LearningStatus.notStarted,
+                            previousActionLabel: '←',
+                            nextStatus: LearningStatus.learnt,
+                            actionLabel: '✓',
+                            dashboard: data,
+                          ),
+                          LearningCardsTab(
+                            cards: learnt,
+                            emptyText: category == 'Script'
+                                ? 'No letters have been marked learnt yet.'
+                                : 'No words have been marked learnt yet.',
+                            previousStatus: LearningStatus.learning,
+                            previousActionLabel: '←',
+                            dashboard: data,
+                          ),
+                          LearningCardsTab(
+                            cards: notStarted,
+                            emptyText: category == 'Script'
+                                ? 'Every letter has been started.'
+                                : 'Every word has been started.',
+                            nextStatus: LearningStatus.learning,
+                            actionLabel: '+',
+                            dashboard: data,
+                          ),
+                        ],
                       ),
-                      LearningCardsTab(
-                        cards: learnt,
-                        emptyText: category == 'Script'
-                            ? 'No letters have been marked learnt yet.'
-                            : 'No words have been marked learnt yet.',
-                        previousStatus: LearningStatus.learning,
-                        previousActionLabel: '←',
-                        dashboard: data,
-                      ),
-                      LearningCardsTab(
-                        cards: notStarted,
-                        emptyText: category == 'Script'
-                            ? 'Every letter has been started.'
-                            : 'Every word has been started.',
-                        nextStatus: LearningStatus.learning,
-                        actionLabel: '+',
-                        dashboard: data,
-                      ),
+                      if (_searching)
+                        LearningCardsTab(
+                          key: const ValueKey('card-search-results'),
+                          cards: cards
+                              .where(
+                                (card) => cardMatchesSearch(
+                                  card,
+                                  _searchController.text,
+                                ),
+                              )
+                              .toList(growable: false),
+                          emptyText: 'No matching cards.',
+                          dashboard: data,
+                          showLearningStatus: true,
+                        ),
                     ],
                   ),
                 ),
