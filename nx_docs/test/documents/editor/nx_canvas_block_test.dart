@@ -6,56 +6,100 @@ import 'package:nx_canvas_core/drawing.dart';
 import 'package:nx_docs/documents/editor/nx_appflowy_blocks.dart';
 
 void main() {
-  testWidgets('end picker appends after a canvas without replacing it', (
-    tester,
-  ) async {
-    final original = nxCanvasNode();
-    final editor = EditorState(
-      document: Document(
-        root: Node(type: 'page', children: [original]),
-      ),
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: AppFlowyEditor(
-            editorState: editor,
-            blockComponentBuilders: nxBlockComponentBuilders(),
-            footer: Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () => appendNxDocumentElement(
-                  context,
-                  editor,
-                  searchLinkableModels:
-                      ({required modelType, required query}) async => [],
-                  createLinkedDocument: (_) async => throw UnimplementedError(),
-                  onLinkableModelSelected: (_, __) async {},
+  testWidgets(
+    'end picker appends after a canvas without replacing it',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final original = nxCanvasNode();
+      final editor = EditorState(
+        document: Document(
+          root: Node(type: 'page', children: [original]),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NxElementPickerScope(
+              child: AppFlowyEditor(
+                editorState: editor,
+                blockComponentBuilders: nxBlockComponentBuilders(),
+                footer: Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => appendNxDocumentElement(
+                      context,
+                      editor,
+                      searchLinkableModels:
+                          ({required modelType, required query}) async => [],
+                      createLinkedDocument: (_) async =>
+                          throw UnimplementedError(),
+                      onLinkableModelSelected: (_, __) async {},
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(NxSlashMenuOverlay),
-        matching: find.text('Canvas'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(editor.document.root.children.length, 2);
-    expect(editor.document.root.children.first, same(original));
-    expect(editor.document.root.children.last.type, nxCanvasBlockType);
-    expect(find.byType(NxSlashMenuOverlay), findsNothing);
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpWidget(const SizedBox());
-    editor.dispose();
-  });
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      final menuState = tester.state(find.byType(NxSlashMenuOverlay));
+      // Keyboard appearance and window resizing rebuild the overlay without
+      // starting a new picker session or losing its insertion point.
+      tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(1000, 800);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpAndSettle();
+      tester.binding.buildOwner!.reassemble(tester.binding.rootElement!);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.state(find.byType(NxSlashMenuOverlay)), same(menuState));
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NxSlashMenuOverlay),
+          matching: find.text('Canvas'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(editor.document.root.children.length, 2);
+      expect(editor.document.root.children.first, same(original));
+      expect(editor.document.root.children.last.type, nxCanvasBlockType);
+      expect(find.byType(NxSlashMenuOverlay), findsNothing);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      expect(find.byType(NxSlashMenuOverlay), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(NxSlashMenuOverlay), findsNothing);
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(990, 10));
+      await tester.pumpAndSettle();
+      expect(find.byType(NxSlashMenuOverlay), findsNothing);
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      // Keep the root overlay alive while removing the document's owner.
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: SizedBox())),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(NxSlashMenuOverlay), findsNothing);
+      expect(tester.takeException(), isNull);
+      editor.dispose();
+    },
+    variant: const TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.macOS,
+    }),
+  );
 
   testWidgets(
     'slash menu retains insertion position when it takes focus',
@@ -68,9 +112,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: AppFlowyEditor(
-              editorState: editor,
-              blockComponentBuilders: nxBlockComponentBuilders(),
+            body: NxElementPickerScope(
+              child: AppFlowyEditor(
+                editorState: editor,
+                blockComponentBuilders: nxBlockComponentBuilders(),
+              ),
             ),
           ),
         ),
@@ -148,13 +194,15 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: AppFlowyEditor(
-              editorState: editor,
-              blockComponentBuilders: nxBlockComponentBuilders(
-                canvasDocumentId: '1',
-                persistCanvasDocument: () async {
-                  saves++;
-                },
+            body: NxElementPickerScope(
+              child: AppFlowyEditor(
+                editorState: editor,
+                blockComponentBuilders: nxBlockComponentBuilders(
+                  canvasDocumentId: '1',
+                  persistCanvasDocument: () async {
+                    saves++;
+                  },
+                ),
               ),
             ),
           ),
@@ -186,10 +234,12 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: AppFlowyEditor(
-              editable: false,
-              editorState: editor,
-              blockComponentBuilders: nxBlockComponentBuilders(),
+            body: NxElementPickerScope(
+              child: AppFlowyEditor(
+                editable: false,
+                editorState: editor,
+                blockComponentBuilders: nxBlockComponentBuilders(),
+              ),
             ),
           ),
         ),

@@ -201,9 +201,9 @@ IconData _iconForModelTypeName(String modelType) {
 }
 
 class _NxSelectionMenuService implements SelectionMenuService {
-  _NxSelectionMenuService({required this.entry, required this.style});
+  _NxSelectionMenuService({required this.onDismiss, required this.style});
 
-  final OverlayEntry entry;
+  final VoidCallback onDismiss;
 
   @override
   final SelectionMenuStyle style;
@@ -216,9 +216,7 @@ class _NxSelectionMenuService implements SelectionMenuService {
 
   @override
   void dismiss() {
-    if (entry.mounted) {
-      entry.remove();
-    }
+    onDismiss();
   }
 
   @override

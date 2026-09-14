@@ -21,6 +21,7 @@ import 'package:nx_documents/nx_documents.dart';
 import 'package:provider/provider.dart';
 
 part 'nx_slash_menu.dart';
+part 'element_picker_scope.dart';
 part 'slash_menu_overlay.dart';
 part 'slash_menu_rows.dart';
 part 'nx_toggle_block.dart';

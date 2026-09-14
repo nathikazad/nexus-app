@@ -837,74 +837,88 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       textScaleFactor: widget.textScaleFactor,
       useMobileSelectionHandles: !isDesktopLayout(context),
     ).copyWith(cursorColor: showsCaret ? AppColors.text : Colors.transparent);
-    final editor = AppFlowyEditor(
-      editable: widget.interactionMode.canEditContent,
-      disableKeyboardService: disableReaderKeyboard,
-      editorState: _editorState,
-      editorScrollController: _scrollController,
-      editorStyle: editorStyle,
-      blockComponentBuilders: nxBlockComponentBuilders(
-        // AppFlowy's editable table can reserve its stored height without
-        // painting imported cells on macOS. Keep the stable content renderer
-        // in both modes so switching to Edit cannot reintroduce a blank block.
-        useReadTable: true,
-        canvasDocumentId: widget.document.id.toString(),
-        persistCanvasDocument:
-            !widget.interactionMode.canEditContent || widget.onChanged == null
-            ? null
-            : () async {
-                if (!mounted) {
-                  throw StateError(
-                    'Document closed; canvas recovery has been kept.',
+    final editor = NxElementPickerScope(
+      key: ObjectKey(_editorState),
+      enabled: widget.interactionMode.canEditContent && widget.active,
+      child: AppFlowyEditor(
+        editable: widget.interactionMode.canEditContent,
+        disableKeyboardService: disableReaderKeyboard,
+        editorState: _editorState,
+        editorScrollController: _scrollController,
+        editorStyle: editorStyle,
+        blockComponentBuilders: nxBlockComponentBuilders(
+          // AppFlowy's editable table can reserve its stored height without
+          // painting imported cells on macOS. Keep the stable content renderer
+          // in both modes so switching to Edit cannot reintroduce a blank block.
+          useReadTable: true,
+          canvasDocumentId: widget.document.id.toString(),
+          persistCanvasDocument:
+              !widget.interactionMode.canEditContent || widget.onChanged == null
+              ? null
+              : () async {
+                  if (!mounted) {
+                    throw StateError(
+                      'Document closed; canvas recovery has been kept.',
+                    );
+                  }
+                  _saveDebounce?.cancel();
+                  await widget.onChanged!(
+                    _currentDraftDocument(),
+                    DraftSavePolicy.deferred,
                   );
-                }
-                _saveDebounce?.cancel();
-                await widget.onChanged!(
-                  _currentDraftDocument(),
-                  DraftSavePolicy.deferred,
-                );
-              },
-        deleteDocumentImage: widget.deleteDocumentImage,
-        resolveDocumentImage: widget.resolveDocumentImage,
-        documentImageBaseUrl: widget.documentImageBaseUrl,
-      ),
-      characterShortcutEvents: widget.interactionMode.isReader
-          ? const <CharacterShortcutEvent>[]
-          : <CharacterShortcutEvent>[
-              ...standardCharacterShortcutEvents.where(
-                (event) => event.key != 'show the slash menu',
-              ),
-              nxSlashCommand(
-                searchLinkableModels: widget.searchLinkableModels,
-                createLinkedDocument: widget.createLinkedDocument!,
-                onLinkableModelSelected: widget.onLinkableModelSelected!,
-                uploadDocumentImage: widget.uploadDocumentImage,
-              ),
-            ],
-      commandShortcutEvents: _commandShortcutEvents(),
-      footer: widget.interactionMode.canEditContent
-          ? Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 72),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Builder(
-                  builder: (buttonContext) => IconButton.outlined(
-                    key: const Key('document-end-add-element'),
-                    tooltip: 'Add element',
-                    icon: const Icon(Icons.add),
-                    onPressed: () => appendNxDocumentElement(
-                      buttonContext,
-                      _editorState,
-                      searchLinkableModels: widget.searchLinkableModels,
-                      createLinkedDocument: widget.createLinkedDocument!,
-                      onLinkableModelSelected: widget.onLinkableModelSelected!,
-                      uploadDocumentImage: widget.uploadDocumentImage,
+                },
+          deleteDocumentImage: widget.deleteDocumentImage,
+          resolveDocumentImage: widget.resolveDocumentImage,
+          documentImageBaseUrl: widget.documentImageBaseUrl,
+        ),
+        characterShortcutEvents: widget.interactionMode.isReader
+            ? const <CharacterShortcutEvent>[]
+            : <CharacterShortcutEvent>[
+                ...standardCharacterShortcutEvents.where(
+                  (event) => event.key != 'show the slash menu',
+                ),
+                nxSlashCommand(
+                  searchLinkableModels: widget.searchLinkableModels,
+                  createLinkedDocument: widget.createLinkedDocument!,
+                  onLinkableModelSelected: widget.onLinkableModelSelected!,
+                  uploadDocumentImage: widget.uploadDocumentImage,
+                ),
+              ],
+        commandShortcutEvents: _commandShortcutEvents(),
+        footer: widget.interactionMode.canEditContent
+            ? Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 72),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Builder(
+                    builder: (buttonContext) => IconButton(
+                      key: const Key('document-end-add-element'),
+                      tooltip: 'Add element',
+                      icon: const Icon(Icons.add, size: 18),
+                      color: AppColors.faint,
+                      padding: const EdgeInsets.only(right: 4),
+                      constraints: const BoxConstraints.tightFor(
+                        width: 22,
+                        height: 32,
+                      ),
+                      style: IconButton.styleFrom(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () => appendNxDocumentElement(
+                        buttonContext,
+                        _editorState,
+                        searchLinkableModels: widget.searchLinkableModels,
+                        createLinkedDocument: widget.createLinkedDocument!,
+                        onLinkableModelSelected:
+                            widget.onLinkableModelSelected!,
+                        uploadDocumentImage: widget.uploadDocumentImage,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            )
-          : const SizedBox(height: 24),
+              )
+            : const SizedBox(height: 24),
+      ),
     );
     final Widget editorSurface;
     if (widget.interactionMode.isReader) {

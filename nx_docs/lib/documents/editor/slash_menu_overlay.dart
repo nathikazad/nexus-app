@@ -4,7 +4,6 @@ class NxSlashMenuOverlay extends StatefulWidget {
   const NxSlashMenuOverlay({
     required this.editorState,
     this.insertionSelection,
-    required this.menuService,
     required this.searchLinkableModels,
     required this.createLinkedDocument,
     required this.onLinkableModelSelected,
@@ -15,7 +14,6 @@ class NxSlashMenuOverlay extends StatefulWidget {
 
   final EditorState editorState;
   final Selection? insertionSelection;
-  final SelectionMenuService menuService;
   final Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
     required String query,
@@ -34,6 +32,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
 class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   final _focusNode = FocusNode(debugLabel: 'nx_slash_menu');
   late final List<SelectionMenuItem> _staticItems;
+  late final SelectionMenuService _menuService;
   var _keyword = '';
   var _selectedIndex = 0;
   var _loadingLinkableModels = false;
@@ -46,6 +45,10 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     // Preserve the insertion point while the menu owns keyboard focus, just
     // like AppFlowy's built-in selection menu.
     keepEditorFocusNotifier.increase();
+    _menuService = _NxSelectionMenuService(
+      onDismiss: widget.onDismiss,
+      style: SelectionMenuStyle.light,
+    );
     _staticItems = _nxStaticSelectionMenuItems(
       uploadDocumentImage: widget.uploadDocumentImage,
     );
@@ -106,7 +109,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
                         context,
                         selected: index == _selectedIndex,
                         editorState: widget.editorState,
-                        style: widget.menuService.style,
+                        style: _menuService.style,
                       );
                     },
                   ),
@@ -315,7 +318,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
 
   void _selectStaticItem(SelectionMenuItem item) {
     _restoreInsertionSelection();
-    item.handler(widget.editorState, widget.menuService, context);
+    item.handler(widget.editorState, _menuService, context);
   }
 
   void _selectLinkableModel(LinkableModelType modelType, LinkedModel model) {
