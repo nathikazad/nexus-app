@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_docs/sync/native/background_uploader.dart';
 import 'package:nx_docs/sync/clock.dart';
+import 'package:nx_docs/sync/sync_models.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:nx_docs/sync/document_synchronizer.dart';
 import 'package:nx_docs/sync/fake/memory_local_notes_store.dart';
 import 'package:nx_docs/sync/fake/fake_document_remote_api.dart';
@@ -38,6 +40,7 @@ void main() {
   });
 
   tearDown(() async {
+    await synchronizer.close();
     await uploader.close();
     await local.dispose();
   });
@@ -66,14 +69,19 @@ void main() {
   });
 
   test(
-    'full sync discovers headers and keeps body requests to twenty items',
+    'manifest-first sync keeps changed body requests to twenty items',
     () async {
       for (var id = 3; id <= 45; id++) {
         remote.replaceRemote(offlineTestDocument(id: id));
       }
       await synchronizer.syncLibrary();
-      expect(remote.catalogFetchCount, 1);
-      expect(remote.syncScopes.map((scope) => scope!.length), [20, 20, 5]);
+      expect(remote.catalogFetchCount, 0);
+      expect(remote.syncScopes.first, isNull);
+      expect(remote.syncScopes.skip(1).map((scope) => scope!.length), [
+        20,
+        20,
+        5,
+      ]);
       expect((await local.documentManifest()).length, 45);
     },
   );
@@ -158,49 +166,120 @@ void main() {
     },
   );
 
-  test(
-    'document opened during library sync reuses the library result',
-    () async {
-      final barrier = Completer<void>();
-      remote.syncBarrier = barrier.future;
-
-      final library = synchronizer.syncLibrary();
-      await Future<void>.delayed(Duration.zero);
-      expect(remote.syncCount, 1);
-
-      final document = synchronizer.refreshDocument(1);
-      await Future<void>.delayed(Duration.zero);
-      expect(remote.syncCount, 1);
-
-      barrier.complete();
-      await library;
-      expect((await document)?.document.title, 'One');
-      expect(remote.syncCount, 1);
-    },
-  );
-
-  test('library sync waits for an active targeted document refresh', () async {
+  test('foreground finishes while the library manifest is waiting', () async {
     final barrier = Completer<void>();
-    remote.syncBarrier = barrier.future;
-
-    final document = synchronizer.refreshDocument(1);
-    await Future<void>.delayed(Duration.zero);
-    expect(remote.syncCount, 1);
-
+    remote.beforeSync = (manifestOnly, _) async {
+      if (manifestOnly) await barrier.future;
+    };
     final library = synchronizer.syncLibrary();
     await Future<void>.delayed(Duration.zero);
-    expect(remote.syncCount, 1);
-
-    barrier.complete();
-    expect((await document)?.document.title, 'One');
-    await library;
-    expect(remote.syncCount, 2);
+    try {
+      final document = await synchronizer
+          .refreshDocument(1)
+          .timeout(const Duration(seconds: 1));
+      expect(document?.document.title, 'One');
+      expect(remote.syncCount, 2);
+    } finally {
+      barrier.complete();
+      await library;
+    }
+  });
+  test('library is not blocked by a foreground request', () async {
+    final barrier = Completer<void>();
+    var held = false;
+    remote.beforeSync = (manifestOnly, ids) async {
+      if (!manifestOnly && ids?.length == 1 && !held) {
+        held = true;
+        await barrier.future;
+      }
+    };
+    final document = synchronizer.refreshDocument(1);
+    await Future<void>.delayed(Duration.zero);
+    try {
+      await synchronizer.syncLibrary().timeout(const Duration(seconds: 1));
+      expect((await local.getDocumentByRemoteId(2))?.document.title, 'Two');
+    } finally {
+      barrier.complete();
+      await document;
+    }
+  });
+  test(
+    'unchanged library uses one request, one changed item adds one request',
+    () async {
+      await synchronizer.syncLibrary();
+      var before = remote.syncCount;
+      await synchronizer.syncLibrary();
+      expect(remote.syncCount - before, 1);
+      remote.replaceRemote(
+        offlineTestDocument(
+          id: 2,
+          title: 'Changed',
+          updatedAt: DateTime.utc(2026, 8),
+        ),
+      );
+      before = remote.syncCount;
+      await synchronizer.syncLibrary();
+      expect(remote.syncCount - before, 2);
+      expect(remote.syncScopes.last, {2});
+    },
+  );
+  test(
+    'blocked upload does not block downloads or overwrite the draft',
+    () async {
+      await synchronizer.syncLibrary();
+      final existing = (await local.getDocumentByRemoteId(1))!;
+      await local.saveDraftAndEnqueue(
+        existing.copyWith(
+          document: existing.document.copyWith(title: 'Local edit'),
+          syncState: DocumentSyncState.locallyModified,
+        ),
+        operation: PendingOperation(
+          operationId: 'edit',
+          accountKey: 'user:1',
+          documentKey: existing.key,
+          type: PendingOperationType.update,
+          payload: {},
+          createdAt: DateTime.utc(2026, 8),
+        ),
+      );
+      final barrier = Completer<void>();
+      remote.saveBarrier = barrier.future;
+      try {
+        await synchronizer.syncLibrary().timeout(const Duration(seconds: 1));
+        expect(
+          (await local.getDocumentByRemoteId(1))?.document.title,
+          'Local edit',
+        );
+        expect(uploader.state.activity, BackgroundUploadActivity.uploading);
+      } finally {
+        barrier.complete();
+        await uploader.uploadPending();
+      }
+    },
+  );
+  test('reports checking, download, completion and failure', () async {
+    final phases = <offline.DownloadPhase>[];
+    final sub = synchronizer.progressChanges.listen((r) => phases.add(r.phase));
+    await synchronizer.syncLibrary();
+    expect(
+      phases,
+      containsAllInOrder([
+        offline.DownloadPhase.checking,
+        offline.DownloadPhase.downloading,
+        offline.DownloadPhase.complete,
+      ]),
+    );
+    expect(synchronizer.progress?.total, 2);
+    expect(synchronizer.progress?.verified, 2);
+    remote.error = StateError('No connection');
+    await expectLater(synchronizer.syncLibrary(), throwsStateError);
+    expect(synchronizer.progress?.phase, offline.DownloadPhase.incomplete);
+    await sub.cancel();
   });
 }
 
 final class _Clock implements Clock {
   const _Clock();
-
   @override
   DateTime now() => DateTime.utc(2026, 7, 30, 12);
 }

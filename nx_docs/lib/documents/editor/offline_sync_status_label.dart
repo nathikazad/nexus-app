@@ -30,8 +30,13 @@ class OfflineSyncStatusLabel extends ConsumerWidget {
 String _statusText(BackgroundUploadState status) {
   return switch (status.activity) {
     BackgroundUploadActivity.idle =>
-      status.lastUploadedAt == null ? 'Saved locally' : 'Synced just now',
-    BackgroundUploadActivity.uploading => 'Syncing',
+      status.pendingCount > 0
+          ? '${status.pendingCount} changes waiting to upload'
+          : status.lastUploadedAt == null
+          ? 'Saved locally'
+          : 'Edits uploaded',
+    BackgroundUploadActivity.uploading =>
+      'Uploading edits (${status.pendingCount} waiting)',
     BackgroundUploadActivity.retryWaiting =>
       'Sync failed - ${status.pendingCount} changes waiting',
   };

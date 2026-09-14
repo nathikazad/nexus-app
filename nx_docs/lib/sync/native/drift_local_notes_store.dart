@@ -326,12 +326,38 @@ class DriftLocalNotesStore implements LocalNotesStore, QueuedDocumentReader {
   }
 
   @override
+  Future<bool> hasCurrentDocument(DocumentManifestEntry entry) async {
+    try {
+      final row = await _rowByRemoteId(entry.documentId);
+      if (row == null) return false;
+      // Unsent changes are protected; upload status is reported separately.
+      if (row.syncState != DocumentSyncState.synced.name) return true;
+      if (entry.serverHash == null || row.serverHash != entry.serverHash) {
+        return false;
+      }
+      final storage = files;
+      return storage != null
+          ? await storage.exists(row.documentJson)
+          : mapper.fromDocumentRow(row).document.hasFullDocument;
+    } catch (_) {
+      // Missing or invalid local content must be fetched again.
+      return false;
+    }
+  }
+
+  @override
   Future<void> applySyncBundle(DocumentSyncBundle bundle) async {
     await database.transaction(() async {
       for (final remote in bundle.documents) {
         final remoteId = remote.key.remoteId;
         if (remoteId == null) continue;
         final existing = await _rowByRemoteId(remoteId);
+        if (bundle.expectedHashes != null &&
+            (!bundle.expectedHashes!.containsKey(remoteId) ||
+                existing?.serverHash != bundle.expectedHashes![remoteId])) {
+          continue;
+        }
+
         if (existing != null &&
             existing.syncState != DocumentSyncState.synced.name) {
           continue;
@@ -362,6 +388,12 @@ class DriftLocalNotesStore implements LocalNotesStore, QueuedDocumentReader {
 
       for (final remoteId in bundle.deletedIds) {
         final existing = await _rowByRemoteId(remoteId);
+        if (bundle.expectedHashes != null &&
+            (!bundle.expectedHashes!.containsKey(remoteId) ||
+                existing?.serverHash != bundle.expectedHashes![remoteId])) {
+          continue;
+        }
+
         if (existing != null &&
             existing.syncState == DocumentSyncState.synced.name) {
           await (database.delete(database.localDocuments)..where(

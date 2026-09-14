@@ -12,3 +12,5 @@ export 'src/sync/sync_ports.dart';
 export 'src/sync/sync_supervisor.dart';
 
 export 'src/sync/hash_manifest.dart';
+
+export 'src/sync/download_report.dart';

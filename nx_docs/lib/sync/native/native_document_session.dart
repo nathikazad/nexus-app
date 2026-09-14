@@ -71,7 +71,16 @@ final class NativeDocumentSession implements DocumentSession {
 
   void _applyLocal(LocalDocument? local) {
     if (_closed || local == null) return;
-    final origin = _nextLocalOrigin;
+    // Library sync writes arrive through the store subscription, without a
+    // session.refresh() call to set an origin. Tell the editor these clean
+    // snapshots are authoritative, so it replaces changed canvas/text content.
+    // Upload acknowledgements keep the same content and do not reset the editor.
+    final origin =
+        _nextLocalOrigin == DocumentChangeOrigin.localCache &&
+            _state.document != null &&
+            local.syncState == DocumentSyncState.synced
+        ? DocumentChangeOrigin.remoteRefresh
+        : _nextLocalOrigin;
     _nextLocalOrigin = DocumentChangeOrigin.localCache;
     final hasBody = local.document.hasFullDocument;
     _emit(

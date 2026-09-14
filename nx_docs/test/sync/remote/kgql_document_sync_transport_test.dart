@@ -11,6 +11,35 @@ void main() {
     registerFallbackValue(QueryOptions(document: gql('query { __typename }')));
   });
 
+  test(
+    'manifest request uses the shared server API and bulk timeout',
+    () async {
+      final client = _MockGraphQLClient();
+      when(() => client.query(any())).thenAnswer((call) async {
+        final options = call.positionalArguments.single as QueryOptions;
+        expect(options.variables['manifestOnly'], isTrue);
+        expect(options.queryRequestTimeout, const Duration(minutes: 5));
+        return QueryResult(
+          options: options,
+          source: QueryResultSource.network,
+          data: {
+            'syncDocuments': {
+              'manifest': [
+                {'id': 1, 'model_type': 'Document', 'hash': 'h'},
+              ],
+              'documents': [],
+              'deleted_ids': [],
+            },
+          },
+        );
+      });
+      final bundle = await KgqlDocumentSyncTransport(
+        client,
+      ).syncDocuments(manifest: [], manifestOnly: true);
+      expect(bundle.manifest.single.serverHash, 'h');
+      expect(bundle.documents, isEmpty);
+    },
+  );
   test('maps a changed KGQL payload into the domain sync bundle', () async {
     final client = _MockGraphQLClient();
     when(() => client.query(any())).thenAnswer(

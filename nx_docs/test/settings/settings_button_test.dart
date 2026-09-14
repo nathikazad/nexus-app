@@ -155,6 +155,18 @@ void main() {
       ProviderScope(
         overrides: [
           documentSyncStatusProvider.overrideWith((ref) => statuses.stream),
+          documentDownloadProgressProvider.overrideWith(
+            (ref) => Stream.value(
+              DownloadReport(
+                phase: DownloadPhase.downloading,
+                total: 10,
+                verified: 3,
+                failed: [],
+                updatedAt: DateTime.utc(2026, 9),
+              ),
+            ),
+          ),
+          backgroundUploaderProvider.overrideWithValue(null),
           appVersionInfoProvider.overrideWith(
             (ref) async => const AppVersionInfo(shorebirdAvailable: false),
           ),
@@ -182,6 +194,20 @@ void main() {
     await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pump();
     expect(refetches, 0);
+    expect(
+      find.text('Downloading updates: 3/10 documents checked'),
+      findsOneWidget,
+    );
+    statuses.add(
+      const SyncStatus(
+        activity: SyncActivity.retryWaiting,
+        pendingCount: 0,
+        message: 'Network unavailable',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('docs-sync-error')), findsOneWidget);
+    expect(find.textContaining('Retrying automatically'), findsOneWidget);
   });
 
   testWidgets('default web refresh reads the server repository', (

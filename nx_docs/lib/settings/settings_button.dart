@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_docs/app/version_provider.dart';
 import 'package:nx_docs/library/library_providers.dart';
 import 'package:nx_docs/sync/sync_providers.dart';
+import 'package:nx_docs/documents/editor/offline_sync_status_label.dart';
 import 'package:nx_docs/app/version_info.dart';
 import 'package:nx_docs/app/theme.dart';
 import 'package:nx_docs/documents/editor/document_text_scale.dart';
@@ -104,6 +105,7 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
     final workspace = ref.watch(desktopWorkspaceProvider);
     final versionInfo = ref.watch(appVersionInfoProvider);
     final syncStatus = ref.watch(documentSyncStatusProvider).value;
+    final download = ref.watch(documentDownloadProgressProvider).value;
     final syncInProgress =
         _refetching || syncStatus?.activity == offline.SyncActivity.syncing;
     return AlertDialog(
@@ -212,8 +214,8 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
               const SizedBox(height: 6),
               Text(
                 widget.offlineEnabled
-                    ? 'Upload pending edits, compare the local manifest, and '
-                          'download every changed document for offline use.'
+                    ? 'Check for changes and download only new or updated documents. '
+                          'Your edits upload separately in the background.'
                     : 'Reload the document library from the server.',
               ),
               const SizedBox(height: 12),
@@ -235,6 +237,32 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
                       : 'Refresh library',
                 ),
               ),
+              if (widget.offlineEnabled) ...[
+                const SizedBox(height: 10),
+                const OfflineSyncStatusLabel(),
+                if (download != null)
+                  Text(switch (download.phase) {
+                    offline.DownloadPhase.checking =>
+                      download.total == 0
+                          ? 'Checking library…'
+                          : 'Checking library: ${download.verified}/${download.total} documents checked',
+                    offline.DownloadPhase.downloading =>
+                      'Downloading updates: ${download.verified}/${download.total} documents checked',
+                    offline.DownloadPhase.complete =>
+                      '${download.verified}/${download.total} documents checked. Library is up to date.',
+                    offline.DownloadPhase.incomplete =>
+                      'Library check interrupted. Saved documents remain available.',
+                  }, key: const Key('docs-download-progress')),
+                if (syncStatus?.activity == offline.SyncActivity.retryWaiting)
+                  Text(
+                    'Sync paused: ${syncStatus?.message ?? "Connection unavailable"}. Retrying automatically.',
+                    key: const Key('docs-sync-error'),
+                  ),
+                if (syncInProgress)
+                  const Text(
+                    'You can keep using your documents while synchronization runs.',
+                  ),
+              ],
               if (_resultMessage != null) ...<Widget>[
                 const SizedBox(height: 10),
                 Text(

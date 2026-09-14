@@ -7,7 +7,7 @@ final class KgqlBooksSyncTransport implements BooksSyncTransport {
   final GraphQLClient client;
   // Override GraphQL's normal 90-second limit, not just an outer Future timer.
   // The server allows four minutes of SQL work, leaving a minute for transfer.
-  static const requestTimeout = Duration(minutes: 5);
+  static const requestTimeout = documentBulkSyncTimeout;
 
   @override
   Future<DocumentSyncResponse> manifest() => syncDocuments(

@@ -1,7 +1,8 @@
 # Shared NX Canvas
 
 `nx_canvas_core` contains the versioned editable ink model and preview renderer.
-Both the standalone NX Canvas prototype and NX Docs depend on it. Their Android
+NX Docs depends on this module directly. The original prototype lives under
+`example/` as a development and regression-test harness. Their Android
 source sets include `android/src/main/kotlin`, so the native editor stays the same
 implementation tested on the ink tablet. It uses the tablet's firmware NoteView;
 other devices can render drawing previews without that firmware.
@@ -22,7 +23,7 @@ per point through Flutter.
 
 On the tablet: enter Edit mode, insert `/canvas`, tap the preview, draw, and use
 `‹ Document` to return. Other platforms/read-only modes open a zoomable preview.
-The standalone NX Canvas app is not required to use the NX Docs element.
+No separate canvas app is required to use the NX Docs element.
 
 Tests cover native geometry/orientation in the prototype, existing Flutter ink
 and storage behavior, the Docs block/native handoff, read-only previews, and a

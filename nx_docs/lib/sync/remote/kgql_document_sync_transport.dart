@@ -15,6 +15,7 @@ final class KgqlDocumentSyncTransport implements DocumentSyncTransport {
   Future<DocumentSyncBundle> syncDocuments({
     required List<DocumentManifestEntry> manifest,
     Set<int>? documentIds,
+    bool manifestOnly = false,
   }) async {
     final response = await document_api.syncDocuments(
       _client,
@@ -22,8 +23,14 @@ final class KgqlDocumentSyncTransport implements DocumentSyncTransport {
         for (final entry in manifest) entry.toJson(),
       ],
       documentIds: documentIds,
+      manifestOnly: manifestOnly,
+      requestTimeout: document_api.documentBulkSyncTimeout,
     );
     return DocumentSyncBundle(
+      manifest: [
+        for (final entry in response.manifest)
+          DocumentManifestEntry(documentId: entry.id, serverHash: entry.hash),
+      ],
       documents: <RemoteDocument>[
         for (final entry in response.documents) _remoteDocument(entry),
       ],

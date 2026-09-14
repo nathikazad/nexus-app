@@ -12,6 +12,7 @@ abstract interface class DocumentRemoteApi {
   Future<DocumentSyncBundle> syncDocuments({
     required List<DocumentManifestEntry> manifest,
     Set<int>? documentIds,
+    bool manifestOnly = false,
   });
 
   Future<NxDocument> createDocument({

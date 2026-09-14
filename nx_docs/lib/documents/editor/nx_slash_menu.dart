@@ -1,5 +1,57 @@
 part of 'nx_appflowy_blocks.dart';
 
+/// Opens the usual element picker at a new insertion point after all blocks.
+Future<void> appendNxDocumentElement(
+  BuildContext context,
+  EditorState editorState, {
+  required Future<List<LinkedModel>> Function({
+    required LinkableModelType modelType,
+    required String query,
+  })
+  searchLinkableModels,
+  required Future<LinkedModel> Function(String title) createLinkedDocument,
+  required Future<void> Function(LinkableModelType modelType, LinkedModel model)
+  onLinkableModelSelected,
+  Future<String> Function(String source)? uploadDocumentImage,
+}) async {
+  if (!editorState.editable || editorState.isDisposed) return;
+  final overlay = Overlay.of(context);
+  final anchor = (context.findRenderObject() as RenderBox?)?.localToGlobal(
+    Offset.zero,
+  );
+  keepEditorFocusNotifier.increase();
+  try {
+    final path = [editorState.document.root.children.length];
+    final transaction = editorState.transaction
+      ..insertNode(path, paragraphNode(text: '/'))
+      ..afterSelection = Selection.collapsed(Position(path: path, offset: 1));
+    await editorState.apply(transaction);
+    editorState.service.keyboardService?.enable();
+    editorState.selection = Selection.collapsed(
+      Position(path: path, offset: 1),
+    );
+    if (!overlay.mounted || editorState.isDisposed) return;
+    _showNxSlashOverlay(
+      overlay.context,
+      editorState,
+      anchorOverride: anchor,
+      overlayOverride: overlay,
+      searchLinkableModels: searchLinkableModels,
+      createLinkedDocument: createLinkedDocument,
+      onLinkableModelSelected: onLinkableModelSelected,
+      uploadDocumentImage: uploadDocumentImage,
+    );
+    await WidgetsBinding.instance.endOfFrame;
+    if (!editorState.isDisposed) {
+      editorState.selection = Selection.collapsed(
+        Position(path: path, offset: 1),
+      );
+    }
+  } finally {
+    keepEditorFocusNotifier.decrease();
+  }
+}
+
 CharacterShortcutEvent nxSlashCommand({
   required Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
@@ -522,6 +574,8 @@ bool _isHttpImageUrl(String text) {
 void _showNxSlashOverlay(
   BuildContext anchorContext,
   EditorState editorState, {
+  Offset? anchorOverride,
+  OverlayState? overlayOverride,
   required Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
     required String query,
@@ -532,9 +586,23 @@ void _showNxSlashOverlay(
   onLinkableModelSelected,
   Future<String> Function(String source)? uploadDocumentImage,
 }) {
-  final overlay = Overlay.of(anchorContext);
+  final overlay = overlayOverride ?? Overlay.of(anchorContext);
   final renderBox = anchorContext.findRenderObject() as RenderBox?;
-  final anchor = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+  final anchor =
+      anchorOverride ?? renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+  final viewport = MediaQuery.of(anchorContext);
+  final left = (anchor.dx + 8).clamp(
+    8.0,
+    (viewport.size.width - 348).clamp(8.0, double.infinity),
+  );
+  final top = (anchor.dy + 28).clamp(
+    viewport.padding.top + 8,
+    (viewport.size.height - viewport.viewInsets.bottom - 328).clamp(
+      viewport.padding.top + 8,
+      double.infinity,
+    ),
+  );
+  final insertionSelection = editorState.selection;
   late final OverlayEntry entry;
   late final _NxSelectionMenuService menuService;
   entry = OverlayEntry(
@@ -544,10 +612,11 @@ void _showNxSlashOverlay(
         style: SelectionMenuStyle.light,
       );
       return Positioned(
-        left: anchor.dx + 8,
-        top: anchor.dy + 28,
+        left: left,
+        top: top,
         child: NxSlashMenuOverlay(
           editorState: editorState,
+          insertionSelection: insertionSelection,
           menuService: menuService,
           searchLinkableModels: searchLinkableModels,
           createLinkedDocument: createLinkedDocument,

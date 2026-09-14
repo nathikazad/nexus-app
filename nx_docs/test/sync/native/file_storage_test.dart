@@ -13,6 +13,43 @@ import '../../support/contracts/local_notes_store_contract.dart';
 
 void main() {
   test(
+    'hash verification checks files without decoding and repairs missing files',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('nx-sync-integrity-');
+      final database = NotesDatabase(NativeDatabase.memory());
+      final files = DirectoryContentFiles(Directory('${dir.path}/content'));
+      final store = DriftLocalNotesStore(
+        database: database,
+        accountKey: 'prod:user-1',
+        files: files,
+      );
+      addTearDown(() async {
+        await database.close();
+        await dir.delete(recursive: true);
+      });
+      final remote = RemoteDocument(
+        key: const DocumentKey(localId: 'remote-1', remoteId: 1),
+        document: offlineTestDocument(),
+        revision: const RemoteRevision('v1'),
+        serverHash: 'hash',
+      );
+      await store.applySyncBundle(DocumentSyncBundle(documents: [remote]));
+      final reads = files.reads;
+      const entry = DocumentManifestEntry(documentId: 1, serverHash: 'hash');
+      expect(await store.hasCurrentDocument(entry), isTrue);
+      expect(files.reads, reads);
+      final row = await database.select(database.localDocuments).getSingle();
+      final reference = ContentReference.decode(row.documentJson);
+      await File('${files.directory.path}/${reference.path}').delete();
+      expect(await store.hasCurrentDocument(entry), isFalse);
+      await store.applySyncBundle(
+        DocumentSyncBundle(documents: [remote], expectedHashes: {1: 'hash'}),
+      );
+      expect(await store.hasCurrentDocument(entry), isTrue);
+    },
+  );
+
+  test(
     'large documents round-trip through workers without entering the summary index',
     () async {
       final dir = await Directory.systemTemp.createTemp('nx-large-document-');

@@ -882,7 +882,29 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
               ),
             ],
       commandShortcutEvents: _commandShortcutEvents(),
-      footer: SizedBox(height: widget.interactionMode.isReader ? 24 : 120),
+      footer: widget.interactionMode.canEditContent
+          ? Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 72),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Builder(
+                  builder: (buttonContext) => IconButton.outlined(
+                    key: const Key('document-end-add-element'),
+                    tooltip: 'Add element',
+                    icon: const Icon(Icons.add),
+                    onPressed: () => appendNxDocumentElement(
+                      buttonContext,
+                      _editorState,
+                      searchLinkableModels: widget.searchLinkableModels,
+                      createLinkedDocument: widget.createLinkedDocument!,
+                      onLinkableModelSelected: widget.onLinkableModelSelected!,
+                      uploadDocumentImage: widget.uploadDocumentImage,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : const SizedBox(height: 24),
     );
     final Widget editorSurface;
     if (widget.interactionMode.isReader) {

@@ -2,6 +2,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_offline/nx_offline.dart';
 
 void main() {
+  test(
+    'bounded downloads request only missing items and commit before next page',
+    () async {
+      final calls = <Set<int>>[];
+      final saved = <int>[];
+      await reconcileHashManifest<int, int, int>(
+        manifest: List.generate(9, (i) => i),
+        downloadPageSize: 3,
+        keyOf: (x) => x,
+        valueKeyOf: (x) => x,
+        verified: (x) async => x == 0,
+        download: (ids) async {
+          expect(saved.length, calls.length * 3);
+          calls.add(ids);
+          return HashDownload(ids.toList());
+        },
+        applyBatch: (items) async {
+          saved.addAll(items);
+          return [];
+        },
+      );
+      expect(calls, [
+        {1, 2, 3},
+        {4, 5, 6},
+        {7, 8},
+      ]);
+      expect(saved.length, 8);
+    },
+  );
   test('unchanged manifest never downloads or writes', () async {
     final result = await reconcileHashManifest<int, int, int>(
       manifest: [1, 2],

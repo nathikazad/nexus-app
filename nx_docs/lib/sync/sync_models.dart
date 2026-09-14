@@ -31,10 +31,16 @@ final class DocumentManifestEntry {
 
 final class DocumentSyncBundle {
   const DocumentSyncBundle({
+    this.manifest = const <DocumentManifestEntry>[],
+    this.expectedHashes,
     this.documents = const <RemoteDocument>[],
     this.deletedIds = const <int>[],
   });
 
+  final List<DocumentManifestEntry> manifest;
+
+  /// Compare-and-set guard: a newer upload/foreground pull must win.
+  final Map<int, String?>? expectedHashes;
   final List<RemoteDocument> documents;
   final List<int> deletedIds;
 }

@@ -1,8 +1,9 @@
-# NX Canvas
+# NX Canvas development example
 
-A standalone Flutter experiment for thinking with a stylus on one continuous,
-unbounded canvas. It lives on the `Canvas` worktree branch and does not change
-NX Docs or AppFlowy.
+Development harness for the shared NX Canvas module in the parent directory.
+The product canvas is an NX Docs element; this example preserves the original
+prototype, native-device experiments, and regression tests. It is not a separate
+product app.
 
 ## Try it
 

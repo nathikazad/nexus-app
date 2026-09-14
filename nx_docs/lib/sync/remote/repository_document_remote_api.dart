@@ -41,10 +41,12 @@ final class RepositoryDocumentRemoteApi implements DocumentRemoteApi {
   Future<DocumentSyncBundle> syncDocuments({
     required List<DocumentManifestEntry> manifest,
     Set<int>? documentIds,
+    bool manifestOnly = false,
   }) {
     return _syncTransport.syncDocuments(
       manifest: manifest,
       documentIds: documentIds,
+      manifestOnly: manifestOnly,
     );
   }
 
