@@ -18,7 +18,7 @@ shared `nx_auth` package; no user ID or credentials are compiled into it.
   recordings in account-scoped durable storage and play those files directly.
   Web plays downloaded bytes. Playback supports seeking and speed control.
 - Original import sources remain in `assets/` for provenance, but are no longer
-  bundled into the application. `generation/` holds story sources, audio tools, skills, and private outputs.
+  bundled into the application. The separate [Story Creator repository](<../../Story Creator/README.md>) holds story sources, generation tools, skills, and private outputs.
 
 ## Run
 
