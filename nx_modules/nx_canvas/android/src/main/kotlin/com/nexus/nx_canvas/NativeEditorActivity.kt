@@ -27,11 +27,13 @@ class NativeEditorActivity : Activity() {
     private lateinit var editing:NativeEditingView
     private lateinit var body:FrameLayout
     private lateinit var status:TextView
-    private lateinit var zoomLabel:TextView
+    private lateinit var boardLabel:TextView
+    private var overview:NativeBoardGrid?=null
+    private lateinit var boardControls:NativeBoardControls
+    private var overlayTouch=false
     private val buttons=mutableMapOf<NativeTool,Button>()
     private lateinit var undoButton:Button
     private lateinit var redoButton:Button
-    private lateinit var previousButton:Button
     private val seen=IdentityHashMap<Any,Boolean>()
     private val main=Handler(Looper.getMainLooper())
     private var documentId="prototype"
@@ -63,8 +65,6 @@ class NativeEditorActivity : Activity() {
         toolButton(NativeTool.RUB,"Rub erase")
         toolButton(NativeTool.REGION,"Region erase")
         toolButton(NativeTool.SELECT,"Lasso / move")
-        toolButton(NativeTool.HAND,"Hand")
-        toolButton(NativeTool.MAGNIFY,"⌕ Magnify")
         tools.addView(button("Pen width"){chooseWidth()})
         undoButton=button("Undo"){perform{model.undo();showTool()}}
         redoButton=button("Redo"){perform{model.redo();showTool()}}
@@ -74,17 +74,6 @@ class NativeEditorActivity : Activity() {
         page.addView(status)
         body=FrameLayout(this)
         page.addView(body,LinearLayout.LayoutParams(-1,0,1f))
-        val navigation=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-        previousButton=button("Previous view"){perform{model.back();showTool()}}
-        navigation.addView(previousButton)
-        navigation.addView(button("Overview"){perform{model.overview(body.width/density,body.height/density);showTool()}})
-        navigation.addView(button("Places"){choosePlace()})
-        navigation.addView(Space(this),LinearLayout.LayoutParams(0,1,1f))
-        navigation.addView(button("−"){perform{model.zoom(.8,center());showTool()}})
-        zoomLabel=TextView(this).apply{gravity=Gravity.CENTER;minWidth=dp(48)}
-        navigation.addView(zoomLabel)
-        navigation.addView(button("+"){perform{model.zoom(1.25,center());showTool()}})
-        page.addView(navigation)
         setContentView(page)
         try {
             val input=NativeEditorFiles.scene(this)
@@ -102,6 +91,19 @@ class NativeEditorActivity : Activity() {
             body.addView(widget,FrameLayout.LayoutParams(-1,-1))
             editing=NativeEditingView(this,model){checkpointSafely();updateControls()}.apply{visibility=View.GONE}
             body.addView(editing,FrameLayout.LayoutParams(-1,-1))
+            boardControls=NativeBoardControls(this,{dx,dy,jump->navigateBoard(dx,dy,jump)},{showOverview()})
+            body.addView(boardControls,FrameLayout.LayoutParams(dp(152),dp(152),Gravity.BOTTOM or Gravity.RIGHT).apply{
+                rightMargin=dp(16);bottomMargin=dp(16)
+            })
+            boardLabel=TextView(this).apply{
+                textSize=12f;setTextColor(Color.DKGRAY);setPadding(dp(10),dp(6),dp(10),dp(6))
+                background=android.graphics.drawable.GradientDrawable().apply{
+                    setColor(Color.WHITE);cornerRadius=dp(14).toFloat();setStroke(dp(1),0xffdddddd.toInt())
+                }
+            }
+            body.addView(boardLabel,FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM or Gravity.LEFT).apply{
+                leftMargin=dp(16);bottomMargin=dp(16)
+            })
             // Layout gives us a size before the firmware sets its rotation.
             // Its surfaceChanged callback initializes rotation and panel buffers;
             // render only after that callback sequence has completed.
@@ -113,7 +115,13 @@ class NativeEditorActivity : Activity() {
                     widget.post {
                         if(!ready && !closing && !isFinishing && holder.surface.isValid && widget.width>0 && widget.height>0) {
                             ready=true
-                            runCatching{showTool();checkpoint()}.onFailure{ready=false;report(it)}
+                            runCatching{
+                                val sw=body.width/density;val sh=body.height/density
+                                val legacy=model.boards==null
+                                model.boards=model.boards?:InkBoards(sw,sh)
+                                if(legacy || kotlin.math.abs(model.view.scale-kotlin.math.min(sw/model.boards!!.width,sh/model.boards!!.height))>.001)
+                                    model.view=model.boards!!.view(model.boards!!.current(model.view,sw,sh),sw,sh)
+                                showTool();checkpoint()}.onFailure{ready=false;report(it)}
                         }
                     }
                 }
@@ -126,17 +134,17 @@ class NativeEditorActivity : Activity() {
         text=label;textSize=13f;isAllCaps=false;minWidth=dp(60);minimumWidth=dp(60)
         setPadding(dp(10),0,dp(10),0);setOnClickListener{if(!busy&&!closing)action()}
     }
-    private fun center()=InkPoint(body.width/density/2,body.height/density/2)
-    private fun nativeTool()=tool in listOf(NativeTool.PEN,NativeTool.RUB,NativeTool.REGION)
+    private fun nativeTool()=overview==null && tool in listOf(NativeTool.PEN,NativeTool.RUB,NativeTool.REGION)
     private fun flag(enabled:Boolean){ink?.let{api.getMethod("setInputEnabled",Boolean::class.javaPrimitiveType).invoke(it,enabled)}}
-    private fun resumeInk(){flag(ready&&resumed&&!closing&&!busy&&!dialogOpen&&nativeTool())}
+    private fun resumeInk(){flag(ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&nativeTool())}
     private fun finishPen(){ink?.let{api.getMethod("finishPen").invoke(it)}}
 
     private fun switchTool(next:NativeTool) {
-        if(next==tool || !ready || busy || closing)return
+        if(::boardControls.isInitialized)boardControls.cancelPress()
+        if((next==tool && overview==null) || !ready || busy || closing)return
         val wasNative=nativeTool()
         perform {
-            tool=next;buttonErasing=false;model.selected.clear()
+            dismissOverview();tool=next;buttonErasing=false;model.selected.clear()
             if(wasNative && nativeTool()) {
                 // Keep the vendor framebuffer and record list intact. A pen
                 // change does not require a full-screen foreground refresh.
@@ -200,6 +208,7 @@ class NativeEditorActivity : Activity() {
     }
     private fun showTool() {
         if(!ready)return
+        dismissOverview()
         flag(false)
         if(nativeTool()) {
             editing.visibility=View.GONE;ink!!.visibility=View.VISIBLE
@@ -229,7 +238,7 @@ class NativeEditorActivity : Activity() {
     }
     /** Only tool transitions touch the vendor API; live ink stays stock. */
     private fun eraseButton(held:Boolean) {
-        if(!ready || busy || closing || dialogOpen || !nativeTool() || held==buttonErasing)return
+        if(!ready || busy || closing || dialogOpen || !nativeTool() || overlayTouch || held==buttonErasing)return
         runCatching {
             finishPen()
             buttonErasing=held
@@ -246,8 +255,18 @@ class NativeEditorActivity : Activity() {
         }
     }
     override fun dispatchTouchEvent(event:MotionEvent):Boolean {
-        stylusButtons(event)
-        return super.dispatchTouchEvent(event)
+        if(event.actionMasked==MotionEvent.ACTION_DOWN && ::boardControls.isInitialized) {
+            val rect=Rect()
+            overlayTouch=listOf(boardControls,boardLabel).any{it.getGlobalVisibleRect(rect) && rect.contains(event.rawX.toInt(),event.rawY.toInt())}
+            if(overlayTouch && ready)runCatching{flag(false);finishPen()}.onFailure{report(it)}
+        }
+        if(!overlayTouch)stylusButtons(event)
+        val handled=super.dispatchTouchEvent(event)
+        if(event.actionMasked==MotionEvent.ACTION_UP || event.actionMasked==MotionEvent.ACTION_CANCEL) {
+            val wasOverlay=overlayTouch;overlayTouch=false
+            if(wasOverlay && ready)runCatching{resumeInk()}.onFailure{report(it)}
+        }
+        return handled
     }
     override fun dispatchGenericMotionEvent(event:MotionEvent):Boolean {
         stylusButtons(event)
@@ -259,8 +278,10 @@ class NativeEditorActivity : Activity() {
         // Include uncollected native strokes: an Undo tap captures them first.
         undoButton.isEnabled=model.canUndo || nativeTool()
         redoButton.isEnabled=model.canRedo
-        previousButton.isEnabled=model.canGoBack
-        zoomLabel.text="${(model.view.scale*100).roundToInt()}%"
+        if(model.boards!=null && body.width>0) {
+            val board=model.boards!!.current(model.view,body.width/density,body.height/density)
+            boardLabel.text=if(overview!=null)"Tap a board to open it" else "Board ${board.column}, ${board.row}"
+        }
         status.text=when(tool){
             NativeTool.PEN->"Black pen · ${penWidth} pt · Hold the pen button and circle to erase"
             NativeTool.RUB->"Rub eraser · Rub over the parts you want to remove"
@@ -277,31 +298,44 @@ class NativeEditorActivity : Activity() {
             penWidth=widths[index];runCatching{if(nativeTool())setNativePen(if(buttonErasing)NativeTool.REGION else tool);updateControls()}.onFailure{report(it)};dialog.dismiss()
         }.setNegativeButton("Cancel",null).create().apply{setOnDismissListener{dialogOpen=false;resumeInk()};show()}
     }
-    private fun choosePlace()=perform{
-        dialogOpen=true
-        val labels=(model.places.map{it.name}+"+ Save this view").toTypedArray()
-        AlertDialog.Builder(this).setTitle("Places").setItems(labels){_,index->
-            if(index<model.places.size){model.rememberView();model.view=model.places[index].view;showTool();checkpointSafely()}
-            else main.post{savePlace()}
-        }.setNegativeButton("Close",null).create().apply{setOnDismissListener{dialogOpen=false;resumeInk()};show()}
+    private fun dismissOverview() { overview?.let{body.removeView(it)};overview=null }
+    private fun navigateBoard(dx:Int,dy:Int,jump:Boolean) {
+        if(!ready || busy || closing)return
+        perform {
+            dismissOverview();model.selected.clear()
+            model.view=model.boards!!.navigate(model.view,dx,dy,jump,body.width/density,body.height/density)
+            showTool()
+        }
     }
-    private fun savePlace() {
-        flag(false);dialogOpen=true
-        val input=EditText(this).apply{hint="Opening, next idea…";setSingleLine()}
-        AlertDialog.Builder(this).setTitle("Name this view").setView(input).setPositiveButton("Save"){_,_->
-            val name=input.text.toString().trim();if(name.isNotEmpty()){model.places=model.places+InkPlace(name,model.view);checkpointSafely()}
-        }.setNegativeButton("Cancel",null).create().apply{setOnDismissListener{dialogOpen=false;resumeInk()};show()}
+    private fun openBoard(board:InkBoard) {
+        dismissOverview();model.selected.clear()
+        model.view=model.boards!!.view(board,body.width/density,body.height/density)
+        showTool();checkpointSafely()
+    }
+    private fun showOverview() {
+        if(::boardControls.isInitialized)boardControls.cancelPress()
+        perform {
+            dismissOverview()
+            overview=NativeBoardGrid(this,model){board->perform{openBoard(board)}}
+            ink?.visibility=View.INVISIBLE;editing.visibility=View.GONE
+            body.addView(overview,FrameLayout.LayoutParams(-1,-1))
+            boardControls.bringToFront();boardLabel.bringToFront()
+            updateControls()
+        }
     }
     private fun checkpoint() {
         NativeEditorFiles.write(this,"document-output",mapOf("documentId" to documentId,"title" to title,"drawing" to InkCodec.encode(model),"saveToken" to UUID.randomUUID().toString()))
     }
     private fun checkpointSafely(){runCatching{checkpoint()}.onFailure{report(it)}}
     private fun finishWriting() {
+        if(::boardControls.isInitialized)boardControls.cancelPress()
         if(!::model.isInitialized || !ready){finish();return}
         perform{checkpoint();closing=true;setResult(RESULT_OK);finish()}
     }
     @Deprecated("Legacy Android back callback") override fun onBackPressed(){finishWriting()}
     override fun onPause() {
+        if(::boardControls.isInitialized)boardControls.cancelPress()
+        overlayTouch=false
         resumed=false
         if(::model.isInitialized)runCatching{flag(false);if(ready){finishPen();captureNew()};if(::editing.isInitialized)editing.cancelGesture();checkpoint()}.onFailure{report(it)}
         super.onPause()

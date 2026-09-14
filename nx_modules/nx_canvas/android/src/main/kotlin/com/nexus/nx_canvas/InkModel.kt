@@ -88,7 +88,7 @@ object InkGeometry {
     }
 }
 
-class InkModel(var strokes: List<NativeStroke>, var view: InkViewport, var places: List<InkPlace>) {
+class InkModel(var strokes: List<NativeStroke>, var view: InkViewport, var places: List<InkPlace>, var boards:InkBoards?=null) {
     private val undo=mutableListOf<List<NativeStroke>>()
     private val redo=mutableListOf<List<NativeStroke>>()
     private val views=mutableListOf<InkViewport>()
@@ -151,10 +151,11 @@ object InkCodec {
     fun model(map:Map<*,*>):InkModel {
         require(map["format"]=="nx-canvas" && (map["version"] as Number).toInt()==1){"Unsupported canvas format"}
         return InkModel((map["strokes"] as List<*>).map { stroke(it as Map<*,*>) },view(map["view"] as Map<*,*>),
-            (map["places"] as List<*>).map { val p=it as Map<*,*>;InkPlace(p["name"] as String,view(p["view"] as Map<*,*>)) })
+            (map["places"] as List<*>).map { val p=it as Map<*,*>;InkPlace(p["name"] as String,view(p["view"] as Map<*,*>)) },
+            (map["boards"] as? Map<*,*>)?.let{InkBoards(num(it,"width",1.0),num(it,"height",1.0))})
     }
     fun encode(view:InkViewport)=mapOf("x" to view.x,"y" to view.y,"scale" to view.scale)
     fun encode(model:InkModel):Map<String,Any> = mapOf("format" to "nx-canvas","version" to 1,
         "strokes" to model.strokes.map { mapOf("id" to it.id,"points" to it.points.map { p->listOf(p.x,p.y,p.pressure) },"color" to it.color,"width" to it.width) },
-        "view" to encode(model.view),"places" to model.places.map { mapOf("name" to it.name,"view" to encode(it.view)) })
+        "view" to encode(model.view),"places" to model.places.map { mapOf("name" to it.name,"view" to encode(it.view)) }) + (model.boards?.let{mapOf("boards" to mapOf("width" to it.width,"height" to it.height))}?:emptyMap())
 }

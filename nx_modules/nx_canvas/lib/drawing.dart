@@ -75,10 +75,12 @@ class Drawing {
   Drawing({
     List<InkStroke> strokes = const [],
     this.view = const CanvasView(),
+    this.boards,
     List<SavedPlace> places = const [],
   }) : strokes = List.unmodifiable(strokes),
        places = List.unmodifiable(places);
   final List<InkStroke> strokes;
+  final Map<String, dynamic>? boards;
   final CanvasView view;
   final List<SavedPlace> places;
   Map<String, dynamic> toJson() => {
@@ -87,12 +89,16 @@ class Drawing {
     'strokes': strokes.map((s) => s.toJson()).toList(),
     'view': view.toJson(),
     'places': places.map((p) => p.toJson()).toList(),
+    if (boards != null) 'boards': boards,
   };
   factory Drawing.fromJson(Map<String, dynamic> json) {
     if (json['format'] != 'nx-canvas' || json['version'] != 1) {
       throw const FormatException('This drawing format is not supported.');
     }
     return Drawing(
+      boards: json['boards'] == null
+          ? null
+          : Map<String, dynamic>.from(json['boards'] as Map),
       strokes: (json['strokes'] as List)
           .map((s) => InkStroke.fromJson(Map<String, dynamic>.from(s as Map)))
           .toList(),

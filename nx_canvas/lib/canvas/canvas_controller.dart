@@ -8,7 +8,8 @@ class CanvasController extends ChangeNotifier {
   CanvasController(Drawing drawing)
     : strokes = drawing.strokes,
       view = drawing.view,
-      places = drawing.places;
+      places = drawing.places,
+      boards = drawing.boards;
   final inkRepaint = ChangeNotifier();
   final sceneRepaint = ChangeNotifier();
   bool get isDrawing => _before != null;
@@ -33,6 +34,7 @@ class CanvasController extends ChangeNotifier {
   List<InkStroke> strokes;
   CanvasView view;
   List<SavedPlace> places;
+  final Map<String, dynamic>? boards;
   CanvasTool tool = CanvasTool.pen;
   int color = 0xff283d44;
   double width = 3;
@@ -48,7 +50,8 @@ class CanvasController extends ChangeNotifier {
   bool get canUndo => _undo.isNotEmpty;
   bool get canRedo => _redo.isNotEmpty;
   bool get canGoBack => _views.isNotEmpty;
-  Drawing get drawing => Drawing(strokes: strokes, view: view, places: places);
+  Drawing get drawing =>
+      Drawing(strokes: strokes, view: view, places: places, boards: boards);
   String _id() => '${DateTime.now().microsecondsSinceEpoch}-${_serial++}';
   void refresh() => notifyListeners();
   void setTool(CanvasTool value) {

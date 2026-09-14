@@ -17,6 +17,7 @@ void main() {
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   final drawing = Drawing(
+    boards: {'width': 900.0, 'height': 1100.0},
     strokes: [
       InkStroke(
         id: 'pen-1',

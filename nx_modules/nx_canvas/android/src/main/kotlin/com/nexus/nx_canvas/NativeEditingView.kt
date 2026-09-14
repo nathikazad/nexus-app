@@ -29,6 +29,18 @@ object NativeInkPainter {
         canvas.translate((model.view.x*density).toFloat(),(model.view.y*density).toFloat())
         canvas.scale((model.view.scale*density).toFloat(),(model.view.scale*density).toFloat())
         val paint=Paint(Paint.ANTI_ALIAS_FLAG).apply { style=Paint.Style.STROKE;strokeCap=Paint.Cap.ROUND }
+        model.boards?.let { boards ->
+            // Board guides are part of the static background, never live pen processing.
+            val bounds=canvas.clipBounds
+            paint.color=0xffdddddd.toInt();paint.strokeWidth=(1/(model.view.scale*density)).toFloat()
+            for(column in ceil(bounds.left/boards.width).toInt()..floor(bounds.right/boards.width).toInt()) {
+                val x=(column*boards.width).toFloat();canvas.drawLine(x,bounds.top.toFloat(),x,bounds.bottom.toFloat(),paint)
+            }
+            for(row in ceil(bounds.top/boards.height).toInt()..floor(bounds.bottom/boards.height).toInt()) {
+                val y=(row*boards.height).toFloat();canvas.drawLine(bounds.left.toFloat(),y,bounds.right.toFloat(),y,paint)
+            }
+        }
+
         for(stroke in model.strokes) {
             paint.color=stroke.color.toInt()
             val delta=if(stroke.id in model.selected)offset else InkPoint(0.0,0.0)
@@ -98,7 +110,7 @@ class NativeEditingView(context:Context,val model:InkModel,val changed:()->Unit)
         when(e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 active=true;start=point(e);base=model.view;anchor=center(e);distance=1.0
-                pan=tool==NativeTool.HAND || e.getToolType(0)==MotionEvent.TOOL_TYPE_FINGER
+                pan=tool==NativeTool.HAND
                 if(pan)model.rememberView()
                 else {
                     val bounds=NativeInkPainter.bounds(model)?.apply { inset((-12/model.view.scale).toFloat(),(-12/model.view.scale).toFloat()) }
