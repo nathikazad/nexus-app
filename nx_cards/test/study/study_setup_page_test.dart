@@ -742,8 +742,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(firstLetter).hitTestable(), findsOneWidget);
     expect(find.text('CARD 1 OF 2'), findsOneWidget);
-    final erase = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Erase'),
+    final erase = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.delete_outline),
     );
     expect(erase.onPressed, isNull);
     await tester.drag(
@@ -758,12 +758,14 @@ void main() {
     expect(drawingPaint.foregroundPainter, isNotNull);
     expect(
       tester
-          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Erase'))
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.delete_outline),
+          )
           .onPressed,
       isNotNull,
     );
-    await tester.tap(find.text('Erase'));
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.byTooltip('Erase'));
+    await tester.tap(find.byTooltip('Next'));
     await tester.pumpAndSettle();
     expect(find.text(firstLetter == 'ക' ? 'ഖ' : 'ക'), findsOneWidget);
     expect(find.text('CARD 2 OF 2'), findsOneWidget);

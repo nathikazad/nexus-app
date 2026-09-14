@@ -79,12 +79,16 @@ class DirectoryBinaryContentFilesImpl implements DirectoryBinaryContentFiles {
     try {
       final sink = temporary.openWrite();
       var count = 0;
-      await for (final chunk in bytes) {
-        count += chunk.length;
-        sink.add(chunk);
+      try {
+        await for (final chunk in bytes) {
+          count += chunk.length;
+          sink.add(chunk);
+        }
+        await sink.flush();
+      } finally {
+        // A failed network stream must close the file before staging cleanup.
+        await sink.close();
       }
-      await sink.flush();
-      await sink.close();
       if (count == 0) throw const FormatException('Binary content is empty');
       final hash = (await sha256.bind(temporary.openRead()).first).toString();
       final relative =

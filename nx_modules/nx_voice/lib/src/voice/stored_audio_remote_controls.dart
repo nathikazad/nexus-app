@@ -6,18 +6,21 @@ typedef NxRemoteAudioAction = Future<void> Function();
 typedef NxRemoteAudioSeek = Future<void> Function(Duration position);
 
 class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
-  NxStoredAudioRemoteControls._();
+  NxStoredAudioRemoteControls();
 
   static Future<NxStoredAudioRemoteControls>? _initialization;
 
-  static Future<NxStoredAudioRemoteControls> initialize() {
+  static Future<NxStoredAudioRemoteControls> initialize({
+    String channelId = 'com.nexus.nxNotes.note_audio',
+    String channelName = 'Note audio',
+  }) {
     return _initialization ??= AudioService.init<NxStoredAudioRemoteControls>(
-      builder: NxStoredAudioRemoteControls._,
-      config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.nexus.nxNotes.note_audio',
-        androidNotificationChannelName: 'Note audio',
-        rewindInterval: Duration(seconds: 15),
-        fastForwardInterval: Duration(seconds: 15),
+      builder: NxStoredAudioRemoteControls.new,
+      config: AudioServiceConfig(
+        androidNotificationChannelId: channelId,
+        androidNotificationChannelName: channelName,
+        rewindInterval: const Duration(seconds: 15),
+        fastForwardInterval: const Duration(seconds: 15),
       ),
     );
   }
@@ -42,7 +45,13 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
     required NxRemoteAudioAction onStop,
     required NxRemoteAudioSeek onSeek,
     required double speed,
+    String title = 'Note audio',
+    String album = 'Nx Docs',
   }) {
+    if (!identical(owner, _owner) || mediaItem.value?.id != mediaId) {
+      _position = Duration.zero;
+      _playing = false;
+    }
     _owner = owner;
     _onPlay = onPlay;
     _onPause = onPause;
@@ -54,8 +63,8 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
     mediaItem.add(
       MediaItem(
         id: mediaId,
-        album: 'Nx Docs',
-        title: 'Note audio',
+        album: album,
+        title: title,
         duration: duration,
       ),
     );
@@ -79,14 +88,22 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
   }
 
   void update({
+    Object? owner,
     Duration? position,
     Duration? duration,
     bool? playing,
     double? speed,
     AudioProcessingState? processingState,
   }) {
+    if (owner != null && !identical(owner, _owner)) return;
     if (position != null) _position = position;
-    if (duration != null && duration > Duration.zero) _duration = duration;
+    if (duration != null &&
+        duration >= Duration.zero &&
+        duration != _duration) {
+      _duration = duration;
+      final item = mediaItem.value;
+      if (item != null) mediaItem.add(item.copyWith(duration: duration));
+    }
     if (playing != null) _playing = playing;
     if (speed != null) _speed = speed;
     if (processingState != null) _processingState = processingState;
@@ -103,7 +120,15 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
   Future<void> stop() async => _onStop?.call();
 
   @override
-  Future<void> seek(Duration position) async => _onSeek?.call(position);
+  Future<void> seek(Duration position) async => _onSeek?.call(Duration(
+      milliseconds:
+          position.inMilliseconds.clamp(0, _duration.inMilliseconds)));
+
+  @override
+  Future<void> rewind() => seek(_position - const Duration(seconds: 15));
+
+  @override
+  Future<void> fastForward() => seek(_position + const Duration(seconds: 15));
 
   void _publish() {
     final bound = _owner != null;

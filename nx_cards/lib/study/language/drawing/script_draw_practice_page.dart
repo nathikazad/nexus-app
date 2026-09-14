@@ -171,36 +171,17 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton.filledTonal(
-                                tooltip: _letterVisible
-                                    ? 'Hide character'
-                                    : 'Show character',
-                                onPressed: () => setState(
-                                  () => _letterVisible = !_letterVisible,
-                                ),
-                                icon: Icon(
-                                  _letterVisible
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                ),
+                          if (_audioUrl case final audioUrl?
+                              when widget.audioRepository != null) ...[
+                            const SizedBox(width: 12),
+                            PronunciationButton(
+                              key: ValueKey<String>(
+                                'draw-practice-audio-${_card.id}',
                               ),
-                              if (_audioUrl case final audioUrl?
-                                  when widget.audioRepository != null) ...[
-                                const SizedBox(height: 8),
-                                PronunciationButton(
-                                  key: ValueKey<String>(
-                                    'draw-practice-audio-${_card.id}',
-                                  ),
-                                  audioUrl: audioUrl,
-                                  repository: widget.audioRepository!,
-                                ),
-                              ],
-                            ],
-                          ),
+                              audioUrl: audioUrl,
+                              repository: widget.audioRepository!,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -218,31 +199,36 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                   ),
                   const SizedBox(height: 16),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _drawingController.hasStrokes
-                              ? _drawingController.clear
-                              : null,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Text('Erase'),
-                          ),
+                      IconButton.outlined(
+                        tooltip: 'Erase',
+                        onPressed: _drawingController.hasStrokes
+                            ? _drawingController.clear
+                            : null,
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton.filledTonal(
+                        tooltip: _letterVisible
+                            ? 'Hide character'
+                            : 'Show character',
+                        onPressed: () =>
+                            setState(() => _letterVisible = !_letterVisible),
+                        icon: Icon(
+                          _letterVisible
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _next,
-                          icon: Icon(
-                            last
-                                ? Icons.check_circle_outline
-                                : Icons.arrow_forward,
-                          ),
-                          label: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Text(last ? 'Finish' : 'Next'),
-                          ),
+                      IconButton.filled(
+                        tooltip: last ? 'Finish' : 'Next',
+                        onPressed: _next,
+                        icon: Icon(
+                          last
+                              ? Icons.check_circle_outline
+                              : Icons.arrow_forward,
                         ),
                       ),
                     ],

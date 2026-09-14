@@ -59,7 +59,7 @@ class NxStoredAudioPlayer {
     _speed = speed;
     try {
       if (_open) await _player.setSpeed(speed);
-      _remoteControls?.update(speed: speed);
+      _remoteControls?.update(owner: this, speed: speed);
     } catch (_) {
       _speed = previous;
       rethrow;
@@ -91,6 +91,7 @@ class NxStoredAudioPlayer {
             _currentPosition = Duration.zero;
             _markPlaying(false);
             _remoteControls?.update(
+              owner: this,
               position: Duration.zero,
               processingState: AudioProcessingState.completed,
             );
@@ -128,7 +129,7 @@ class NxStoredAudioPlayer {
     if (!_sourceStarted) return;
     await _player.seekToPlayer(position);
     _currentPosition = position;
-    _remoteControls?.update(position: position);
+    _remoteControls?.update(owner: this, position: position);
   }
 
   Future<void> stop() async {
@@ -139,6 +140,7 @@ class NxStoredAudioPlayer {
     _currentPosition = Duration.zero;
     _markPlaying(false);
     _remoteControls?.update(
+      owner: this,
       position: Duration.zero,
       processingState: AudioProcessingState.ready,
     );
@@ -235,6 +237,7 @@ class NxStoredAudioPlayer {
     _progressSubscription = _player.onProgress?.listen((event) {
       _currentPosition = event.position;
       _remoteControls?.update(
+        owner: this,
         position: event.position,
         duration: event.duration,
       );
@@ -247,6 +250,7 @@ class NxStoredAudioPlayer {
     if (_playing == value) return;
     _playing = value;
     _remoteControls?.update(
+      owner: this,
       playing: value,
       processingState: AudioProcessingState.ready,
     );
@@ -257,6 +261,7 @@ class NxStoredAudioPlayer {
     if (_loading == value) return;
     _loading = value;
     _remoteControls?.update(
+      owner: this,
       processingState:
           value ? AudioProcessingState.loading : AudioProcessingState.ready,
     );
