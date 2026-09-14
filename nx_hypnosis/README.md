@@ -18,7 +18,7 @@ shared `nx_auth` package; no user ID or credentials are compiled into it.
   the downloaded bytes; native platforms use a temporary file removed when the
   player closes. Playback supports seeking and speed control.
 - Original import sources remain in `assets/` for provenance, but are no longer
-  bundled into the application. `voice_test/` is the separate ElevenLabs prototype.
+  bundled into the application. `generation/` holds story sources, audio tools, skills, and private outputs.
 
 ## Run
 

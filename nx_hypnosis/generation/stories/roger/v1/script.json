@@ -1,0 +1,1219 @@
+{
+  "version": 1,
+  "title": "Roger — Abundance Through Service",
+  "cast": {
+    "Narrator": "Harold",
+    "Roger": "Edward",
+    "Mother": "Beatrice",
+    "Rita": "Deborah",
+    "Tim": "Evan",
+    "Rick": "Arthur",
+    "Katie": "Lauren",
+    "Katie’s father": "Warren",
+    "Factory manager": "Conrad",
+    "Coworker": "Vinny"
+  },
+  "speaking_rate": 0.95,
+  "delivery_mode": "BALANCED",
+  "speaker_instructions": {
+    "Narrator": "Warm, grounded storytelling with clear articulation and natural variation. Let meaningful moments breathe. Avoid a sales pitch or exaggerated drama.",
+    "Roger": "A humble, courageous protagonist. Warm, human, expressive conversation with varied pitch and rhythm. Let vulnerability, curiosity, joy, and growing conviction emerge as appropriate to the line. Never a booming announcer or a monotone.",
+    "Mother": "A mature older mother speaking to her adult son. Warm, gently weathered, affectionate, practical and reassuring. Understated, not theatrical.",
+    "Rita": "Gentle and sincere, with quiet conviction and self-respect. Natural, warm conversation.",
+    "Tim": "An ordinary working man. Friendly and direct, with natural warmth. Let frustration or relief follow the meaning of the line.",
+    "Rick": "A successful middle-aged man, kindly and confident. Speak to the craftsman with respect and natural curiosity.",
+    "Katie": "An assured adult woman, elegant, friendly and candid. Natural conversation, never an advertisement.",
+    "Katie’s father": "An experienced older businessman giving patient, practical advice. Conversational, not an announcer.",
+    "Factory manager": "A gruff factory manager, skeptical and dismissive but believable. No shouting or exaggerated villain voice.",
+    "Coworker": "A skeptical coworker teasing another man with dry disbelief. Natural, not cartoonish."
+  },
+  "turns": [
+    {
+      "id": "turn-001",
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "The first man laughed before Roger had finished speaking.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-002",
+      "scene": 1,
+      "speaker": "Coworker",
+      "text": "You’re going to make shoes for private customers?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-003",
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "Roger stood beside his workbench, a length of waxed thread caught around his finger. Around him, the factory carried on: belts turning, needles striking leather, soles dropping into wooden bins.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-004",
+      "scene": 1,
+      "speaker": "Roger",
+      "text": "I want to try,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-005",
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "he said.\n\nSomeone at the next bench grinned.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-006",
+      "scene": 1,
+      "speaker": "Coworker",
+      "text": "Listen to him. He’ll have his name above a shop by Christmas.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-007",
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "Roger tried to smile with them.\n\nHis manager did not smile.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-008",
+      "scene": 1,
+      "speaker": "Factory manager",
+      "text": "And who feeds your mother while you’re trying?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-009",
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "That quietened the room.\n\nThe manager glanced toward the door, where men gathered every morning hoping someone would miss a shift.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-010",
+      "scene": 1,
+      "speaker": "Factory manager",
+      "text": "You have work here, Roger. Don’t throw away what you have for something you’ve imagined.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-011",
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "Roger looked down at his hands. A fine white scar crossed one knuckle. Dark wax had settled into the creases of his fingers.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-012",
+      "scene": 1,
+      "speaker": "Roger",
+      "text": "I understand,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-013",
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "he said.\n\nHe returned to his stitching.\n\nFor the rest of the afternoon, whenever laughter rose above the machines, he wondered whether it was about him.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-014",
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "At home, his mother divided a pot of stew among four bowls.\n\nHis youngest brother had torn the sole of his school shoe. His sister needed money for an examination fee. A notice from the landlord lay beneath the salt jar, folded so that only the amount due was visible.\n\nRoger put his wages on the table.\n\nHis mother counted them once, then began making small piles.\n\nHe watched her move a coin from one pile to another.\n\nFor years, he had called this his fate.\n\nThere was dignity in work. His mother had taught him that. He did not resent the stitching, or the men beside him, or the honest tiredness in his shoulders at the end of a day.\n\nBut somewhere along the way, he had begun to believe that accepting his circumstances was the same thing as accepting God’s will.\n\nHe prayed for enough work.\n\nHe prayed not to fall ill.\n\nHe rarely prayed for anything larger.\n\nA week earlier, outside the factory, he had watched a well-dressed man remove an expensive shoe and rub his heel. The man had complained bitterly to his companion.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-015",
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "Third pair this month. Every shop promises they’ll soften.",
+      "pause": 0.45,
+      "instruction": "Briefly portray a frustrated, well-dressed passerby complaining about uncomfortable shoes. This is an incidental character, not Roger."
+    },
+    {
+      "id": "turn-016",
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "Roger had noticed the stiff edge at the back of the shoe. He had known two ways he might alter it.\n\nHe had said nothing.\n\nThat silence troubled him more than the manager’s laughter.\n\nSomeone had needed something he might have been able to give, and he had stood there waiting to become the sort of man who was allowed to offer it.\n\nThat evening, after his siblings had gone to bed, his mother found him repairing the school shoe.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-017",
+      "scene": 2,
+      "speaker": "Mother",
+      "text": "What happened?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-018",
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "He told her.\n\nShe listened without interrupting.\n\nThen she asked,",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-019",
+      "scene": 2,
+      "speaker": "Mother",
+      "text": "Can you begin without leaving us hungry?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-020",
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "Roger looked up.\n\nIt was such a different question from whether he would succeed.\n\nOver the following weeks, he put aside a little money, bought discarded leather with permission, and repaired shoes after supper. He kept taking factory shifts. On evenings and the occasional day he could spare, he went out to speak to people.\n\nBefore the first outing, he sat on the edge of his bed with his coat already on.\n\nHis heart was beating as though something dangerous waited outside.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-021",
+      "scene": 2,
+      "speaker": "Roger",
+      "text": "God,",
+      "pause": 0.18,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-022",
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "he whispered,",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-023",
+      "scene": 2,
+      "speaker": "Roger",
+      "text": "help me see where I can be useful. And help me speak when I see it.",
+      "pause": 0.45,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-024",
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "Then he stood up.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-025",
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "He began badly.\n\nHe spoke too quickly. He explained things people had not asked about. When someone said they were busy, he apologized so many times that they became impatient.\n\nA shopkeeper asked where his business was.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-026",
+      "scene": 3,
+      "speaker": "Roger",
+      "text": "I work from home.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-027",
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "The man’s expression changed.\n\nA hotel clerk looked at Roger’s worn shoes and said their guests already had suppliers.\n\nOne woman listened politely, then asked whether he could mend her gardener’s boots.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-028",
+      "scene": 3,
+      "speaker": "Roger",
+      "text": "Yes,",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-029",
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "Roger said.\n\nHe took the boots.\n\nBy the end of the first month, he had learned something unexpected.\n\nBeing dismissed was unpleasant. It was not unbearable.\n\nHe could be embarrassed at eleven in the morning and still eat lunch at noon. He could hear no, walk to the next street, and discover that the world had not ended.\n\nGradually, he stopped beginning with what he wanted to sell.\n\nHe began asking questions.\n\nWhich shoes did people wear longest? What wore out first? When did their feet begin to hurt? Which pair did they keep buying, and what did they wish someone would change?\n\nSome people hurried away.\n\nOthers had been waiting years for someone to ask.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-030",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Tim was leaning against a car outside a café when Roger met him.\n\nOne shoe was off. His socked foot rested on the curb.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-031",
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "Long day?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-032",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Roger asked.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-033",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "Long enough.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-034",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Tim was a chauffeur. Most days he drove across the city, waited, drove again, then stood beside the car while other people finished their evenings.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-035",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "My left foot’s fine,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-036",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-037",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "It’s the right one. By supper I want to cut the shoe off.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-038",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "He had already sought advice and been told to return if the trouble persisted. Different shoes had helped for a little while, then disappointed him.\n\nRoger crouched beside the curb.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-039",
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "May I look?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-040",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Tim handed him the shoe.\n\nRoger checked the seams, pressed the lining, and ran his thumb around the inside.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-041",
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "I don’t know whether I can solve it,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-042",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-043",
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "But there are a few things I could try.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-044",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "How much?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-045",
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "For looking? Nothing.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-046",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Tim studied him.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-047",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "Bring it back before Thursday. I need it.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-048",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Roger returned it the following evening.\n\nHe had fitted a soft insert beneath the foot.\n\nTwo days later, Tim shook his head.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-049",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "Comfortable standing still. Worse when I’m driving.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-050",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Roger tried a firmer material.\n\nThen a thinner one.\n\nThen he made removable inserts so Tim could compare them during different parts of the day.\n\nNothing lasted.\n\nRoger began keeping notes on scraps of paper: where the pain appeared, how long Tim had driven, which shoe he wore.\n\nAt night, he laid the scraps beside his tools.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-051",
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "Please help me understand what I’m missing.",
+      "pause": 0.45,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-052",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Once, after another unsuccessful fitting, he offered to stop.\n\nTim leaned against the car.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-053",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "You remember what I tell you,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-054",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-055",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "Most people just tell me to buy another pair.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-056",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "So Roger continued.\n\nHe tried shoes with almost no cushioning. He changed the flexibility of the soles. He adjusted the room around the toes.\n\nThen, one morning, he made a mistake.\n\nTwo nearly identical trial pairs stood beneath his bench. In his hurry, he packed a left shoe from one pair and a right shoe from the other.\n\nTim wore them for an entire working day.\n\nThat evening, he arrived at Roger’s door still wearing both shoes.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-057",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "What did you change?",
+      "pause": 0.45,
+      "instruction": "Surprised, delighted relief after a long working day without the usual pain. Sincere, conversational."
+    },
+    {
+      "id": "turn-058",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Roger felt his stomach tighten.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-059",
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "Why?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-060",
+      "scene": 4,
+      "speaker": "Tim",
+      "text": "Because I’ve just driven six hours, and I’m not desperate to take this one off.",
+      "pause": 0.45,
+      "instruction": "Surprised, delighted relief after a long working day without the usual pain. Sincere, conversational."
+    },
+    {
+      "id": "turn-061",
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Roger examined the pair.\n\nThe left shoe had the cushioned insert.\n\nThe right had the thinner, firmer footbed.\n\nHe did not understand everything about it. But he remembered what Tim had said weeks earlier: the soft cushioning felt worse at the pedals.\n\nHe made a second pair with the same arrangement and asked Tim to try it carefully over several days.\n\nThe improvement held.\n\nTim began calling them his miracle shoes.\n\nRoger smiled when he heard it, but in his notebook he wrote something more useful:\n\nThe two feet did not need the same thing.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-062",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Tim told his employer, Rick, while opening the car door.\n\nRick had watched him limp at the end of enough evenings to notice the difference.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-063",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "He really helped you?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-064",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Tim nodded.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-065",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "Then I’d like to meet him.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-066",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Rick walked every morning. One foot was slightly longer than the other, and buying ordinary pairs meant accepting either cramped toes on one side or a loose heel on the other.\n\nAt their first meeting, Roger measured both feet separately.\n\nRick watched him.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-067",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "You seem nervous.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-068",
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "I am.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-069",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "About the shoes?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-070",
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "About promising more than I can do.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-071",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "Then promise what you can.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-072",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Roger considered that.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-073",
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "I can promise to keep working until we know whether I can make you something better.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-074",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Rick agreed to pay a materials deposit.\n\nRoger had rehearsed asking for it all the way to the house. Rick’s easy acceptance surprised him so much that he briefly forgot the amount.\n\nHe spent the next several days visiting shops, examining walking shoes, speaking with suppliers, and studying how different soles bent beneath the ball of the foot.\n\nHe could not afford to buy everything he wanted to study. Some shopkeepers let him look. One dismissed him. A repairer across town showed him several worn pairs and explained where they had failed.\n\nWhen Roger returned to Rick, he brought trial uppers and several combinations of footbeds and soles.\n\nThey tested five arrangements that afternoon.\n\nTwo felt promising.\n\nOver the following fortnight, Roger made a finished pair and adjusted it after Rick’s walks.\n\nWhen Rick finally said,",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-075",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "Leave them exactly as they are,",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-076",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Roger felt a satisfaction that stayed with him the whole journey home.\n\nRick paid the balance, then added a substantial bonus. The total was roughly ten times the original materials deposit.\n\nRoger stared at the money.\n\nRick mistook his silence.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-077",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "Is something wrong?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-078",
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "No.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-079",
+      "scene": 5,
+      "speaker": "Rick",
+      "text": "Good. My wife would like to see you.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-080",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Katie received him in a room with more shoes than Roger had ever seen outside a shop.\n\nBeside her stood a young woman carrying a notebook.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-081",
+      "scene": 6,
+      "speaker": "Katie",
+      "text": "This is Rita,",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-082",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Katie said.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-083",
+      "scene": 6,
+      "speaker": "Katie",
+      "text": "She keeps me from arriving at appointments on the wrong day.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-084",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Rita smiled.\n\nRoger nearly dropped his measuring tape.\n\nKatie wanted evening slippers: elegant, fitted properly, and decorated with ornaments she already owned.\n\nShe opened a small box.\n\nInside lay a pair of jeweled pieces shaped like leaves.\n\nRoger had never held anything so valuable.\n\nKatie described how she wanted them to catch the light when she walked.\n\nHe listened, then set the box down carefully.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-085",
+      "scene": 6,
+      "speaker": "Roger",
+      "text": "I need to tell you something. I haven’t made anything like this before.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-086",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Katie waited.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-087",
+      "scene": 6,
+      "speaker": "Roger",
+      "text": "I understand leather and fitting. I’ll need help with the ornament work.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-088",
+      "scene": 6,
+      "speaker": "Katie",
+      "text": "Can you find it?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-089",
+      "scene": 6,
+      "speaker": "Roger",
+      "text": "I believe I can.",
+      "pause": 0.45,
+      "instruction": "Quiet growing confidence. He is beginning to believe himself. Warm and resolute, not boastful."
+    },
+    {
+      "id": "turn-090",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Rita looked up from her notebook.\n\nIt was the first time Roger had heard himself say those words without immediately explaining why he might be wrong.\n\nKatie took him shopping to show him the shapes she liked. Roger paid attention to things he had once barely noticed: the curve of an opening, how a narrow strap changed the look of a foot, the difference between decoration that seemed graceful and decoration that seemed heavy.\n\nHe used part of Rick’s payment to buy materials and pay for instruction.\n\nThen the trouble began.\n\nThe first sample looked clumsy.\n\nOn the second, the decorated leather pulled out of shape.\n\nHe tested a mounting method with inexpensive imitation pieces. It held when the slipper sat on his bench and loosened when someone walked in it.\n\nThe money disappeared faster than he expected.\n\nHe still took factory shifts. His mother sometimes found him asleep beside the lamp, a scrap of leather in one hand.\n\nFor three days, ashamed of his lack of progress, he avoided sending Katie an update.\n\nOn the fourth, he wrote to her.\n\nThe attachment is not strong enough yet. I won’t put your ornaments at risk. I need more time.\n\nHer reply was brief.\n\nThank you for telling me. Show me when it is ready.\n\nHe folded that note and kept it.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-091",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "The solution began in a jeweler’s cramped workshop.\n\nRoger had already visited two people who said the job was not worth their time.\n\nThe third listened.\n\nInstead of fastening the ornaments directly through the thin slipper upper, the jeweler suggested mounting them in small settings attached to a separate, reinforced leather panel.\n\nTogether, they positioned the decoration on a part of the upper that flexed less. The jeweler smoothed the metal fittings. Roger enclosed the backs beneath a soft lining so that nothing sharp touched the foot.\n\nHe practiced with imitation ornaments first.\n\nHe bent the samples, pulled at them, and asked his sister to walk around the house in a trial pair while he watched for movement.\n\nOnly then did they fit Katie’s pieces.\n\nWhen Roger brought the slippers to her, she lifted one toward the window.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-092",
+      "scene": 7,
+      "speaker": "Katie",
+      "text": "Oh, Roger.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-093",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "For a moment, he thought he had finished.\n\nThen she walked across the room.\n\nHer smile changed.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-094",
+      "scene": 7,
+      "speaker": "Katie",
+      "text": "They press here.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-095",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "She touched the front of her foot.\n\nRoger felt the familiar disappointment rise in him.\n\nRita was watching from beside the doorway.\n\nHe could have explained how many weeks the decoration had taken. He could have suggested that evening shoes were never entirely comfortable.\n\nInstead, he knelt.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-096",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "Show me exactly where.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-097",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He marked the spot.\n\nThe next version had more room through the forefoot, a smoother lining, and thin cushioning placed where Katie needed it rather than spread everywhere.\n\nShe walked across the room.\n\nThen back again.\n\nThen she kept walking.\n\nThis time, Roger waited for her to speak.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-098",
+      "scene": 7,
+      "speaker": "Katie",
+      "text": "When can you make another pair?",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-099",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Katie wanted heels next.\n\nRoger sought out a maker who understood balance and heel construction. He paid for the man’s time and accepted being a beginner again.\n\nThere were failed samples. There were fittings that looked right and felt wrong. There was a heel position he changed by a small amount that made a surprisingly large difference.\n\nThroughout it, he prayed.\n\nSometimes the prayer was hopeful.\n\nSometimes it was simply,",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-100",
+      "scene": 8,
+      "speaker": "Roger",
+      "text": "Help me stay patient.",
+      "pause": 0.45,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-101",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "When Katie settled his fees for the slippers, the heels, and the development work, she added a bonus that left him speechless.\n\nIt was about ten times what Rick had paid him.\n\nMore than Roger had earned in the factory in a year.\n\nHe counted it at home with his mother beside him.\n\nThen he counted it again.\n\nHis mother did not ask what he would buy.\n\nShe said,",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-102",
+      "scene": 8,
+      "speaker": "Mother",
+      "text": "Put aside what belongs to the work.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-103",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "They separated the money: household needs, materials, wages owed to the craftsmen who had helped him, savings.\n\nFor the first time, there was still a meaningful amount left.\n\nRoger sat quietly before it.\n\nHe had not taken it from anyone.\n\nHe had listened, learned, asked for help, and made something another person valued.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-104",
+      "scene": 8,
+      "speaker": "Roger",
+      "text": "Thank you, God,",
+      "pause": 0.18,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-105",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-106",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Katie’s friends began asking about the shoes.\n\nAt first, Roger took one commission at a time.\n\nThen there were more appointments than he could manage after his shifts.\n\nKatie approached her father, who owned several businesses.\n\nShe brought him orders, cost estimates, and samples. He asked difficult questions. Some she could answer. Others she brought back to Roger.\n\nEventually, they agreed to fund a small company.\n\nKatie would run the commercial side and bring in customers. Her father would provide capital and advice. Roger would lead design, fitting, and production.\n\nRoger’s share would be thirty percent.\n\nBefore signing, he paid an independent adviser to explain the agreement.\n\nIt cost him money he disliked spending.\n\nHe was glad afterward that he had spent it.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-107",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "The workshop frightened him more than his first private commission.\n\nNow mistakes could waste other people’s wages.\n\nHe knew how to work at a production bench. He had never designed the flow of an entire workshop.\n\nHe stood in the empty room the evening before the equipment arrived.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-108",
+      "scene": 10,
+      "speaker": "Roger",
+      "text": "Help me build something good here,",
+      "pause": 0.18,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-109",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "he prayed.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-110",
+      "scene": 10,
+      "speaker": "Roger",
+      "text": "Help me recognize what I don’t know.",
+      "pause": 0.45,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-111",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "He hired a cutter whose precision he had admired for years, an experienced stitcher, and a production supervisor who had organized work in another factory.\n\nTogether, they divided the process into stages: measuring and fitting, patterns, cutting, stitching, assembly, finishing, inspection.\n\nThey labeled each customer’s measurements clearly. They kept separate patterns for left and right feet when required. They checked a trial fitting before completing expensive custom work.\n\nRoger made mistakes.\n\nOnce, he moved a workstation because it looked tidier and slowed the whole room down.\n\nThe supervisor explained why.\n\nRoger moved it back.\n\nThe employees began offering suggestions more freely after that.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-112",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Their first serious business failure arrived in beautiful boxes.\n\nDozens of them.\n\nStacked against a wall.\n\nKatie’s friends had loved the early designs, and Roger had assumed that more shoes would mean more sales.\n\nThey had committed too much money to too many styles.\n\nSome sizes hardly moved. Certain colors received compliments and no orders. Materials sat unused while wages and rent continued to fall due.\n\nRoger began arriving before everyone else and leaving after they had gone.\n\nOne evening, his mother found him at the kitchen table studying figures.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-113",
+      "scene": 11,
+      "speaker": "Mother",
+      "text": "Are we in trouble?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-114",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "He almost said no.\n\nInstead, he told her what was happening.\n\nThe next morning, he went to Katie’s father.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-115",
+      "scene": 11,
+      "speaker": "Roger",
+      "text": "I know how to make something one person wants,",
+      "pause": 0.45,
+      "instruction": "Honest vulnerability. Admit the problem with difficulty but without giving up."
+    },
+    {
+      "id": "turn-116",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Roger said.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-117",
+      "scene": 11,
+      "speaker": "Roger",
+      "text": "I don’t know how to make enough people buy it.",
+      "pause": 0.45,
+      "instruction": "Honest vulnerability. Admit the problem with difficulty but without giving up."
+    },
+    {
+      "id": "turn-118",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "The older man closed the notebook between them.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-119",
+      "scene": 11,
+      "speaker": "Katie’s father",
+      "text": "Then you have another trade to learn.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-120",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "He advised them to reduce the range, protect their cash, and stop making speculative stock until they understood demand.\n\nThen he asked Roger a question.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-121",
+      "scene": 11,
+      "speaker": "Katie’s father",
+      "text": "When did you last speak to someone who bought from you?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-122",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Roger named a customer he had fitted that week.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-123",
+      "scene": 11,
+      "speaker": "Katie’s father",
+      "text": "After the sale, I mean.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-124",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Roger had no answer.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-125",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "He began making visits.\n\nHe asked before calling. He wrote down preferences. He checked whether shoes had remained comfortable after an entire evening, not merely during a fitting.\n\nHe learned that one customer loved her slippers but never wore them because the color matched nothing she owned.\n\nAnother needed shoes for a particular gala and had ordered elsewhere because she had not known Roger could deliver in time.\n\nOne woman said quietly that she hated having to choose between looking elegant and being able to remain on her feet beside her friends.\n\nRoger remembered that.\n\nHe and Katie arranged small appointments where customers could see samples, bring their dresses, and discuss upcoming events.\n\nThey improved the packaging so the shoes arrived protected, beautifully presented, and accompanied by clear care instructions.\n\nThey asked satisfied customers for introductions. They made alterations promptly. They developed a small collection that customers could adapt instead of beginning every design from nothing.\n\nFor the next season, they took deposits before committing to larger material orders.\n\nThe unsold boxes gradually disappeared.\n\nMore importantly, fewer new ones accumulated.\n\nRoger discovered that selling could be another form of attention.\n\nHe did not have to become someone else.\n\nHe had to keep listening after the shoes left his hands.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-126",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Rita appeared often during those months.\n\nSometimes she accompanied Katie. Sometimes she collected an order for another woman she assisted.\n\nRoger learned that her family had once been wealthy. A business failure had changed their circumstances, and she had gone to work.\n\nShe spoke of it without bitterness.\n\nOne afternoon, while waiting for a small alteration, she helped his mother carry a basket through the workshop door.\n\nLater, his mother said,",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-127",
+      "scene": 13,
+      "speaker": "Mother",
+      "text": "That young woman has good manners.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-128",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Roger pretended to be occupied.\n\nHis mother noticed.\n\nRita once found him apologizing for the plain room where he received fittings.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-129",
+      "scene": 13,
+      "speaker": "Roger",
+      "text": "It isn’t much yet,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-130",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "he said.\n\nShe looked around at the measured patterns, the clean workbench, and the half-finished shoes.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-131",
+      "scene": 13,
+      "speaker": "Rita",
+      "text": "People are doing honest work here.",
+      "pause": 0.45,
+      "instruction": "Gentle, reassuring conviction. Honest work is nothing to be ashamed of."
+    },
+    {
+      "id": "turn-132",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "He glanced at her.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-133",
+      "scene": 13,
+      "speaker": "Rita",
+      "text": "There’s nothing to apologize for,",
+      "pause": 0.18,
+      "instruction": "Gentle, reassuring conviction. Honest work is nothing to be ashamed of."
+    },
+    {
+      "id": "turn-134",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "she said.\n\nHe remembered that sentence long after he forgot what they had discussed afterward.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-135",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "The company’s growth took years.\n\nThere were seasons when orders came easily and seasons when Roger worried again.\n\nA supplier failed to deliver. A promising design sold poorly. A large order had to be remade because a material behaved differently in use than it had in the sample.\n\nBut the business learned.\n\nRoger learned.\n\nHis reputation spread beyond the city. Customers traveled for fittings. Invitations arrived from retailers and event organizers. People began asking what he would make next.\n\nThey paid high prices because the work was distinctive, the fit received unusual care, and Roger’s company had earned a reputation for putting problems right.\n\nHe paid his employees reliably. He promoted people who could do things better than he could. He gave the workshop time for training and allowed experienced hands to question a design before it became an expensive mistake.\n\nHis days remained disciplined.\n\nHe began them in prayer.\n\nHe still carried a notebook.\n\nAnd when a customer described a problem, he tried to hear it before deciding he already knew the answer.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-136",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "Success brought attention he had never expected.\n\nSome invitations were innocent. Others were not.\n\nOnce, a married customer suggested that he bring samples to her house late in the evening, when her husband would be away.\n\nRoger recognized the invitation beneath the words.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-137",
+      "scene": 15,
+      "speaker": "Roger",
+      "text": "We can arrange a fitting at the showroom,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-138",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "he said gently.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-139",
+      "scene": 15,
+      "speaker": "Roger",
+      "text": "Katie will help us choose a convenient time.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-140",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "When she pressed, he remained courteous and firm.\n\nAfterward, he told no entertaining story about it.\n\nHer private embarrassment was not something he wanted to turn into his own importance.\n\nHe found that wealth gave him more choices.\n\nHe wanted to remain responsible for the choices he made.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-141",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "In time, Roger saved enough to purchase a larger share of the company.\n\nHe did not empty the business to do it.\n\nWith retained personal earnings and a formally arranged loan from clients who had come to trust him, he negotiated to buy another thirty percent. Advisers reviewed the terms. The repayments were measured against what he could reasonably afford.\n\nThe papers were signed in the same office where he had once struggled to explain his first cost estimates.\n\nAfterward, Katie shook his hand.\n\nThen she laughed.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-142",
+      "scene": 16,
+      "speaker": "Katie",
+      "text": "You still look as though you’ve been called into trouble.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-143",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "Roger laughed too.\n\nSome habits took longer to change than others.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-144",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "He bought a spacious house with a garden his mother could tend if she wished, and rooms where his siblings could return with families of their own.\n\nThere were vehicles now. There were journeys he could once only have imagined.\n\nHe enjoyed them.\n\nHe enjoyed buying good materials without first calculating whether it would leave the household short. He enjoyed paying for his brother’s studies. He enjoyed giving his mother the freedom to choose something because she liked it.\n\nAbundance had become more than a sum in an account.\n\nIt was room to act.\n\nRoom to rest.\n\nRoom to help without panic.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-145",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "When his mother finally mentioned marriage, she did so while pouring tea.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-146",
+      "scene": 18,
+      "speaker": "Mother",
+      "text": "There is someone I would like you to consider.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-147",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Roger kept his eyes on his cup.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-148",
+      "scene": 18,
+      "speaker": "Roger",
+      "text": "Who?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-149",
+      "scene": 18,
+      "speaker": "Mother",
+      "text": "Rita.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-150",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "He looked up so quickly that she smiled.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-151",
+      "scene": 18,
+      "speaker": "Mother",
+      "text": "I would speak to her family,",
+      "pause": 0.18
+    },
+    {
+      "id": "turn-152",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "she said.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-153",
+      "scene": 18,
+      "speaker": "Mother",
+      "text": "If you wished. And if she wished.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-154",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "He asked for a day to think.\n\nHis mother gave him until the following morning.\n\nWhen Roger and Rita met to speak seriously, he was more nervous than he had been in several important business meetings.\n\nShe made it easier by admitting that she was nervous too.\n\nThey spoke about faith, family, work, and the kind of home they wanted.\n\nRoger told her that he did not want her to feel she had to hide the years when her family had struggled.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-155",
+      "scene": 18,
+      "speaker": "Rita",
+      "text": "I don’t,",
+      "pause": 0.18,
+      "instruction": "Gentle, reassuring conviction. Honest work is nothing to be ashamed of."
+    },
+    {
+      "id": "turn-156",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "she said.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-157",
+      "scene": 18,
+      "speaker": "Rita",
+      "text": "We worked. We were honest. God was there too.",
+      "pause": 0.45,
+      "instruction": "Gentle, reassuring conviction. Honest work is nothing to be ashamed of."
+    },
+    {
+      "id": "turn-158",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "He knew then that his mother had understood something he had been too shy to say aloud.\n\nThey married with the willing blessing of both families.",
+      "pause": 1.5
+    },
+    {
+      "id": "turn-159",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "Years later, Roger came home after a long day and found the house quiet.\n\nRita had left a lamp burning.\n\nHis mother had fallen asleep in her chair with a book resting open in her lap.\n\nFor a moment, he stood in the doorway.\n\nHe remembered her hands dividing his wages into small piles.\n\nHe remembered the landlord’s notice beneath the salt jar.\n\nHe remembered a man in a factory asking who would feed her when he failed.\n\nRoger lifted the book and marked her place.\n\nShe stirred.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-160",
+      "scene": 19,
+      "speaker": "Mother",
+      "text": "You’re home?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-161",
+      "scene": 19,
+      "speaker": "Roger",
+      "text": "Yes, Mother.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-162",
+      "scene": 19,
+      "speaker": "Mother",
+      "text": "Have you eaten?",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-163",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "He smiled.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-164",
+      "scene": 19,
+      "speaker": "Roger",
+      "text": "Yes.",
+      "pause": 0.45
+    },
+    {
+      "id": "turn-165",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "She settled back.\n\nThere was nothing she needed to calculate that night.\n\nRoger stood beside her until her breathing grew steady again.\n\nThe next morning, he rose before the household.\n\nThere was a difficult fitting waiting at the workshop. A new employee needed guidance. A customer had written about a fastening that troubled her fingers.\n\nHe washed, knelt, and prayed.",
+      "pause": 0.25
+    },
+    {
+      "id": "turn-166",
+      "scene": 19,
+      "speaker": "Roger",
+      "text": "Thank you for what You have given us.\n\nHelp me care for it well.\n\nAnd show me where I can be useful today.",
+      "pause": 0.45,
+      "instruction": "A sincere, private prayer. Quiet and heartfelt, clearly voiced rather than whispered. Natural expressive delivery."
+    },
+    {
+      "id": "turn-167",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "Then he stood up and went to work.",
+      "pause": 1.5
+    }
+  ]
+}

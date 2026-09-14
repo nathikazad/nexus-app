@@ -11,7 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-BASE = Path(__file__).resolve().parent
+BASE = Path(__file__).resolve().parents[3]
 DEFAULT_VOICE = "iI1BlqMaaIkiLuGRhtpA"  # Hypnotizer
 
 
@@ -33,7 +33,9 @@ def main():
     parser.add_argument("--voice-id", default=DEFAULT_VOICE)
     parser.add_argument("--speed", type=float, default=0.7)
     parser.add_argument("--stability", type=float, default=0.65)
-    parser.add_argument("--text-file", type=Path, default=BASE / "story.txt")
+    parser.add_argument("--similarity", type=float, default=0.75)
+    parser.add_argument("--speaker-boost", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--text-file", type=Path, default=BASE / "stories" / "abundance" / "legacy" / "story.txt")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--dry-run", action="store_true",
                         help="Validate and show the request without a key or API call.")
@@ -42,6 +44,8 @@ def main():
         parser.error("--speed must be between 0.7 and 1.2")
     if not 0 <= args.stability <= 1:
         parser.error("--stability must be between 0 and 1")
+    if not 0 <= args.similarity <= 1:
+        parser.error("--similarity must be between 0 and 1")
     if not args.voice_id.strip():
         parser.error("--voice-id cannot be empty")
     text = args.text_file.read_text(encoding="utf-8").strip()
@@ -52,9 +56,9 @@ def main():
         "model_id": "eleven_multilingual_v2",
         "voice_settings": {
             "stability": args.stability,
-            "similarity_boost": 0.75,
+            "similarity_boost": args.similarity,
             "style": 0.0,
-            "use_speaker_boost": True,
+            "use_speaker_boost": args.speaker_boost,
             "speed": args.speed,
         },
     }
@@ -64,8 +68,8 @@ def main():
         return 0
     key = api_key()
     if not key:
-        parser.error("Set ELEVENLABS_API_KEY or put it in voice_test/.env first")
-    output = args.output or BASE / "output" / (
+        parser.error("Set ELEVENLABS_API_KEY or put it in generation/.env first")
+    output = args.output or BASE / "outputs" / "legacy" / (
         "abundance_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f") + ".mp3"
     )
     if output.exists():
@@ -108,6 +112,7 @@ def main():
         return 1
     with output.open("xb") as file:
         file.write(audio)
+    output.with_suffix(".json").write_text(json.dumps({"voice_id": args.voice_id, **payload}, indent=2) + "\n")
     print(f"Saved: {output.resolve()}")
     return 0
 
