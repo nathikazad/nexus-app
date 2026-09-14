@@ -41,6 +41,9 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   @override
   void initState() {
     super.initState();
+    // Preserve the insertion point while the menu owns keyboard focus, just
+    // like AppFlowy's built-in selection menu.
+    keepEditorFocusNotifier.increase();
     _staticItems = _nxStaticSelectionMenuItems(
       uploadDocumentImage: widget.uploadDocumentImage,
     );
@@ -57,6 +60,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   @override
   void dispose() {
     _focusNode.dispose();
+    keepEditorFocusNotifier.decrease();
     super.dispose();
   }
 

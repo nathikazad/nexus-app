@@ -22,3 +22,14 @@
 - On the first installation after the rename, treat the legacy `/Applications/Nexus Docs.app` (or older `/Applications/Nexus Notes.app`) as that existing bundle and move it into the same recoverable backup before installing `Nx Docs.app`. The bundle identifier is intentionally unchanged, so this is a filename migration rather than a second application identity.
 - Verify the installed bundle itself with `codesign --verify --deep --strict "/Applications/Nx Docs.app"`, confirm its signed entitlements include `com.apple.security.network.server`, and then launch it.
 - For changes involving live voice, complete a functional smoke test in the installed app. A successful test must advance from `CONNECTING` to `LISTENING`; merely launching the app or finding the compiled credential is insufficient.
+
+## Worktree location and cleanup
+
+- Create future Nexus worktrees under `~/Projects/Nexus-worktrees/<task>/mobile`,
+  alongside the main checkout at `~/Projects/Nexus/mobile`.
+- Use a short descriptive task name. Do not put worktrees inside the main Nexus
+  checkout, Downloads, or temporary directories unless the user requests it.
+- Use `git worktree add`, `move`, and `remove` so Git's worktree metadata stays
+  correct. Before removing a completed worktree, commit and merge its intended
+  changes into the main checkout, preserve unrelated local edits, and retain any
+  useful ignored diagnostics or artifacts outside the worktree.

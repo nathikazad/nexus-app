@@ -7,6 +7,8 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  nx_canvas_core:
+    path: ../nx_modules/nx_canvas
   auto_size_text: ^3.0.0
   appflowy_editor:
     path: ../third_party/appflowy-editor

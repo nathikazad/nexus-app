@@ -1105,6 +1105,13 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
+  nx_canvas_core:
+    dependency: "direct main"
+    description:
+      path: "../nx_modules/nx_canvas"
+      relative: true
+    source: path
+    version: "0.1.0"
   nx_db:
     dependency: "direct main"
     description:

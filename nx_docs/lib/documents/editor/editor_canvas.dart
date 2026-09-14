@@ -848,6 +848,22 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
         // painting imported cells on macOS. Keep the stable content renderer
         // in both modes so switching to Edit cannot reintroduce a blank block.
         useReadTable: true,
+        canvasDocumentId: widget.document.id.toString(),
+        persistCanvasDocument:
+            !widget.interactionMode.canEditContent || widget.onChanged == null
+            ? null
+            : () async {
+                if (!mounted) {
+                  throw StateError(
+                    'Document closed; canvas recovery has been kept.',
+                  );
+                }
+                _saveDebounce?.cancel();
+                await widget.onChanged!(
+                  _currentDraftDocument(),
+                  DraftSavePolicy.deferred,
+                );
+              },
         deleteDocumentImage: widget.deleteDocumentImage,
         resolveDocumentImage: widget.resolveDocumentImage,
         documentImageBaseUrl: widget.documentImageBaseUrl,
