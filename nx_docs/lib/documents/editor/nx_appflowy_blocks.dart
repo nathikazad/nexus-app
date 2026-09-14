@@ -9,6 +9,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_docs/app/theme.dart';
+import 'package:nx_canvas_core/drawing.dart';
+import 'package:nx_canvas_core/preview.dart';
+import 'package:nx_docs/documents/editor/nx_canvas_session.dart';
+export 'package:nx_docs/documents/editor/nx_canvas_session.dart'
+    show nxCanvasNode, nxCanvasBlockType;
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/documents/editor/nx_document_link.dart';
 import 'package:nx_docs/documents/editor/nx_excalidraw_frame.dart';
@@ -22,6 +27,7 @@ part 'nx_toggle_block.dart';
 part 'nx_kgql_link_block.dart';
 part 'nx_drag_to_reorder.dart';
 part 'nx_excalidraw_block.dart';
+part 'nx_canvas_block.dart';
 part 'excalidraw_dialog.dart';
 part 'excalidraw_preview.dart';
 part 'nx_document_image_block.dart';
@@ -32,6 +38,8 @@ const String nxExcalidrawBlockType = 'nx_excalidraw';
 
 Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
   bool useReadTable = false,
+  String? canvasDocumentId,
+  Future<void> Function()? persistCanvasDocument,
   Future<void> Function(String url)? deleteDocumentImage,
   String Function(String url)? resolveDocumentImage,
   String? documentImageBaseUrl,
@@ -55,6 +63,10 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
     nxToggleBlockType: NxToggleBlockComponentBuilder(),
     nxBlogLinkBlockType: NxBlogLinkBlockComponentBuilder(),
     nxExcalidrawBlockType: NxExcalidrawBlockComponentBuilder(),
+    nxCanvasBlockType: NxCanvasBlockComponentBuilder(
+      documentId: canvasDocumentId,
+      persist: persistCanvasDocument,
+    ),
   };
   for (final entry in builders.entries) {
     if (entry.key == PageBlockKeys.type) {
@@ -108,6 +120,8 @@ String nxPlainTextForCustomNode(Node node) {
     case nxBlogLinkBlockType:
       final title = _stringAttribute(node, 'title', 'Blog document');
       return 'Blog: $title';
+    case nxCanvasBlockType:
+      return _stringAttribute(node, 'title', 'Canvas');
     case nxExcalidrawBlockType:
       return _stringAttribute(node, 'title', 'Excalidraw');
     default:

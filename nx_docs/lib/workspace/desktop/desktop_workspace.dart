@@ -44,34 +44,40 @@ class DesktopWorkspace extends ConsumerWidget {
     final workspace = ref.watch(desktopWorkspaceProvider);
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Stack(
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              if (workspace.sidebarCollapsed)
-                const SizedBox(
-                  width: _collapsedSidebarWidth,
-                  child: _CollapsedSidebar(),
-                )
-              else
-                const SizedBox(width: _sidebarWidth, child: _DesktopSidebar()),
-              Expanded(child: _DesktopEditorWorkspace(workspace: workspace)),
-              if (workspace.inspectorCollapsed)
-                const SizedBox(
-                  width: _collapsedInspectorWidth,
-                  child: _CollapsedInspector(),
-                )
-              else
-                SizedBox(
-                  width: _inspectorWidth,
-                  child: _DesktopInspector(
-                    documentId: workspace.activeDocumentId,
+      body: SafeArea(
+        child: Stack(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                if (workspace.sidebarCollapsed)
+                  const SizedBox(
+                    width: _collapsedSidebarWidth,
+                    child: _CollapsedSidebar(),
+                  )
+                else
+                  const SizedBox(
+                    width: _sidebarWidth,
+                    child: _DesktopSidebar(),
                   ),
-                ),
-            ],
-          ),
-          if (workspace.hasOverlay) _DesktopResultOverlay(workspace: workspace),
-        ],
+                Expanded(child: _DesktopEditorWorkspace(workspace: workspace)),
+                if (workspace.inspectorCollapsed)
+                  const SizedBox(
+                    width: _collapsedInspectorWidth,
+                    child: _CollapsedInspector(),
+                  )
+                else
+                  SizedBox(
+                    width: _inspectorWidth,
+                    child: _DesktopInspector(
+                      documentId: workspace.activeDocumentId,
+                    ),
+                  ),
+              ],
+            ),
+            if (workspace.hasOverlay)
+              _DesktopResultOverlay(workspace: workspace),
+          ],
+        ),
       ),
     );
   }

@@ -29,6 +29,11 @@ void main() {
   ) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1440, 900);
+    // Ink tablets reserve a tall system toolbar above the desktop layout.
+    tester.view.padding = const FakeViewPadding(top: 60);
+    tester.view.viewPadding = const FakeViewPadding(top: 60);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
     tester.platformDispatcher.textScaleFactorTestValue = 0.95;
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
@@ -117,6 +122,23 @@ void main() {
     expect(find.byType(DesktopWorkspace), findsOneWidget);
     expect(find.text('Desktop restart offline'), findsWidgets);
     expect(find.text('Another persistent document'), findsWidgets);
+
+    for (final label in ['New', 'Collapse navigator', 'Collapse inspector']) {
+      expect(
+        tester.getRect(find.byTooltip(label)).top,
+        greaterThanOrEqualTo(60),
+      );
+    }
+    await tester.tap(find.byTooltip('New'));
+    await tester.pumpAndSettle();
+    expect(find.text('Document'), findsOneWidget);
+    await tester.tapAt(const Offset(500, 100));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Collapse inspector'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Expand inspector'), findsOneWidget);
+    await tester.tap(find.byTooltip('Expand inspector'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Collapse navigator'));
     await tester.pumpAndSettle();

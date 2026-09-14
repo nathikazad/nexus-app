@@ -605,6 +605,10 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                               widget.interactionMode ==
                                   DocumentInteractionMode.highlightOnly
                               ? shared_documents.DocumentReader(
+                                  extraBlockBuilders: {
+                                    nxCanvasBlockType:
+                                        NxCanvasBlockComponentBuilder(),
+                                  },
                                   content: shared_documents.DocumentContent(
                                     identity: shared_documents.DocumentIdentity(
                                       id: widget.document.id,

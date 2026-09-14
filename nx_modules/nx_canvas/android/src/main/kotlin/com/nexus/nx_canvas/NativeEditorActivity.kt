@@ -52,7 +52,8 @@ class NativeEditorActivity : Activity() {
         density=resources.displayMetrics.density.toDouble()
         val page=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.WHITE)}
         val header=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-        header.addView(button("‹ Drawings"){finishWriting()})
+        val back=button("‹ Drawings"){finishWriting()}
+        header.addView(back)
         val name=TextView(this).apply{textSize=18f;setPadding(dp(12),0,dp(8),0);maxLines=1}
         header.addView(name,LinearLayout.LayoutParams(0,-2,1f))
         page.addView(header)
@@ -87,6 +88,7 @@ class NativeEditorActivity : Activity() {
         setContentView(page)
         try {
             val input=NativeEditorFiles.scene(this)
+            back.text=input["backLabel"] as? String?:"‹ Drawings"
             documentId=input["documentId"] as? String?:"prototype"
             title=input["title"] as? String?:"Drawing"
             name.text=title

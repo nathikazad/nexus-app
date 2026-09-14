@@ -5,6 +5,7 @@ plugins {
 }
 
 android {
+    sourceSets.getByName("main").java.srcDir("../../../nx_modules/nx_canvas/android/src/main/kotlin")
     namespace = "com.nexus.nx_canvas"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion

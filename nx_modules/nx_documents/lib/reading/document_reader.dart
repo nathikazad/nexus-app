@@ -29,6 +29,7 @@ class DocumentReader extends StatefulWidget {
     required this.content,
     required this.onChanged,
     this.onOpenLink,
+    this.extraBlockBuilders = const {},
     this.headingLinkAction,
     this.headingAction,
     this.imageUrlResolver,
@@ -41,6 +42,7 @@ class DocumentReader extends StatefulWidget {
     super.key,
   });
 
+  final Map<String, BlockComponentBuilder> extraBlockBuilders;
   final DocumentContent content;
   final Future<void> Function(DocumentContent content) onChanged;
   final Future<bool> Function(String href)? onOpenLink;
@@ -238,6 +240,7 @@ class _DocumentReaderState extends State<DocumentReader> {
           );
     final builders = <String, BlockComponentBuilder>{
       ...standardBlockComponentBuilderMap,
+      ...widget.extraBlockBuilders,
       HeadingBlockKeys.type: HeadingBlockComponentBuilder(
         trailingBuilder: _headingLinkButton,
       ),

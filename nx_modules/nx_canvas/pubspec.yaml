@@ -1,0 +1,9 @@
+name: nx_canvas_core
+description: Shared editable ink format, previews and native tablet canvas.
+publish_to: none
+version: 0.1.0
+environment:
+  sdk: ^3.11.0
+dependencies:
+  flutter:
+    sdk: flutter

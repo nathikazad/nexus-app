@@ -54,9 +54,16 @@ List<SelectionMenuItem> _nxStaticSelectionMenuItems({
     ),
     SelectionMenuItem.node(
       getName: () => 'Excalidraw',
-      keywords: const <String>['excalidraw', 'drawing', 'diagram', 'canvas'],
+      keywords: const <String>['excalidraw', 'diagram'],
       iconData: Icons.draw_outlined,
       nodeBuilder: (_, __) => nxExcalidrawNode(),
+      replace: _replaceCurrentParagraph,
+    ),
+    SelectionMenuItem.node(
+      getName: () => 'Canvas',
+      keywords: const ['canvas', 'drawing', 'handwriting', 'sketch', 'ink'],
+      iconData: Icons.gesture,
+      nodeBuilder: (_, __) => nxCanvasNode(),
       replace: _replaceCurrentParagraph,
     ),
     _nxImageSelectionMenuItem(uploadDocumentImage: uploadDocumentImage),

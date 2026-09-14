@@ -210,6 +210,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.19.2"
+  nx_canvas_core:
+    dependency: "direct main"
+    description:
+      path: "../nx_modules/nx_canvas"
+      relative: true
+    source: path
+    version: "0.1.0"
   path:
     dependency: "direct main"
     description:
