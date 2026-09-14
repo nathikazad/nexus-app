@@ -6,6 +6,57 @@ import 'package:nx_canvas_core/drawing.dart';
 import 'package:nx_docs/documents/editor/nx_appflowy_blocks.dart';
 
 void main() {
+  testWidgets('end picker appends after a canvas without replacing it', (
+    tester,
+  ) async {
+    final original = nxCanvasNode();
+    final editor = EditorState(
+      document: Document(
+        root: Node(type: 'page', children: [original]),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AppFlowyEditor(
+            editorState: editor,
+            blockComponentBuilders: nxBlockComponentBuilders(),
+            footer: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => appendNxDocumentElement(
+                  context,
+                  editor,
+                  searchLinkableModels:
+                      ({required modelType, required query}) async => [],
+                  createLinkedDocument: (_) async => throw UnimplementedError(),
+                  onLinkableModelSelected: (_, __) async {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NxSlashMenuOverlay),
+        matching: find.text('Canvas'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(editor.document.root.children.length, 2);
+    expect(editor.document.root.children.first, same(original));
+    expect(editor.document.root.children.last.type, nxCanvasBlockType);
+    expect(find.byType(NxSlashMenuOverlay), findsNothing);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpWidget(const SizedBox());
+    editor.dispose();
+  });
+
   testWidgets(
     'slash menu retains insertion position when it takes focus',
     (tester) async {
@@ -150,6 +201,9 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       editor.dispose();
     },
-    variant: TargetPlatformVariant({TargetPlatform.macOS, TargetPlatform.iOS}),
+    variant: const TargetPlatformVariant({
+      TargetPlatform.macOS,
+      TargetPlatform.iOS,
+    }),
   );
 }

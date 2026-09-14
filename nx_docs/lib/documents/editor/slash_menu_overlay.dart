@@ -3,6 +3,7 @@ part of 'nx_appflowy_blocks.dart';
 class NxSlashMenuOverlay extends StatefulWidget {
   const NxSlashMenuOverlay({
     required this.editorState,
+    this.insertionSelection,
     required this.menuService,
     required this.searchLinkableModels,
     required this.createLinkedDocument,
@@ -13,6 +14,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
   });
 
   final EditorState editorState;
+  final Selection? insertionSelection;
   final SelectionMenuService menuService;
   final Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
@@ -296,7 +298,23 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
         });
   }
 
+  Selection? _restoreInsertionSelection() {
+    final current = widget.editorState.selection;
+    if (current != null) return current;
+    final initial = widget.insertionSelection;
+    if (initial == null || widget.editorState.isDisposed) return null;
+    final selection = Selection.collapsed(
+      Position(
+        path: initial.start.path,
+        offset: initial.start.offset + _keyword.length,
+      ),
+    );
+    widget.editorState.selection = selection;
+    return selection;
+  }
+
   void _selectStaticItem(SelectionMenuItem item) {
+    _restoreInsertionSelection();
     item.handler(widget.editorState, widget.menuService, context);
   }
 
@@ -318,7 +336,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   }
 
   void _insertText(String text) {
-    final selection = widget.editorState.selection;
+    final selection = _restoreInsertionSelection();
     if (selection == null || !selection.isSingle) {
       return;
     }
@@ -332,7 +350,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   }
 
   void _deleteLastCharacter() {
-    final selection = widget.editorState.selection;
+    final selection = _restoreInsertionSelection();
     if (selection == null || !selection.isCollapsed) {
       return;
     }
@@ -349,7 +367,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     LinkableModelType modelType,
     LinkedModel model,
   ) {
-    final selection = widget.editorState.selection;
+    final selection = _restoreInsertionSelection();
     if (selection == null || !selection.isCollapsed) {
       return;
     }

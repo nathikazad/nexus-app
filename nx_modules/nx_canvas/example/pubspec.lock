@@ -213,7 +213,7 @@ packages:
   nx_canvas_core:
     dependency: "direct main"
     description:
-      path: "../nx_modules/nx_canvas"
+      path: ".."
       relative: true
     source: path
     version: "0.1.0"

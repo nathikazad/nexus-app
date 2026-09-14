@@ -146,11 +146,27 @@ class MemoryLocalNotesStore implements LocalNotesStore {
   }
 
   @override
+  Future<bool> hasCurrentDocument(DocumentManifestEntry entry) async {
+    final local = _documentByRemoteId(entry.documentId);
+    if (local == null) return false;
+    return local.syncState != DocumentSyncState.synced ||
+        (entry.serverHash != null &&
+            local.serverHash == entry.serverHash &&
+            local.document.hasFullDocument);
+  }
+
+  @override
   Future<void> applySyncBundle(DocumentSyncBundle bundle) async {
     for (final remote in bundle.documents) {
       final remoteId = remote.key.remoteId;
       if (remoteId == null) continue;
       final existing = _documentByRemoteId(remoteId);
+      if (bundle.expectedHashes != null &&
+          (!bundle.expectedHashes!.containsKey(remoteId) ||
+              existing?.serverHash != bundle.expectedHashes![remoteId])) {
+        continue;
+      }
+
       if (existing != null && existing.syncState != DocumentSyncState.synced) {
         continue;
       }
@@ -169,6 +185,12 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     }
     for (final remoteId in bundle.deletedIds) {
       final existing = _documentByRemoteId(remoteId);
+      if (bundle.expectedHashes != null &&
+          (!bundle.expectedHashes!.containsKey(remoteId) ||
+              existing?.serverHash != bundle.expectedHashes![remoteId])) {
+        continue;
+      }
+
       if (existing == null || existing.syncState == DocumentSyncState.synced) {
         if (existing != null) _documents.remove(existing.key.localId);
         _summaries.remove(remoteId);

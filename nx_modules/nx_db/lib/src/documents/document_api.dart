@@ -137,6 +137,9 @@ Future<DocumentMutationResult> mutateDocument(
   });
 }
 
+/// Bulk library requests share the server's longer processing budget.
+const documentBulkSyncTimeout = Duration(minutes: 5);
+
 Future<DocumentSyncResponse> syncDocuments(
   GraphQLClient client, {
   required List<Map<String, Object?>> manifest,

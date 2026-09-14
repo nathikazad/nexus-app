@@ -99,11 +99,13 @@ final documentSynchronizerProvider = Provider<DocumentSynchronizer?>((ref) {
   final local = ref.watch(localNotesStoreProvider);
   final uploader = ref.watch(backgroundUploaderProvider);
   if (local == null || uploader == null) return null;
-  return DocumentSynchronizer(
+  final synchronizer = DocumentSynchronizer(
     localStore: local,
     remoteApi: ref.watch(documentRemoteApiProvider),
     uploader: uploader,
   );
+  ref.onDispose(() => unawaited(synchronizer.close()));
+  return synchronizer;
 });
 
 final documentSyncStatusProvider = StreamProvider<offline.SyncStatus>((ref) {
@@ -139,3 +141,13 @@ class SecureIdGenerator implements IdGenerator {
     return '$timestamp-$random';
   }
 }
+
+final documentDownloadProgressProvider =
+    StreamProvider<offline.DownloadReport?>((ref) {
+      final source = ref.watch(documentSynchronizerProvider);
+      if (source == null) return Stream.value(null);
+      return (() async* {
+        yield source.progress;
+        yield* source.progressChanges;
+      })();
+    });

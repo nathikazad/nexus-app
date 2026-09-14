@@ -26,6 +26,7 @@ final class FakeDocumentRemoteApi
   Future<void>? documentBarrier;
   Future<void>? saveBarrier;
   Future<void>? syncBarrier;
+  Future<void> Function(bool manifestOnly, Set<int>? ids)? beforeSync;
   int catalogFetchCount = 0;
   final Map<int, int> documentFetchCounts = <int, int>{};
   int saveCount = 0;
@@ -125,9 +126,11 @@ final class FakeDocumentRemoteApi
   Future<DocumentSyncBundle> syncDocuments({
     required List<DocumentManifestEntry> manifest,
     Set<int>? documentIds,
+    bool manifestOnly = false,
   }) async {
     syncCount += 1;
     syncScopes.add(documentIds == null ? null : Set<int>.of(documentIds));
+    await beforeSync?.call(manifestOnly, documentIds);
     await syncBarrier;
     _throwIfConfigured();
     final clientHashes = <int, String?>{
@@ -142,9 +145,16 @@ final class FakeDocumentRemoteApi
             .toList()
           ..sort((a, b) => a.id.compareTo(b.id));
     return DocumentSyncBundle(
+      manifest: [
+        for (final document in candidates)
+          DocumentManifestEntry(
+            documentId: document.id,
+            serverHash: _hash(document),
+          ),
+      ],
       documents: <RemoteDocument>[
         for (final document in candidates)
-          if (clientHashes[document.id] != _hash(document))
+          if (!manifestOnly && clientHashes[document.id] != _hash(document))
             _remoteDocument(document),
       ],
       deletedIds: <int>[

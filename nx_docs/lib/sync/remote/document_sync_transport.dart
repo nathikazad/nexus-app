@@ -4,5 +4,6 @@ abstract interface class DocumentSyncTransport {
   Future<DocumentSyncBundle> syncDocuments({
     required List<DocumentManifestEntry> manifest,
     Set<int>? documentIds,
+    bool manifestOnly = false,
   });
 }

@@ -76,44 +76,77 @@ void main() {
     network.complete();
   });
 
-  test(
-    'library sync refreshes catalogs when document hashes are unchanged',
-    () async {
-      final initialBook = offlineTestDocument(
-        id: 9,
-        title: 'Correct book',
-      ).copyWith(modelTypeName: 'Book', readingState: 'to_read');
-      remote.replaceRemote(initialBook);
-      final initial = await remote.syncDocuments(manifest: const []);
-      await local.importRemoteDocuments(initial.documents);
-      await local.replaceCatalog(const CatalogQuery.books(), <DocumentSummary>[
-        DocumentSummary.fromDocument(initialBook),
-      ]);
-      final book = initialBook.copyWith(
-        readingState: 'read',
-        updatedAt: initialBook.updatedAt.add(const Duration(minutes: 1)),
-      );
-      remote.replaceRemote(book);
+  test('manifest sync refreshes catalogs for changed metadata', () async {
+    final initialBook = offlineTestDocument(
+      id: 9,
+      title: 'Correct book',
+    ).copyWith(modelTypeName: 'Book', readingState: 'to_read');
+    remote.replaceRemote(initialBook);
+    final initial = await remote.syncDocuments(manifest: const []);
+    await local.importRemoteDocuments(initial.documents);
+    await local.replaceCatalog(const CatalogQuery.books(), <DocumentSummary>[
+      DocumentSummary.fromDocument(initialBook),
+    ]);
+    final book = initialBook.copyWith(
+      readingState: 'read',
+      updatedAt: initialBook.updatedAt.add(const Duration(minutes: 1)),
+    );
+    remote.replaceRemote(book);
 
-      expect(
-        (await local.readCatalog(
-          const CatalogQuery.books(),
-        )).single.readingState,
-        'to_read',
-      );
+    expect(
+      (await local.readCatalog(const CatalogQuery.books())).single.readingState,
+      'to_read',
+    );
 
-      await workspace.syncLibrary();
+    await workspace.syncLibrary();
 
-      expect(remote.syncCount, 2);
-      expect(remote.catalogFetchCount, 1); // Header discovery precedes body pages.
-      expect(
-        (await local.readCatalog(
-          const CatalogQuery.books(),
-        )).single.readingState,
-        'read',
-      );
-    },
-  );
+    expect(remote.syncCount, 3); // Initial body, manifest, changed body.
+    expect(remote.catalogFetchCount, 0);
+    expect(
+      (await local.readCatalog(const CatalogQuery.books())).single.readingState,
+      'read',
+    );
+  });
+
+  test('library sync marks canvas-only changes as a remote refresh', () async {
+    Map<String, dynamic> canvas(int count) => {
+      'format': 'appflowy_document',
+      'document': {
+        'type': 'page',
+        'children': [
+          {
+            'type': 'nx_canvas',
+            'data': {
+              'canvas_id': 'test-canvas',
+              'drawing': {
+                'strokes': List.generate(count, (i) => {'id': '$i'}),
+              },
+            },
+          },
+        ],
+      },
+    };
+    final original = offlineTestDocument(
+      id: 7,
+    ).copyWith(jsonDocument: canvas(1));
+    remote.replaceRemote(original);
+    await workspace.syncLibrary();
+    final session = workspace.openDocument(7);
+    await session.states.firstWhere((state) => state.document != null);
+    final changed = original.copyWith(
+      jsonDocument: canvas(2),
+      updatedAt: original.updatedAt.add(const Duration(minutes: 1)),
+    );
+    remote.replaceRemote(changed);
+    final update = session.states.firstWhere(
+      (state) => state.document?.updatedAt == changed.updatedAt,
+    );
+    await workspace.syncLibrary();
+    final state = await update;
+    expect(state.document!.document, original.document);
+    expect(state.document!.jsonDocument, changed.jsonDocument);
+    expect(state.origin, DocumentChangeOrigin.remoteRefresh);
+  });
 
   test(
     'opening is local-only and foreground demand fetches remote once',

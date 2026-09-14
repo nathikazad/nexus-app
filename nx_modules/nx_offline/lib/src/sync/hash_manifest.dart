@@ -9,6 +9,7 @@ final class HashDownload<K, V> {
 /// hashes, pending-edit protection and publication of the completed manifest.
 Future<List<E>> reconcileHashManifest<K, E, V>({
   required List<E> manifest,
+  int? downloadPageSize,
   required K Function(E) keyOf,
   required K Function(V) valueKeyOf,
   required Future<bool> Function(E) verified,
@@ -22,6 +23,9 @@ Future<List<E>> reconcileHashManifest<K, E, V>({
   )?
   report,
 }) async {
+  if (downloadPageSize != null && downloadPageSize < 1) {
+    throw ArgumentError.value(downloadPageSize, 'downloadPageSize');
+  }
   final entries = [...manifest];
   if (entries.map(keyOf).toSet().length != entries.length) {
     throw StateError('Duplicate items in server manifest');
@@ -45,12 +49,15 @@ Future<List<E>> reconcileHashManifest<K, E, V>({
     await Future<void>.delayed(Duration.zero);
   }
   await report?.call(true, entries.length, done, failed);
-  if (missing.isNotEmpty) {
-    final bundle = await download(missing);
+  final missingList = missing.toList();
+  final pageSize = downloadPageSize ?? missing.length.clamp(1, 1 << 30);
+  for (var offset = 0; offset < missingList.length; offset += pageSize) {
+    final requested = missingList.skip(offset).take(pageSize).toSet();
+    final bundle = await download(requested);
     final received = <K>{};
     for (final value in bundle.values) {
       final key = valueKeyOf(value);
-      if (!missing.contains(key) ||
+      if (!requested.contains(key) ||
           !received.add(key) ||
           bundle.deleted.contains(key)) {
         throw StateError('Unexpected item in sync response');
@@ -64,7 +71,7 @@ Future<List<E>> reconcileHashManifest<K, E, V>({
       await report?.call(true, entries.length, done, failed);
       await Future<void>.delayed(Duration.zero);
     }
-    for (final key in missing.difference(received)) {
+    for (final key in requested.difference(received)) {
       if (bundle.deleted.contains(key)) {
         entries.removeWhere((entry) => keyOf(entry) == key);
       } else {

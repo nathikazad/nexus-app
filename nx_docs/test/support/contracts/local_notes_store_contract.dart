@@ -425,4 +425,52 @@ void runLocalNotesStoreContract({
       expect(await store.readCatalog(const CatalogQuery.pinned()), isEmpty);
     },
   );
+  test(
+    'late downloads and deletions cannot overwrite a newer foreground result',
+    () async {
+      RemoteDocument remote(String hash) => RemoteDocument(
+        key: const DocumentKey(localId: 'remote-1', remoteId: 1),
+        document: offlineTestDocument(title: hash),
+        revision: RemoteRevision(hash),
+        serverHash: hash,
+      );
+      await store.applySyncBundle(
+        DocumentSyncBundle(documents: [remote('original')]),
+      );
+      await store.applySyncBundle(
+        DocumentSyncBundle(
+          documents: [remote('newest')],
+          expectedHashes: {1: 'original'},
+        ),
+      );
+      await store.applySyncBundle(
+        DocumentSyncBundle(
+          documents: [remote('stale')],
+          expectedHashes: {1: 'original'},
+        ),
+      );
+      expect((await store.getDocumentByRemoteId(1))?.document.title, 'newest');
+      await store.applySyncBundle(
+        const DocumentSyncBundle(
+          deletedIds: [1],
+          expectedHashes: {1: 'original'},
+        ),
+      );
+      expect((await store.getDocumentByRemoteId(1))?.document.title, 'newest');
+      await store.applySyncBundle(
+        const DocumentSyncBundle(
+          deletedIds: [1],
+          expectedHashes: {1: 'newest'},
+        ),
+      );
+      expect(await store.getDocumentByRemoteId(1), isNull);
+      await store.applySyncBundle(
+        DocumentSyncBundle(
+          documents: [remote('resurrect')],
+          expectedHashes: {1: 'newest'},
+        ),
+      );
+      expect(await store.getDocumentByRemoteId(1), isNull);
+    },
+  );
 }

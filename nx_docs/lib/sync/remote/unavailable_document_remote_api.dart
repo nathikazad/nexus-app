@@ -25,6 +25,7 @@ final class UnavailableDocumentRemoteApi implements DocumentRemoteApi {
   Future<DocumentSyncBundle> syncDocuments({
     required List<DocumentManifestEntry> manifest,
     Set<int>? documentIds,
+    bool manifestOnly = false,
   }) async => _unavailable();
 
   @override

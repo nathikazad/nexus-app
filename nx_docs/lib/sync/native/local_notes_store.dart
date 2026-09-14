@@ -24,6 +24,8 @@ abstract interface class LocalNotesStore {
 
   Future<List<DocumentManifestEntry>> documentManifest();
 
+  Future<bool> hasCurrentDocument(DocumentManifestEntry entry);
+
   Future<void> applySyncBundle(DocumentSyncBundle bundle);
 
   /// Replaces a stale local draft with the accepted remote document and

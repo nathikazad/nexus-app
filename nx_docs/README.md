@@ -84,3 +84,23 @@ compatibility:
 flutter build web --release --base-href /docs/
 rsync -az --delete build/web/ ../../servers/mcp/server/static/nx_notes/
 ```
+
+## Native library synchronization
+
+Docs and Books share `nx_offline.reconcileHashManifest`, download progress types,
+and the `nx_db.syncDocuments` server API. A full Docs check first fetches a
+manifest-only response, verifies matching local content references without
+loading bodies, then downloads only missing/changed bodies in pages of 20.
+Deletions are reconciled after the complete manifest pass. Unsent local edits
+are never replaced by downloads or server deletions.
+
+Library and foreground requests use separate shared `SyncSupervisor` instances.
+Foreground document demand therefore need not wait for the entire library.
+Each downloaded/deleted document carries the local hash observed before the
+request; the local store checks it inside the write transaction, preventing a
+late library response from overwriting a newer foreground result or upload.
+Uploads keep their durable outbox and run independently of pulls. Settings shows
+upload state separately from library progress and automatic retry errors. The
+library supervisor uses Books' bounded exponential retry policy; providers close
+both supervisors when the account scope is disposed. Sync phase/count timestamps
+are logged with the `[NX Docs sync]` prefix without document bodies or credentials.
