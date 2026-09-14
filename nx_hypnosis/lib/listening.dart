@@ -1,3 +1,4 @@
+import 'package:nx_voice/background_audio.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -7,9 +8,11 @@ import 'recording_source_web.dart'
     if (dart.library.io) 'recording_source_io.dart';
 
 class Listening extends ChangeNotifier {
-  Listening({this.loadRecording});
+  Listening({this.loadRecording, this.loadRecordingPath});
+  final Future<String> Function(Tape)? loadRecordingPath;
   final Future<Uint8List> Function(Tape)? loadRecording;
   AudioPlayer? _player;
+  NxBackgroundAudioPlayer? _background;
   String? _source;
   Future<void> clearSource() async {
     final old = _source;
@@ -24,6 +27,8 @@ class Listening extends ChangeNotifier {
   bool playing = false;
   bool loading = false;
   double speed = 1;
+  bool repeatEnabled = false;
+  bool changingRepeat = false;
   String? error;
   int _generation = 0;
   bool _disposed = false;
@@ -33,7 +38,8 @@ class Listening extends ChangeNotifier {
 
   AudioPlayer get player {
     if (_player != null) return _player!;
-    final p = _player = AudioPlayer();
+    _background = NxBackgroundAudioPlayer();
+    final p = _player = _background!.player;
     _subscriptions.add(
       p.positionStream.listen((v) {
         position = v;
@@ -70,7 +76,9 @@ class Listening extends ChangeNotifier {
     final request = ++_generation;
     error = null;
     try {
-      if (tape?.id != item.id) {
+      if (tape?.id != item.id ||
+          tape?.audioRevision != item.audioRevision ||
+          tape?.audioAsset != item.audioAsset) {
         tape = item;
         loading = true;
         position = Duration.zero;
@@ -78,7 +86,12 @@ class Listening extends ChangeNotifier {
         _update();
         await player.stop();
         await clearSource();
-        if (loadRecording != null) {
+        if (loadRecordingPath != null) {
+          final path = await loadRecordingPath!(item);
+          if (_disposed || request != _generation) return;
+          // Durable cached recordings belong to the library, not this player.
+          await player.setFilePath(path);
+        } else if (loadRecording != null) {
           final bytes = await loadRecording!(item);
           if (_disposed || request != _generation) return;
           final source = await recordingSource(bytes);
@@ -93,7 +106,15 @@ class Listening extends ChangeNotifier {
         }
       }
       if (_disposed || request != _generation) return;
+      await _background!.prepare(
+        id: item.id,
+        title: item.title,
+        album: 'NX Hypnosis',
+        onStop: close,
+      );
+      if (_disposed || request != _generation) return;
       await player.setSpeed(speed);
+      await player.setLoopMode(repeatEnabled ? LoopMode.one : LoopMode.off);
       if (player.processingState == ProcessingState.completed) {
         await player.seek(Duration.zero);
       }
@@ -139,6 +160,22 @@ class Listening extends ChangeNotifier {
     _update();
   }
 
+  Future<void> toggleRepeat() async {
+    if (changingRepeat || _disposed) return;
+    changingRepeat = true;
+    _update();
+    try {
+      final next = !repeatEnabled;
+      await player.setLoopMode(next ? LoopMode.one : LoopMode.off);
+      repeatEnabled = next;
+    } catch (_) {
+      error = 'Repeat could not be changed. Please try again.';
+    } finally {
+      changingRepeat = false;
+      _update();
+    }
+  }
+
   Future<void> close() async {
     ++_generation;
     tape = null;
@@ -146,7 +183,7 @@ class Listening extends ChangeNotifier {
     loading = false;
     error = null;
     _update();
-    await _player?.stop();
+    await _background?.stop();
     await clearSource();
   }
 
@@ -158,7 +195,9 @@ class Listening extends ChangeNotifier {
       unawaited(s.cancel());
     }
     unawaited(
-      (_player?.dispose() ?? Future<void>.value()).then((_) => clearSource()),
+      (_background?.dispose() ?? Future<void>.value()).then(
+        (_) => clearSource(),
+      ),
     );
     super.dispose();
   }
@@ -242,8 +281,9 @@ class ListeningBar extends StatelessWidget {
                           ),
                         ],
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           TextButton(
                             onPressed: () => listening.skip(-15),
@@ -271,6 +311,25 @@ class ListeningBar extends StatelessWidget {
                           TextButton(
                             onPressed: () => listening.skip(15),
                             child: const Text('+15s'),
+                          ),
+                          IconButton(
+                            tooltip: listening.repeatEnabled
+                                ? 'Turn auto repeat off'
+                                : 'Turn auto repeat on',
+                            isSelected: listening.repeatEnabled,
+                            style: IconButton.styleFrom(
+                              backgroundColor: listening.repeatEnabled
+                                  ? Colors.black
+                                  : Colors.transparent,
+                              foregroundColor: listening.repeatEnabled
+                                  ? Colors.white
+                                  : Colors.black,
+                            ),
+                            onPressed: listening.changingRepeat
+                                ? null
+                                : listening.toggleRepeat,
+                            icon: const Icon(Icons.repeat_rounded),
+                            selectedIcon: const Icon(Icons.repeat_one_rounded),
                           ),
                           PopupMenuButton<double>(
                             tooltip: 'Playback speed',

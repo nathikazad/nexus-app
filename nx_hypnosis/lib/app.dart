@@ -1,3 +1,7 @@
+import 'package:flutter/rendering.dart';
+import 'timed_story.dart';
+import 'dart:async';
+import 'package:nx_offline/nx_offline.dart';
 import 'package:flutter/material.dart';
 import 'desires.dart';
 import 'forms.dart';
@@ -74,11 +78,79 @@ class HypnosisHome extends StatefulWidget {
 }
 
 class _HypnosisHomeState extends State<HypnosisHome> {
+  final followPlayback = ValueNotifier(true);
   late final listening = Listening(
+    loadRecordingPath:
+        widget.collection is RemoteCollection &&
+            (widget.collection as RemoteCollection).cache != null
+        ? (widget.collection as RemoteCollection).recordingPath
+        : null,
     loadRecording: widget.collection is RemoteCollection
         ? (widget.collection as RemoteCollection).recording
         : null,
   );
+  @override
+  void initState() {
+    super.initState();
+    data.addListener(_collectionChanged);
+  }
+
+  void _collectionChanged() {
+    if (!mounted) return;
+    setState(() {
+      if (selectedDesire != null) {
+        selectedDesire = data.desires
+            .where((d) => d.id == selectedDesire!.id)
+            .firstOrNull;
+        if (selectedDesire == null && view == View.desire) view = View.desires;
+      }
+      if (selectedTape != null) {
+        selectedTape = data.tapes
+            .where((t) => t.id == selectedTape!.id)
+            .firstOrNull;
+        if (selectedTape == null && view == View.story) view = View.tapes;
+      }
+      if (filter != null && !data.desires.any((d) => d.id == filter)) {
+        filter = null;
+      }
+    });
+  }
+
+  Widget syncStatus() {
+    final remote = data;
+    if (remote is! RemoteCollection) return const SizedBox.shrink();
+    final count = remote.tapes.where((t) => t.audioAsset != null).length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SyncStatusView(
+                  source: remote.synchronizer,
+                  textStyle: const TextStyle(fontSize: 12, color: muted),
+                ),
+                if (remote.cache != null && count > 0)
+                  Text(
+                    '${remote.savedRecordings.length} of $count recordings saved offline${remote.downloading ? ' · Downloading' : ''}',
+                    style: const TextStyle(fontSize: 12, color: muted),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Sync collection',
+            icon: const Icon(Icons.sync, size: 20),
+            onPressed: () =>
+                unawaited(remote.refresh().catchError((Object _) {})),
+          ),
+        ],
+      ),
+    );
+  }
+
   bool saving = false;
   Future<void> perform(Future<void> Function() action) async {
     if (saving) return;
@@ -104,11 +176,14 @@ class _HypnosisHomeState extends State<HypnosisHome> {
   HypnosisCollection get data => widget.collection;
   @override
   void dispose() {
+    data.removeListener(_collectionChanged);
     listening.dispose();
+    followPlayback.dispose();
     super.dispose();
   }
 
   void go(View next) {
+    followPlayback.value = true;
     setState(() => view = next);
   }
 
@@ -574,25 +649,35 @@ class _HypnosisHomeState extends State<HypnosisHome> {
           ),
         ),
         surface(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children:
-                (t.story.isEmpty
-                        ? "Your tape is saved as a draft. The narration has not been created yet."
-                        : t.story)
-                    .split(RegExp(r'\n\s*\n'))
-                    .where((p) => p.trim().isNotEmpty)
-                    .map(
-                      (p) => Padding(
-                        padding: const EdgeInsets.only(bottom: 22),
-                        child: Text(
-                          p.trim(),
-                          style: const TextStyle(fontSize: 16, height: 1.85),
-                        ),
-                      ),
-                    )
-                    .toList(),
-          ),
+          t.timeline != null
+              ? TimedStory(
+                  key: ValueKey("${t.id}:${t.audioRevision}"),
+                  tape: t,
+                  listening: listening,
+                  follow: followPlayback,
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children:
+                      (t.story.isEmpty
+                              ? "Your tape is saved as a draft. The narration has not been created yet."
+                              : t.story)
+                          .split(RegExp(r'\n\s*\n'))
+                          .where((p) => p.trim().isNotEmpty)
+                          .map(
+                            (p) => Padding(
+                              padding: const EdgeInsets.only(bottom: 22),
+                              child: Text(
+                                p.trim(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  height: 1.85,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                ),
           padding: 26,
         ),
       ],
@@ -635,27 +720,49 @@ class _HypnosisHomeState extends State<HypnosisHome> {
       if (!didPop) back();
     },
     child: Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, box) => SingleChildScrollView(
-            key: ValueKey(view),
-            padding: EdgeInsets.fromLTRB(
-              box.maxWidth < 600 ? 24 : 32,
-              box.maxWidth < 600 ? 24 : 36,
-              box.maxWidth < 600 ? 24 : 32,
-              36,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 816),
-                child: AbsorbPointer(
-                  absorbing: saving,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (saving) const LinearProgressIndicator(),
-                      body(),
-                    ],
+      floatingActionButton: view == View.story && selectedTape?.timeline != null
+          ? ValueListenableBuilder<bool>(
+              valueListenable: followPlayback,
+              builder: (context, follow, _) => follow
+                  ? const SizedBox.shrink()
+                  : FloatingActionButton.extended(
+                      onPressed: () => followPlayback.value = true,
+                      icon: const Icon(Icons.my_location),
+                      label: const Text('Follow audio'),
+                    ),
+            )
+          : null,
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: (notification) {
+          if (view == View.story &&
+              notification.direction != ScrollDirection.idle) {
+            followPlayback.value = false;
+          }
+          return false;
+        },
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, box) => SingleChildScrollView(
+              key: ValueKey(view),
+              padding: EdgeInsets.fromLTRB(
+                box.maxWidth < 600 ? 24 : 32,
+                box.maxWidth < 600 ? 24 : 36,
+                box.maxWidth < 600 ? 24 : 32,
+                36,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 816),
+                  child: AbsorbPointer(
+                    absorbing: saving,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        syncStatus(),
+                        if (saving) const LinearProgressIndicator(),
+                        body(),
+                      ],
+                    ),
                   ),
                 ),
               ),

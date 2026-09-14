@@ -3,6 +3,8 @@ name: nx-hypnosis-voice-gen
 description: Generate NX Hypnosis narration from a transcript using the approved ElevenLabs female voice, with spacious phrase pauses and locally saved audio. Use for creating or regenerating hypnosis recordings.
 ---
 
+For multi-character Inworld stories, use [the story skill and its approved pacing](../construct-story/SKILL.md#approved-story-pacing). The approved Roger v5 preview uses short narrative beats, explicit pauses, and native speed 0.90. Read that guidance before rendering; the ElevenLabs settings below belong to the single-voice workflow.
+
 Use `scripts/audio/generate.py` relative to the generation folder. It accepts a UTF-8 transcript and writes MP3 audio, the raw take, transcript, and settings into the generation folder's Git-ignored `outputs/` directory. Python 3.9+, FFmpeg and ffprobe are required.
 
 ```sh

@@ -1,3 +1,6 @@
+import 'playback_timeline.dart';
+import 'package:flutter/foundation.dart';
+
 class Desire {
   Desire({required this.id, required this.title, required this.belief});
   final String id;
@@ -13,6 +16,8 @@ class Tape {
     required this.story,
     this.prompt = '',
     this.audioAsset,
+    this.audioRevision,
+    this.timeline,
   });
   final String id;
   String desireId;
@@ -20,10 +25,12 @@ class Tape {
   String story;
   String prompt;
   String? audioAsset;
+  String? audioRevision;
+  final PlaybackTimeline? timeline;
 }
 
 /// Collection model; RemoteCollection persists operations through Nexus.
-class HypnosisCollection {
+class HypnosisCollection extends ChangeNotifier {
   HypnosisCollection(this.desires, this.tapes, this.sampleStory);
   final List<Desire> desires;
   final List<Tape> tapes;

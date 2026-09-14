@@ -50,3 +50,9 @@ After commit, use a fresh connection to verify the collection and `load_recordin
 For uncertain SSH/transaction results, inspect the tape metadata or creation token before retrying. Do not regenerate audio, blindly repeat creation, or delete a potentially committed recording.
 
 Remove temporary staging files after verification and update the local receipt with the final tape ID, filename, checksum, and verification result. Report the tape title, duration, and whether created or replaced. State the production target and relevant verification. Do not claim listening quality or on-device playback was checked unless it actually was.
+
+## Audio schema and playback timing
+
+The canonical audio JSON schema lives in `servers/pgdb/core_schema/models/Digital_Nouns/hypnosis_tapes.json`, under the audio attribute’s `metadata.json_schema`; production stores it in `attribute_definitions.metadata.json_schema`. Audio is optional/null, and `audio.timeline` is optional for legacy recordings. The current database trigger warns on mismatches rather than rejecting them, so validate before publishing.
+
+For a timed recording, load the matching `.timeline.json`, verify its `audio_sha256` and `script_sha256`, and store it inside `audio.timeline`, renaming the local `turns` array to `segments`. Each segment keeps its ID, speaker, exact spoken text, and start/end seconds. Preserve clip-end and sample offsets when supplied. Check ordered, nonoverlapping intervals, nonnegative times, end within duration, and matching audio checksum; JSON schema alone cannot enforce these relationships. Publish audio and timeline in the same transaction. When replacing with an untimed recording, omit the old timeline rather than carrying stale timings forward. If the editable story changes independently, retain the recording’s spoken-text snapshot; do not apply its timestamps to changed prose.

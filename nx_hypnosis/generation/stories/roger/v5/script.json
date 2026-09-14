@@ -1,0 +1,4484 @@
+{
+  "version": 1,
+  "title": "Roger — Abundance Through Service",
+  "cast": {
+    "Narrator": "Harold",
+    "Roger": "Edward",
+    "Mother": "Beatrice",
+    "Rita": "Deborah",
+    "Tim": "Evan",
+    "Rick": "Arthur",
+    "Katie": "Lauren",
+    "Katie’s father": "Warren",
+    "Factory manager": "Conrad",
+    "Coworker": "Vinny",
+    "Churchgoer": "Warren"
+  },
+  "speaking_rate": 0.9,
+  "delivery_mode": "BALANCED",
+  "speaker_instructions": {
+    "Narrator": "Warm, grounded storytelling with clear articulation and natural variation. Let meaningful moments breathe. Avoid a sales pitch or exaggerated drama.",
+    "Roger": "A humble, courageous protagonist. Warm, human, expressive conversation with varied pitch and rhythm. Let vulnerability, curiosity, joy, and growing conviction emerge as appropriate to the line. Never a booming announcer or a monotone. In prayers, speak to God personally. Remembrance is woven into ordinary life, not delivered as a sermon. Let fear and trust coexist.",
+    "Mother": "A mature older mother speaking to her adult son. Warm, gently weathered, affectionate, practical and reassuring. Understated, not theatrical.",
+    "Rita": "Gentle and sincere, with quiet conviction and self-respect. Natural, warm conversation.",
+    "Tim": "An ordinary working man. Friendly and direct, with natural warmth. Let frustration or relief follow the meaning of the line.",
+    "Rick": "A successful middle-aged man, kindly and confident. Speak to the craftsman with respect and natural curiosity.",
+    "Katie": "An assured adult woman, elegant, friendly and candid. Natural conversation, never an advertisement.",
+    "Katie’s father": "An experienced older businessman giving patient, practical advice. Conversational, not an announcer.",
+    "Factory manager": "A gruff factory manager, skeptical and dismissive but believable. No shouting or exaggerated villain voice.",
+    "Coworker": "A skeptical coworker teasing another man with dry disbelief. Natural, not cartoonish.",
+    "Churchgoer": "An older, successful man speaking warmly and thoughtfully to someone he respects. Conversational encouragement, never a sermon or grand prophecy."
+  },
+  "turns": [
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "Roger worked until the factory windows reflected the lamps inside.\n\nAll day, his needle passed through leather.",
+      "pause": 1.05,
+      "id": "opening-beat-001",
+      "source_turn_id": "turn-001"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "At night, he took small repairs home and stitched beside the kitchen table.\n\nSometimes he fell asleep with the thread still looped around his finger.",
+      "pause": 1.05,
+      "id": "opening-beat-002",
+      "source_turn_id": "turn-001"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "He was careful.\n\nHe was dependable.\n\nHe worked harder when there was less money, and somehow there was always less money.",
+      "pause": 1.05,
+      "id": "opening-beat-003",
+      "source_turn_id": "turn-001"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "One evening, his mother divided a pot of stew among four bowls.\n\nHis youngest brother needed a new sole on his school shoe.",
+      "pause": 1.05,
+      "id": "opening-beat-004",
+      "source_turn_id": "turn-001"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "His sister had an examination fee to pay.\n\nBeneath the salt jar lay a notice from the landlord.",
+      "pause": 1.05,
+      "id": "opening-beat-005",
+      "source_turn_id": "turn-001"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "Roger put his wages on the table and watched his mother count them.\n\nShe moved a coin from one pile to another, then moved it back.",
+      "pause": 1.05,
+      "id": "opening-beat-006",
+      "source_turn_id": "turn-001"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "He wanted to tell her that one day she would stop doing this.\n\nBut he could not see how to make next month different from this one.",
+      "pause": 1.05,
+      "id": "opening-beat-007",
+      "source_turn_id": "turn-001"
+    },
+    {
+      "scene": 1,
+      "speaker": "Mother",
+      "text": "Eat before it gets cold.",
+      "pause": 0.8,
+      "id": "opening-beat-008",
+      "source_turn_id": "turn-002"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "He lifted his spoon.\n\nHe could scarcely swallow.",
+      "pause": 1.6,
+      "id": "opening-beat-009",
+      "source_turn_id": "turn-003"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "He did not despise his work.\n\nHis mother had taught him that honest work was something to respect.",
+      "pause": 1.05,
+      "id": "opening-beat-010",
+      "source_turn_id": "turn-003"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "But he had begun to confuse the life he knew with the only life he could have.",
+      "pause": 1.05,
+      "id": "opening-beat-011",
+      "source_turn_id": "turn-003"
+    },
+    {
+      "scene": 1,
+      "speaker": "Narrator",
+      "text": "He called it his fate because he could not bear to keep wanting what seemed impossible.",
+      "pause": 1.5,
+      "id": "opening-beat-012",
+      "source_turn_id": "turn-003"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "The following evening, Roger stopped at a church on his way home.\n\nHe stood outside for a moment with his repair bag against his leg.",
+      "pause": 1.05,
+      "id": "opening-beat-013",
+      "source_turn_id": "turn-004"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "Then he went in.",
+      "pause": 1.05,
+      "id": "opening-beat-014",
+      "source_turn_id": "turn-004"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "He sat near the back.\n\nFor several minutes he could only look at his hands.",
+      "pause": 1.05,
+      "id": "opening-beat-015",
+      "source_turn_id": "turn-004"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "There was dark wax in the creases of his fingers, and a fine white scar across one knuckle.\n\nHe had asked so much of those hands.",
+      "pause": 1.05,
+      "id": "opening-beat-016",
+      "source_turn_id": "turn-004"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "At last, he bowed his head.",
+      "pause": 1.6,
+      "id": "opening-beat-017",
+      "source_turn_id": "turn-004"
+    },
+    {
+      "scene": 2,
+      "speaker": "Roger",
+      "text": "God, I’m willing to work. You know I am. But I don’t know what to do differently.",
+      "pause": 0.8,
+      "instruction": "An exhausted man speaking personally to God. Honest helplessness, clearly voiced, no theatrical sobbing.",
+      "id": "opening-beat-018",
+      "source_turn_id": "turn-005"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "His voice caught.\n\nHe waited, then continued.",
+      "pause": 1.05,
+      "id": "opening-beat-019",
+      "source_turn_id": "turn-006"
+    },
+    {
+      "scene": 2,
+      "speaker": "Roger",
+      "text": "I want my mother to rest. I want my brother and sister to have a chance. I don’t know how to give them that. Please show me a way. Help me recognize it when it comes.",
+      "pause": 0.8,
+      "id": "opening-beat-020",
+      "source_turn_id": "turn-007"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "He had prayed for another shift many times.\n\nThis time he was asking to see something he had not seen before.",
+      "pause": 1.05,
+      "id": "opening-beat-021",
+      "source_turn_id": "turn-008"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "He stayed until the church began to grow quiet.\n\nNothing had changed in his pocket when he rose.",
+      "pause": 1.05,
+      "id": "opening-beat-022",
+      "source_turn_id": "turn-008"
+    },
+    {
+      "scene": 2,
+      "speaker": "Narrator",
+      "text": "Yet he had finally spoken the longing he usually swallowed.\n\nHe picked up his bag and walked outside.",
+      "pause": 1.5,
+      "id": "opening-beat-023",
+      "source_turn_id": "turn-008"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "Near the steps, a man in a well-cut coat was examining the loose buckle on his shoe.\n\nA car waited by the curb.",
+      "pause": 1.05,
+      "id": "opening-beat-024",
+      "source_turn_id": "turn-009"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "The driver had come around to help, but the man waved him back gently.",
+      "pause": 1.05,
+      "id": "opening-beat-025",
+      "source_turn_id": "turn-009"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "Roger recognized the problem.\n\nThe small leather loop holding the buckle had begun to split.\n\nHe hesitated, then touched the tools inside his bag.",
+      "pause": 1.05,
+      "id": "opening-beat-026",
+      "source_turn_id": "turn-009"
+    },
+    {
+      "scene": 3,
+      "speaker": "Roger",
+      "text": "I could secure that for your journey, if you like. It will need a proper repair afterward.",
+      "pause": 0.8,
+      "id": "opening-beat-027",
+      "source_turn_id": "turn-010"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "The man looked up, then smiled and sat on the low wall beside the steps.",
+      "pause": 1.05,
+      "id": "opening-beat-028",
+      "source_turn_id": "turn-011"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "Roger knelt and worked a few careful stitches through the sound part of the leather.",
+      "pause": 1.05,
+      "id": "opening-beat-029",
+      "source_turn_id": "turn-011"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "Before drawing the thread tight, he silently asked God for care in his hands.\n\nA few minutes later, the buckle held.",
+      "pause": 1.05,
+      "id": "opening-beat-030",
+      "source_turn_id": "turn-011"
+    },
+    {
+      "scene": 3,
+      "speaker": "Churchgoer",
+      "text": "You noticed that quickly. Do you have a shop?",
+      "pause": 0.8,
+      "id": "opening-beat-031",
+      "source_turn_id": "turn-012"
+    },
+    {
+      "scene": 3,
+      "speaker": "Roger",
+      "text": "No. I stitch in the factory. And do repairs when I can.",
+      "pause": 0.8,
+      "id": "opening-beat-032",
+      "source_turn_id": "turn-013"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "The man tested the fastening and asked what he owed Roger for the work.\n\nRoger named a modest price.",
+      "pause": 1.05,
+      "id": "opening-beat-033",
+      "source_turn_id": "turn-014"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "The man paid it, then remained beside him while Roger put away his tools.",
+      "pause": 1.05,
+      "id": "opening-beat-034",
+      "source_turn_id": "turn-014"
+    },
+    {
+      "scene": 3,
+      "speaker": "Churchgoer",
+      "text": "Have you thought about taking customers of your own?",
+      "pause": 0.8,
+      "id": "opening-beat-035",
+      "source_turn_id": "turn-015"
+    },
+    {
+      "scene": 3,
+      "speaker": "Roger",
+      "text": "People like me don’t usually get that far.",
+      "pause": 0.8,
+      "id": "opening-beat-036",
+      "source_turn_id": "turn-016"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "The man did not laugh.\n\nThat made it easier for Roger to say the rest.",
+      "pause": 1.05,
+      "id": "opening-beat-037",
+      "source_turn_id": "turn-017"
+    },
+    {
+      "scene": 3,
+      "speaker": "Roger",
+      "text": "My family depends on me. I can’t afford to dream and leave them hungry.",
+      "pause": 0.8,
+      "id": "opening-beat-038",
+      "source_turn_id": "turn-018"
+    },
+    {
+      "scene": 3,
+      "speaker": "Churchgoer",
+      "text": "Then keep caring for them. But be careful about what you call impossible.",
+      "pause": 0.8,
+      "id": "opening-beat-039",
+      "source_turn_id": "turn-019"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "He looked down at the fastening Roger had repaired.",
+      "pause": 1.05,
+      "id": "opening-beat-040",
+      "source_turn_id": "turn-020"
+    },
+    {
+      "scene": 3,
+      "speaker": "Churchgoer",
+      "text": "A few minutes ago, you saw a way to help me that I couldn’t see. How many other things might be possible that you haven’t learned to see yet?",
+      "pause": 0.8,
+      "id": "opening-beat-041",
+      "source_turn_id": "turn-021"
+    },
+    {
+      "scene": 3,
+      "speaker": "Roger",
+      "text": "I wouldn’t know where to begin.",
+      "pause": 0.8,
+      "id": "opening-beat-042",
+      "source_turn_id": "turn-022"
+    },
+    {
+      "scene": 3,
+      "speaker": "Churchgoer",
+      "text": "That is different from there being nowhere to begin. You know the limits of what you’ve tried, Roger. You don’t know the limits of what’s possible. And God has no limits.",
+      "pause": 1.6,
+      "id": "opening-beat-043",
+      "source_turn_id": "turn-023"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "Roger glanced back toward the church door.\n\nThe words touched the very place from which his prayer had come.",
+      "pause": 1.05,
+      "id": "opening-beat-044",
+      "source_turn_id": "turn-024"
+    },
+    {
+      "scene": 3,
+      "speaker": "Churchgoer",
+      "text": "What would you dare to build if you stopped assuming the answer was already no?",
+      "pause": 0.8,
+      "id": "opening-beat-045",
+      "source_turn_id": "turn-025"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "The driver opened the car door.\n\nThe man thanked Roger again and left.\n\nHe had offered no investment, no position, no promise that everything would work.",
+      "pause": 1.05,
+      "id": "opening-beat-046",
+      "source_turn_id": "turn-026"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "Roger remained beside the steps with the payment in his palm.\n\nHis circumstances were almost exactly as they had been when he entered the church.",
+      "pause": 1.05,
+      "id": "opening-beat-047",
+      "source_turn_id": "turn-026"
+    },
+    {
+      "scene": 3,
+      "speaker": "Narrator",
+      "text": "But a question had entered them.",
+      "pause": 1.6,
+      "id": "opening-beat-048",
+      "source_turn_id": "turn-026"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "That night, after finishing his brother’s shoe, Roger let himself picture a different evening at home.",
+      "pause": 1.05,
+      "id": "opening-beat-049",
+      "source_turn_id": "turn-027"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "His mother putting away the household accounts without a crease between her eyes.\n\nHis sister paying her examination fee on time.",
+      "pause": 1.05,
+      "id": "opening-beat-050",
+      "source_turn_id": "turn-027"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "A table with enough for everyone, and something left to offer a guest.",
+      "pause": 1.05,
+      "id": "opening-beat-051",
+      "source_turn_id": "turn-027"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Then he pictured a workshop.\n\nLight over a clean bench.\n\nGood leather.\n\nCustomers who came because something he made had improved their lives.",
+      "pause": 1.05,
+      "id": "opening-beat-052",
+      "source_turn_id": "turn-027"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Enough money to pay skilled people well, and enough freedom to choose what he would make next.",
+      "pause": 1.05,
+      "id": "opening-beat-053",
+      "source_turn_id": "turn-027"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "For a moment, the wanting frightened him.\n\nWho was he to imagine such a life?\n\nHe almost pushed the picture away.",
+      "pause": 1.6,
+      "id": "opening-beat-054",
+      "source_turn_id": "turn-027"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Then he remembered the man’s question.",
+      "pause": 1.6,
+      "id": "opening-beat-055",
+      "source_turn_id": "turn-027"
+    },
+    {
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "God, this is what I want. I want to provide generously. I want to make something useful and live fully. Help me bring these desires to You without shame. Guide what I do with them.",
+      "pause": 0.8,
+      "id": "opening-beat-056",
+      "source_turn_id": "turn-028"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "He could see the end of his wages.\n\nHe could not see the end of God’s abundance.\n\nGod’s knowledge did not stop where Roger’s knowledge stopped.",
+      "pause": 1.6,
+      "id": "opening-beat-057",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "He had been bringing a small picture of the world into every prayer: a few fortunate people, a fixed number of chances, everyone else waiting for what remained.",
+      "pause": 1.05,
+      "id": "opening-beat-058",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Yet the One he prayed to was infinite.",
+      "pause": 1.05,
+      "id": "opening-beat-059",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Roger took a scrap of paper.\n\nAt the top, he wrote that he wanted a workshop which supported his family by doing work people truly valued.",
+      "pause": 1.05,
+      "id": "opening-beat-060",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Then he began working backward.",
+      "pause": 1.05,
+      "id": "opening-beat-061",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "A workshop would need customers.\n\nCustomers would need a reason to trust him.",
+      "pause": 1.05,
+      "id": "opening-beat-062",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "Before any of that, there would have to be one person whose problem he could help solve.",
+      "pause": 1.05,
+      "id": "opening-beat-063",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "He could look for that person before he owned a shop.\n\nHe could begin while keeping his factory shifts.",
+      "pause": 1.05,
+      "id": "opening-beat-064",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "He wrote one thing he could do tomorrow: speak to someone outside the factory, ask what troubled them about their shoes, and listen.",
+      "pause": 1.05,
+      "id": "opening-beat-065",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "His mother found him looking at the paper.\n\nHe showed her what he had written.",
+      "pause": 1.05,
+      "id": "opening-beat-066",
+      "source_turn_id": "turn-029"
+    },
+    {
+      "scene": 4,
+      "speaker": "Mother",
+      "text": "Can you begin without leaving us hungry?",
+      "pause": 0.8,
+      "id": "opening-beat-067",
+      "source_turn_id": "turn-030"
+    },
+    {
+      "scene": 4,
+      "speaker": "Roger",
+      "text": "I think I can begin small.",
+      "pause": 0.8,
+      "id": "opening-beat-068",
+      "source_turn_id": "turn-031"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "She sat beside him while he worked out what he could spare.",
+      "pause": 1.05,
+      "id": "opening-beat-069",
+      "source_turn_id": "turn-032"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "He put aside a little money, arranged to buy discarded leather with permission, and chose an evening for his first outing.",
+      "pause": 1.5,
+      "id": "opening-beat-070",
+      "source_turn_id": "turn-032"
+    },
+    {
+      "scene": 4,
+      "speaker": "Narrator",
+      "text": "The next day at work, he made the mistake of sharing his hope before it had grown strong enough to bear much weight.",
+      "pause": 1.5,
+      "id": "story-beat-071",
+      "source_turn_id": "turn-032"
+    },
+    {
+      "id": "story-beat-072",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "The first man laughed before Roger had finished speaking.",
+      "pause": 1.05,
+      "source_turn_id": "turn-033"
+    },
+    {
+      "id": "story-beat-073",
+      "scene": 5,
+      "speaker": "Coworker",
+      "text": "You’re going to make shoes for private customers?",
+      "pause": 0.8,
+      "source_turn_id": "turn-034"
+    },
+    {
+      "id": "story-beat-074",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Roger stood beside his workbench, a length of waxed thread caught around his finger.",
+      "pause": 1.05,
+      "source_turn_id": "turn-035"
+    },
+    {
+      "id": "story-beat-075",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Around him, the factory carried on: belts turning, needles striking leather, soles dropping into wooden bins.",
+      "pause": 1.05,
+      "source_turn_id": "turn-035"
+    },
+    {
+      "id": "story-beat-076",
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "I want to try,",
+      "pause": 0.35,
+      "source_turn_id": "turn-036"
+    },
+    {
+      "id": "story-beat-077",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-037"
+    },
+    {
+      "id": "story-beat-078",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Someone at the next bench grinned.",
+      "pause": 1.05,
+      "source_turn_id": "turn-037"
+    },
+    {
+      "id": "story-beat-079",
+      "scene": 5,
+      "speaker": "Coworker",
+      "text": "Listen to him. He’ll have his name above a shop by Christmas.",
+      "pause": 0.8,
+      "source_turn_id": "turn-038"
+    },
+    {
+      "id": "story-beat-080",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Roger tried to smile with them.",
+      "pause": 1.05,
+      "source_turn_id": "turn-039"
+    },
+    {
+      "id": "story-beat-081",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "His manager did not smile.",
+      "pause": 1.05,
+      "source_turn_id": "turn-039"
+    },
+    {
+      "id": "story-beat-082",
+      "scene": 5,
+      "speaker": "Factory manager",
+      "text": "And who feeds your mother while you’re trying?",
+      "pause": 0.8,
+      "source_turn_id": "turn-040"
+    },
+    {
+      "id": "story-beat-083",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "That quietened the room.",
+      "pause": 1.05,
+      "source_turn_id": "turn-041"
+    },
+    {
+      "id": "story-beat-084",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "The manager glanced toward the door, where men gathered every morning hoping someone would miss a shift.",
+      "pause": 1.05,
+      "source_turn_id": "turn-041"
+    },
+    {
+      "id": "story-beat-085",
+      "scene": 5,
+      "speaker": "Factory manager",
+      "text": "You have work here, Roger. Don’t throw away what you have for something you’ve imagined.",
+      "pause": 0.8,
+      "source_turn_id": "turn-042"
+    },
+    {
+      "id": "story-beat-086",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Roger looked down at his hands.\n\nA fine white scar crossed one knuckle.\n\nDark wax had settled into the creases of his fingers.",
+      "pause": 1.05,
+      "source_turn_id": "turn-043"
+    },
+    {
+      "id": "story-beat-087",
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "I understand,",
+      "pause": 0.35,
+      "source_turn_id": "turn-044"
+    },
+    {
+      "id": "story-beat-088",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-045"
+    },
+    {
+      "id": "story-beat-089",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "He returned to his stitching.",
+      "pause": 1.05,
+      "source_turn_id": "turn-045"
+    },
+    {
+      "id": "story-beat-090",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "For the rest of the afternoon, whenever laughter rose above the machines, he wondered whether it was about him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-045"
+    },
+    {
+      "id": "story-beat-091",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "He kept his head bent so that nobody would see his face.\n\nAnger came first, then shame at how badly he wanted their approval.",
+      "pause": 1.05,
+      "source_turn_id": "turn-045"
+    },
+    {
+      "id": "story-beat-092",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Beneath the noise of the machines, he turned inward.",
+      "pause": 1.05,
+      "source_turn_id": "turn-045"
+    },
+    {
+      "id": "story-beat-093",
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "God, You know how small I feel. Please don’t let their words become the limits I place on You.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-046"
+    },
+    {
+      "id": "story-beat-094",
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "He pulled the next stitch through.\n\nHis hands were still unsteady.\n\nHe asked for help again.",
+      "pause": 1.5,
+      "source_turn_id": "turn-047"
+    },
+    {
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "That night, he nearly folded the paper away.\n\nThe manager’s question sounded reasonable.\n\nHis own hope sounded childish.",
+      "pause": 1.05,
+      "id": "story-beat-095",
+      "source_turn_id": "turn-048"
+    },
+    {
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Then he remembered the church steps.\n\nThose men knew the factory.\n\nThey knew his wages.\n\nThey did not know every way his life could unfold.",
+      "pause": 1.05,
+      "id": "story-beat-096",
+      "source_turn_id": "turn-048"
+    },
+    {
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "He took the paper out again.",
+      "pause": 1.05,
+      "id": "story-beat-097",
+      "source_turn_id": "turn-048"
+    },
+    {
+      "scene": 5,
+      "speaker": "Roger",
+      "text": "God, I’m still afraid. Help me take this one step. Help me see where I can be useful, and speak when I see it.",
+      "pause": 0.8,
+      "id": "story-beat-098",
+      "source_turn_id": "turn-049"
+    },
+    {
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "Before his first outing, he sat on the edge of his bed with his coat already on.\n\nHis heart beat as though something dangerous waited outside.",
+      "pause": 1.05,
+      "id": "story-beat-099",
+      "source_turn_id": "turn-050"
+    },
+    {
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "He remembered God, picked up his repair bag, and went.",
+      "pause": 1.05,
+      "id": "story-beat-100",
+      "source_turn_id": "turn-050"
+    },
+    {
+      "scene": 5,
+      "speaker": "Narrator",
+      "text": "He did not need the whole road to be visible before he could walk to the next street.",
+      "pause": 1.5,
+      "id": "story-beat-101",
+      "source_turn_id": "turn-050"
+    },
+    {
+      "id": "story-beat-102",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "He began badly.",
+      "pause": 1.05,
+      "source_turn_id": "turn-051"
+    },
+    {
+      "id": "story-beat-103",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "He spoke too quickly.\n\nHe explained things people had not asked about.\n\nWhen someone said they were busy, he apologized so many times that they became impatient.",
+      "pause": 1.05,
+      "source_turn_id": "turn-051"
+    },
+    {
+      "id": "story-beat-104",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "A shopkeeper asked where his business was.",
+      "pause": 1.05,
+      "source_turn_id": "turn-051"
+    },
+    {
+      "id": "story-beat-105",
+      "scene": 6,
+      "speaker": "Roger",
+      "text": "I work from home.",
+      "pause": 0.8,
+      "source_turn_id": "turn-052"
+    },
+    {
+      "id": "story-beat-106",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "The man’s expression changed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-053"
+    },
+    {
+      "id": "story-beat-107",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "A hotel clerk looked at Roger’s worn shoes and said their guests already had suppliers.",
+      "pause": 1.05,
+      "source_turn_id": "turn-053"
+    },
+    {
+      "id": "story-beat-108",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "One woman listened politely, then asked whether he could mend her gardener’s boots.",
+      "pause": 1.05,
+      "source_turn_id": "turn-053"
+    },
+    {
+      "id": "story-beat-109",
+      "scene": 6,
+      "speaker": "Roger",
+      "text": "Yes,",
+      "pause": 0.35,
+      "source_turn_id": "turn-054"
+    },
+    {
+      "id": "story-beat-110",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Roger said.",
+      "pause": 1.05,
+      "source_turn_id": "turn-055"
+    },
+    {
+      "id": "story-beat-111",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "He took the boots.",
+      "pause": 1.05,
+      "source_turn_id": "turn-055"
+    },
+    {
+      "id": "story-beat-112",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "By the end of the first month, he had learned something unexpected.",
+      "pause": 1.05,
+      "source_turn_id": "turn-055"
+    },
+    {
+      "id": "story-beat-113",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Being dismissed was unpleasant.\n\nIt was not unbearable.",
+      "pause": 1.05,
+      "source_turn_id": "turn-055"
+    },
+    {
+      "id": "story-beat-114",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "After one rejection, he stopped around the corner and pressed his palms together to keep them from trembling.",
+      "pause": 1.05,
+      "source_turn_id": "turn-055"
+    },
+    {
+      "id": "story-beat-115",
+      "scene": 6,
+      "speaker": "Roger",
+      "text": "Stay with me in this, God. Help me meet the next person without carrying my hurt into their doorway.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-056"
+    },
+    {
+      "id": "story-beat-116",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "On another day, someone offered him a chair and a few minutes.\n\nHe silently gave thanks before sitting down.\n\nNothing had been sold.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-117",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Still, there was something here to receive: time, attention, a person willing to speak to him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-118",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "He could be embarrassed at eleven in the morning and still eat lunch at noon.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-119",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "He could hear no, walk to the next street, and discover that the world had not ended.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-120",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Gradually, he stopped beginning with what he wanted to sell.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-121",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "He began asking questions.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-122",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Which shoes did people wear longest?\n\nWhat wore out first?\n\nWhen did their feet begin to hurt?",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-123",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Which pair did they keep buying, and what did they wish someone would change?",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-124",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Some people hurried away.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-125",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Others had been waiting years for someone to ask.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-126",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "Walking home, Roger began to notice how much he had passed without seeing: a broken fastening someone had learned to tolerate, a shopkeeper who knew a supplier, a craftsman willing to explain a mistake.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-127",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "God’s abundance was becoming less abstract to him.\n\nThere was knowledge he had not learned, help he had not asked for, usefulness he had not discovered.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-128",
+      "scene": 6,
+      "speaker": "Narrator",
+      "text": "He had been living among possibilities while telling himself there were none.",
+      "pause": 1.05,
+      "source_turn_id": "turn-057"
+    },
+    {
+      "id": "story-beat-129",
+      "scene": 6,
+      "speaker": "Roger",
+      "text": "Thank You for helping me notice.",
+      "pause": 1.5,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-058"
+    },
+    {
+      "id": "story-beat-130",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Tim was leaning against a car outside a café when Roger met him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-059"
+    },
+    {
+      "id": "story-beat-131",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "One shoe was off.\n\nHis socked foot rested on the curb.",
+      "pause": 1.05,
+      "source_turn_id": "turn-059"
+    },
+    {
+      "id": "story-beat-132",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "Long day?",
+      "pause": 0.8,
+      "source_turn_id": "turn-060"
+    },
+    {
+      "id": "story-beat-133",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger asked.",
+      "pause": 1.05,
+      "source_turn_id": "turn-061"
+    },
+    {
+      "id": "story-beat-134",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "Long enough.",
+      "pause": 0.8,
+      "source_turn_id": "turn-062"
+    },
+    {
+      "id": "story-beat-135",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Tim was a chauffeur.\n\nMost days he drove across the city, waited, drove again, then stood beside the car while other people finished their evenings.",
+      "pause": 1.05,
+      "source_turn_id": "turn-063"
+    },
+    {
+      "id": "story-beat-136",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "My left foot’s fine,",
+      "pause": 0.35,
+      "source_turn_id": "turn-064"
+    },
+    {
+      "id": "story-beat-137",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-065"
+    },
+    {
+      "id": "story-beat-138",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "It’s the right one. By supper I want to cut the shoe off.",
+      "pause": 0.8,
+      "source_turn_id": "turn-066"
+    },
+    {
+      "id": "story-beat-139",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He had already sought advice and been told to return if the trouble persisted.\n\nDifferent shoes had helped for a little while, then disappointed him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-067"
+    },
+    {
+      "id": "story-beat-140",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger crouched beside the curb.",
+      "pause": 1.05,
+      "source_turn_id": "turn-067"
+    },
+    {
+      "id": "story-beat-141",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "May I look?",
+      "pause": 0.8,
+      "source_turn_id": "turn-068"
+    },
+    {
+      "id": "story-beat-142",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Tim handed him the shoe.",
+      "pause": 1.05,
+      "source_turn_id": "turn-069"
+    },
+    {
+      "id": "story-beat-143",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger checked the seams, pressed the lining, and ran his thumb around the inside.",
+      "pause": 1.05,
+      "source_turn_id": "turn-069"
+    },
+    {
+      "id": "story-beat-144",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "I don’t know whether I can solve it,",
+      "pause": 0.35,
+      "source_turn_id": "turn-070"
+    },
+    {
+      "id": "story-beat-145",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-071"
+    },
+    {
+      "id": "story-beat-146",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "But there are a few things I could try.",
+      "pause": 0.8,
+      "source_turn_id": "turn-072"
+    },
+    {
+      "id": "story-beat-147",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "How much?",
+      "pause": 0.8,
+      "source_turn_id": "turn-073"
+    },
+    {
+      "id": "story-beat-148",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "For looking? Nothing.",
+      "pause": 0.8,
+      "source_turn_id": "turn-074"
+    },
+    {
+      "id": "story-beat-149",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Tim studied him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-075"
+    },
+    {
+      "id": "story-beat-150",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "Bring it back before Thursday. I need it.",
+      "pause": 0.8,
+      "source_turn_id": "turn-076"
+    },
+    {
+      "id": "story-beat-151",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger returned it the following evening.",
+      "pause": 1.05,
+      "source_turn_id": "turn-077"
+    },
+    {
+      "id": "story-beat-152",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He had fitted a soft insert beneath the foot.",
+      "pause": 1.05,
+      "source_turn_id": "turn-077"
+    },
+    {
+      "id": "story-beat-153",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Two days later, Tim shook his head.",
+      "pause": 1.05,
+      "source_turn_id": "turn-077"
+    },
+    {
+      "id": "story-beat-154",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "Comfortable standing still. Worse when I’m driving.",
+      "pause": 0.8,
+      "source_turn_id": "turn-078"
+    },
+    {
+      "id": "story-beat-155",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger tried a firmer material.",
+      "pause": 1.05,
+      "source_turn_id": "turn-079"
+    },
+    {
+      "id": "story-beat-156",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Then a thinner one.",
+      "pause": 1.05,
+      "source_turn_id": "turn-079"
+    },
+    {
+      "id": "story-beat-157",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Then he made removable inserts so Tim could compare them during different parts of the day.",
+      "pause": 1.05,
+      "source_turn_id": "turn-079"
+    },
+    {
+      "id": "story-beat-158",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Nothing lasted.",
+      "pause": 1.05,
+      "source_turn_id": "turn-079"
+    },
+    {
+      "id": "story-beat-159",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Each time Tim returned disappointed, Roger felt a heaviness in his stomach.\n\nAt first he worried that Tim would think him useless.",
+      "pause": 1.05,
+      "source_turn_id": "turn-079"
+    },
+    {
+      "id": "story-beat-160",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Then he watched the man ease his foot out of the shoe, and the embarrassment gave way to something more painful: he wanted to help, and he did not know how.",
+      "pause": 1.05,
+      "source_turn_id": "turn-079"
+    },
+    {
+      "id": "story-beat-161",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "That night he sat with an unfinished insert before him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-079"
+    },
+    {
+      "id": "story-beat-162",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "God, I have reached the end of what I know. You haven’t. Help me understand what this man needs.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-080"
+    },
+    {
+      "id": "story-beat-163",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He rested his tired hands on the bench.\n\nHe stopped trying to invent a brilliant answer for a moment and read Tim’s words again.",
+      "pause": 1.05,
+      "source_turn_id": "turn-081"
+    },
+    {
+      "id": "story-beat-164",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger began keeping notes on scraps of paper: where the pain appeared, how long Tim had driven, which shoe he wore.",
+      "pause": 1.05,
+      "source_turn_id": "turn-081"
+    },
+    {
+      "id": "story-beat-165",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "At night, he laid the scraps beside his tools.",
+      "pause": 1.05,
+      "source_turn_id": "turn-081"
+    },
+    {
+      "id": "story-beat-166",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "Please help me understand what I’m missing.",
+      "pause": 0.8,
+      "instruction": "A sincere private prayer. Let the specific meaning guide the emotion: fear, longing, gratitude or trust. Clearly voiced, not whispered or sermon-like.",
+      "source_turn_id": "turn-082"
+    },
+    {
+      "id": "story-beat-167",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Once, after another unsuccessful fitting, he offered to stop.",
+      "pause": 1.05,
+      "source_turn_id": "turn-083"
+    },
+    {
+      "id": "story-beat-168",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Tim leaned against the car.",
+      "pause": 1.05,
+      "source_turn_id": "turn-083"
+    },
+    {
+      "id": "story-beat-169",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "You remember what I tell you,",
+      "pause": 0.35,
+      "source_turn_id": "turn-084"
+    },
+    {
+      "id": "story-beat-170",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-085"
+    },
+    {
+      "id": "story-beat-171",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "Most people just tell me to buy another pair.",
+      "pause": 0.8,
+      "source_turn_id": "turn-086"
+    },
+    {
+      "id": "story-beat-172",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "So Roger continued.",
+      "pause": 1.05,
+      "source_turn_id": "turn-087"
+    },
+    {
+      "id": "story-beat-173",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He tried shoes with almost no cushioning.\n\nHe changed the flexibility of the soles.\n\nHe adjusted the room around the toes.",
+      "pause": 1.05,
+      "source_turn_id": "turn-087"
+    },
+    {
+      "id": "story-beat-174",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Then, one morning, he made a mistake.",
+      "pause": 1.05,
+      "source_turn_id": "turn-087"
+    },
+    {
+      "id": "story-beat-175",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Two nearly identical trial pairs stood beneath his bench.\n\nIn his hurry, he packed a left shoe from one pair and a right shoe from the other.",
+      "pause": 1.05,
+      "source_turn_id": "turn-087"
+    },
+    {
+      "id": "story-beat-176",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Tim wore them for an entire working day.",
+      "pause": 1.05,
+      "source_turn_id": "turn-087"
+    },
+    {
+      "id": "story-beat-177",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "That evening, he arrived at Roger’s door still wearing both shoes.",
+      "pause": 1.05,
+      "source_turn_id": "turn-087"
+    },
+    {
+      "id": "story-beat-178",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "What did you change?",
+      "pause": 0.8,
+      "source_turn_id": "turn-088"
+    },
+    {
+      "id": "story-beat-179",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger felt his stomach tighten.",
+      "pause": 1.05,
+      "source_turn_id": "turn-089"
+    },
+    {
+      "id": "story-beat-180",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "Why?",
+      "pause": 0.8,
+      "source_turn_id": "turn-090"
+    },
+    {
+      "id": "story-beat-181",
+      "scene": 7,
+      "speaker": "Tim",
+      "text": "Because I’ve just driven six hours, and I’m not desperate to take this one off.",
+      "pause": 0.8,
+      "source_turn_id": "turn-091"
+    },
+    {
+      "id": "story-beat-182",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger examined the pair.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-183",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "The left shoe had the cushioned insert.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-184",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "The right had the thinner, firmer footbed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-185",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He did not understand everything about it.\n\nBut he remembered what Tim had said weeks earlier: the soft cushioning felt worse at the pedals.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-186",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He made a second pair with the same arrangement and asked Tim to try it carefully over several days.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-187",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "The improvement held.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-188",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger waited until Tim had left before sitting down.\n\nRelief came over him so suddenly that his eyes filled.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-189",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He had been so certain that he was running out of answers.\n\nYet a possibility had existed that he had never thought to test.",
+      "pause": 1.05,
+      "source_turn_id": "turn-092"
+    },
+    {
+      "id": "story-beat-190",
+      "scene": 7,
+      "speaker": "Roger",
+      "text": "Thank You. I couldn’t see it, but my not seeing it didn’t mean there was nothing there.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-093"
+    },
+    {
+      "id": "story-beat-191",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "He gave thanks for Tim’s patience too.\n\nWithout that patience, there would have been no next attempt.",
+      "pause": 1.05,
+      "source_turn_id": "turn-094"
+    },
+    {
+      "id": "story-beat-192",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Tim began calling them his miracle shoes.",
+      "pause": 1.05,
+      "source_turn_id": "turn-094"
+    },
+    {
+      "id": "story-beat-193",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "Roger smiled when he heard it, but in his notebook he wrote something more useful:",
+      "pause": 1.05,
+      "source_turn_id": "turn-094"
+    },
+    {
+      "id": "story-beat-194",
+      "scene": 7,
+      "speaker": "Narrator",
+      "text": "The two feet did not need the same thing.",
+      "pause": 1.5,
+      "source_turn_id": "turn-094"
+    },
+    {
+      "id": "story-beat-195",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Tim told his employer, Rick, while opening the car door.",
+      "pause": 1.05,
+      "source_turn_id": "turn-095"
+    },
+    {
+      "id": "story-beat-196",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Rick had watched him limp at the end of enough evenings to notice the difference.",
+      "pause": 1.05,
+      "source_turn_id": "turn-095"
+    },
+    {
+      "id": "story-beat-197",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "He really helped you?",
+      "pause": 0.8,
+      "source_turn_id": "turn-096"
+    },
+    {
+      "id": "story-beat-198",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Tim nodded.",
+      "pause": 1.05,
+      "source_turn_id": "turn-097"
+    },
+    {
+      "id": "story-beat-199",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "Then I’d like to meet him.",
+      "pause": 0.8,
+      "source_turn_id": "turn-098"
+    },
+    {
+      "id": "story-beat-200",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Rick walked every morning.",
+      "pause": 1.05,
+      "source_turn_id": "turn-099"
+    },
+    {
+      "id": "story-beat-201",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "One foot was slightly longer than the other, and buying ordinary pairs meant accepting either cramped toes on one side or a loose heel on the other.",
+      "pause": 1.05,
+      "source_turn_id": "turn-099"
+    },
+    {
+      "id": "story-beat-202",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "At their first meeting, Roger measured both feet separately.",
+      "pause": 1.05,
+      "source_turn_id": "turn-099"
+    },
+    {
+      "id": "story-beat-203",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Rick watched him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-099"
+    },
+    {
+      "id": "story-beat-204",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "You seem nervous.",
+      "pause": 0.8,
+      "source_turn_id": "turn-100"
+    },
+    {
+      "id": "story-beat-205",
+      "scene": 8,
+      "speaker": "Roger",
+      "text": "I am.",
+      "pause": 0.8,
+      "source_turn_id": "turn-101"
+    },
+    {
+      "id": "story-beat-206",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "About the shoes?",
+      "pause": 0.8,
+      "source_turn_id": "turn-102"
+    },
+    {
+      "id": "story-beat-207",
+      "scene": 8,
+      "speaker": "Roger",
+      "text": "About promising more than I can do.",
+      "pause": 0.8,
+      "source_turn_id": "turn-103"
+    },
+    {
+      "id": "story-beat-208",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "Then promise what you can.",
+      "pause": 0.8,
+      "source_turn_id": "turn-104"
+    },
+    {
+      "id": "story-beat-209",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Roger considered that.",
+      "pause": 1.05,
+      "source_turn_id": "turn-105"
+    },
+    {
+      "id": "story-beat-210",
+      "scene": 8,
+      "speaker": "Roger",
+      "text": "I can promise to keep working until we know whether I can make you something better.",
+      "pause": 0.8,
+      "source_turn_id": "turn-106"
+    },
+    {
+      "id": "story-beat-211",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Rick agreed to pay a materials deposit.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-212",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Roger had rehearsed asking for it all the way to the house.\n\nRick’s easy acceptance surprised him so much that he briefly forgot the amount.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-213",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "On the way out, Roger paused with the deposit in his pocket.\n\nHe had spent the journey imagining humiliation.\n\nInstead, he had met willingness.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-214",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "He thanked God quietly, then wrote down exactly what the money was for.",
+      "pause": 1.4,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-215",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Receiving help made him want to be more careful with what had been entrusted to him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-216",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "He spent the next several days visiting shops, examining walking shoes, speaking with suppliers, and studying how different soles bent beneath the ball of the foot.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-217",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "He could not afford to buy everything he wanted to study.\n\nSome shopkeepers let him look.\n\nOne dismissed him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-218",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "A repairer across town showed him several worn pairs and explained where they had failed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-219",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "When Roger returned to Rick, he brought trial uppers and several combinations of footbeds and soles.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-220",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "They tested five arrangements that afternoon.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-221",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Two felt promising.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-222",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Over the following fortnight, Roger made a finished pair and adjusted it after Rick’s walks.",
+      "pause": 1.05,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-223",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "When Rick finally said,",
+      "pause": 0.35,
+      "source_turn_id": "turn-107"
+    },
+    {
+      "id": "story-beat-224",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "Leave them exactly as they are,",
+      "pause": 0.35,
+      "source_turn_id": "turn-108"
+    },
+    {
+      "id": "story-beat-225",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Roger felt a satisfaction that stayed with him the whole journey home.",
+      "pause": 1.05,
+      "source_turn_id": "turn-109"
+    },
+    {
+      "id": "story-beat-226",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Rick paid the balance, then added a substantial bonus.\n\nThe total was roughly ten times the original materials deposit.",
+      "pause": 1.05,
+      "source_turn_id": "turn-109"
+    },
+    {
+      "id": "story-beat-227",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Roger stared at the money.",
+      "pause": 1.05,
+      "source_turn_id": "turn-109"
+    },
+    {
+      "id": "story-beat-228",
+      "scene": 8,
+      "speaker": "Narrator",
+      "text": "Rick mistook his silence.",
+      "pause": 1.05,
+      "source_turn_id": "turn-109"
+    },
+    {
+      "id": "story-beat-229",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "Is something wrong?",
+      "pause": 0.8,
+      "source_turn_id": "turn-110"
+    },
+    {
+      "id": "story-beat-230",
+      "scene": 8,
+      "speaker": "Roger",
+      "text": "No.",
+      "pause": 0.8,
+      "source_turn_id": "turn-111"
+    },
+    {
+      "id": "story-beat-231",
+      "scene": 8,
+      "speaker": "Rick",
+      "text": "Good. My wife would like to see you.",
+      "pause": 1.5,
+      "source_turn_id": "turn-112"
+    },
+    {
+      "id": "story-beat-232",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Katie received him in a room with more shoes than Roger had ever seen outside a shop.",
+      "pause": 1.05,
+      "source_turn_id": "turn-113"
+    },
+    {
+      "id": "story-beat-233",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Beside her stood a young woman carrying a notebook.",
+      "pause": 1.05,
+      "source_turn_id": "turn-113"
+    },
+    {
+      "id": "story-beat-234",
+      "scene": 9,
+      "speaker": "Katie",
+      "text": "This is Rita,",
+      "pause": 0.35,
+      "source_turn_id": "turn-114"
+    },
+    {
+      "id": "story-beat-235",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Katie said.",
+      "pause": 1.05,
+      "source_turn_id": "turn-115"
+    },
+    {
+      "id": "story-beat-236",
+      "scene": 9,
+      "speaker": "Katie",
+      "text": "She keeps me from arriving at appointments on the wrong day.",
+      "pause": 0.8,
+      "source_turn_id": "turn-116"
+    },
+    {
+      "id": "story-beat-237",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Rita smiled.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-238",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Roger nearly dropped his measuring tape.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-239",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Katie wanted evening slippers: elegant, fitted properly, and decorated with ornaments she already owned.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-240",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "She opened a small box.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-241",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Inside lay a pair of jeweled pieces shaped like leaves.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-242",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Roger had never held anything so valuable.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-243",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Katie described how she wanted them to catch the light when she walked.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-244",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "He listened, then set the box down carefully.",
+      "pause": 1.05,
+      "source_turn_id": "turn-117"
+    },
+    {
+      "id": "story-beat-245",
+      "scene": 9,
+      "speaker": "Roger",
+      "text": "I need to tell you something. I haven’t made anything like this before.",
+      "pause": 0.8,
+      "source_turn_id": "turn-118"
+    },
+    {
+      "id": "story-beat-246",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Katie waited.",
+      "pause": 1.05,
+      "source_turn_id": "turn-119"
+    },
+    {
+      "id": "story-beat-247",
+      "scene": 9,
+      "speaker": "Roger",
+      "text": "I understand leather and fitting. I’ll need help with the ornament work.",
+      "pause": 0.8,
+      "source_turn_id": "turn-120"
+    },
+    {
+      "id": "story-beat-248",
+      "scene": 9,
+      "speaker": "Katie",
+      "text": "Can you find it?",
+      "pause": 0.8,
+      "source_turn_id": "turn-121"
+    },
+    {
+      "id": "story-beat-249",
+      "scene": 9,
+      "speaker": "Roger",
+      "text": "I believe I can.",
+      "pause": 0.8,
+      "source_turn_id": "turn-122"
+    },
+    {
+      "id": "story-beat-250",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Rita looked up from her notebook.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-251",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "It was the first time Roger had heard himself say those words without immediately explaining why he might be wrong.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-252",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Katie took him shopping to show him the shapes she liked.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-253",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Roger paid attention to things he had once barely noticed: the curve of an opening, how a narrow strap changed the look of a foot, the difference between decoration that seemed graceful and decoration that seemed heavy.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-254",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "He used part of Rick’s payment to buy materials and pay for instruction.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-255",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Then the trouble began.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-256",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "The first sample looked clumsy.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-257",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "On the second, the decorated leather pulled out of shape.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-258",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "He tested a mounting method with inexpensive imitation pieces.\n\nIt held when the slipper sat on his bench and loosened when someone walked in it.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-259",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "The money disappeared faster than he expected.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-260",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Some nights he looked at the ruined pieces and felt foolish for ever having believed he could do this.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-261",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "The ornaments seemed to belong to a world into which he had wandered by mistake.",
+      "pause": 1.05,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-262",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "He bowed his head over the bench.",
+      "pause": 1.4,
+      "source_turn_id": "turn-123"
+    },
+    {
+      "id": "story-beat-263",
+      "scene": 9,
+      "speaker": "Roger",
+      "text": "God, I’m frightened. I want to hide from her. Please help me be honest, and help me find the knowledge I don’t have.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-124"
+    },
+    {
+      "id": "story-beat-264",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "He had asked for a solution.\n\nWhat he found himself able to do first was send an honest message.",
+      "pause": 1.05,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-265",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "He still took factory shifts.\n\nHis mother sometimes found him asleep beside the lamp, a scrap of leather in one hand.",
+      "pause": 1.05,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-266",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "For three days, ashamed of his lack of progress, he avoided sending Katie an update.",
+      "pause": 1.05,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-267",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "On the fourth, he wrote to her.",
+      "pause": 1.05,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-268",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "The attachment is not strong enough yet.\n\nI won’t put your ornaments at risk.\n\nI need more time.",
+      "pause": 1.05,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-269",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Her reply was brief.",
+      "pause": 1.05,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-270",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "Thank you for telling me.\n\nShow me when it is ready.",
+      "pause": 1.05,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-271",
+      "scene": 9,
+      "speaker": "Narrator",
+      "text": "He folded that note and kept it.",
+      "pause": 1.5,
+      "source_turn_id": "turn-125"
+    },
+    {
+      "id": "story-beat-272",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "The solution began in a jeweler’s cramped workshop.",
+      "pause": 1.05,
+      "source_turn_id": "turn-126"
+    },
+    {
+      "id": "story-beat-273",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Roger had already visited two people who said the job was not worth their time.",
+      "pause": 1.05,
+      "source_turn_id": "turn-126"
+    },
+    {
+      "id": "story-beat-274",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "The third listened.",
+      "pause": 1.05,
+      "source_turn_id": "turn-126"
+    },
+    {
+      "id": "story-beat-275",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Roger felt the impulse to explain how much he already knew.\n\nHe let it go.",
+      "pause": 1.05,
+      "source_turn_id": "turn-126"
+    },
+    {
+      "id": "story-beat-276",
+      "scene": 10,
+      "speaker": "Roger",
+      "text": "Help me listen,",
+      "pause": 0.35,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-127"
+    },
+    {
+      "id": "story-beat-277",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "he asked inwardly.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-278",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "The jeweler drew something on a scrap of paper.\n\nRoger leaned closer.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-279",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Here was a mind trained by years he had never lived, seeing a possibility he had missed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-280",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "He felt gratitude before he knew whether the suggestion would work.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-281",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Instead of fastening the ornaments directly through the thin slipper upper, the jeweler suggested mounting them in small settings attached to a separate, reinforced leather panel.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-282",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Together, they positioned the decoration on a part of the upper that flexed less.\n\nThe jeweler smoothed the metal fittings.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-283",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Roger enclosed the backs beneath a soft lining so that nothing sharp touched the foot.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-284",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "He practiced with imitation ornaments first.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-285",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "He bent the samples, pulled at them, and asked his sister to walk around the house in a trial pair while he watched for movement.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-286",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Only then did they fit Katie’s pieces.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-287",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "When Roger brought the slippers to her, she lifted one toward the window.",
+      "pause": 1.05,
+      "source_turn_id": "turn-128"
+    },
+    {
+      "id": "story-beat-288",
+      "scene": 10,
+      "speaker": "Katie",
+      "text": "Oh, Roger.",
+      "pause": 0.8,
+      "source_turn_id": "turn-129"
+    },
+    {
+      "id": "story-beat-289",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "For a moment, he thought he had finished.",
+      "pause": 1.05,
+      "source_turn_id": "turn-130"
+    },
+    {
+      "id": "story-beat-290",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Then she walked across the room.",
+      "pause": 1.05,
+      "source_turn_id": "turn-130"
+    },
+    {
+      "id": "story-beat-291",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Her smile changed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-130"
+    },
+    {
+      "id": "story-beat-292",
+      "scene": 10,
+      "speaker": "Katie",
+      "text": "They press here.",
+      "pause": 0.8,
+      "source_turn_id": "turn-131"
+    },
+    {
+      "id": "story-beat-293",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "She touched the front of her foot.",
+      "pause": 1.05,
+      "source_turn_id": "turn-132"
+    },
+    {
+      "id": "story-beat-294",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Roger felt the familiar disappointment rise in him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-132"
+    },
+    {
+      "id": "story-beat-295",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Rita was watching from beside the doorway.",
+      "pause": 1.05,
+      "source_turn_id": "turn-132"
+    },
+    {
+      "id": "story-beat-296",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "He could have explained how many weeks the decoration had taken.\n\nHe could have suggested that evening shoes were never entirely comfortable.",
+      "pause": 1.05,
+      "source_turn_id": "turn-132"
+    },
+    {
+      "id": "story-beat-297",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Instead, he knelt.",
+      "pause": 1.05,
+      "source_turn_id": "turn-132"
+    },
+    {
+      "id": "story-beat-298",
+      "scene": 10,
+      "speaker": "Roger",
+      "text": "Show me exactly where.",
+      "pause": 0.8,
+      "source_turn_id": "turn-133"
+    },
+    {
+      "id": "story-beat-299",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "His disappointment had not disappeared.\n\nHe could feel it while he waited for her answer.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-300",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "But he remembered God there too, kneeling beside a customer’s chair, with the work he had hoped was finished beginning again.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-301",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "He asked for the patience to care more about her comfort than about being praised.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-302",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "He marked the spot.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-303",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "The next version had more room through the forefoot, a smoother lining, and thin cushioning placed where Katie needed it rather than spread everywhere.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-304",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "She walked across the room.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-305",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Then back again.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-306",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "Then she kept walking.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-307",
+      "scene": 10,
+      "speaker": "Narrator",
+      "text": "This time, Roger waited for her to speak.",
+      "pause": 1.05,
+      "source_turn_id": "turn-134"
+    },
+    {
+      "id": "story-beat-308",
+      "scene": 10,
+      "speaker": "Katie",
+      "text": "When can you make another pair?",
+      "pause": 1.5,
+      "source_turn_id": "turn-135"
+    },
+    {
+      "id": "story-beat-309",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Katie wanted heels next.",
+      "pause": 1.05,
+      "source_turn_id": "turn-136"
+    },
+    {
+      "id": "story-beat-310",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Roger sought out a maker who understood balance and heel construction.\n\nHe paid for the man’s time and accepted being a beginner again.",
+      "pause": 1.05,
+      "source_turn_id": "turn-136"
+    },
+    {
+      "id": "story-beat-311",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "There were failed samples.\n\nThere were fittings that looked right and felt wrong.",
+      "pause": 1.05,
+      "source_turn_id": "turn-136"
+    },
+    {
+      "id": "story-beat-312",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "There was a heel position he changed by a small amount that made a surprisingly large difference.",
+      "pause": 1.05,
+      "source_turn_id": "turn-136"
+    },
+    {
+      "id": "story-beat-313",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Throughout it, he prayed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-136"
+    },
+    {
+      "id": "story-beat-314",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Sometimes the prayer was hopeful.",
+      "pause": 1.05,
+      "source_turn_id": "turn-136"
+    },
+    {
+      "id": "story-beat-315",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Sometimes it was simply,",
+      "pause": 0.35,
+      "source_turn_id": "turn-136"
+    },
+    {
+      "id": "story-beat-316",
+      "scene": 11,
+      "speaker": "Roger",
+      "text": "Help me stay patient.",
+      "pause": 0.8,
+      "instruction": "A sincere private prayer. Let the specific meaning guide the emotion: fear, longing, gratitude or trust. Clearly voiced, not whispered or sermon-like.",
+      "source_turn_id": "turn-137"
+    },
+    {
+      "id": "story-beat-317",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "When Katie settled his fees for the slippers, the heels, and the development work, she added a bonus that left him speechless.",
+      "pause": 1.05,
+      "source_turn_id": "turn-138"
+    },
+    {
+      "id": "story-beat-318",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "It was about ten times what Rick had paid him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-138"
+    },
+    {
+      "id": "story-beat-319",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "More than Roger had earned in the factory in a year.",
+      "pause": 1.05,
+      "source_turn_id": "turn-138"
+    },
+    {
+      "id": "story-beat-320",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "He counted it at home with his mother beside him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-138"
+    },
+    {
+      "id": "story-beat-321",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Then he counted it again.",
+      "pause": 1.05,
+      "source_turn_id": "turn-138"
+    },
+    {
+      "id": "story-beat-322",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "His mother did not ask what he would buy.",
+      "pause": 1.05,
+      "source_turn_id": "turn-138"
+    },
+    {
+      "id": "story-beat-323",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "She said,",
+      "pause": 0.35,
+      "source_turn_id": "turn-138"
+    },
+    {
+      "id": "story-beat-324",
+      "scene": 11,
+      "speaker": "Mother",
+      "text": "Put aside what belongs to the work.",
+      "pause": 0.8,
+      "source_turn_id": "turn-139"
+    },
+    {
+      "id": "story-beat-325",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "They separated the money: household needs, materials, wages owed to the craftsmen who had helped him, savings.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-326",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "For the first time, there was still a meaningful amount left.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-327",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "He looked at the remaining money, then at the piles that would pay other people.\n\nThe payment had fed more than one household.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-328",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "The jeweler had earned something.\n\nThe other maker had earned something.\n\nKatie had received shoes she loved.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-329",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Roger had once imagined prosperity as a small locked room in which a few people kept what everyone else needed.\n\nThis felt different.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-330",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Something useful had come into existence, and several lives were better because of it.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-331",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "For him, this was a glimpse of the abundance he had prayed to recognize.\n\nGod had not become more generous that month.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-332",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Roger had begun to see more ways to receive, work with, and pass on that generosity.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-333",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "Roger sat quietly before it.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-334",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "He had not taken it from anyone.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-335",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "He had listened, learned, asked for help, and made something another person valued.",
+      "pause": 1.05,
+      "source_turn_id": "turn-140"
+    },
+    {
+      "id": "story-beat-336",
+      "scene": 11,
+      "speaker": "Roger",
+      "text": "Thank you, God,",
+      "pause": 0.35,
+      "instruction": "A sincere private prayer. Let the specific meaning guide the emotion: fear, longing, gratitude or trust. Clearly voiced, not whispered or sermon-like.",
+      "source_turn_id": "turn-141"
+    },
+    {
+      "id": "story-beat-337",
+      "scene": 11,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-142"
+    },
+    {
+      "id": "story-beat-338",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "Katie’s friends began asking about the shoes.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-339",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "At first, Roger took one commission at a time.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-340",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "Then there were more appointments than he could manage after his shifts.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-341",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "Katie approached her father, who owned several businesses.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-342",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "She brought him orders, cost estimates, and samples.\n\nHe asked difficult questions.\n\nSome she could answer.\n\nOthers she brought back to Roger.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-343",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "Eventually, they agreed to fund a small company.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-344",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "Katie would run the commercial side and bring in customers.\n\nHer father would provide capital and advice.\n\nRoger would lead design, fitting, and production.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-345",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "Roger’s share would be thirty percent.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-346",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "Before signing, he paid an independent adviser to explain the agreement.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-347",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "It cost him money he disliked spending.",
+      "pause": 1.05,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-348",
+      "scene": 12,
+      "speaker": "Narrator",
+      "text": "He was glad afterward that he had spent it.",
+      "pause": 1.5,
+      "source_turn_id": "turn-143"
+    },
+    {
+      "id": "story-beat-349",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "The workshop frightened him more than his first private commission.",
+      "pause": 1.05,
+      "source_turn_id": "turn-144"
+    },
+    {
+      "id": "story-beat-350",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Now mistakes could waste other people’s wages.",
+      "pause": 1.05,
+      "source_turn_id": "turn-144"
+    },
+    {
+      "id": "story-beat-351",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "He knew how to work at a production bench.\n\nHe had never designed the flow of an entire workshop.",
+      "pause": 1.05,
+      "source_turn_id": "turn-144"
+    },
+    {
+      "id": "story-beat-352",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "He stood in the empty room the evening before the equipment arrived.",
+      "pause": 1.05,
+      "source_turn_id": "turn-144"
+    },
+    {
+      "id": "story-beat-353",
+      "scene": 13,
+      "speaker": "Roger",
+      "text": "Help me build something good here,",
+      "pause": 0.35,
+      "instruction": "A sincere private prayer. Let the specific meaning guide the emotion: fear, longing, gratitude or trust. Clearly voiced, not whispered or sermon-like.",
+      "source_turn_id": "turn-145"
+    },
+    {
+      "id": "story-beat-354",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "he prayed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-146"
+    },
+    {
+      "id": "story-beat-355",
+      "scene": 13,
+      "speaker": "Roger",
+      "text": "Help me recognize what I don’t know.",
+      "pause": 0.8,
+      "instruction": "A sincere private prayer. Let the specific meaning guide the emotion: fear, longing, gratitude or trust. Clearly voiced, not whispered or sermon-like.",
+      "source_turn_id": "turn-147"
+    },
+    {
+      "id": "story-beat-356",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "He hired a cutter whose precision he had admired for years, an experienced stitcher, and a production supervisor who had organized work in another factory.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-357",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Together, they divided the process into stages: measuring and fitting, patterns, cutting, stitching, assembly, finishing, inspection.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-358",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "They labeled each customer’s measurements clearly.\n\nThey kept separate patterns for left and right feet when required.\n\nThey checked a trial fitting before completing expensive custom work.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-359",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Roger made mistakes.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-360",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Once, he moved a workstation because it looked tidier and slowed the whole room down.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-361",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "The supervisor explained why.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-362",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Roger moved it back.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-363",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "The employees began offering suggestions more freely after that.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-364",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Remembrance began to find a place in the smallest parts of his day.\n\nBefore cutting costly leather, he asked for care in his hands.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-365",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "When a needle snapped and irritation rose, he paused before speaking to the person beside him.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-366",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "When someone caught an error, he thanked God for the correction and thanked the person aloud.",
+      "pause": 1.4,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-367",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Sometimes he forgot for hours.\n\nHe became hurried, proud of a design, frightened by a bill.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-368",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "Then he would notice the tightness in himself and return, without ceremony.",
+      "pause": 1.05,
+      "source_turn_id": "turn-148"
+    },
+    {
+      "id": "story-beat-369",
+      "scene": 13,
+      "speaker": "Roger",
+      "text": "Help me with this too.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-149"
+    },
+    {
+      "id": "story-beat-370",
+      "scene": 13,
+      "speaker": "Narrator",
+      "text": "A tangled thread.\n\nA difficult apology.\n\nA decision about wages.\n\nHe was learning that he did not have to wait for a crisis to turn toward God.",
+      "pause": 1.5,
+      "source_turn_id": "turn-150"
+    },
+    {
+      "id": "story-beat-371",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Their first serious business failure arrived in beautiful boxes.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-372",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Dozens of them.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-373",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Stacked against a wall.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-374",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Katie’s friends had loved the early designs, and Roger had assumed that more shoes would mean more sales.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-375",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "They had committed too much money to too many styles.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-376",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Some sizes hardly moved.\n\nCertain colors received compliments and no orders.\n\nMaterials sat unused while wages and rent continued to fall due.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-377",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Roger began arriving before everyone else and leaving after they had gone.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-378",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "One evening, his mother found him at the kitchen table studying figures.",
+      "pause": 1.05,
+      "source_turn_id": "turn-151"
+    },
+    {
+      "id": "story-beat-379",
+      "scene": 14,
+      "speaker": "Mother",
+      "text": "Are we in trouble?",
+      "pause": 0.8,
+      "source_turn_id": "turn-152"
+    },
+    {
+      "id": "story-beat-380",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "He almost said no.",
+      "pause": 1.05,
+      "source_turn_id": "turn-153"
+    },
+    {
+      "id": "story-beat-381",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Instead, he told her what was happening.",
+      "pause": 1.05,
+      "source_turn_id": "turn-153"
+    },
+    {
+      "id": "story-beat-382",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "After she went to bed, he remained at the table.\n\nHe had prayed before opening the workshop.\n\nHe had worked until his eyes hurt.",
+      "pause": 1.05,
+      "source_turn_id": "turn-153"
+    },
+    {
+      "id": "story-beat-383",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Why was he sitting here afraid of losing it?",
+      "pause": 1.05,
+      "source_turn_id": "turn-153"
+    },
+    {
+      "id": "story-beat-384",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "For a moment, he felt ashamed even of the question.\n\nThen he brought that to God as well.",
+      "pause": 1.05,
+      "source_turn_id": "turn-153"
+    },
+    {
+      "id": "story-beat-385",
+      "scene": 14,
+      "speaker": "Roger",
+      "text": "I thought I was doing the right thing. I don’t understand this. Please help me. Help me see clearly enough to protect the people depending on me.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-154"
+    },
+    {
+      "id": "story-beat-386",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "He wanted certainty that everything would be all right.\n\nNone came.",
+      "pause": 1.05,
+      "source_turn_id": "turn-155"
+    },
+    {
+      "id": "story-beat-387",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "What returned, slowly, was the recognition that his fear did not know everything.\n\nHe remembered the man outside the church.",
+      "pause": 1.05,
+      "source_turn_id": "turn-155"
+    },
+    {
+      "id": "story-beat-388",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Not knowing a way was different from there being no way.\n\nThese figures described a problem.\n\nThey did not describe the limits of God.",
+      "pause": 1.05,
+      "source_turn_id": "turn-155"
+    },
+    {
+      "id": "story-beat-389",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "There might be a question he had not asked, an error he had not understood, a person from whom he could learn.",
+      "pause": 1.05,
+      "source_turn_id": "turn-155"
+    },
+    {
+      "id": "story-beat-390",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "He could not see the whole way forward.\n\nHe could ask for help with tomorrow.",
+      "pause": 1.05,
+      "source_turn_id": "turn-155"
+    },
+    {
+      "id": "story-beat-391",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "The next morning, he went to Katie’s father.",
+      "pause": 1.05,
+      "source_turn_id": "turn-155"
+    },
+    {
+      "id": "story-beat-392",
+      "scene": 14,
+      "speaker": "Roger",
+      "text": "I know how to make something one person wants,",
+      "pause": 0.35,
+      "source_turn_id": "turn-156"
+    },
+    {
+      "id": "story-beat-393",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Roger said.",
+      "pause": 1.05,
+      "source_turn_id": "turn-157"
+    },
+    {
+      "id": "story-beat-394",
+      "scene": 14,
+      "speaker": "Roger",
+      "text": "I don’t know how to make enough people buy it.",
+      "pause": 0.8,
+      "source_turn_id": "turn-158"
+    },
+    {
+      "id": "story-beat-395",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "The older man closed the notebook between them.",
+      "pause": 1.05,
+      "source_turn_id": "turn-159"
+    },
+    {
+      "id": "story-beat-396",
+      "scene": 14,
+      "speaker": "Katie’s father",
+      "text": "Then you have another trade to learn.",
+      "pause": 0.8,
+      "source_turn_id": "turn-160"
+    },
+    {
+      "id": "story-beat-397",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "He advised them to reduce the range, protect their cash, and stop making speculative stock until they understood demand.",
+      "pause": 1.05,
+      "source_turn_id": "turn-161"
+    },
+    {
+      "id": "story-beat-398",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Then he asked Roger a question.",
+      "pause": 1.05,
+      "source_turn_id": "turn-161"
+    },
+    {
+      "id": "story-beat-399",
+      "scene": 14,
+      "speaker": "Katie’s father",
+      "text": "When did you last speak to someone who bought from you?",
+      "pause": 0.8,
+      "source_turn_id": "turn-162"
+    },
+    {
+      "id": "story-beat-400",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Roger named a customer he had fitted that week.",
+      "pause": 1.05,
+      "source_turn_id": "turn-163"
+    },
+    {
+      "id": "story-beat-401",
+      "scene": 14,
+      "speaker": "Katie’s father",
+      "text": "After the sale, I mean.",
+      "pause": 0.8,
+      "source_turn_id": "turn-164"
+    },
+    {
+      "id": "story-beat-402",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Roger had no answer.",
+      "pause": 1.05,
+      "source_turn_id": "turn-165"
+    },
+    {
+      "id": "story-beat-403",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "Heat rose into his face.\n\nThen, beneath the embarrassment, he felt a small opening.\n\nThere was something he could do that he had not been doing.",
+      "pause": 1.05,
+      "source_turn_id": "turn-165"
+    },
+    {
+      "id": "story-beat-404",
+      "scene": 14,
+      "speaker": "Narrator",
+      "text": "He silently thanked God for bringing him to a question that humbled him enough to learn.",
+      "pause": 1.5,
+      "source_turn_id": "turn-165"
+    },
+    {
+      "id": "story-beat-405",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He began making visits.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-406",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He asked before calling.\n\nHe wrote down preferences.\n\nHe checked whether shoes had remained comfortable after an entire evening, not merely during a fitting.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-407",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He learned that one customer loved her slippers but never wore them because the color matched nothing she owned.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-408",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "Another needed shoes for a particular gala and had ordered elsewhere because she had not known Roger could deliver in time.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-409",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "One woman said quietly that she hated having to choose between looking elegant and being able to remain on her feet beside her friends.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-410",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "Roger remembered that.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-411",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He and Katie arranged small appointments where customers could see samples, bring their dresses, and discuss upcoming events.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-412",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "They improved the packaging so the shoes arrived protected, beautifully presented, and accompanied by clear care instructions.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-413",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "They asked satisfied customers for introductions.\n\nThey made alterations promptly.\n\nThey developed a small collection that customers could adapt instead of beginning every design from nothing.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-414",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "For the next season, they took deposits before committing to larger material orders.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-415",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "The unsold boxes gradually disappeared.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-416",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "More importantly, fewer new ones accumulated.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-417",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "Roger discovered that selling could be another form of attention.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-418",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He did not have to become someone else.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-419",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He had to keep listening after the shoes left his hands.",
+      "pause": 1.05,
+      "source_turn_id": "turn-166"
+    },
+    {
+      "id": "story-beat-420",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "Before a visit, he would ask God to help him hear what mattered to the customer.",
+      "pause": 1.05,
+      "source_turn_id": "turn-167"
+    },
+    {
+      "id": "story-beat-421",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "Afterward, he gave thanks for what she had told him, even when it was criticism.",
+      "pause": 1.05,
+      "source_turn_id": "turn-167"
+    },
+    {
+      "id": "story-beat-422",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "The world was beginning to feel larger.",
+      "pause": 1.05,
+      "source_turn_id": "turn-167"
+    },
+    {
+      "id": "story-beat-423",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "There were more needs than he could serve alone, more designs than he could make in a lifetime, more people with knowledge to share.",
+      "pause": 1.05,
+      "source_turn_id": "turn-167"
+    },
+    {
+      "id": "story-beat-424",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He did not need to possess all of it.",
+      "pause": 1.05,
+      "source_turn_id": "turn-167"
+    },
+    {
+      "id": "story-beat-425",
+      "scene": 15,
+      "speaker": "Narrator",
+      "text": "He could take his place in it, do useful work, and trust that the source of abundance was greater than his grasp.",
+      "pause": 1.5,
+      "source_turn_id": "turn-167"
+    },
+    {
+      "id": "story-beat-426",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "Rita appeared often during those months.",
+      "pause": 1.05,
+      "source_turn_id": "turn-168"
+    },
+    {
+      "id": "story-beat-427",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "Sometimes she accompanied Katie.\n\nSometimes she collected an order for another woman she assisted.",
+      "pause": 1.05,
+      "source_turn_id": "turn-168"
+    },
+    {
+      "id": "story-beat-428",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "Roger learned that her family had once been wealthy.\n\nA business failure had changed their circumstances, and she had gone to work.",
+      "pause": 1.05,
+      "source_turn_id": "turn-168"
+    },
+    {
+      "id": "story-beat-429",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "She spoke of it without bitterness.",
+      "pause": 1.05,
+      "source_turn_id": "turn-168"
+    },
+    {
+      "id": "story-beat-430",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "One afternoon, while waiting for a small alteration, she helped his mother carry a basket through the workshop door.",
+      "pause": 1.05,
+      "source_turn_id": "turn-168"
+    },
+    {
+      "id": "story-beat-431",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "Later, his mother said,",
+      "pause": 0.35,
+      "source_turn_id": "turn-168"
+    },
+    {
+      "id": "story-beat-432",
+      "scene": 16,
+      "speaker": "Mother",
+      "text": "That young woman has good manners.",
+      "pause": 0.8,
+      "source_turn_id": "turn-169"
+    },
+    {
+      "id": "story-beat-433",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "Roger pretended to be occupied.",
+      "pause": 1.05,
+      "source_turn_id": "turn-170"
+    },
+    {
+      "id": "story-beat-434",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "His mother noticed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-170"
+    },
+    {
+      "id": "story-beat-435",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "Rita once found him apologizing for the plain room where he received fittings.",
+      "pause": 1.05,
+      "source_turn_id": "turn-170"
+    },
+    {
+      "id": "story-beat-436",
+      "scene": 16,
+      "speaker": "Roger",
+      "text": "It isn’t much yet,",
+      "pause": 0.35,
+      "source_turn_id": "turn-171"
+    },
+    {
+      "id": "story-beat-437",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "he said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-172"
+    },
+    {
+      "id": "story-beat-438",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "She looked around at the measured patterns, the clean workbench, and the half-finished shoes.",
+      "pause": 1.05,
+      "source_turn_id": "turn-172"
+    },
+    {
+      "id": "story-beat-439",
+      "scene": 16,
+      "speaker": "Rita",
+      "text": "People are doing honest work here.",
+      "pause": 0.8,
+      "source_turn_id": "turn-173"
+    },
+    {
+      "id": "story-beat-440",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "He glanced at her.",
+      "pause": 1.05,
+      "source_turn_id": "turn-174"
+    },
+    {
+      "id": "story-beat-441",
+      "scene": 16,
+      "speaker": "Rita",
+      "text": "There’s nothing to apologize for,",
+      "pause": 0.35,
+      "source_turn_id": "turn-175"
+    },
+    {
+      "id": "story-beat-442",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "she said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-176"
+    },
+    {
+      "id": "story-beat-443",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "He remembered that sentence long after he forgot what they had discussed afterward.",
+      "pause": 1.05,
+      "source_turn_id": "turn-176"
+    },
+    {
+      "id": "story-beat-444",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "That evening, he remembered her kindness while putting away his tools.\n\nHe thanked God for it as simply as he might have thanked Him for food.",
+      "pause": 1.4,
+      "source_turn_id": "turn-176"
+    },
+    {
+      "id": "story-beat-445",
+      "scene": 16,
+      "speaker": "Narrator",
+      "text": "He was beginning to recognize provision in things he could not deposit in an account: a word that relieved his shame, a person who understood his mother, the courage to be seen before his work was perfect.",
+      "pause": 1.5,
+      "source_turn_id": "turn-176"
+    },
+    {
+      "id": "story-beat-446",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "The company’s growth took years.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-447",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "There were seasons when orders came easily and seasons when Roger worried again.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-448",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "A supplier failed to deliver.\n\nA promising design sold poorly.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-449",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "A large order had to be remade because a material behaved differently in use than it had in the sample.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-450",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "But the business learned.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-451",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "Roger learned.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-452",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "His reputation spread beyond the city.\n\nCustomers traveled for fittings.\n\nInvitations arrived from retailers and event organizers.\n\nPeople began asking what he would make next.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-453",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "They paid high prices because the work was distinctive, the fit received unusual care, and Roger’s company had earned a reputation for putting problems right.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-454",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "He paid his employees reliably.\n\nHe promoted people who could do things better than he could.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-455",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "He gave the workshop time for training and allowed experienced hands to question a design before it became an expensive mistake.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-456",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "His days remained disciplined.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-457",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "He began them in prayer.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-458",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "He still carried a notebook.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-459",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "And when a customer described a problem, he tried to hear it before deciding he already knew the answer.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-460",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "Success did not remove his need for that inward return.\n\nSometimes it made the need harder to notice.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-461",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "An important customer praised him, and he would carry the words around all afternoon.\n\nA worker questioned him, and he would feel himself stiffen.",
+      "pause": 1.05,
+      "source_turn_id": "turn-177"
+    },
+    {
+      "id": "story-beat-462",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "When he caught it, he asked God to keep him teachable.",
+      "pause": 1.4,
+      "source_turn_id": "turn-178"
+    },
+    {
+      "id": "story-beat-463",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "He remembered the first insert that had failed, the jeweler’s drawing, the supervisor who had moved the workstation back.",
+      "pause": 1.05,
+      "source_turn_id": "turn-178"
+    },
+    {
+      "id": "story-beat-464",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "His skill was real.\n\nSo was the help through which it had grown.",
+      "pause": 1.05,
+      "source_turn_id": "turn-178"
+    },
+    {
+      "id": "story-beat-465",
+      "scene": 17,
+      "speaker": "Narrator",
+      "text": "Remembering both allowed him to enjoy what he could do without imagining that everything depended on him.",
+      "pause": 1.5,
+      "source_turn_id": "turn-178"
+    },
+    {
+      "id": "story-beat-466",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Success brought attention he had never expected.",
+      "pause": 1.05,
+      "source_turn_id": "turn-179"
+    },
+    {
+      "id": "story-beat-467",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Some invitations were innocent.\n\nOthers were not.",
+      "pause": 1.05,
+      "source_turn_id": "turn-179"
+    },
+    {
+      "id": "story-beat-468",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Once, a married customer suggested that he bring samples to her house late in the evening, when her husband would be away.",
+      "pause": 1.05,
+      "source_turn_id": "turn-179"
+    },
+    {
+      "id": "story-beat-469",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Roger recognized the invitation beneath the words.",
+      "pause": 1.05,
+      "source_turn_id": "turn-179"
+    },
+    {
+      "id": "story-beat-470",
+      "scene": 18,
+      "speaker": "Roger",
+      "text": "We can arrange a fitting at the showroom,",
+      "pause": 0.35,
+      "source_turn_id": "turn-180"
+    },
+    {
+      "id": "story-beat-471",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "he said gently.",
+      "pause": 1.05,
+      "source_turn_id": "turn-181"
+    },
+    {
+      "id": "story-beat-472",
+      "scene": 18,
+      "speaker": "Roger",
+      "text": "Katie will help us choose a convenient time.",
+      "pause": 0.8,
+      "source_turn_id": "turn-182"
+    },
+    {
+      "id": "story-beat-473",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "When she pressed, he remained courteous and firm.",
+      "pause": 1.05,
+      "source_turn_id": "turn-183"
+    },
+    {
+      "id": "story-beat-474",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Afterward, he told no entertaining story about it.",
+      "pause": 1.05,
+      "source_turn_id": "turn-183"
+    },
+    {
+      "id": "story-beat-475",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Her private embarrassment was not something he wanted to turn into his own importance.",
+      "pause": 1.05,
+      "source_turn_id": "turn-183"
+    },
+    {
+      "id": "story-beat-476",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "He found that wealth gave him more choices.",
+      "pause": 1.05,
+      "source_turn_id": "turn-183"
+    },
+    {
+      "id": "story-beat-477",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "He wanted to remain responsible for the choices he made.",
+      "pause": 1.05,
+      "source_turn_id": "turn-183"
+    },
+    {
+      "id": "story-beat-478",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Before answering invitations that stirred his vanity, he sometimes needed a moment alone.",
+      "pause": 1.05,
+      "source_turn_id": "turn-183"
+    },
+    {
+      "id": "story-beat-479",
+      "scene": 18,
+      "speaker": "Roger",
+      "text": "God, help me choose what will leave peace in my home and in theirs.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-184"
+    },
+    {
+      "id": "story-beat-480",
+      "scene": 18,
+      "speaker": "Narrator",
+      "text": "Then he returned and spoke kindly.\n\nThe remembrance belonged there as much as it belonged beside his prayer mat.",
+      "pause": 1.5,
+      "source_turn_id": "turn-185"
+    },
+    {
+      "id": "story-beat-481",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "In time, Roger saved enough to purchase a larger share of the company.",
+      "pause": 1.05,
+      "source_turn_id": "turn-186"
+    },
+    {
+      "id": "story-beat-482",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "He did not empty the business to do it.",
+      "pause": 1.05,
+      "source_turn_id": "turn-186"
+    },
+    {
+      "id": "story-beat-483",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "With retained personal earnings and a formally arranged loan from clients who had come to trust him, he negotiated to buy another thirty percent.",
+      "pause": 1.05,
+      "source_turn_id": "turn-186"
+    },
+    {
+      "id": "story-beat-484",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "Advisers reviewed the terms.\n\nThe repayments were measured against what he could reasonably afford.",
+      "pause": 1.05,
+      "source_turn_id": "turn-186"
+    },
+    {
+      "id": "story-beat-485",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "The papers were signed in the same office where he had once struggled to explain his first cost estimates.",
+      "pause": 1.05,
+      "source_turn_id": "turn-186"
+    },
+    {
+      "id": "story-beat-486",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "Afterward, Katie shook his hand.",
+      "pause": 1.05,
+      "source_turn_id": "turn-186"
+    },
+    {
+      "id": "story-beat-487",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "Then she laughed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-186"
+    },
+    {
+      "id": "story-beat-488",
+      "scene": 19,
+      "speaker": "Katie",
+      "text": "You still look as though you’ve been called into trouble.",
+      "pause": 0.8,
+      "source_turn_id": "turn-187"
+    },
+    {
+      "id": "story-beat-489",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "Roger laughed too.",
+      "pause": 1.05,
+      "source_turn_id": "turn-188"
+    },
+    {
+      "id": "story-beat-490",
+      "scene": 19,
+      "speaker": "Narrator",
+      "text": "Some habits took longer to change than others.",
+      "pause": 1.5,
+      "source_turn_id": "turn-188"
+    },
+    {
+      "id": "story-beat-491",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He bought a spacious house with a garden his mother could tend if she wished, and rooms where his siblings could return with families of their own.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-492",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "There were vehicles now.\n\nThere were journeys he could once only have imagined.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-493",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He enjoyed them.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-494",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He enjoyed buying good materials without first calculating whether it would leave the household short.\n\nHe enjoyed paying for his brother’s studies.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-495",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He enjoyed giving his mother the freedom to choose something because she liked it.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-496",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "Abundance had become more than a sum in an account.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-497",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "It was room to act.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-498",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "Room to rest.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-499",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "Room to help without panic.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-500",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He no longer apologized inwardly for enjoying it.\n\nWhen his mother chose something beautiful for the house, he delighted in her pleasure.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-501",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "When his brother wrote about his studies, Roger read the letter twice.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-502",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He wanted a full life: worthwhile work, a generous home, comfort, beauty, love, and the means to do more good.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-503",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He could bring those desires to God openly.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-504",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He knew the company had limits.\n\nHis time and judgment had limits.\n\nGod did not.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-505",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "He could respect the limits of a particular plan without surrendering his belief in the vastness of what remained possible.",
+      "pause": 1.05,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-506",
+      "scene": 20,
+      "speaker": "Narrator",
+      "text": "That recognition made him grateful for what he held and hopeful about what he had yet to discover.",
+      "pause": 1.5,
+      "source_turn_id": "turn-189"
+    },
+    {
+      "id": "story-beat-507",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "When his mother finally mentioned marriage, she did so while pouring tea.",
+      "pause": 1.05,
+      "source_turn_id": "turn-190"
+    },
+    {
+      "id": "story-beat-508",
+      "scene": 21,
+      "speaker": "Mother",
+      "text": "There is someone I would like you to consider.",
+      "pause": 0.8,
+      "source_turn_id": "turn-191"
+    },
+    {
+      "id": "story-beat-509",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "Roger kept his eyes on his cup.",
+      "pause": 1.05,
+      "source_turn_id": "turn-192"
+    },
+    {
+      "id": "story-beat-510",
+      "scene": 21,
+      "speaker": "Roger",
+      "text": "Who?",
+      "pause": 0.8,
+      "source_turn_id": "turn-193"
+    },
+    {
+      "id": "story-beat-511",
+      "scene": 21,
+      "speaker": "Mother",
+      "text": "Rita.",
+      "pause": 0.8,
+      "source_turn_id": "turn-194"
+    },
+    {
+      "id": "story-beat-512",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "He looked up so quickly that she smiled.",
+      "pause": 1.05,
+      "source_turn_id": "turn-195"
+    },
+    {
+      "id": "story-beat-513",
+      "scene": 21,
+      "speaker": "Mother",
+      "text": "I would speak to her family,",
+      "pause": 0.35,
+      "source_turn_id": "turn-196"
+    },
+    {
+      "id": "story-beat-514",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "she said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-197"
+    },
+    {
+      "id": "story-beat-515",
+      "scene": 21,
+      "speaker": "Mother",
+      "text": "If you wished. And if she wished.",
+      "pause": 0.8,
+      "source_turn_id": "turn-198"
+    },
+    {
+      "id": "story-beat-516",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "He asked for a day to think.",
+      "pause": 1.05,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-517",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "His mother gave him until the following morning.",
+      "pause": 1.05,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-518",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "When Roger and Rita met to speak seriously, he was more nervous than he had been in several important business meetings.",
+      "pause": 1.05,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-519",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "She made it easier by admitting that she was nervous too.",
+      "pause": 1.05,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-520",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "Roger felt his shoulders loosen.\n\nHe silently thanked God for that small kindness.",
+      "pause": 1.4,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-521",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "He had prayed over large sums of money with more composure than he had managed while waiting for her to arrive.",
+      "pause": 1.05,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-522",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "They spoke about faith, family, work, and the kind of home they wanted.",
+      "pause": 1.05,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-523",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "Roger told her that he did not want her to feel she had to hide the years when her family had struggled.",
+      "pause": 1.05,
+      "source_turn_id": "turn-199"
+    },
+    {
+      "id": "story-beat-524",
+      "scene": 21,
+      "speaker": "Rita",
+      "text": "I don’t,",
+      "pause": 0.35,
+      "source_turn_id": "turn-200"
+    },
+    {
+      "id": "story-beat-525",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "she said.",
+      "pause": 0.4,
+      "source_turn_id": "turn-201"
+    },
+    {
+      "id": "story-beat-526",
+      "scene": 21,
+      "speaker": "Rita",
+      "text": "We worked. We were honest. God was there too.",
+      "pause": 0.8,
+      "source_turn_id": "turn-202"
+    },
+    {
+      "id": "story-beat-527",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "He knew then that his mother had understood something he had been too shy to say aloud.",
+      "pause": 1.05,
+      "source_turn_id": "turn-203"
+    },
+    {
+      "id": "story-beat-528",
+      "scene": 21,
+      "speaker": "Narrator",
+      "text": "They married with the willing blessing of both families.",
+      "pause": 1.5,
+      "source_turn_id": "turn-203"
+    },
+    {
+      "id": "story-beat-529",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "Years later, Roger came home after a long day and found the house quiet.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-530",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "Rita had left a lamp burning.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-531",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "His mother had fallen asleep in her chair with a book resting open in her lap.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-532",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "For a moment, he stood in the doorway.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-533",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "He remembered her hands dividing his wages into small piles.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-534",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "He remembered the landlord’s notice beneath the salt jar.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-535",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "He remembered a man in a factory asking who would feed her when he failed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-536",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "Roger lifted the book and marked her place.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-537",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "She stirred.",
+      "pause": 1.05,
+      "source_turn_id": "turn-204"
+    },
+    {
+      "id": "story-beat-538",
+      "scene": 22,
+      "speaker": "Mother",
+      "text": "You’re home?",
+      "pause": 0.8,
+      "source_turn_id": "turn-205"
+    },
+    {
+      "id": "story-beat-539",
+      "scene": 22,
+      "speaker": "Roger",
+      "text": "Yes, Mother.",
+      "pause": 0.8,
+      "source_turn_id": "turn-206"
+    },
+    {
+      "id": "story-beat-540",
+      "scene": 22,
+      "speaker": "Mother",
+      "text": "Have you eaten?",
+      "pause": 0.8,
+      "source_turn_id": "turn-207"
+    },
+    {
+      "id": "story-beat-541",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "He smiled.",
+      "pause": 1.05,
+      "source_turn_id": "turn-208"
+    },
+    {
+      "id": "story-beat-542",
+      "scene": 22,
+      "speaker": "Roger",
+      "text": "Yes.",
+      "pause": 0.8,
+      "source_turn_id": "turn-209"
+    },
+    {
+      "id": "story-beat-543",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "She settled back.",
+      "pause": 1.05,
+      "source_turn_id": "turn-210"
+    },
+    {
+      "id": "story-beat-544",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "There was nothing she needed to calculate that night.",
+      "pause": 1.05,
+      "source_turn_id": "turn-210"
+    },
+    {
+      "id": "story-beat-545",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "Roger stood beside her until her breathing grew steady again.",
+      "pause": 1.05,
+      "source_turn_id": "turn-210"
+    },
+    {
+      "id": "story-beat-546",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "Gratitude rose through him with the memory of all those small, frightened prayers: beside the factory bench, outside a stranger’s door, over a shoe that would not come right.",
+      "pause": 1.05,
+      "source_turn_id": "turn-210"
+    },
+    {
+      "id": "story-beat-547",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "He had not known, while living them, how one day would lead to another.\n\nHe had only known where to turn.",
+      "pause": 1.05,
+      "source_turn_id": "turn-210"
+    },
+    {
+      "id": "story-beat-548",
+      "scene": 22,
+      "speaker": "Roger",
+      "text": "Thank You for caring for us in ways I could not imagine.",
+      "pause": 0.8,
+      "instruction": "A personal prayer addressed to God. Speak as a real man in this moment, with vulnerability, longing, gratitude or growing trust as the words imply. Expressive and understated, never preaching. No whispering.",
+      "source_turn_id": "turn-211"
+    },
+    {
+      "id": "story-beat-549",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "He drew the blanket gently over her knees.\n\nThen he switched off the brighter lamp and left the softer one burning.",
+      "pause": 1.05,
+      "source_turn_id": "turn-212"
+    },
+    {
+      "id": "story-beat-550",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "The next morning, he rose before the household.",
+      "pause": 1.05,
+      "source_turn_id": "turn-212"
+    },
+    {
+      "id": "story-beat-551",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "There was a difficult fitting waiting at the workshop.\n\nA new employee needed guidance.\n\nA customer had written about a fastening that troubled her fingers.",
+      "pause": 1.05,
+      "source_turn_id": "turn-212"
+    },
+    {
+      "id": "story-beat-552",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "He washed, knelt, and prayed.",
+      "pause": 1.05,
+      "source_turn_id": "turn-212"
+    },
+    {
+      "id": "story-beat-553",
+      "scene": 22,
+      "speaker": "Roger",
+      "text": "Thank you for what You have given us.\n\nHelp me care for it well.\n\nAnd show me where I can be useful today.",
+      "pause": 0.8,
+      "instruction": "A sincere private prayer. Let the specific meaning guide the emotion: fear, longing, gratitude or trust. Clearly voiced, not whispered or sermon-like.",
+      "source_turn_id": "turn-213"
+    },
+    {
+      "id": "story-beat-554",
+      "scene": 22,
+      "speaker": "Narrator",
+      "text": "Then he stood up and went to work.",
+      "pause": 1.5,
+      "source_turn_id": "turn-214"
+    }
+  ]
+}

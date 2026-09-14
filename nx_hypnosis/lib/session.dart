@@ -1,3 +1,8 @@
+import 'cached_session.dart';
+import 'package:flutter/foundation.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:nx_offline/nx_offline.dart';
+import 'offline_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_auth/nx_auth.dart';
@@ -9,7 +14,8 @@ class HypnosisSession extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authProvider);
-    final user = session.value;
+    final cached = ref.watch(activeHypnosisUserProvider);
+    final user = cached.value ?? session.value;
     if (user != null) {
       return ConnectedHypnosis(
         key: ValueKey('${user.preset}-${user.userId}'),
@@ -33,7 +39,7 @@ class HypnosisSession extends ConsumerWidget {
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 24),
-              if (session.isLoading)
+              if (session.isLoading || cached.isLoading)
                 const CircularProgressIndicator()
               else
                 FilledButton(
@@ -65,8 +71,26 @@ class ConnectedHypnosis extends ConsumerStatefulWidget {
 }
 
 class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
-  late final data = RemoteCollection(widget.user);
-  late Future<void> loading = data.refresh();
+  late final data = RemoteCollection(
+    widget.user,
+    cache: kIsWeb
+        ? null
+        : HypnosisCache.application(
+            AccountIdentity(
+              serverId: 'nexus-primary',
+              userId: widget.user.userId,
+              application: 'nx_hypnosis',
+            ).key,
+          ),
+  );
+  late final onlineChanges = Connectivity().onConnectivityChanged.map(
+    (values) => !values.contains(ConnectivityResult.none),
+  );
+  // Keep one callback identity across rebuilds so lifecycle sync is not retriggered.
+  // ignore: prefer_function_declarations_over_variables
+  late final OfflineSynchronize synchronize = (reason) =>
+      data.refresh(reason: reason);
+  late Future<void> loading = data.initialize();
   @override
   void dispose() {
     data.dispose();
@@ -79,9 +103,16 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done &&
           !snapshot.hasError) {
-        return HypnosisApp(
-          collection: data,
-          onLogout: () => ref.read(authProvider.notifier).logout(),
+        return OfflineLifecycle(
+          synchronize: synchronize,
+          onlineChanges: kIsWeb ? null : onlineChanges,
+          child: HypnosisApp(
+            collection: data,
+            onLogout: () async {
+              await (await hypnosisSessionStore()).clear();
+              if (mounted) await ref.read(authProvider.notifier).logout();
+            },
+          ),
         );
       }
       return MaterialApp(
@@ -94,7 +125,7 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
                       const Text('Could not load your desires and tapes.'),
                       TextButton(
                         onPressed: () =>
-                            setState(() => loading = data.refresh()),
+                            setState(() => loading = data.initialize()),
                         child: const Text('Try again'),
                       ),
                       TextButton(

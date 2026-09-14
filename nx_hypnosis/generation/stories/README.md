@@ -61,3 +61,18 @@ python3 scripts/audio/inworld_dialogue.py stories/roger/v2/script.json --name ro
 ```
 
 `--output-group` is relative to `generation/outputs`; paths outside that folder are rejected. The published faith revision is version 2; its production receipt is in `generation/receipts/`.
+
+## Playback timeline
+
+Every Inworld render now writes `<name>.timeline.json` alongside the audio. It contains the audio filename and SHA-256, script SHA-256, sample rate, total duration, and ordered turns with their original ID, scene, speaker, voice ID, text, and timings.
+
+- `start_seconds`: where the generated turn begins in the joined recording.
+- `audio_end_seconds`: end of that generated clip (including its natural silence).
+- `end_seconds`: end of the inserted pause following the turn.
+- The corresponding `*_sample` fields preserve exact integer offsets before MP3 encoding.
+
+For later auto-scroll, select the turn with `start_seconds <= playback_position < end_seconds`. Keep that turn selected during its following pause. Before the first turn, select the first item; after completion, keep the last item. Recompute the selection after seeking. Check the audio checksum before using a timeline. These are turn-level boundaries, not word-level forced alignment; long narration turns will scroll as a unit. No app scrolling behavior has been added yet.
+
+Roger v3 introduces the church encounter and a concrete first action before the factory ridicule. Its source is `roger/v3/story.md`, with `roger/v3/script.json`; render to `--output-group roger/v3 --name roger-faith-v3`. The existing Roger tape now uses v3, with its matching timeline stored in audio.timeline.segments.
+
+Roger v4 preserves v3's exact wording and cast, changes native speaking rate from 0.95 to 0.90, and restores v1's narrator direction to match the original listening pace. Source: `roger/v4/script.json`; output group: `roger/v4`; name: `roger-pace-v4`. Its timeline must be used only with its own audio. This render does not replace the production tape automatically.

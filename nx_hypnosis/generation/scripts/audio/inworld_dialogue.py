@@ -4,7 +4,7 @@ Usage: python3 inworld_dialogue.py turns.json --name sample
 Input: {"cast": {"Narrator": "Harold"}, "turns": [{"speaker": "Narrator", "text": "...", "pause": 0.4}]}
 Existing segments are reused only when their saved request matches exactly.
 """
-import argparse, array, base64, json, math, os, pathlib, subprocess, sys, urllib.request, wave
+import argparse, array, base64, hashlib, json, math, os, pathlib, subprocess, sys, urllib.request, wave
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 def validate(config):
     if config.get('version', 1) != 1:
@@ -59,7 +59,7 @@ def main():
     output_root=(ROOT/'outputs'/args.output_group).resolve()
     if not output_root.is_relative_to((ROOT/'outputs').resolve()): ap.error('Output group must stay within outputs')
     out=output_root/args.name; out.mkdir(parents=True,exist_ok=True)
-    combined=array.array('h'); rate=48000; receipts=[]
+    combined=array.array('h'); rate=48000; receipts=[]; timeline=[]
     combined.extend([0]*int(rate*0.3))
     for i,turn in enumerate(turns):
         payload={'text':turn['text'],'voiceId':cast[turn['speaker']],'modelId':'inworld-tts-2','audioConfig':{'audioEncoding':'LINEAR16','sampleRateHertz':rate,'speakingRate':config.get('speaking_rate',0.9)},'deliveryMode':config.get('delivery_mode','STABLE'),'instruction':turn.get('instruction',config.get('speaker_instructions',{}).get(turn['speaker'],'Speak naturally and gently, with understated emotion, clear words, and unhurried pauses. No whispering.')),'synthesisContext':{'previousRequests':[{'text':t['text']} for t in turns[:i]][-5:]}}
@@ -82,12 +82,19 @@ def main():
         n=min(240,len(samples)//2)
         for j in range(n):
             samples[j]=round(samples[j]*j/n);samples[-1-j]=round(samples[-1-j]*j/n)
-        combined.extend(samples);combined.extend([0]*round(rate*turn.get('pause',0.4)))
+        start_sample=len(combined)
+        combined.extend(samples)
+        audio_end_sample=len(combined)
+        combined.extend([0]*round(rate*turn.get('pause',0.4)))
+        timeline.append({'id':turn.get('id',f'turn-{i+1:03d}'),'scene':turn.get('scene'),'speaker':turn['speaker'],'voice_id':cast[turn['speaker']],'text':turn['text'],'start_sample':start_sample,'audio_end_sample':audio_end_sample,'end_sample':len(combined),'start_seconds':start_sample/rate,'audio_end_seconds':audio_end_sample/rate,'end_seconds':len(combined)/rate})
         receipts.append({'id':turn.get('id'), 'scene':turn.get('scene'), 'speaker':turn['speaker'],'voice':cast[turn['speaker']],'seconds':len(samples)/rate,'usage':receipt['response'].get('usage')})
     final=output_root/f'{args.name}.wav'
     if sys.byteorder!='little':combined.byteswap()
     with wave.open(str(final),'wb') as audio:audio.setparams((1,2,rate,0,'NONE','not compressed'));audio.writeframes(combined.tobytes())
     subprocess.run(['ffmpeg','-v','error','-y','-i',str(final),'-codec:a','libmp3lame','-b:a','192k',str(final.with_suffix('.mp3'))],check=True)
     final.with_suffix('.json').write_text(json.dumps({'script':config,'segments':receipts,'duration_seconds':len(combined)/rate,'processing':'5ms edge ramps; explicit pauses; no EQ or time stretch'},indent=2))
+    audio_path=final.with_suffix('.mp3')
+    timing={'version':1,'granularity':'turn','timebase':'seconds from playback start','sample_rate_hertz':rate,'audio_filename':audio_path.name,'audio_sha256':hashlib.sha256(audio_path.read_bytes()).hexdigest(),'script_sha256':hashlib.sha256(args.script.read_bytes()).hexdigest(),'duration_seconds':len(combined)/rate,'opening_silence_seconds':0.3,'intervals':'start inclusive, end exclusive; end includes following inserted pause; audio_end is the generated clip boundary, not a detected last word','turns':timeline}
+    final.with_suffix('.timeline.json').write_text(json.dumps(timing,ensure_ascii=False,indent=2)+'\n')
     print(f'Created {final.with_suffix(".mp3")} ({len(combined)/rate:.1f}s)')
 if __name__=='__main__':main()

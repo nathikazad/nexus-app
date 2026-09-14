@@ -28,7 +28,7 @@ The preferred format from this project is:
 
 For wealth-through-service requests, the established theme is creating useful stories and experiences that help people pursue their own meaningful desires; receiving wealth from that value; and enjoying abundance as time, choice, family security, generosity, comfort, and resources to create more. Gratitude to God is part of this user's stated values when relevant. Do not automatically insert wealth or religion into unrelated scripts.
 
-Use natural spoken language, short paragraphs, and clear phrase boundaries. Avoid dense clauses, stage directions read aloud, exaggerated guarantees, and claims that listening alone cures addiction, guarantees wealth, or controls other people's choices. Reflect beneficial change through the person's actions and support. A specific amount or imagined message can be included when requested as part of the visualization.
+Use natural spoken language, short paragraphs, and clear phrase boundaries. Give each meaningful action, feeling, or realization room to land before moving on. For character stories, follow [the approved story pacing](../construct-story/SKILL.md#approved-story-pacing): short beats and explicit audio pauses, rather than relying on slower speech to compensate for dense narration. Keep those Inworld-specific settings separate from the single-voice workflow. Avoid dense clauses, stage directions read aloud, exaggerated guarantees, and claims that listening alone cures addiction, guarantees wealth, or controls other people's choices. Reflect beneficial change through the person's actions and support. A specific amount or imagined message can be included when requested as part of the visualization.
 
 ## Deliver and hand off
 
