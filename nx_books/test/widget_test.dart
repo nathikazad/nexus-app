@@ -120,8 +120,8 @@ void main() {
       const ValueKey<String>('books-settings-button'),
     );
     expect(settingsButton, findsOneWidget);
-    expect(tester.getCenter(settingsButton).dx, lessThan(70));
-    expect(tester.getCenter(settingsButton).dy, greaterThan(740));
+    expect(tester.getCenter(settingsButton).dx, greaterThan(1200));
+    expect(tester.getCenter(settingsButton).dy, lessThan(70));
 
     await tester.tap(settingsButton);
     await tester.pumpAndSettle();

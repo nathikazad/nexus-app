@@ -9,7 +9,8 @@ import 'package:nx_offline/nx_offline.dart';
 import 'download_report_view.dart';
 
 class BooksSettingsButton extends ConsumerWidget {
-  const BooksSettingsButton({super.key});
+  const BooksSettingsButton({super.key, this.onAddBook});
+  final VoidCallback? onAddBook;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +28,7 @@ class BooksSettingsButton extends ConsumerWidget {
         tooltip: 'Settings',
         onPressed: () => showDialog<void>(
           context: context,
-          builder: (context) => const _BooksSettingsDialog(),
+          builder: (context) => _BooksSettingsDialog(onAddBook: onAddBook),
         ),
         icon: const Icon(Icons.settings_outlined, size: 19),
       ),
@@ -36,7 +37,8 @@ class BooksSettingsButton extends ConsumerWidget {
 }
 
 class _BooksSettingsDialog extends ConsumerStatefulWidget {
-  const _BooksSettingsDialog();
+  const _BooksSettingsDialog({this.onAddBook});
+  final VoidCallback? onAddBook;
 
   @override
   ConsumerState<_BooksSettingsDialog> createState() =>
@@ -124,6 +126,14 @@ class _BooksSettingsDialogState extends ConsumerState<_BooksSettingsDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               const DomainSettingsTile(),
+              if (widget.onAddBook != null)
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onAddBook!();
+                  },
+                  child: const Text('Add book'),
+                ),
               const Divider(),
               const SizedBox(height: 12),
               Text('Appearance', style: Theme.of(context).textTheme.labelLarge),

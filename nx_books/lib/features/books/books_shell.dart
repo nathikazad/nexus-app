@@ -41,8 +41,6 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
         final selectedId = ref.watch(selectedBookIdProvider);
         final selected = _bookById(rows, selectedId);
         return Scaffold(
-          floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-          floatingActionButton: const BooksSettingsButton(),
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -426,10 +424,8 @@ class _MobileTopBar extends ConsumerWidget {
             ),
             const _MobileTopicFilterButton(),
             const _LibrarySearch(),
-            IconButton(
-              tooltip: 'Add book',
-              onPressed: () => _showCreateBookDialog(context, ref),
-              icon: const Icon(Icons.add, size: 19),
+            BooksSettingsButton(
+              onAddBook: () => _showCreateBookDialog(context, ref),
             ),
           ],
         ),
@@ -478,10 +474,8 @@ class _MainHeader extends ConsumerWidget {
               const SizedBox(width: 8),
               const _LibrarySearch(),
               const SizedBox(width: 8),
-              FilledButton.icon(
-                onPressed: () => _showCreateBookDialog(context, ref),
-                icon: const Icon(Icons.add, size: 17),
-                label: const Text('Add Book'),
+              BooksSettingsButton(
+                onAddBook: () => _showCreateBookDialog(context, ref),
               ),
             ],
           ),
