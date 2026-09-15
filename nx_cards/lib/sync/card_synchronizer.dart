@@ -126,6 +126,8 @@ final class _CardPullReconciler implements PullReconciler<int> {
         keyOf: (entry) => entry.id,
         valueKeyOf: (entry) => entry.card.id,
         verified: hashStore.verifiedCard,
+        matchesEntry: (entry, value) =>
+            !entry.hash.startsWith('s1:') || entry.hash == value.hash,
         download: (ids) async {
           final bundle = await hashTransport.downloadCards(ids);
           return HashDownload(bundle.cards, deleted: bundle.deletedIds);

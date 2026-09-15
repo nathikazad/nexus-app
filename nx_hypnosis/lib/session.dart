@@ -1,4 +1,5 @@
 import 'cached_session.dart';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:nx_offline/nx_offline.dart';
@@ -8,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_auth/nx_auth.dart';
 import 'app.dart';
 import 'remote_collection.dart';
+import 'package:nx_db/nx_db.dart' as db;
+import 'package:nx_db/app_sync.dart' as sync;
 
 class HypnosisSession extends ConsumerWidget {
   const HypnosisSession({super.key});
@@ -71,8 +74,18 @@ class ConnectedHypnosis extends ConsumerStatefulWidget {
 }
 
 class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
+  bool _loaded = false;
+  StreamSubscription<SyncStatus>? _initialSync;
   late final data = RemoteCollection(
     widget.user,
+    stateSession: () =>
+        sync.appStateSyncEnabled && ref.read(authProvider).value != null
+        ? sync.AppSyncClient.forOwner(
+            this,
+            ref.read(db.graphqlClientProvider),
+            'hypnosis',
+          ).session
+        : null,
     cache: kIsWeb
         ? null
         : HypnosisCache.application(
@@ -90,9 +103,23 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
   // ignore: prefer_function_declarations_over_variables
   late final OfflineSynchronize synchronize = (reason) =>
       data.refresh(reason: reason);
-  late Future<void> loading = data.initialize();
+  late Future<void> loading = data.initialize().then((_) {
+    _loaded = true;
+  });
+  @override
+  void initState() {
+    super.initState();
+    _initialSync = data.synchronizer.statusChanges.listen((status) {
+      if (!_loaded && mounted && status.lastSyncedAt != null) {
+        _loaded = true;
+        setState(() => loading = Future.value());
+      }
+    });
+  }
+
   @override
   void dispose() {
+    unawaited(_initialSync?.cancel());
     data.dispose();
     super.dispose();
   }
@@ -106,6 +133,10 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
         return OfflineLifecycle(
           synchronize: synchronize,
           onlineChanges: kIsWeb ? null : onlineChanges,
+          remoteChanges: ref.watch(sync.appSyncChangesProvider('hypnosis')),
+          checkInterval: sync.appStateSyncEnabled
+              ? const Duration(seconds: 30)
+              : null,
           child: HypnosisApp(
             collection: data,
             onLogout: () async {

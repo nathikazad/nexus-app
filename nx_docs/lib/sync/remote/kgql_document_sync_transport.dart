@@ -1,6 +1,7 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/documents.dart' as document_api;
 import 'package:nx_db/kgql.dart';
+import 'package:nx_db/app_sync.dart';
 import 'package:nx_docs/sync/remote/document_sync_transport.dart';
 import 'package:nx_docs/documents/data/kgql/document_mapper.dart';
 import 'package:nx_docs/documents/document_models.dart';
@@ -17,15 +18,21 @@ final class KgqlDocumentSyncTransport implements DocumentSyncTransport {
     Set<int>? documentIds,
     bool manifestOnly = false,
   }) async {
-    final response = await document_api.syncDocuments(
-      _client,
-      manifest: <Map<String, Object?>>[
-        for (final entry in manifest) entry.toJson(),
-      ],
-      documentIds: documentIds,
-      manifestOnly: manifestOnly,
-      requestTimeout: document_api.documentBulkSyncTimeout,
-    );
+    final response =
+        await AppSyncClient.forOwner(this, _client, 'docs').documents(
+          localManifest: [for (final entry in manifest) entry.toJson()],
+          ids: documentIds,
+          manifestOnly: manifestOnly,
+        ) ??
+        await document_api.syncDocuments(
+          _client,
+          manifest: <Map<String, Object?>>[
+            for (final entry in manifest) entry.toJson(),
+          ],
+          documentIds: documentIds,
+          manifestOnly: manifestOnly,
+          requestTimeout: document_api.documentBulkSyncTimeout,
+        );
     return DocumentSyncBundle(
       manifest: [
         for (final entry in response.manifest)

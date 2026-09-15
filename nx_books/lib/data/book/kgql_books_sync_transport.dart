@@ -1,5 +1,6 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/documents.dart';
+import 'package:nx_db/app_sync.dart';
 import '../offline/books_hash_sync.dart';
 
 final class KgqlBooksSyncTransport implements BooksSyncTransport {
@@ -10,20 +11,32 @@ final class KgqlBooksSyncTransport implements BooksSyncTransport {
   static const requestTimeout = documentBulkSyncTimeout;
 
   @override
-  Future<DocumentSyncResponse> manifest() => syncDocuments(
-    client,
-    manifest: const [],
-    manifestOnly: true,
-    requestTimeout: requestTimeout,
-  );
+  Future<DocumentSyncResponse> manifest() async =>
+      await AppSyncClient.forOwner(
+        this,
+        client,
+        'books',
+      ).documents(localManifest: const [], manifestOnly: true) ??
+      await syncDocuments(
+        client,
+        manifest: const [],
+        manifestOnly: true,
+        requestTimeout: requestTimeout,
+      );
 
   @override
-  Future<DocumentSyncResponse> download(Set<int> ids) => syncDocuments(
-    client,
-    manifest: [
-      for (final id in ids) {'id': id, 'hash': null},
-    ],
-    documentIds: ids,
-    requestTimeout: requestTimeout,
-  );
+  Future<DocumentSyncResponse> download(Set<int> ids) async =>
+      await AppSyncClient.forOwner(
+        this,
+        client,
+        'books',
+      ).documents(localManifest: const [], ids: ids) ??
+      await syncDocuments(
+        client,
+        manifest: [
+          for (final id in ids) {'id': id, 'hash': null},
+        ],
+        documentIds: ids,
+        requestTimeout: requestTimeout,
+      );
 }

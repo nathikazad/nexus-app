@@ -10,6 +10,8 @@ export 'src/sync/policies.dart';
 export 'src/sync/pull_library.dart';
 export 'src/sync/sync_ports.dart';
 export 'src/sync/sync_supervisor.dart';
+export 'src/sync/app_state_coordinator.dart';
+export 'src/sync/app_sync_session.dart';
 
 export 'src/sync/hash_manifest.dart';
 

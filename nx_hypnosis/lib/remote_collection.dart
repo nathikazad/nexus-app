@@ -9,16 +9,25 @@ import 'package:nx_auth/nx_auth.dart';
 import 'desires.dart';
 
 class RemoteCollection extends HypnosisCollection {
-  RemoteCollection(this.user, {NexusAuthenticatedClient? transport, this.cache})
-    : client =
-          transport ??
-          NexusAuthenticatedClient(preset: user.preset, userId: user.userId),
-      super([], [], '') {
-    synchronizer = SyncSupervisor<String>(reconciler: _CollectionPull(_pull));
+  RemoteCollection(
+    this.user, {
+    NexusAuthenticatedClient? transport,
+    this.cache,
+    this.stateSession,
+  }) : client =
+           transport ??
+           NexusAuthenticatedClient(preset: user.preset, userId: user.userId),
+       super([], [], '') {
+    synchronizer = SyncSupervisor<String>(
+      reconciler: _CollectionPull(_pull),
+      retryDelay: const Duration(seconds: 5),
+    );
     _statusSubscription = synchronizer.statusChanges.listen((_) => _changed());
   }
   final User user;
   final HypnosisCache? cache;
+  final AppSyncSession? Function()? stateSession;
+  String? _appliedRoot;
   late final SyncSupervisor<String> synchronizer;
   StreamSubscription<SyncStatus>? _statusSubscription;
   final savedRecordings = <String>{};
@@ -78,6 +87,20 @@ class RemoteCollection extends HypnosisCollection {
 
   Future<void> _pull() async {
     await _serialize(() async {
+      final session = stateSession?.call();
+      final remote = await session?.manifest();
+      if (session != null && remote != null) {
+        // The collection is a single compatibility projection; asset downloads
+        // remain independent and are retried even when its metadata is equal.
+        if (_appliedRoot != remote.root) {
+          final items = await session.download(remote, {0});
+          if (items.length != 1)
+            throw StateError('Missing Hypnosis collection');
+          await _persist(200, jsonEncode(items.single['payload']));
+          _appliedRoot = remote.root;
+        }
+        return;
+      }
       final response = await client
           .get(endpoint('/hypnosis/collection'))
           .timeout(const Duration(seconds: 30));

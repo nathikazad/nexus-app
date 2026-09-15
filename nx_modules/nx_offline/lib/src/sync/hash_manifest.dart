@@ -15,6 +15,7 @@ Future<List<E>> reconcileHashManifest<K, E, V>({
   required Future<bool> Function(E) verified,
   required Future<HashDownload<K, V>> Function(Set<K>) download,
   required Future<List<K>> Function(List<V>) applyBatch,
+  bool Function(E entry, V value)? matchesEntry,
   Future<void> Function(
     bool downloading,
     int total,
@@ -27,6 +28,7 @@ Future<List<E>> reconcileHashManifest<K, E, V>({
     throw ArgumentError.value(downloadPageSize, 'downloadPageSize');
   }
   final entries = [...manifest];
+  final expected = {for (final entry in entries) keyOf(entry): entry};
   if (entries.map(keyOf).toSet().length != entries.length) {
     throw StateError('Duplicate items in server manifest');
   }
@@ -59,7 +61,8 @@ Future<List<E>> reconcileHashManifest<K, E, V>({
       final key = valueKeyOf(value);
       if (!requested.contains(key) ||
           !received.add(key) ||
-          bundle.deleted.contains(key)) {
+          bundle.deleted.contains(key) ||
+          (matchesEntry != null && !matchesEntry(expected[key] as E, value))) {
         throw StateError('Unexpected item in sync response');
       }
     }

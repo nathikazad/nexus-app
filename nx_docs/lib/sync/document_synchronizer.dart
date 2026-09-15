@@ -131,6 +131,9 @@ final class _DocumentPullReconciler implements offline.PullReconciler<int> {
             keyOf: (entry) => entry.documentId,
             valueKeyOf: (document) => document.key.remoteId!,
             verified: _localStore.hasCurrentDocument,
+            matchesEntry: (entry, value) =>
+                entry.serverHash?.startsWith('s1:') != true ||
+                entry.serverHash == value.serverHash,
             download: (ids) async {
               final bundle = await _remoteApi.syncDocuments(
                 // Force a body for damaged/missing local files even if hashes match.

@@ -62,6 +62,12 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                 children: [
                   AdaptiveCardGrid(
                     children: [
+                      _LanguageCategoryCard(
+                        category: 'All',
+                        allCards: true,
+                        data: data,
+                        language: language,
+                      ),
                       for (final category in categories)
                         _LanguageCategoryCard(
                           category: category,
@@ -85,9 +91,11 @@ class _LanguageCategoryCard extends StatelessWidget {
     required this.category,
     required this.data,
     this.language,
+    this.allCards = false,
   });
 
   final String category;
+  final bool allCards;
   final CardsDashboard data;
   final String? language;
 
@@ -96,7 +104,7 @@ class _LanguageCategoryCard extends StatelessWidget {
     final cards = data.cards
         .where(
           (card) =>
-              card.belongsToStudyCategory(category) &&
+              (allCards || card.belongsToStudyCategory(category)) &&
               (language == null || data.languageFor(card) == language),
         )
         .toList(growable: false);
@@ -111,7 +119,7 @@ class _LanguageCategoryCard extends StatelessWidget {
         .length;
     final due = data.dueCount(
       DateTime.now(),
-      studyCategory: category,
+      studyCategory: allCards ? null : category,
       language: language,
       cue: StudyCue.fromLanguage,
     );
@@ -144,12 +152,18 @@ class _LanguageCategoryCard extends StatelessWidget {
       ),
     );
     return Card(
+      color: allCards
+          ? Theme.of(context).colorScheme.surfaceContainerHighest
+          : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) =>
-                LanguageCategoryPage(category: category, language: language),
+            builder: (_) => LanguageCategoryPage(
+              category: category,
+              language: language,
+              allCards: allCards,
+            ),
           ),
         ),
         child: Padding(
@@ -161,10 +175,10 @@ class _LanguageCategoryCard extends StatelessWidget {
               const identityAndDividerWidth = 135.0;
               final metricWidth =
                   constraints.maxWidth - identityAndDividerWidth;
-              final showLearnt = metricWidth >= 76;
-              final showLearning = metricWidth >= 126;
-              final showDue = metricWidth >= 160;
-              final showRemaining = metricWidth >= 212;
+              final showLearnt = !allCards && metricWidth >= 76;
+              final showLearning = allCards || metricWidth >= 126;
+              final showDue = allCards || metricWidth >= 160;
+              final showRemaining = !allCards && metricWidth >= 212;
               return Row(
                 children: [
                   Expanded(
@@ -196,9 +210,11 @@ class _LanguageCategoryCard extends StatelessWidget {
                             category,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: allCards
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
                             ),
                           ),
                         ),
@@ -247,9 +263,11 @@ class LanguageCategoryPage extends ConsumerStatefulWidget {
     super.key,
     required this.category,
     this.language,
+    this.allCards = false,
   });
 
   final String category;
+  final bool allCards;
   final String? language;
 
   @override
@@ -294,7 +312,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
           final cards = data.cards
               .where(
                 (card) =>
-                    card.belongsToStudyCategory(category) &&
+                    (widget.allCards ||
+                        card.belongsToStudyCategory(category)) &&
                     (language == null || data.languageFor(card) == language),
               )
               .toList(growable: false);
@@ -341,7 +360,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
           }
           final queue = data.studyQueue(
             DateTime.now(),
-            studyCategory: category,
+            studyCategory: widget.allCards ? null : category,
             language: language,
             newCardLimit:
                 (learning.length + learnt.length) * StudyCue.values.length,
@@ -359,7 +378,11 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${cards.length} ${category == 'Script' ? 'letters' : 'words'} · ${learning.length} learning',
+                              '${cards.length} ${widget.allCards
+                                  ? 'cards'
+                                  : category == 'Script'
+                                  ? 'letters'
+                                  : 'words'} · ${learning.length} learning',
                               style: const TextStyle(color: RecallColors.muted),
                             ),
                           ),
@@ -368,7 +391,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 ? category
                                 : '$language · $category',
                             preferenceKey:
-                                'language-category:${language ?? 'all'}:$category',
+                                'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}',
                             prompts: queue,
                             studyCards: [...learning, ...learnt],
                             languagePair: language == null
@@ -444,6 +467,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             showScheduleStatus: true,
                             emptyText: category == 'Script'
                                 ? 'No letters are currently being learned.'
+                                : widget.allCards
+                                ? 'No cards are currently being learned.'
                                 : 'No words are currently being learned.',
                             previousStatus: LearningStatus.notStarted,
                             previousActionLabel: '←',
@@ -455,6 +480,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             cards: learnt,
                             emptyText: category == 'Script'
                                 ? 'No letters have been marked learnt yet.'
+                                : widget.allCards
+                                ? 'No cards have been marked learnt yet.'
                                 : 'No words have been marked learnt yet.',
                             previousStatus: LearningStatus.learning,
                             previousActionLabel: '←',
@@ -464,6 +491,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             cards: notStarted,
                             emptyText: category == 'Script'
                                 ? 'Every letter has been started.'
+                                : widget.allCards
+                                ? 'Every card has been started.'
                                 : 'Every word has been started.',
                             nextStatus: LearningStatus.learning,
                             actionLabel: '+',

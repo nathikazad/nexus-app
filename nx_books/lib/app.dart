@@ -6,6 +6,7 @@ import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_books/data/providers.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_db/app_sync.dart' as sync;
 import 'companion/reading_route.dart';
 
 class NexusBooksApp extends ConsumerWidget {
@@ -19,6 +20,10 @@ class NexusBooksApp extends ConsumerWidget {
     return OfflineLifecycle(
       synchronize: ref.watch(booksLifecycleSyncProvider),
       onlineChanges: ref.watch(booksOnlineChangesProvider),
+      remoteChanges: ref.watch(sync.appSyncChangesProvider('books')),
+      checkInterval: sync.appStateSyncEnabled
+          ? const Duration(seconds: 30)
+          : null,
       child: MaterialApp.router(
         key: ValueKey<bool>(darkMode),
         title: 'Nexus Books',

@@ -8,6 +8,86 @@ import 'package:nx_cards/browser/browser_page.dart';
 import 'package:nx_cards/browser/language/language_page.dart';
 
 void main() {
+  for (final language in ['Malayalam', 'Chinese']) {
+    testWidgets(
+      '$language All includes every type once and only that language',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        StudyCard card(
+          int id,
+          String type,
+          String lang,
+          List<String> categories,
+        ) => StudyCard(
+          id: id,
+          modelTypeName: type,
+          content: LanguageCardContent(
+            english: 'item $id',
+            originalScript: '字',
+            transliteration: 'zi',
+          ),
+          schedules: {
+            StudyCue.fromLanguage: _schedule(
+              DateTime.now().toUtc().subtract(const Duration(days: 1)),
+            ),
+          },
+          reviewHistory: const {},
+          suspended: false,
+          learningStatus: LearningStatus.learning,
+          tags: {
+            'Language': [lang],
+            'Word Category': categories,
+          },
+        );
+        final data = CardsDashboard(
+          cards: [
+            card(1, 'Word', language, ['Noun', 'Adjective']),
+            card(2, 'Script', language, []),
+            card(3, 'Phrase', language, []),
+            card(4, 'Word', language, []),
+            card(5, 'Word', 'Other language', ['Noun']),
+          ],
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              cardsDashboardProvider.overrideWith((_) => Stream.value(data)),
+              cardAudioRepositoryProvider.overrideWithValue(null),
+            ],
+            child: MaterialApp(home: LanguagePage(language: language)),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.getTopLeft(find.text('All')).dy,
+          lessThan(tester.getTopLeft(find.text('Noun')).dy),
+        );
+        for (final (name, value) in [
+          ('total', '4'),
+          ('learning', '4'),
+          ('due', '3'),
+        ]) {
+          expect(
+            find.descendant(
+              of: find.byKey(ValueKey('language-category-all-$name')),
+              matching: find.text(value),
+            ),
+            findsOneWidget,
+          );
+        }
+        await tester.tap(find.text('All'));
+        await tester.pumpAndSettle();
+        expect(find.text('4 cards · 4 learning'), findsOneWidget);
+        for (var id = 1; id <= 4; id++) {
+          expect(find.text('item $id'), findsOneWidget);
+        }
+        expect(find.text('item 5'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('home shows languages first and opens their category cards', (
     tester,
   ) async {
@@ -65,7 +145,7 @@ void main() {
     expect(find.text('Noun'), findsOneWidget);
     expect(find.text('Adjective'), findsOneWidget);
     expect(find.text('Verb'), findsOneWidget);
-    expect(find.byType(VerticalDivider), findsNWidgets(4));
+    expect(find.byType(VerticalDivider), findsNWidgets(5));
     final nounTitle = tester.getCenter(find.text('Noun'));
     final nounDivider = tester.getCenter(
       find.byKey(const ValueKey('language-category-divider-Noun')),

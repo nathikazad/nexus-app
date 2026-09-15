@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_docs/sync/sync_providers.dart';
 import 'package:nx_docs/workspace/workspace_providers.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
+import 'package:nx_db/app_sync.dart' as sync;
 
 class OfflineSyncLifecycle extends ConsumerWidget {
   const OfflineSyncLifecycle({required this.child, super.key});
@@ -14,6 +15,10 @@ class OfflineSyncLifecycle extends ConsumerWidget {
     return offline.OfflineLifecycle(
       synchronize: ref.watch(offlineLifecycleSyncProvider),
       onlineChanges: ref.watch(offlineConnectivityChangesProvider),
+      remoteChanges: ref.watch(sync.appSyncChangesProvider('docs')),
+      checkInterval: sync.appStateSyncEnabled
+          ? const Duration(seconds: 30)
+          : null,
       child: child,
     );
   }

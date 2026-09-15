@@ -67,6 +67,8 @@ final class BooksHashPull implements PullReconciler<DocumentIdentity> {
             keyOf: (entry) => entry.id,
             valueKeyOf: (entry) => entry.documentId,
             verified: store.verified,
+            matchesEntry: (entry, value) =>
+                !entry.hash.startsWith('s1:') || entry.hash == value.syncHash,
             download: (ids) async {
               generation = store.histories.generation;
               documentGeneration = store.documents.generation;

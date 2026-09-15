@@ -2,6 +2,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_offline/nx_offline.dart';
 
 void main() {
+  test('a body from a newer snapshot is rejected before applying', () async {
+    var applied = false;
+    await expectLater(
+      reconcileHashManifest<int, (int, String), (int, String)>(
+        manifest: [(1, 'old')],
+        keyOf: (e) => e.$1,
+        valueKeyOf: (e) => e.$1,
+        verified: (_) async => false,
+        download: (_) async => const HashDownload([(1, 'new')]),
+        matchesEntry: (entry, value) => entry.$2 == value.$2,
+        applyBatch: (_) async {
+          applied = true;
+          return [];
+        },
+      ),
+      throwsStateError,
+    );
+    expect(applied, false);
+  });
   test(
     'bounded downloads request only missing items and commit before next page',
     () async {

@@ -19,6 +19,8 @@ dependencies:
   http: ^1.2.2
   nx_auth:
     path: ../nx_auth
+  nx_offline:
+    path: ../nx_offline
   shared_preferences: ^2.2.2
   json_annotation: ^4.9.0
 

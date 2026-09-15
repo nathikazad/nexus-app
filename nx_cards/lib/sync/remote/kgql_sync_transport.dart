@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_db/cards.dart' as cards_api;
 import 'package:nx_db/kgql.dart';
+import 'package:nx_db/app_sync.dart';
 
 final class KgqlCardsSyncTransport
     implements CardsSyncTransport, HashCardsSyncTransport {
@@ -119,6 +120,38 @@ final class KgqlCardsSyncTransport
     Set<int>? ids,
     bool manifestOnly = false,
   }) async {
+    if (appStateSyncEnabled) {
+      final session = AppSyncClient.forOwner(this, _client, 'cards').session;
+      final remote = await session.manifest();
+      if (remote != null) {
+        final entries = remote.entries;
+        final wanted = ids ?? entries.map((e) => e['id'] as int).toSet();
+        final items = manifestOnly
+            ? <Map<String, dynamic>>[]
+            : await session.download(remote, wanted);
+        final cards = <HashedCard>[];
+        for (final entry in items) {
+          final card = studyCardFromModel(
+            Model.fromJson(Map<String, dynamic>.from(entry['payload'] as Map)),
+          );
+          if (card == null || card.id != entry['id'])
+            throw StateError('Invalid card payload');
+          cards.add(HashedCard(card, entry['hash'] as String));
+        }
+        final remoteIds = entries.map((e) => e['id']).toSet();
+        return CardHashBundle(
+          [
+            for (final entry in entries)
+              CardHash(entry['id'] as int, entry['hash'] as String),
+          ],
+          cards,
+          {
+            for (final id in ids ?? <int>{})
+              if (!remoteIds.contains(id)) id,
+          },
+        );
+      }
+    }
     final response = await _client.query(
       QueryOptions(
         document: gql(

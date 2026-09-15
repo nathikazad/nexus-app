@@ -105,16 +105,24 @@ void main() {
     expect(offenders, isEmpty);
   });
 
-  test('app contains only the Flutter root, routes, and theme', () {
-    const expected = <String>{'recall_app.dart', 'routes.dart', 'theme.dart'};
-    final actual = Directory('lib/app')
-        .listSync()
-        .whereType<File>()
-        .where((file) => file.path.endsWith('.dart'))
-        .map((file) => file.uri.pathSegments.last)
-        .toSet();
-    expect(actual, expected);
-  });
+  test(
+    'app contains the Flutter root, routes, theme, and shared adaptive grid',
+    () {
+      const expected = <String>{
+        'recall_app.dart',
+        'routes.dart',
+        'theme.dart',
+        'adaptive_card_grid.dart',
+      };
+      final actual = Directory('lib/app')
+          .listSync()
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart'))
+          .map((file) => file.uri.pathSegments.last)
+          .toSet();
+      expect(actual, expected);
+    },
+  );
 
   test('study details are grouped by learning flow', () {
     const expectedFolders = <String>{'language', 'session'};
