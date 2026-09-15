@@ -6,6 +6,18 @@ import 'package:nx_cards/audio/http_card_audio.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_db/nx_db.dart';
 
+// Keep one cache manager per account, independent of auth restoration rebuilds.
+// Opening two managers for the same database can race disposal against open.
+final cardAudioCacheProvider = Provider.family<CacheManager, String>((
+  ref,
+  account,
+) {
+  final safeName = account.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+  final manager = CacheManager(Config('nx_cards_audio_$safeName'));
+  ref.onDispose(manager.dispose);
+  return manager;
+});
+
 final cardAudioRepositoryProvider = Provider<CardAudioRepository?>((ref) {
   final user = ref.watch(authProvider).value;
   final session = ref.watch(activeCardsSessionProvider).value;
@@ -24,12 +36,7 @@ final cardAudioRepositoryProvider = Provider<CardAudioRepository?>((ref) {
   );
   if (!ref.watch(cardsOfflineEnabledProvider) || session == null) return remote;
 
-  final safeName = session.account.key.replaceAll(
-    RegExp(r'[^a-zA-Z0-9_]'),
-    '_',
-  );
-  final manager = CacheManager(Config('nx_cards_audio_$safeName'));
-  ref.onDispose(manager.dispose);
+  final manager = ref.watch(cardAudioCacheProvider(session.account.key));
   return CachedCardAudioRepository(
     remote: remote,
     cache: FlutterCardAudioByteCache(manager),

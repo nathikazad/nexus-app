@@ -66,7 +66,11 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed;
+    // Desktop windows can remain visible while another window has focus.
+    // Inactive is not hidden; keep those visible libraries synchronized.
+    _foreground =
+        state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive;
     if (state == AppLifecycleState.resumed) {
       _synchronize(SyncReason.appResumed);
     }

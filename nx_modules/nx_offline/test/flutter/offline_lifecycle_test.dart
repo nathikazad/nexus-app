@@ -37,6 +37,38 @@ void main() {
     expect(reasons.last, SyncReason.appResumed);
   });
 
+  testWidgets(
+    'visible inactive windows keep syncing; hidden windows catch up on resume',
+    (tester) async {
+      final hints = StreamController<String>();
+      final reasons = <SyncReason>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AppSyncLifecycle(
+            synchronize: (reason) async => reasons.add(reason),
+            remoteChanges: hints.stream,
+            checkInterval: const Duration(seconds: 30),
+            child: const Text('App'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      hints.add('change while visible without focus');
+      await tester.pumpAndSettle();
+      expect(reasons, [SyncReason.appStarted, SyncReason.timer]);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      hints.add('change while hidden');
+      await tester.pump(const Duration(seconds: 31));
+      expect(reasons, hasLength(2));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(reasons.last, SyncReason.appResumed);
+      await tester.pumpWidget(const SizedBox());
+      await hints.close();
+    },
+  );
+
   testWidgets('a disabled lifecycle does not synchronize', (tester) async {
     final connectivity = StreamController<bool>();
     addTearDown(connectivity.close);
