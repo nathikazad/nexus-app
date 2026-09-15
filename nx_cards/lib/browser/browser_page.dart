@@ -1,9 +1,9 @@
+import 'data/models/library_summary.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/book_page.dart';
-import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/browser_error.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_list/card_metric.dart';
@@ -120,12 +120,12 @@ class _HomeScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(cardsDashboardProvider);
+    final dashboard = ref.watch(cardsSourcesProvider);
     final body = dashboard.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => BrowserLoadError(
         error: error,
-        onRetry: () => ref.invalidate(cardsDashboardProvider),
+        onRetry: () => ref.invalidate(cardsSourcesProvider),
       ),
       data: (data) => _SourcesDashboard(data: data),
     );
@@ -159,17 +159,12 @@ class _HomeScaffold extends ConsumerWidget {
 class _SourcesDashboard extends StatelessWidget {
   const _SourcesDashboard({required this.data});
 
-  final CardsDashboard data;
+  final List<LibrarySource> data;
 
   @override
   Widget build(BuildContext context) {
-    final booksById = <int, String>{};
-    for (final card in data.cards) {
-      final id = card.sourceBookId;
-      if (id != null) booksById[id] = card.sourceBookName ?? 'Book $id';
-    }
-    final books = booksById.entries.toList()
-      ..sort((left, right) => left.value.compareTo(right.value));
+    final languages = data.where((s) => s.kind == 'language');
+    final books = data.where((s) => s.kind == 'book').toList();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -187,28 +182,18 @@ class _SourcesDashboard extends StatelessWidget {
                 const SizedBox(height: 12),
                 AdaptiveCardGrid(
                   children: [
-                    for (final language in data.languages)
+                    for (final language in languages)
                       _SourceCard(
-                        title: language,
+                        title: language.name,
                         icon: Icons.translate_outlined,
                         color: RecallColors.violet,
-                        total: data.cardsForLanguage(language).length,
-                        due: data.dueCount(
-                          DateTime.now(),
-                          language: language,
-                          cue: StudyCue.fromLanguage,
-                        ),
-                        current: data
-                            .cardsForLanguage(language)
-                            .where(
-                              (card) =>
-                                  card.learningStatus ==
-                                  LearningStatus.learning,
-                            )
-                            .length,
+                        total: language.total,
+                        due: language.due,
+                        current: language.current,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => LanguagePage(language: language),
+                            builder: (_) =>
+                                LanguagePage(language: language.name),
                           ),
                         ),
                       ),
@@ -225,24 +210,17 @@ class _SourcesDashboard extends StatelessWidget {
                     children: [
                       for (final book in books)
                         _SourceCard(
-                          title: book.value,
+                          title: book.name,
                           icon: Icons.menu_book_outlined,
                           color: RecallColors.sky,
-                          total: data.cardsForBook(book.key).length,
-                          due: data.dueCount(DateTime.now(), bookId: book.key),
-                          current: data
-                              .cardsForBook(book.key)
-                              .where(
-                                (card) =>
-                                    card.learningStatus ==
-                                    LearningStatus.learning,
-                              )
-                              .length,
+                          total: book.total,
+                          due: book.due,
+                          current: book.current,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => BookPage(
-                                bookId: book.key,
-                                bookName: book.value,
+                                bookId: int.parse(book.id),
+                                bookName: book.name,
                               ),
                             ),
                           ),

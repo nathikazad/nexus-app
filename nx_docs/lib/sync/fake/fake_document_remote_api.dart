@@ -45,6 +45,20 @@ final class FakeDocumentRemoteApi
     if (configured != null) throw configured;
   }
 
+  int liveBatchCount = 0;
+  final liveScopes = <Set<int>>[];
+
+  @override
+  void invalidateReads() {}
+
+  @override
+  Future<List<NxDocument>> fetchDocuments(Set<int> ids) async {
+    liveBatchCount++;
+    liveScopes.add(ids);
+    final documents = await Future.wait(ids.map(fetchDocument));
+    return documents.whereType<NxDocument>().toList();
+  }
+
   @override
   Future<List<DocumentSummary>> fetchCatalog(CatalogQuery query) async {
     catalogFetchCount += 1;

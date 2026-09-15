@@ -147,7 +147,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
       await ref
           .read(cardLibraryProvider)
           .setLearningStatus(widget.card, status);
-      ref.invalidate(cardsDashboardProvider);
+      ref.read(cardsInvalidationProvider)();
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -172,7 +172,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final edit = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => CardDetailsPage(card: widget.card)),
     );
-    if (edit == true && mounted) ref.invalidate(cardsDashboardProvider);
+    if (edit == true && mounted) ref.read(cardsInvalidationProvider)();
   }
 
   @override

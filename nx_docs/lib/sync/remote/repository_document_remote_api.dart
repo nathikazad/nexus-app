@@ -15,6 +15,15 @@ final class RepositoryDocumentRemoteApi implements DocumentRemoteApi {
   final DocumentSyncTransport _syncTransport;
 
   @override
+  void invalidateReads() {}
+
+  @override
+  Future<List<NxDocument>> fetchDocuments(Set<int> ids) async {
+    final documents = await Future.wait(ids.map(fetchDocument));
+    return documents.whereType<NxDocument>().toList();
+  }
+
+  @override
   Future<List<DocumentSummary>> fetchCatalog(CatalogQuery query) async {
     final documents = await switch (query.kind) {
       CatalogKind.all => repository.listAll(),

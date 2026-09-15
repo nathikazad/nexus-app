@@ -1,3 +1,5 @@
+export 'package:nx_sync/nx_sync.dart' show SyncReason;
+
 enum MutationType { create, update, delete, relation }
 
 enum PendingMutationStatus { queued, claimed, retryWaiting, blocked }
@@ -11,19 +13,6 @@ enum SyncFailureKind {
 }
 
 enum SyncActivity { idle, syncing, retryWaiting, blocked }
-
-/// Why synchronization was requested.
-///
-/// The lifecycle layer reports intent only. Applications decide whether a
-/// reason should upload an outbox, reconcile a library, or do both.
-enum SyncReason {
-  manual,
-  foregroundDemand,
-  appStarted,
-  appResumed,
-  connectivityRestored,
-  timer,
-}
 
 /// Stable identity for one application's data partition.
 ///

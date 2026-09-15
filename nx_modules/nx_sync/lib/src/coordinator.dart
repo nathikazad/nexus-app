@@ -1,5 +1,5 @@
 import 'dart:async';
-import '../core/sync_models.dart';
+import 'reason.dart';
 
 /// Coalesces wakeups while retaining changes received after a pull starts.
 /// Hints are requests to check current state, never trusted content/checkpoints.

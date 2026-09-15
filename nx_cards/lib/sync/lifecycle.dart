@@ -12,7 +12,7 @@ final class CardSyncLifecycle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return OfflineLifecycle(
+    return AppSyncLifecycle(
       synchronize: ref.watch(cardsLifecycleSyncProvider),
       onlineChanges: ref.watch(cardsConnectivityChangesProvider),
       remoteChanges: ref.watch(sync.appSyncChangesProvider('cards')),

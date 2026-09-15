@@ -42,7 +42,7 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
       scheduler: ref.read(cardSchedulerProvider),
       prompts: widget.prompts,
       languages: widget.languages,
-      onScheduleSaved: () => ref.invalidate(cardsDashboardProvider),
+      onScheduleSaved: () => ref.read(cardsInvalidationProvider)(),
     );
     controller.addListener(_handleControllerChange);
     unawaited(

@@ -51,6 +51,7 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
           () => _NativeCatalogFeed(
             query: query,
             localStore: _localStore,
+            remoteApi: _remoteApi,
             onUnused: () => _catalogs.remove(query),
           ),
         )
@@ -162,9 +163,11 @@ final class _NativeCatalogFeed {
     required this.query,
     required LocalNotesStore localStore,
     required this.onUnused,
+    required this.remoteApi,
   }) : _localStore = localStore;
 
   final CatalogQuery query;
+  final DocumentRemoteApi remoteApi;
   final void Function() onUnused;
   int _listeners = 0;
   final LocalNotesStore _localStore;
@@ -203,6 +206,19 @@ final class _NativeCatalogFeed {
                 _emit(_state.copyWith(error: error, isInitialLoading: false));
               },
             );
+      }
+      if (_state.items.isEmpty) {
+        // On a new installation, show the visible catalog without waiting for
+        // the complete offline library. Bodies continue hydrating separately.
+        try {
+          final items = await remoteApi.fetchCatalog(query);
+          if (!_closed && _state.items.isEmpty) {
+            _state = CatalogState(items: items, isInitialLoading: false);
+          }
+        } catch (error) {
+          if (!_closed)
+            _state = _state.copyWith(error: error, isInitialLoading: false);
+        }
       }
       yield _state;
       yield* _states.stream;

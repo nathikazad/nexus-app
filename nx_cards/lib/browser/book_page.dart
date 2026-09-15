@@ -18,7 +18,7 @@ class BookPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(cardsDashboardProvider);
+    final dashboard = ref.watch(cardsCollectionProvider((language: null, bookId: bookId)));
     final historyWindow =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
     return Scaffold(
@@ -27,7 +27,7 @@ class BookPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => BrowserLoadError(
           error: error,
-          onRetry: () => ref.invalidate(cardsDashboardProvider),
+          onRetry: () => ref.read(cardsInvalidationProvider)(),
         ),
         data: (data) {
           final cards = data.cardsForBook(bookId);

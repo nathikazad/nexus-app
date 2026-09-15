@@ -89,3 +89,8 @@ abstract interface class DocumentContentRepository {
 
   Future<DocumentContent> save(DocumentContent content);
 }
+
+/// Repositories emit after a remote invalidation or durable local replacement.
+abstract interface class DocumentContentUpdates {
+  Stream<void> get changes;
+}

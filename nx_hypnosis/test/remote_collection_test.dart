@@ -44,7 +44,7 @@ void main() {
       expect(data.desires.single.id, '10');
       expect(data.tapes.single.desireId, '10');
       expect(await data.recording(data.tapes.single), [1, 2, 3]);
-      expect(paths, ['/hypnosis/collection', '/hypnosis/recordings/20']);
+      expect(paths, ['/apps/hypnosis/initial', '/hypnosis/recordings/20']);
     },
   );
   test('Failed save keeps existing content and reports failure', () async {

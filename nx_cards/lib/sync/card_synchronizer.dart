@@ -21,7 +21,7 @@ final class CardLibrarySynchronizer {
       reconciler: _CardPullReconciler(
         localStore: localStore,
         requireTransport: _requireTransport,
-        afterPull: () => unawaited(prefetchAudio()),
+        afterPull: () => unawaited(prefetchAudio().catchError((Object _) {})),
       ),
       prepare: uploader?.uploadPending,
       coalescingWindow: Duration.zero,
@@ -53,6 +53,7 @@ final class CardLibrarySynchronizer {
   /// latest sync bundle. A transient download failure must be retried by the
   /// next sync even when the card snapshot has not changed.
   Future<void>? _audioPrefetch;
+  final _files = AttachmentQueue();
 
   Future<void> prefetchAudio() => _audioPrefetch ??= _prefetchAudio()
       .whenComplete(() => _audioPrefetch = null);
@@ -72,15 +73,10 @@ final class CardLibrarySynchronizer {
         });
       }
     }
-    final list = urls.toList();
-    for (var offset = 0; offset < list.length; offset += 4) {
-      await Future.wait(
-        list
-            .skip(offset)
-            .take(4)
-            .map((url) => _downloadAudio(repository, {url})),
-      );
-    }
+    await Future.wait([
+      for (final url in urls)
+        _files.run(url, () => _downloadAudio(repository, {url})),
+    ]);
   }
 
   Future<void> _downloadAudio(
@@ -96,7 +92,10 @@ final class CardLibrarySynchronizer {
     }
   }
 
-  Future<void> close() => _supervisor.close();
+  Future<void> close() async {
+    await _supervisor.close();
+    await _files.close();
+  }
 }
 
 final class _CardPullReconciler implements PullReconciler<int> {

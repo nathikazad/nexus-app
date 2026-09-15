@@ -1,3 +1,4 @@
+import 'package:nx_db/app_reads.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_docs/sync/sync_providers.dart';
@@ -14,7 +15,7 @@ class OfflineSyncLifecycle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return offline.OfflineLifecycle(
+    return offline.AppSyncLifecycle(
       synchronize: ref.watch(offlineLifecycleSyncProvider),
       onlineChanges: ref.watch(offlineConnectivityChangesProvider),
       remoteChanges: ref.watch(sync.appSyncChangesProvider('docs')),
@@ -26,17 +27,16 @@ class OfflineSyncLifecycle extends ConsumerWidget {
   }
 }
 
-final offlineLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((
-  ref,
-) {
+final offlineLifecycleSyncProvider = Provider<offline.AppSynchronize?>((ref) {
   if (ref.watch(authProvider).value == null) return null;
   final workspace = ref.watch(documentWorkspaceProvider);
   if (workspace == null) return null;
   if (!ref.watch(offlineEnabledProvider)) {
     if (!sync.appStateSyncEnabled) return null;
     final client = sync.AppSyncClient(ref.watch(graphqlClientProvider), 'docs');
-    return (reason) =>
-        client.refreshIfChanged(() => workspace.syncLibrary(reason: reason));
+    return (reason) => client.refreshIfChanged(() {
+      return workspace.syncLibrary(reason: reason);
+    }, invalidate: ref.read(appReadsProvider('docs'))?.invalidateChanges);
   }
   return (reason) => workspace.syncLibrary(reason: reason);
 });

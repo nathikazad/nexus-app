@@ -2,14 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../core/sync_models.dart';
-import '../sync/app_state_coordinator.dart';
-import '../sync/sync_ports.dart';
+import 'reason.dart';
+import 'coordinator.dart';
 
-typedef OfflineSynchronize = Future<void> Function(SyncReason reason);
+typedef AppSynchronize = Future<void> Function(SyncReason reason);
 
-final class OfflineLifecycle extends StatefulWidget {
-  const OfflineLifecycle({
+final class AppSyncLifecycle extends StatefulWidget {
+  const AppSyncLifecycle({
     required this.synchronize,
     required this.child,
     this.onlineChanges,
@@ -22,17 +21,17 @@ final class OfflineLifecycle extends StatefulWidget {
   ///
   /// Passing null disables every native lifecycle trigger. This keeps web
   /// applications free of offline behavior without branching in this widget.
-  final OfflineSynchronize? synchronize;
+  final AppSynchronize? synchronize;
   final Stream<bool>? onlineChanges;
   final Stream<String>? remoteChanges;
   final Duration? checkInterval;
   final Widget child;
 
   @override
-  State<OfflineLifecycle> createState() => _OfflineLifecycleState();
+  State<AppSyncLifecycle> createState() => _AppSyncLifecycleState();
 }
 
-final class _OfflineLifecycleState extends State<OfflineLifecycle>
+final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
     with WidgetsBindingObserver {
   StreamSubscription<bool>? _connectivitySubscription;
   StreamSubscription<String>? _remoteSubscription;
@@ -50,7 +49,7 @@ final class _OfflineLifecycleState extends State<OfflineLifecycle>
   }
 
   @override
-  void didUpdateWidget(OfflineLifecycle oldWidget) {
+  void didUpdateWidget(AppSyncLifecycle oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.onlineChanges != widget.onlineChanges) {
       unawaited(_connectivitySubscription?.cancel());
@@ -118,37 +117,4 @@ final class _OfflineLifecycleState extends State<OfflineLifecycle>
 
   @override
   Widget build(BuildContext context) => widget.child;
-}
-
-final class SyncStatusView extends StatelessWidget {
-  const SyncStatusView({required this.source, this.textStyle, super.key});
-
-  final SyncStatusSource source;
-  final TextStyle? textStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<SyncStatus>(
-      stream: source.statusChanges,
-      initialData: source.status,
-      builder: (context, snapshot) {
-        final status = snapshot.data ?? source.status;
-        return Semantics(
-          label: 'Synchronization status',
-          child: Text(_label(status), style: textStyle),
-        );
-      },
-    );
-  }
-
-  String _label(SyncStatus status) {
-    return switch (status.activity) {
-      SyncActivity.idle =>
-        status.lastSyncedAt == null ? 'Saved locally' : 'Synced',
-      SyncActivity.syncing => 'Syncing',
-      SyncActivity.retryWaiting =>
-        'Sync pending - ${status.pendingCount} changes',
-      SyncActivity.blocked => 'Sync requires attention',
-    };
-  }
 }

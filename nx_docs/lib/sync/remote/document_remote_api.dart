@@ -3,9 +3,12 @@ import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/sync/sync_models.dart';
 
 abstract interface class DocumentRemoteApi {
+  void invalidateReads();
   Future<List<DocumentSummary>> fetchCatalog(CatalogQuery query);
 
   Future<NxDocument?> fetchDocument(int documentId);
+
+  Future<List<NxDocument>> fetchDocuments(Set<int> documentIds);
 
   Future<RemoteSaveResult> mutateDocument(NxDocument document);
 

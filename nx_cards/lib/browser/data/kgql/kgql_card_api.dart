@@ -1,3 +1,4 @@
+import 'package:nx_db/app_reads.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_mapper.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_schema.dart';
@@ -70,14 +71,35 @@ Future<List<StudyCard>> fetchKgqlCards(GraphQLClient client) async {
 }
 
 class KgqlCardApi implements CardLibrary {
-  KgqlCardApi(this._client);
+  KgqlCardApi(this._client, {this.reads});
+
+  final AppReads? reads;
 
   final GraphQLClient _client;
 
   @override
-  Future<List<StudyCard>> listCards() => _cardsInFlight ??= fetchKgqlCards(
-    _client,
-  ).whenComplete(() => _cardsInFlight = null);
+  Future<List<StudyCard>> listCards() =>
+      _cardsInFlight ??= _readCards().whenComplete(() => _cardsInFlight = null);
+
+  Future<List<StudyCard>> _readCards() async {
+    final api = reads;
+    if (api == null) return fetchKgqlCards(_client);
+    return readCollection(api);
+  }
+
+  static Future<List<StudyCard>> readCollection(
+    AppReads reads, [
+    Map<String, String> query = const {},
+  ]) async {
+    final rows = {
+      for (final row in await reads.items(query: query))
+        (row['id'] as num).toInt(): Model.fromJson(row),
+    };
+    return [
+      for (final row in rows.values)
+        studyCardFromModel(row, relatedModels: rows)!,
+    ];
+  }
 
   // Dashboard, language filters and sync refresh share only an active request.
   // Completed data is not persisted or reused as an offline browser cache.
@@ -113,8 +135,11 @@ class KgqlCardApi implements CardLibrary {
   }
 
   @override
-  Future<int> createCard({required CardContent content, int? sourceBookId}) {
-    return setKgqlModel(
+  Future<int> createCard({
+    required CardContent content,
+    int? sourceBookId,
+  }) async {
+    final id = await setKgqlModel(
       _client,
       SetModelRequest(
         modelType: content is LanguageCardContent
@@ -154,6 +179,8 @@ class KgqlCardApi implements CardLibrary {
       ),
       auditSourceKind: 'nx_cards',
     );
+    reads?.invalidate();
+    return id;
   }
 
   @override
@@ -180,6 +207,7 @@ class KgqlCardApi implements CardLibrary {
       ),
       auditSourceKind: 'nx_cards',
     );
+    reads?.invalidate();
   }
 
   @override
@@ -203,6 +231,7 @@ class KgqlCardApi implements CardLibrary {
       ),
       auditSourceKind: 'nx_cards',
     );
+    reads?.invalidate();
   }
 
   @override
@@ -215,6 +244,7 @@ class KgqlCardApi implements CardLibrary {
       ),
       auditSourceKind: 'nx_cards',
     );
+    reads?.invalidate();
   }
 
   @override
@@ -232,6 +262,7 @@ class KgqlCardApi implements CardLibrary {
       ),
       auditSourceKind: 'nx_cards',
     );
+    reads?.invalidate();
   }
 
   @override
@@ -241,5 +272,6 @@ class KgqlCardApi implements CardLibrary {
       SetModelRequest(id: id, delete: true),
       auditSourceKind: 'nx_cards',
     );
+    reads?.invalidate();
   }
 }

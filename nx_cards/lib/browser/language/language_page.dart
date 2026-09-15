@@ -19,14 +19,14 @@ class LanguagePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(cardsDashboardProvider);
+    final dashboard = ref.watch(cardsCollectionProvider((language: language, bookId: null)));
     return Scaffold(
       appBar: AppBar(title: Text(language)),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => BrowserLoadError(
           error: error,
-          onRetry: () => ref.invalidate(cardsDashboardProvider),
+          onRetry: () => ref.read(cardsInvalidationProvider)(),
         ),
         data: (data) =>
             _LanguageCategoriesDashboard(data: data, language: language),
@@ -297,7 +297,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final dashboard = ref.watch(cardsDashboardProvider);
+    final dashboard = ref.watch(cardsCollectionProvider((language: language, bookId: null)));
     final historyWindow =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
     return Scaffold(
@@ -306,7 +306,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => BrowserLoadError(
           error: error,
-          onRetry: () => ref.invalidate(cardsDashboardProvider),
+          onRetry: () => ref.read(cardsInvalidationProvider)(),
         ),
         data: (data) {
           final cards = data.cards

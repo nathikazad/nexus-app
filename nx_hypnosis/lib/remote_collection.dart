@@ -33,6 +33,7 @@ class RemoteCollection extends HypnosisCollection {
   final savedRecordings = <String>{};
   final Map<String, Future<String>> _audioRequests = {};
   Future<void>? _prefetch;
+  final _files = AttachmentQueue();
   Future<void>? _availability;
   Future<void>? _closing;
   Future<void> _operations = Future.value();
@@ -102,7 +103,7 @@ class RemoteCollection extends HypnosisCollection {
         return;
       }
       final response = await client
-          .get(endpoint('/hypnosis/collection'))
+          .get(endpoint('/apps/hypnosis/initial'))
           .timeout(const Duration(seconds: 30));
       await _persist(response.statusCode, response.body);
     });
@@ -283,17 +284,15 @@ class RemoteCollection extends HypnosisCollection {
     _changed();
     try {
       final items = tapes.where((t) => t.audioAsset != null).toList();
-      for (var offset = 0; offset < items.length && !_disposed; offset += 2) {
-        await Future.wait(
-          items.skip(offset).take(2).map((t) async {
-            try {
-              await recordingPath(t);
-            } catch (_) {
-              /* Retry on next sync or play. */
-            }
-          }),
-        );
-      }
+      await Future.wait(
+        items.map((tape) async {
+          try {
+            await _files.run(tape.id, () => recordingPath(tape));
+          } catch (_) {
+            // Retry on next sync or play.
+          }
+        }),
+      );
     } finally {
       downloading = false;
       _changed();
@@ -309,6 +308,7 @@ class RemoteCollection extends HypnosisCollection {
     await synchronizer.close();
     await _operations;
     await _availability;
+    await _files.close();
     await _prefetch;
     await Future.wait(
       _audioRequests.values.map((future) async {

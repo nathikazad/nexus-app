@@ -4,7 +4,7 @@ typedef AppSyncRequest =
       Map<String, dynamic> variables,
     );
 
-const appStateSyncEnabled = bool.fromEnvironment('NX_APP_STATE_SYNC');
+const appStateSyncEnabled = true;
 
 final class AppSyncManifest {
   AppSyncManifest(

@@ -155,7 +155,7 @@ void main() {
       await _import(local, cached);
       final network = Completer<void>();
       remote
-        ..syncBarrier = network.future
+        ..documentBarrier = network.future
         ..replaceRemote(cached.copyWith(title: 'Remote body'));
 
       final first = workspace.openDocument(7);
@@ -166,11 +166,11 @@ void main() {
 
       expect(identical(first, second), isTrue);
       expect(ready.document!.title, 'Cached body');
-      expect(remote.syncCount, 0);
+      expect(remote.liveBatchCount, 0);
 
       final demand = workspace.ensureDocumentAvailable(7);
       await Future<void>.delayed(Duration.zero);
-      expect(remote.syncCount, 1);
+      expect(remote.liveBatchCount, 1);
       network.complete();
       await demand;
     },

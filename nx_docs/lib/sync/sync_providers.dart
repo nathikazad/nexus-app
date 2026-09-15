@@ -1,3 +1,5 @@
+import 'package:nx_db/app_reads.dart';
+import 'remote/app_document_remote_api.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -24,7 +26,9 @@ import 'package:nx_docs/sync/remote/unavailable_document_remote_api.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:nx_offline/nx_offline_storage.dart';
 
-final offlineEnabledProvider = Provider<bool>((ref) => offline.AppDataPolicy.current.storesOfflineData);
+final offlineEnabledProvider = Provider<bool>(
+  (ref) => offline.AppDataPolicy.current.storesOfflineData,
+);
 
 final offlineClockProvider = Provider<Clock>((ref) => const SystemClock());
 final offlineIdGeneratorProvider = Provider<IdGenerator>(
@@ -73,10 +77,13 @@ final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
 final documentRemoteApiProvider = Provider<DocumentRemoteApi>((ref) {
   final user = ref.watch(authProvider).value;
   if (user == null) return const UnavailableDocumentRemoteApi();
-  return RepositoryDocumentRemoteApi(
+  final mutations = RepositoryDocumentRemoteApi(
     repository: ref.watch(documentRepositoryProvider),
     syncTransport: KgqlDocumentSyncTransport(ref.watch(graphqlClientProvider)),
   );
+  final reads = ref.watch(appReadsProvider('docs'));
+  if (reads == null) return const UnavailableDocumentRemoteApi();
+  return AppDocumentRemoteApi(reads, mutations);
 });
 
 final backgroundUploaderProvider = Provider<BackgroundUploader?>((ref) {

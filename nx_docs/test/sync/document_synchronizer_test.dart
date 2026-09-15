@@ -122,7 +122,7 @@ void main() {
     },
   );
 
-  test('concurrent document refreshes share one remote hash check', () async {
+  test('concurrent document refreshes share one live batch', () async {
     await synchronizer.syncLibrary();
     remote.replaceRemote(
       offlineTestDocument(
@@ -132,14 +132,14 @@ void main() {
       ),
     );
     final barrier = Completer<void>();
-    remote.syncBarrier = barrier.future;
-    final before = remote.syncCount;
+    remote.documentBarrier = barrier.future;
+    final before = remote.liveBatchCount;
 
     final first = synchronizer.refreshDocument(1);
     final second = synchronizer.refreshDocument(1);
     await Future<void>.delayed(Duration.zero);
 
-    expect(remote.syncCount, before + 1);
+    expect(remote.liveBatchCount, before + 1);
     barrier.complete();
     await Future.wait(<Future<Object?>>[first, second]);
     expect((await local.getDocumentByRemoteId(1))?.document.title, 'Changed');
@@ -159,8 +159,8 @@ void main() {
           synchronizer.requestDocuments(<int>{id}),
       ]);
 
-      expect(remote.syncCount, 1);
-      expect(remote.syncScopes.single, <int>{
+      expect(remote.liveBatchCount, 1);
+      expect(remote.liveScopes.single, <int>{
         for (var id = 1; id <= 15; id++) id,
       });
     },
@@ -178,7 +178,8 @@ void main() {
           .refreshDocument(1)
           .timeout(const Duration(seconds: 1));
       expect(document?.document.title, 'One');
-      expect(remote.syncCount, 2);
+      expect(remote.syncCount, 1);
+      expect(remote.liveBatchCount, 1);
     } finally {
       barrier.complete();
       await library;

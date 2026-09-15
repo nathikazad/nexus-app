@@ -8,6 +8,10 @@ environment:
   flutter: '>=3.0.0'
 
 dependencies:
+  nx_sync:
+    path: ../nx_sync
+  nx_data:
+    path: ../nx_data
   flutter:
     sdk: flutter
   flutter_cache_manager: ^3.4.1

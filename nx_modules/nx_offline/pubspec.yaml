@@ -8,6 +8,10 @@ environment:
   flutter: ">=3.32.0"
 
 dependencies:
+  nx_data:
+    path: ../nx_data
+  nx_sync:
+    path: ../nx_sync
   crypto: ^3.0.6
   drift: ^2.34.0
   drift_flutter: ^0.3.1

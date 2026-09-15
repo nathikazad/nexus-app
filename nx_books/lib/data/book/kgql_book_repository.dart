@@ -1,3 +1,4 @@
+import 'package:nx_db/app_reads.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/domain/book/book_repository.dart';
@@ -20,6 +21,8 @@ class KgqlBookRepository implements BookRepository {
   KgqlBookRepository({required GraphQLClient client}) : _client = client;
 
   final GraphQLClient _client;
+
+  void didMutate() {}
 
   @override
   Future<List<NxBook>> listBooks() async {
@@ -71,6 +74,7 @@ class KgqlBookRepository implements BookRepository {
       ),
       auditSourceKind: 'nx_books',
     );
+    didMutate();
     final now = DateTime.now();
     return NxBook(
       id: result.documentId,
@@ -146,6 +150,7 @@ class KgqlBookRepository implements BookRepository {
       clientUpdatedAt: DateTime.now().toUtc(),
       auditSourceKind: 'nx_books',
     );
+    didMutate();
   }
 
   static const Map<String, dynamic> bookSummaryFetchStruct = {
@@ -293,4 +298,23 @@ String _relativeLabel(DateTime time) {
   if (diff.inDays < 1) return '${diff.inHours}h ago';
   if (diff.inDays < 7) return '${diff.inDays}d ago';
   return '${time.month}/${time.day}/${time.year}';
+}
+
+/// App-scoped live reads, shared by native cache hydration and browser views.
+class AppBookRepository extends KgqlBookRepository {
+  AppBookRepository({required super.client, required this.reads});
+  final AppReads? reads;
+  AppReads get _reads =>
+      reads ?? (throw StateError('Connect to refresh books'));
+  @override
+  void didMutate() => reads?.invalidate();
+  @override
+  Future<List<NxBook>> listBooks() async => [
+    for (final row in await _reads.items()) bookFromModel(Model.fromJson(row)),
+  ];
+  @override
+  Future<List<String>> listTopicTags() async => [
+    for (final tag in (await _reads.read('initial'))['topics'] as List)
+      tag.toString(),
+  ];
 }

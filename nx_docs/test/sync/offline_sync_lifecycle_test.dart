@@ -1,3 +1,5 @@
+import 'package:nx_db/auth.dart';
+import 'package:nx_db/app_sync.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -17,6 +19,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authProvider.overrideWith(() => _SignedOut()),
+          appSyncChangesProvider('docs').overrideWithValue(null),
           offlineEnabledProvider.overrideWithValue(false),
           documentWorkspaceProvider.overrideWith((ref) {
             workspaceReads++;
@@ -44,6 +48,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authProvider.overrideWith(() => _SignedOut()),
+          appSyncChangesProvider('docs').overrideWithValue(null),
           offlineLifecycleSyncProvider.overrideWithValue(
             (reason) async => reasons.add(reason),
           ),
@@ -72,4 +78,9 @@ void main() {
     expect(reasons.last, SyncReason.appResumed);
     expect(reasons, hasLength(3));
   });
+}
+
+class _SignedOut extends AuthController {
+  @override
+  Future<User?> build() async => null;
 }

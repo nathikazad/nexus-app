@@ -3,10 +3,10 @@ library;
 import 'dart:convert';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_offline/nx_offline.dart';
+import 'package:nx_sync/nx_sync.dart';
 import 'nx_db.dart';
 
-export 'package:nx_offline/nx_offline.dart' show appStateSyncEnabled;
+export 'package:nx_sync/nx_sync.dart' show appStateSyncEnabled;
 
 final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
   ref,
@@ -38,10 +38,15 @@ final class AppSyncClient {
   late final AppSyncSession session;
   bool _unsupported = false;
   String? _refreshedRoot;
+  Map<String, dynamic> _collections = {};
 
   /// Browser repositories refresh their existing views only when state changes.
   /// A failed refresh never advances the locally applied root.
-  Future<void> refreshIfChanged(Future<void> Function() refresh) async {
+  Future<void> refreshIfChanged(
+    Future<void> Function() refresh, {
+    void Function(Map<String, dynamic> previous, Map<String, dynamic> current)?
+    invalidate,
+  }) async {
     final state = await _request('state', {});
     if (state['status'] == 'unsupported') {
       await refresh();
@@ -52,7 +57,12 @@ final class AppSyncClient {
     }
     final root = state['root_hash'] as String;
     if (root == _refreshedRoot) return;
+    final collections = Map<String, dynamic>.from(
+      state['collections'] as Map? ?? {},
+    );
+    invalidate?.call(_collections, collections);
     await refresh();
+    _collections = collections;
     _refreshedRoot = root;
   }
 
@@ -91,6 +101,7 @@ final class AppSyncClient {
         ),
         variables: {'app': app, ...variables},
         fetchPolicy: FetchPolicy.noCache,
+        queryRequestTimeout: const Duration(seconds: 30),
       ),
     );
     if (response.hasException) {

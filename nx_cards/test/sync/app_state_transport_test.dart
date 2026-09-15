@@ -70,6 +70,7 @@ void main() {
       final downloaded = await transport.downloadCards({11});
       expect(downloaded.cards.single.card.back, '日');
       expect(manifests, 1);
+
     },
     skip: !appStateSyncEnabled,
   );

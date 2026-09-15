@@ -139,7 +139,7 @@ final reviewProgressionRunnerProvider = Provider<RunReviewProgression>((ref) {
     for (final change in plan.changes) {
       await repository.setLearningStatus(change.card, change.status);
     }
-    if (plan.changed) ref.invalidate(cardsDashboardProvider);
+    if (plan.changed) invalidateCardsData(ref);
     return plan;
   };
 });

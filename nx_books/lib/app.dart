@@ -17,7 +17,7 @@ class NexusBooksApp extends ConsumerWidget {
     final darkMode = ref.watch(booksDarkModeProvider);
     final router = ref.watch(routerProvider);
     final user = ref.watch(authProvider).value;
-    return OfflineLifecycle(
+    return AppSyncLifecycle(
       synchronize: ref.watch(booksLifecycleSyncProvider),
       onlineChanges: ref.watch(booksOnlineChangesProvider),
       remoteChanges: ref.watch(sync.appSyncChangesProvider('books')),

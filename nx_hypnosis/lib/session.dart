@@ -102,7 +102,7 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
   );
   // Keep one callback identity across rebuilds so lifecycle sync is not retriggered.
   // ignore: prefer_function_declarations_over_variables
-  late final OfflineSynchronize synchronize = AppDataPolicy.current.select(
+  late final AppSynchronize synchronize = AppDataPolicy.current.select(
     native: () =>
         (reason) => data.refresh(reason: reason),
     web: () =>
@@ -141,7 +141,7 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done &&
           !snapshot.hasError) {
-        return OfflineLifecycle(
+        return AppSyncLifecycle(
           synchronize: synchronize,
           onlineChanges: !AppDataPolicy.current.storesOfflineData
               ? null

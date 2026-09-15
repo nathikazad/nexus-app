@@ -75,7 +75,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
       _ratings[_index] = rating;
       _latestCards[updatedCard.id] = updatedCard;
       if (rating == CardRating.again) _missCount++;
-      ref.invalidate(cardsDashboardProvider);
+      ref.read(cardsInvalidationProvider)();
       if (!mounted) return;
       if (_index + 1 >= widget.prompts.length) {
         setState(() => _index = widget.prompts.length);

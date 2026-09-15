@@ -7,13 +7,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Network-first document storage with a persistent read-through cache.
 final class CachedDocumentContentRepository
-    implements DocumentContentRepository {
+    implements DocumentContentRepository, DocumentContentUpdates {
   CachedDocumentContentRepository({
     required this.remote,
     required this.accountKey,
     this.library,
     this.persistData = true,
-  });
+  }) {
+    if (remote is DocumentContentUpdates) {
+      _remoteChanges = (remote as DocumentContentUpdates).changes.listen(
+        (_) => _changes.add(null),
+      );
+    }
+  }
+  final _changes = StreamController<void>.broadcast();
+  StreamSubscription<void>? _remoteChanges;
+  @override
+  Stream<void> get changes => _changes.stream;
+  Future<void> close() async {
+    await _remoteChanges?.cancel();
+    await _changes.close();
+  }
 
   final DocumentContentRepository remote;
   final String accountKey;
@@ -95,8 +109,10 @@ final class CachedDocumentContentRepository
     return item?.summary['syncHash'] == hash && await _verify(identity);
   }
 
-  Future<void> cacheSynced(DocumentContent content, String hash) =>
-      _write(content, syncHash: hash);
+  Future<void> cacheSynced(DocumentContent content, String hash) async {
+    await _write(content, syncHash: hash);
+    if (!_changes.isClosed) _changes.add(null);
+  }
 
   Future<void> _write(DocumentContent content, {String? syncHash}) async {
     _writeEpoch.update(
@@ -207,7 +223,15 @@ final class CachedDocumentContentRepository
 
   Future<void> _refreshSilently(DocumentIdentity identity) async {
     try {
-      await _loadRemote(identity).timeout(const Duration(seconds: 20));
+      final before = await _read(identity);
+      final fresh = await _loadRemote(
+        identity,
+      ).timeout(const Duration(seconds: 20));
+      if (fresh != null &&
+          (fresh.updatedAt != before?.updatedAt ||
+              fresh.plainText != before?.plainText) &&
+          !_changes.isClosed)
+        _changes.add(null);
     } catch (_) {
       // The cached copy remains readable when refresh is unavailable.
     }

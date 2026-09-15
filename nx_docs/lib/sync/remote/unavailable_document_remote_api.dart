@@ -11,6 +11,15 @@ final class UnavailableDocumentRemoteApi implements DocumentRemoteApi {
   }
 
   @override
+  void invalidateReads() {}
+
+  @override
+  Future<List<NxDocument>> fetchDocuments(Set<int> ids) async {
+    final documents = await Future.wait(ids.map(fetchDocument));
+    return documents.whereType<NxDocument>().toList();
+  }
+
+  @override
   Future<List<DocumentSummary>> fetchCatalog(CatalogQuery query) async =>
       _unavailable();
 

@@ -78,7 +78,7 @@ class _LanguageFastRecallPageState
           .read(cardLibraryProvider)
           .saveSchedule(outcome.card)
           .timeout(const Duration(seconds: 20));
-      ref.invalidate(cardsDashboardProvider);
+      ref.read(cardsInvalidationProvider)();
     } catch (error) {
       if (mounted) {
         setState(() {

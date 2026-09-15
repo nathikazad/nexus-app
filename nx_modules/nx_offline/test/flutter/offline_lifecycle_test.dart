@@ -14,7 +14,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: OfflineLifecycle(
+        home: AppSyncLifecycle(
           synchronize: (reason) async => reasons.add(reason),
           onlineChanges: connectivity.stream,
           child: const Text('App'),
@@ -43,7 +43,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: OfflineLifecycle(
+        home: AppSyncLifecycle(
           synchronize: null,
           onlineChanges: connectivity.stream,
           child: const Text('Web app'),

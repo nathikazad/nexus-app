@@ -45,7 +45,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     setState(() => _savingStatus = true);
     try {
       await ref.read(cardLibraryProvider).setLearningStatus(card, status);
-      ref.invalidate(cardsDashboardProvider);
+      ref.read(cardsInvalidationProvider)();
       if (mounted) setState(() => _updatedStatus = status);
     } catch (error) {
       if (mounted) {

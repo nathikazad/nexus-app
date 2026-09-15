@@ -31,6 +31,7 @@ final class WebDocumentWorkspace implements DocumentWorkspace {
 
   @override
   Future<void> refreshCatalog(CatalogQuery query) {
+    _remoteApi.invalidateReads();
     return _catalogs
         .putIfAbsent(
           query,
@@ -87,6 +88,7 @@ final class WebDocumentWorkspace implements DocumentWorkspace {
   Future<void> syncLibrary({
     offline.SyncReason reason = offline.SyncReason.manual,
   }) {
+    if (reason == offline.SyncReason.manual) _remoteApi.invalidateReads();
     return Future.wait(<Future<void>>[
       _refreshVisibleCatalogs(),
       for (final session in _sessions.values.toList()) session.refresh(),

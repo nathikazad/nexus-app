@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/data/models/library_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
+          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
             cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
           ],
           child: const MaterialApp(

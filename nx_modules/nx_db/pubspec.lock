@@ -599,10 +599,24 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
+  nx_data:
+    dependency: "direct main"
+    description:
+      path: "../nx_data"
+      relative: true
+    source: path
+    version: "0.1.0"
   nx_offline:
     dependency: "direct main"
     description:
       path: "../nx_offline"
+      relative: true
+    source: path
+    version: "0.1.0"
+  nx_sync:
+    dependency: "direct main"
+    description:
+      path: "../nx_sync"
       relative: true
     source: path
     version: "0.1.0"

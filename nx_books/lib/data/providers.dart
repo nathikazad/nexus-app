@@ -1,3 +1,5 @@
+import 'book/app_document_repository.dart';
+import 'package:nx_db/app_reads.dart';
 import 'dart:async';
 import 'book/epub_progress_repository.dart';
 import 'offline/reading_history_store.dart';
@@ -37,7 +39,11 @@ final booksFileLibraryProvider = Provider<FileLibrary?>((ref) {
 
 final bookRepositoryProvider = Provider<BookRepository>((ref) {
   final userId = ref.watch(authProvider).value?.userId ?? 'last-session';
-  final remote = KgqlBookRepository(client: ref.watch(graphqlClientProvider));
+  final reads = ref.watch(appReadsProvider('books'));
+  final remote = AppBookRepository(
+    client: ref.watch(graphqlClientProvider),
+    reads: reads,
+  );
   return offline.AppDataPolicy.current.select<BookRepository>(
     web: () => remote,
     native: () => CachedBookRepository(
@@ -62,15 +68,20 @@ final epubProgressRepositoryProvider = Provider<EpubProgressRepository>((ref) {
 final bookDocumentRepositoryProvider =
     Provider<CachedDocumentContentRepository>((ref) {
       final userId = ref.watch(authProvider).value?.userId ?? 'last-session';
-      return CachedDocumentContentRepository(
+      final repository = CachedDocumentContentRepository(
         persistData: offline.AppDataPolicy.current.storesOfflineData,
-        remote: KgqlDocumentContentRepository(
-          client: ref.watch(graphqlClientProvider),
-          auditSourceKind: 'nx_books',
+        remote: AppBookDocumentRepository(
+          ref.watch(appReadsProvider('books')),
+          KgqlDocumentContentRepository(
+            client: ref.watch(graphqlClientProvider),
+            auditSourceKind: 'nx_books',
+          ),
         ),
         accountKey: userId,
         library: ref.watch(booksFileLibraryProvider),
       );
+      ref.onDispose(() => unawaited(repository.close()));
+      return repository;
     });
 
 final offlineBookHydrationEnabledProvider = Provider<bool>((ref) => true);
@@ -115,7 +126,7 @@ final bookFileCacheProvider = Provider<BookFileCache?>((ref) {
       user == null ||
       client == null)
     return null;
-  return BookFileCache(
+  final cache = BookFileCache(
     accountKey: 'nexus-primary:${user.userId}',
     origin: Uri.parse(resolve(user.preset).imageHttp),
     client: client,
@@ -127,11 +138,14 @@ final bookFileCacheProvider = Provider<BookFileCache?>((ref) {
       if (ref.mounted) ref.invalidate(bookFileReportProvider);
     },
   );
+  ref.onDispose(() => unawaited(cache.close()));
+  return cache;
 });
 
 final refreshBookCatalogProvider = Provider<Future<void> Function()>((ref) {
   final repository = ref.watch(bookRepositoryProvider);
   return () async {
+    ref.read(appReadsProvider('books'))?.invalidate();
     if (repository case final BookCatalogRefresh refresh) {
       await Future.wait([
         refresh.refreshBooks().then((_) {
@@ -208,7 +222,7 @@ final booksLibrarySyncProvider =
       return sync;
     });
 
-final booksLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
+final booksLifecycleSyncProvider = Provider<offline.AppSynchronize?>((ref) {
   if (!offline.AppDataPolicy.current.storesOfflineData) {
     if (!app_sync.appStateSyncEnabled || ref.watch(authProvider).value == null)
       return null;
@@ -217,7 +231,10 @@ final booksLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
       'books',
     );
     final refresh = ref.watch(refreshBookCatalogProvider);
-    return (_) => client.refreshIfChanged(refresh);
+    return (_) => client.refreshIfChanged(
+      refresh,
+      invalidate: ref.read(appReadsProvider('books'))?.invalidateChanges,
+    );
   }
   final sync = ref.watch(booksLibrarySyncProvider);
   return sync?.requestFull;

@@ -210,7 +210,7 @@ void main() {
     expect(find.textContaining('Retrying automatically'), findsOneWidget);
   });
 
-  testWidgets('default web refresh reads the server repository', (
+  testWidgets('web refresh without visible feeds avoids downloading the library', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -242,7 +242,7 @@ void main() {
     await tester.tap(find.byKey(const Key('sync-now-button')));
     await tester.pumpAndSettle();
 
-    expect(repository.listAllCalls, 1);
+    expect(repository.listAllCalls, 0);
     expect(find.text('Library refreshed.'), findsOneWidget);
   });
 }

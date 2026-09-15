@@ -1,3 +1,4 @@
+import 'package:nx_offline/nx_offline.dart' show AttachmentQueue;
 import 'dart:async';
 
 import 'package:http/http.dart' as http;
@@ -28,7 +29,13 @@ final class BookFileCache {
 
   String _key(int id) => 'nx_books.offline.$accountKey.book_file.$id';
 
-  Future<String> openPath(NxBook book) => _ensure(book);
+  final _queue = AttachmentQueue();
+  Future<String> openPath(NxBook book) => _queue.run(
+    '${book.id}:${book.bookLink}:${book.bookFileHash}',
+    () => _ensure(book),
+    foreground: true,
+  );
+  Future<void> close() => _queue.close();
 
   Future<void> synchronize(List<NxBook> books) async {
     final linked = [
@@ -38,20 +45,25 @@ final class BookFileCache {
     final failures = <String>[];
     var verified = 0;
     await _report(DownloadPhase.downloading, linked.length, verified, failures);
-    for (final book in linked) {
-      try {
-        await _ensure(book);
-        verified++;
-      } catch (_) {
-        failures.add('${book.id}: ${book.title}');
-      }
-      await _report(
-        DownloadPhase.downloading,
-        linked.length,
-        verified,
-        failures,
-      );
-    }
+    await Future.wait(
+      linked.map((book) async {
+        try {
+          await _queue.run(
+            '${book.id}:${book.bookLink}:${book.bookFileHash}',
+            () => _ensure(book),
+          );
+          verified++;
+        } catch (_) {
+          failures.add('${book.id}: ${book.title}');
+        }
+        await _report(
+          DownloadPhase.downloading,
+          linked.length,
+          verified,
+          failures,
+        );
+      }),
+    );
     await _report(
       failures.isEmpty ? DownloadPhase.complete : DownloadPhase.incomplete,
       linked.length,

@@ -1,3 +1,4 @@
+import '../../../nx_modules/nx_db/test/support/app_sync_fixture.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/language.dart' show printNode;
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -12,7 +13,7 @@ void main() {
       final transport = KgqlCardsSyncTransport(
         _client((request) {
           captured = request;
-          return {
+          final legacy = {
             'syncCards': {
               'manifest': [
                 {'id': 11, 'hash': 'v2:abc'},
@@ -62,11 +63,19 @@ void main() {
               ],
             },
           };
+          final content = legacy['syncCards']!;
+          return appSyncFixture(request.variables, [
+            for (final card in content['cards'] as List)
+              {'id': card['id'], 'hash': card['hash'], 'payload': card['card']},
+          ]);
         }),
       );
       final bundle = await transport.downloadCards({11});
-      expect(printNode(captured!.operation.document), contains('syncCards'));
-      expect(captured!.variables['ids'], [11]);
+      expect(
+        printNode(captured!.operation.document),
+        contains('appSyncSnapshot'),
+      );
+      expect(captured!.variables['itemIds'], [11]);
       final card = bundle.cards.single.card;
       expect(card.sourceBookId, 50);
       expect(card.tags['Word Category'], ['Noun']);

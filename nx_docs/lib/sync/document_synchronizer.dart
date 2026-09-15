@@ -1,3 +1,4 @@
+import 'package:nx_docs/documents/document_models.dart' show DocumentKey;
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
@@ -208,14 +209,32 @@ final class _DocumentPullReconciler implements offline.PullReconciler<int> {
       }
     }
     if (eligibleIds.isEmpty) return;
-    final bundle = await _remoteApi.syncDocuments(
-      manifest: manifest,
-      documentIds: eligibleIds,
-    );
+    final documents = <RemoteDocument>[];
+    final deletedIds = <int>[];
+    final live = {
+      for (final document in await _remoteApi.fetchDocuments(eligibleIds))
+        document.id: document,
+    };
+    for (final id in eligibleIds) {
+      final document = live[id];
+      if (document == null) {
+        deletedIds.add(id);
+      } else {
+        documents.add(
+          RemoteDocument(
+            key: DocumentKey(localId: 'remote-$id', remoteId: id),
+            document: document,
+            revision: RemoteRevision(
+              document.updatedAt.toUtc().toIso8601String(),
+            ),
+          ),
+        );
+      }
+    }
     await _localStore.applySyncBundle(
       DocumentSyncBundle(
-        documents: bundle.documents,
-        deletedIds: bundle.deletedIds,
+        documents: documents,
+        deletedIds: deletedIds,
         expectedHashes: base,
       ),
     );

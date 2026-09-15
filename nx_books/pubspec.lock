@@ -1011,6 +1011,13 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
+  nx_data:
+    dependency: transitive
+    description:
+      path: "../nx_modules/nx_data"
+      relative: true
+    source: path
+    version: "0.1.0"
   nx_db:
     dependency: "direct main"
     description:
@@ -1036,6 +1043,13 @@ packages:
     dependency: transitive
     description:
       path: "../nx_modules/nx_opus_macos"
+      relative: true
+    source: path
+    version: "0.1.0"
+  nx_sync:
+    dependency: transitive
+    description:
+      path: "../nx_modules/nx_sync"
       relative: true
     source: path
     version: "0.1.0"

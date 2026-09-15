@@ -1,3 +1,7 @@
+import 'package:nx_cards/sync/native/local_cards_store.dart';
+import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
+import 'package:nx_db/app_reads.dart';
+import 'data/models/library_summary.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +19,10 @@ import 'package:nx_offline/nx_offline.dart' as offline;
 
 final kgqlCardApiProvider = Provider<CardLibrary?>((ref) {
   if (ref.watch(authProvider).value == null) return null;
-  return KgqlCardApi(ref.watch(graphqlClientProvider));
+  return KgqlCardApi(
+    ref.watch(graphqlClientProvider),
+    reads: ref.watch(appReadsProvider('cards')),
+  );
 });
 
 final cardWorkspaceProvider = Provider<CardWorkspace?>((ref) {
@@ -49,12 +56,10 @@ final cardLibraryProvider = Provider<CardLibrary>((ref) {
 });
 
 final cardsSchemaStatusProvider = FutureProvider<CardsSchemaStatus>((ref) {
-  if (ref.watch(cardsOfflineEnabledProvider)) {
-    return Future<CardsSchemaStatus>.value(
-      const CardsSchemaStatus(cardReady: true, languageCardReady: true),
-    );
-  }
-  return inspectCardsSchema(ref.watch(graphqlClientProvider));
+  // Catalog/schema provisioning belongs to the backend, not startup reads.
+  return Future.value(
+    const CardsSchemaStatus(cardReady: true, languageCardReady: true),
+  );
 });
 
 final cardsDashboardProvider = StreamProvider<CardsDashboard>((ref) {
@@ -83,7 +88,8 @@ final cardsLibrarySyncProvider = Provider<CardsLibrarySync>((ref) {
     if (ref.read(cardsOfflineEnabledProvider)) {
       await workspace.syncLibrary();
     } else {
-      ref.invalidate(cardsDashboardProvider);
+      invalidateCardsData(ref);
+      await ref.read(cardsSourcesProvider.future);
     }
   };
 });
@@ -97,7 +103,7 @@ final cardsFullSyncProvider = Provider<CardsFullSync>((ref) {
   };
 });
 
-final cardsLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
+final cardsLifecycleSyncProvider = Provider<offline.AppSynchronize?>((ref) {
   if (!ref.watch(cardsOfflineEnabledProvider)) {
     if (!sync.appStateSyncEnabled || ref.watch(authProvider).value == null)
       return null;
@@ -106,16 +112,21 @@ final cardsLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
       'cards',
     );
     return (_) => client.refreshIfChanged(() async {
-      invalidateCardsData(ref);
-      await ref.read(cardsDashboardProvider.future);
-    });
+      invalidateCardsData(ref, invalidateCache: false);
+      await ref.read(cardsSourcesProvider.future);
+    }, invalidate: ref.read(appReadsProvider('cards'))?.invalidateChanges);
   }
   final synchronizer = ref.watch(cardLibrarySynchronizerProvider);
   if (synchronizer == null) return null;
   return (reason) => synchronizer.syncLibrary(reason: reason);
 });
 
-void invalidateCardsData(Ref ref) {
+void invalidateCardsData(Ref ref, {bool invalidateCache = true}) {
+  if (invalidateCache && ref.exists(appReadsProvider('cards'))) {
+    ref.read(appReadsProvider('cards'))?.invalidate();
+  }
+  ref.invalidate(cardsSourcesProvider);
+  ref.invalidate(cardsCollectionProvider);
   if (!ref.read(cardsOfflineEnabledProvider)) {
     ref.invalidate(cardsDashboardProvider);
   }
@@ -141,3 +152,90 @@ Future<StudyCard> hydrateStudyCard(WidgetRef ref, StudyCard card) async {
   if (full == null) throw StateError('Card ${card.id} is unavailable offline.');
   return full;
 }
+
+final cardsSourcesProvider = StreamProvider<List<LibrarySource>>((ref) async* {
+  if (ref.watch(cardsOfflineEnabledProvider)) {
+    final workspace = ref.watch(cardWorkspaceProvider);
+    if (workspace == null) return;
+    final reader = ref.watch(appReadsProvider('cards'));
+    await for (final dashboard in workspace.watchDashboard()) {
+      if (dashboard.cards.isNotEmpty || reader == null) {
+        yield summarizeLibrary(dashboard);
+      } else {
+        try {
+          final response = await reader.read('initial');
+          yield [
+            for (final item in response['collections'] as List)
+              LibrarySource.fromJson(item as Map),
+          ];
+        } catch (_) {
+          rethrow;
+        }
+      }
+    }
+    return;
+  }
+  final reader = ref.watch(appReadsProvider('cards'));
+  if (reader == null) return;
+  final response = await reader.read('initial');
+  yield [
+    for (final item in response['collections'] as List)
+      LibrarySource.fromJson(item as Map),
+  ];
+});
+
+/// Only the selected source is loaded on web. Native reads remain local.
+final cardsCollectionProvider = StreamProvider.autoDispose
+    .family<CardsDashboard, ({String? language, int? bookId})>((
+      ref,
+      source,
+    ) async* {
+      if (ref.watch(cardsOfflineEnabledProvider)) {
+        final workspace = ref.watch(cardWorkspaceProvider)!;
+        final local = ref.watch(localCardsStoreProvider)!;
+        final reader = ref.watch(appReadsProvider('cards'));
+        var attempted = false;
+        await for (final dashboard in workspace.watchDashboard()) {
+          final selected = source.language != null
+              ? dashboard.cardsForLanguage(source.language!)
+              : source.bookId != null
+              ? dashboard.cardsForBook(source.bookId!)
+              : dashboard.cards;
+          if (selected.isEmpty && reader != null && !attempted) {
+            attempted = true;
+            try {
+              final cards = await KgqlCardApi.readCollection(reader, {
+                if (source.language != null) 'tag_system': 'Language',
+                if (source.language != null) 'tag': source.language!,
+                if (source.bookId != null) 'book_id': '${source.bookId}',
+              });
+              // Merge individual entries, never publish a partial library manifest.
+              if (local is HashCardsStore) {
+                await (local as HashCardsStore).applyCardBatch([
+                  for (final card in cards) HashedCard(card, ''),
+                ]);
+              }
+              yield CardsDashboard(cards: cards);
+            } catch (_) {
+              yield dashboard;
+            }
+          } else {
+            yield dashboard;
+          }
+        }
+        return;
+      }
+      final reader = ref.watch(appReadsProvider('cards'));
+      if (reader == null) return;
+      final cards = await KgqlCardApi.readCollection(reader, {
+        if (source.language != null) 'tag_system': 'Language',
+        if (source.language != null) 'tag': source.language!,
+        if (source.bookId != null) 'book_id': '${source.bookId}',
+      });
+      yield CardsDashboard(cards: cards);
+    });
+
+final cardsInvalidationProvider = Provider<void Function()>(
+  (ref) =>
+      () => invalidateCardsData(ref),
+);

@@ -48,10 +48,48 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
   Future<void> _saveChain = Future<void>.value();
   var _loadGeneration = 0;
   var _contentRevision = 0;
+  StreamSubscription<void>? _updates;
+  bool _saving = false;
+
+  void _listen() {
+    unawaited(_updates?.cancel());
+    final repository = widget.repository;
+    _updates = repository is DocumentContentUpdates
+        ? (repository as DocumentContentUpdates).changes.listen((_) {
+            if (!_saving && _saveError == null) unawaited(_refresh());
+          })
+        : null;
+  }
+
+  Future<void> _refresh() async {
+    final revision = _contentRevision;
+    final generation = ++_loadGeneration;
+    try {
+      final content = await widget.repository.load(widget.identity);
+      if (!mounted ||
+          _saving ||
+          revision != _contentRevision ||
+          generation != _loadGeneration)
+        return;
+      setState(() {
+        _content = content;
+        _hasLoaded = true;
+      });
+    } catch (_) {
+      // Keep the displayed document while automatic recovery retries.
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_updates?.cancel());
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    _listen();
     unawaited(_load());
   }
 
@@ -60,6 +98,7 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.identity != widget.identity ||
         oldWidget.repository != widget.repository) {
+      _listen();
       unawaited(_load());
     }
   }
@@ -94,6 +133,7 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
 
   Future<void> _save(DocumentContent content) {
     final revision = ++_contentRevision;
+    _saving = true;
     setState(() {
       _content = content;
       _saveError = null;
@@ -112,7 +152,9 @@ class _DocumentReaderHostState extends State<DocumentReaderHost> {
         .catchError((Object error) {
           if (mounted) setState(() => _saveError = error);
         });
-    _saveChain = save;
+    _saveChain = save.whenComplete(() {
+      if (revision == _contentRevision) _saving = false;
+    });
     return save;
   }
 
