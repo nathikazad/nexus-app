@@ -104,3 +104,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Use the shared compatibility fork; upstream advertises a missing macOS plugin.
+dependency_overrides:
+  flutter_sound:
+    path: ../third_party/flutter_sound
