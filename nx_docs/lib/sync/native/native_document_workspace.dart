@@ -61,7 +61,7 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
   @override
   Future<void> refreshCatalog(CatalogQuery query) {
     if (_closed) return Future<void>.value();
-    return syncLibrary();
+    return _catalogs[query]?.refresh() ?? Future<void>.value();
   }
 
   @override
@@ -136,6 +136,12 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
 
   @override
   Future<void> uploadPending() => _uploader.uploadPending();
+
+  @override
+  Future<void> refreshVisible() => Future.wait([
+    for (final feed in _catalogs.values.toList()) feed.refresh(),
+    for (final session in _sessions.values.toList()) session.refresh(),
+  ]);
 
   @override
   Future<void> syncLibrary({
@@ -231,8 +237,16 @@ final class _NativeCatalogFeed {
     }
   }
 
-  Future<void> refresh() {
-    return Future<void>.value();
+  Future<void> refresh() async {
+    if (_closed) return;
+    final items = await remoteApi.fetchCatalog(query);
+    if (_closed) return;
+    // Summary replacement preserves pending local edits and never deletes bodies.
+    await _localStore.replaceCatalog(query, items);
+    if (_closed) return;
+    final visible = query.persistsMembership
+        ? await _localStore.readCatalog(query) : items;
+    _emit(CatalogState(items: visible, isInitialLoading: false));
   }
 
   void _emit(CatalogState next) {

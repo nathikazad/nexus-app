@@ -1,12 +1,11 @@
+import 'package:nx_db/app_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_books/core/theme/app_theme.dart';
 import 'package:nx_books/router.dart';
 import 'package:nx_books/settings/books_preferences.dart';
 import 'package:nx_books/data/providers.dart';
-import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_db/auth.dart';
-import 'package:nx_db/app_sync.dart' as sync;
 import 'companion/reading_route.dart';
 
 class NexusBooksApp extends ConsumerWidget {
@@ -17,13 +16,8 @@ class NexusBooksApp extends ConsumerWidget {
     final darkMode = ref.watch(booksDarkModeProvider);
     final router = ref.watch(routerProvider);
     final user = ref.watch(authProvider).value;
-    return AppSyncLifecycle(
-      synchronize: ref.watch(booksLifecycleSyncProvider),
-      onlineChanges: ref.watch(booksOnlineChangesProvider),
-      remoteChanges: ref.watch(sync.appSyncChangesProvider('books')),
-      checkInterval: sync.appStateSyncEnabled
-          ? const Duration(seconds: 30)
-          : null,
+    return AppDataHost(
+      session: ref.watch(booksDataSessionProvider),
       child: MaterialApp.router(
         key: ValueKey<bool>(darkMode),
         title: 'Nexus Books',

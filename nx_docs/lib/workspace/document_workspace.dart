@@ -9,6 +9,8 @@ abstract interface class DocumentWorkspace {
 
   Future<void> refreshCatalog(CatalogQuery query);
 
+  Future<void> refreshVisible();
+
   DocumentSession openDocument(int documentId);
 
   /// Requests fresh remote state for a user-visible document.

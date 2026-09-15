@@ -1,3 +1,4 @@
+import 'package:nx_db/app_session.dart';
 import 'book/app_document_repository.dart';
 import 'package:nx_db/app_reads.dart';
 import 'dart:async';
@@ -22,7 +23,6 @@ import 'package:nx_books/data/offline/cached_document_repository.dart';
 import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/domain/book/book_repository.dart';
 import 'package:nx_db/auth.dart';
-import 'package:nx_db/app_sync.dart' as app_sync;
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_documents/nx_documents.dart';
 
@@ -222,22 +222,13 @@ final booksLibrarySyncProvider =
       return sync;
     });
 
-final booksLifecycleSyncProvider = Provider<offline.AppSynchronize?>((ref) {
-  if (!offline.AppDataPolicy.current.storesOfflineData) {
-    if (!app_sync.appStateSyncEnabled || ref.watch(authProvider).value == null)
-      return null;
-    final client = app_sync.AppSyncClient(
-      ref.watch(graphqlClientProvider),
-      'books',
-    );
-    final refresh = ref.watch(refreshBookCatalogProvider);
-    return (_) => client.refreshIfChanged(
-      refresh,
-      invalidate: ref.read(appReadsProvider('books'))?.invalidateChanges,
-    );
-  }
-  final sync = ref.watch(booksLibrarySyncProvider);
-  return sync?.requestFull;
+final booksDataSessionProvider = Provider<AppDataSession?>((ref) {
+  final library = ref.watch(booksLibrarySyncProvider);
+  return createAppSession(ref,
+    definition: AppDataDefinition(name: 'books', refreshVisible: ref.watch(refreshBookCatalogProvider)),
+    offline: library == null ? null : offline.PersistentSyncBackend(library.requestFull),
+    onlineChanges: ref.watch(booksOnlineChangesProvider),
+  );
 });
 
 final booksSyncStatusProvider = StreamProvider<offline.SyncStatus>((

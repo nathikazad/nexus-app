@@ -155,6 +155,9 @@ final class FakeDocumentWorkspace implements DocumentWorkspace {
   }
 
   @override
+  Future<void> refreshVisible() => syncLibrary();
+
+  @override
   Future<void> syncLibrary({
     offline.SyncReason reason = offline.SyncReason.manual,
   }) async {

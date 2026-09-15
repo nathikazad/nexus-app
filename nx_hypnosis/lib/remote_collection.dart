@@ -75,6 +75,12 @@ class RemoteCollection extends HypnosisCollection {
   Future<void> refresh({SyncReason reason = SyncReason.manual}) =>
       synchronizer.requestFull(reason);
 
+  Future<void> refreshVisible() => _serialize(() async {
+    final response = await client.get(endpoint('/apps/hypnosis/initial'))
+        .timeout(const Duration(seconds: 30));
+    await _persist(response.statusCode, response.body);
+  });
+
   Future<void> _persist(int status, String body) async {
     // Validate the entire response before replacing either the cache or the UI.
     final parsed = _decode(status, body);

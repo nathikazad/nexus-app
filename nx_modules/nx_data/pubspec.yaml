@@ -4,6 +4,8 @@ version: 0.1.0
 environment:
   sdk: ^3.9.2
 dependencies:
+  nx_sync:
+    path: ../nx_sync
   flutter:
     sdk: flutter
 dev_dependencies:

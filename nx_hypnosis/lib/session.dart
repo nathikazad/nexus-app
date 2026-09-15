@@ -1,3 +1,5 @@
+import 'package:nx_db/app_session.dart';
+import 'package:nx_data/nx_data.dart';
 import 'cached_session.dart';
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -10,6 +12,25 @@ import 'app.dart';
 import 'remote_collection.dart';
 import 'package:nx_db/nx_db.dart' as db;
 import 'package:nx_db/app_sync.dart' as sync;
+
+final hypnosisDataSessionProvider = Provider.autoDispose
+    .family<AppDataSession?, RemoteCollection>((ref, data) {
+      return createAppSession(
+        ref,
+        definition: AppDataDefinition(
+          name: 'hypnosis',
+          refreshVisible: data.refreshVisible,
+        ),
+        offline: PersistentSyncBackend(
+          (reason) => data.refresh(reason: reason),
+        ),
+        onlineChanges: AppDataPolicy.current.storesOfflineData
+            ? Connectivity().onConnectivityChanged.map(
+                (values) => !values.contains(ConnectivityResult.none),
+              )
+            : null,
+      );
+    });
 
 class HypnosisSession extends ConsumerWidget {
   const HypnosisSession({super.key});
@@ -97,23 +118,6 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
             ).key,
           ),
   );
-  late final onlineChanges = Connectivity().onConnectivityChanged.map(
-    (values) => !values.contains(ConnectivityResult.none),
-  );
-  // Keep one callback identity across rebuilds so lifecycle sync is not retriggered.
-  // ignore: prefer_function_declarations_over_variables
-  late final AppSynchronize synchronize = AppDataPolicy.current.select(
-    native: () =>
-        (reason) => data.refresh(reason: reason),
-    web: () =>
-        (reason) => sync.appStateSyncEnabled
-        ? sync.AppSyncClient.forOwner(
-            this,
-            ref.read(db.graphqlClientProvider),
-            'hypnosis',
-          ).refreshIfChanged(() => data.refresh(reason: reason))
-        : data.refresh(reason: reason),
-  );
   late Future<void> loading = data.initialize().then((_) {
     _loaded = true;
   });
@@ -141,15 +145,8 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done &&
           !snapshot.hasError) {
-        return AppSyncLifecycle(
-          synchronize: synchronize,
-          onlineChanges: !AppDataPolicy.current.storesOfflineData
-              ? null
-              : onlineChanges,
-          remoteChanges: ref.watch(sync.appSyncChangesProvider('hypnosis')),
-          checkInterval: sync.appStateSyncEnabled
-              ? const Duration(seconds: 30)
-              : null,
+        return AppDataHost(
+          session: ref.watch(hypnosisDataSessionProvider(data)),
           child: HypnosisApp(
             collection: data,
             onLogout: () async {

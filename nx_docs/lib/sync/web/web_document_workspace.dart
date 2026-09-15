@@ -89,6 +89,11 @@ final class WebDocumentWorkspace implements DocumentWorkspace {
     offline.SyncReason reason = offline.SyncReason.manual,
   }) {
     if (reason == offline.SyncReason.manual) _remoteApi.invalidateReads();
+    return refreshVisible();
+  }
+
+  @override
+  Future<void> refreshVisible() {
     return Future.wait(<Future<void>>[
       _refreshVisibleCatalogs(),
       for (final session in _sessions.values.toList()) session.refresh(),

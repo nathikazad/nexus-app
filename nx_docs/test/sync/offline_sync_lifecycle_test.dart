@@ -1,3 +1,4 @@
+import 'package:nx_db/app_session.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/app_sync.dart';
 import 'dart:async';
@@ -50,9 +51,12 @@ void main() {
         overrides: [
           authProvider.overrideWith(() => _SignedOut()),
           appSyncChangesProvider('docs').overrideWithValue(null),
-          offlineLifecycleSyncProvider.overrideWithValue(
-            (reason) async => reasons.add(reason),
-          ),
+          docsDataSessionProvider.overrideWithValue(AppDataSession(
+            definition: AppDataDefinition(name: 'docs', refreshVisible: () async {}),
+            checkFreshness: (refresh) => refresh(),
+            offline: PersistentSyncBackend((reason) async => reasons.add(reason)),
+            onlineChanges: connectivity.stream,
+          )),
           offlineConnectivityChangesProvider.overrideWithValue(
             connectivity.stream,
           ),

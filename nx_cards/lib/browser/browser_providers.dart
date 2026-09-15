@@ -1,3 +1,4 @@
+import 'package:nx_db/app_session.dart';
 import 'package:nx_cards/sync/native/local_cards_store.dart';
 import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
 import 'package:nx_db/app_reads.dart';
@@ -14,7 +15,6 @@ import 'package:nx_cards/sync/native/native_card_library.dart';
 import 'package:nx_cards/sync/remote/remote_card_library.dart';
 import 'package:nx_cards/sync/sync_providers.dart';
 import 'package:nx_db/nx_db.dart';
-import 'package:nx_db/app_sync.dart' as sync;
 import 'package:nx_offline/nx_offline.dart' as offline;
 
 final kgqlCardApiProvider = Provider<CardLibrary?>((ref) {
@@ -103,23 +103,55 @@ final cardsFullSyncProvider = Provider<CardsFullSync>((ref) {
   };
 });
 
-final cardsLifecycleSyncProvider = Provider<offline.AppSynchronize?>((ref) {
-  if (!ref.watch(cardsOfflineEnabledProvider)) {
-    if (!sync.appStateSyncEnabled || ref.watch(authProvider).value == null)
-      return null;
-    final client = sync.AppSyncClient(
-      ref.watch(graphqlClientProvider),
-      'cards',
-    );
-    return (_) => client.refreshIfChanged(() async {
-      invalidateCardsData(ref, invalidateCache: false);
-      await ref.read(cardsSourcesProvider.future);
-    }, invalidate: ref.read(appReadsProvider('cards'))?.invalidateChanges);
-  }
+// Active view queries belong to Cards; lifecycle and persistence belong to nx_data.
+final _visibleCollectionsProvider = Provider(
+  (ref) => <({String? language, int? bookId})>{},
+);
+
+final cardsDataSessionProvider = Provider<AppDataSession?>((ref) {
   final synchronizer = ref.watch(cardLibrarySynchronizerProvider);
-  if (synchronizer == null) return null;
-  return (reason) => synchronizer.syncLibrary(reason: reason);
+  final reader = ref.watch(appReadsProvider('cards'));
+  return createAppSession(
+    ref,
+    definition: AppDataDefinition(
+      name: 'cards',
+      refreshVisible: () async {
+        if (reader == null) return;
+        await reader.read('initial');
+        for (final source in ref.read(_visibleCollectionsProvider).toList()) {
+          await _refreshCardCollection(ref, source);
+        }
+        if (ref.mounted) invalidateCardsData(ref, invalidateCache: false);
+      },
+    ),
+    offline: synchronizer == null
+        ? null
+        : offline.PersistentSyncBackend(
+            (reason) => synchronizer.syncLibrary(reason: reason),
+          ),
+    onlineChanges: ref.watch(cardsConnectivityChangesProvider),
+  );
 });
+
+Future<List<StudyCard>> _refreshCardCollection(
+  Ref ref,
+  ({String? language, int? bookId}) source,
+) async {
+  final reader = ref.read(appReadsProvider('cards'));
+  if (reader == null) return [];
+  final local = ref.read(localCardsStoreProvider);
+  final hashStore = local is HashCardsStore ? local as HashCardsStore : null;
+  final generation = hashStore?.editGeneration;
+  final cards = await KgqlCardApi.readCollection(reader, {
+    if (source.language != null) 'tag_system': 'Language',
+    if (source.language != null) 'tag': source.language!,
+    if (source.bookId != null) 'book_id': '${source.bookId}',
+  });
+  await hashStore?.applyCardBatch([
+    for (final card in cards) HashedCard(card, ''),
+  ], expectedGeneration: generation);
+  return cards;
+}
 
 void invalidateCardsData(Ref ref, {bool invalidateCache = true}) {
   if (invalidateCache && ref.exists(appReadsProvider('cards'))) {
@@ -154,34 +186,27 @@ Future<StudyCard> hydrateStudyCard(WidgetRef ref, StudyCard card) async {
 }
 
 final cardsSourcesProvider = StreamProvider<List<LibrarySource>>((ref) async* {
-  if (ref.watch(cardsOfflineEnabledProvider)) {
-    final workspace = ref.watch(cardWorkspaceProvider);
-    if (workspace == null) return;
-    final reader = ref.watch(appReadsProvider('cards'));
-    await for (final dashboard in workspace.watchDashboard()) {
-      if (dashboard.cards.isNotEmpty || reader == null) {
-        yield summarizeLibrary(dashboard);
-      } else {
-        try {
-          final response = await reader.read('initial');
-          yield [
-            for (final item in response['collections'] as List)
-              LibrarySource.fromJson(item as Map),
-          ];
-        } catch (_) {
-          rethrow;
-        }
-      }
-    }
-    return;
-  }
   final reader = ref.watch(appReadsProvider('cards'));
-  if (reader == null) return;
-  final response = await reader.read('initial');
-  yield [
-    for (final item in response['collections'] as List)
-      LibrarySource.fromJson(item as Map),
-  ];
+  final workspace = ref.watch(cardWorkspaceProvider);
+  if (ref.watch(cardsOfflineEnabledProvider) && workspace != null) {
+    final cached = await workspace.watchDashboard().first;
+    if (cached.cards.isNotEmpty) yield summarizeLibrary(cached);
+  }
+  if (reader != null) {
+    try {
+      final response = await reader.read('initial');
+      yield [
+        for (final item in response['collections'] as List)
+          LibrarySource.fromJson(item as Map),
+      ];
+      return;
+    } catch (_) {
+      if (!ref.read(cardsOfflineEnabledProvider)) rethrow;
+    }
+  }
+  if (workspace != null) {
+    yield* workspace.watchDashboard().map(summarizeLibrary);
+  }
 });
 
 /// Only the selected source is loaded on web. Native reads remain local.
@@ -190,37 +215,38 @@ final cardsCollectionProvider = StreamProvider.autoDispose
       ref,
       source,
     ) async* {
+      final observed = ref.read(_visibleCollectionsProvider);
+      observed.add(source);
+      ref.onDispose(() => observed.remove(source));
       if (ref.watch(cardsOfflineEnabledProvider)) {
         final workspace = ref.watch(cardWorkspaceProvider)!;
-        final local = ref.watch(localCardsStoreProvider)!;
-        final reader = ref.watch(appReadsProvider('cards'));
+        Set<int>? visibleIds;
         var attempted = false;
         await for (final dashboard in workspace.watchDashboard()) {
-          final selected = source.language != null
-              ? dashboard.cardsForLanguage(source.language!)
-              : source.bookId != null
-              ? dashboard.cardsForBook(source.bookId!)
-              : dashboard.cards;
-          if (selected.isEmpty && reader != null && !attempted) {
+          if (!attempted) {
             attempted = true;
+            yield dashboard;
             try {
-              final cards = await KgqlCardApi.readCollection(reader, {
-                if (source.language != null) 'tag_system': 'Language',
-                if (source.language != null) 'tag': source.language!,
-                if (source.bookId != null) 'book_id': '${source.bookId}',
-              });
-              // Merge individual entries, never publish a partial library manifest.
-              if (local is HashCardsStore) {
-                await (local as HashCardsStore).applyCardBatch([
-                  for (final card in cards) HashedCard(card, ''),
-                ]);
-              }
-              yield CardsDashboard(cards: cards);
+              final cards = await _refreshCardCollection(ref, source);
+              visibleIds = cards.map((card) => card.id).toSet();
+              // Re-read merged cards so pending local edits win over server data.
+              final local = ref.read(localCardsStoreProvider)!;
+              final merged = await Future.wait([
+                for (final card in cards)
+                  local.getCard(card.id).then((value) => value ?? card),
+              ]);
+              yield CardsDashboard(cards: merged);
             } catch (_) {
               yield dashboard;
             }
           } else {
-            yield dashboard;
+            yield visibleIds == null
+                ? dashboard
+                : CardsDashboard(
+                    cards: dashboard.cards
+                        .where((card) => visibleIds!.contains(card.id))
+                        .toList(),
+                  );
           }
         }
         return;

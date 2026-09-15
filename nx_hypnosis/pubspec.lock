@@ -743,7 +743,7 @@ packages:
     source: path
     version: "1.0.0"
   nx_data:
-    dependency: transitive
+    dependency: "direct main"
     description:
       path: "../nx_modules/nx_data"
       relative: true

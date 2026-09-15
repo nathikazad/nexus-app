@@ -18,3 +18,5 @@ export 'src/sync/hash_manifest.dart';
 export 'src/sync/download_report.dart';
 
 export 'src/sync/attachment_queue.dart';
+
+export 'src/session/sync_backend.dart';
