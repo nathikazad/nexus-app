@@ -31,7 +31,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
     final processing = dmap?['processing_status']?.toString();
     final cpName = _counterpartyNameFromPayload(p);
     final amount = num.tryParse(p['amount']?.toString().trim() ?? '');
-    final accountNames = ref.watch(tellerAccountNameByIdProvider);
+    final accountNames = const <String, String>{};
     final accountLabel = externalTransactionAccountLabel(row, accountNames);
     final sourceLabel = externalTransactionSourceLabel(row);
 

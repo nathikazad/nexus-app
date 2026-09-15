@@ -2,21 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:nx_db/auth.dart';
-import 'package:teller_connect/teller_connect.dart';
 
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
-import 'package:nx_expense/data/teller/teller_accounts_api.dart';
-import 'package:nx_expense/data/teller/teller_sync_api.dart';
 import 'package:nx_expense/data/teller/teller_timeline_api.dart';
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
-import 'package:nx_expense/features/suggestions/suggestion_review_page.dart';
-import 'package:nx_expense/features/suggestions/suggestion_state.dart';
 import 'teller_transaction_detail_page.dart';
 
 enum _TellerSortMode {
@@ -36,15 +30,11 @@ class TellerListScreen extends ConsumerStatefulWidget {
 }
 
 class _TellerListScreenState extends ConsumerState<TellerListScreen> {
-  bool _syncBusy = false;
-  bool _connectBusy = false;
   bool _pendingOnly = false;
   bool _deletedOnly = false;
   bool _unlinkedOnly = false;
   _TellerSortMode? _sortModeOverride;
   final _searchController = TextEditingController();
-
-  static const _tellerAppId = 'app_p4b539s05g9c22876m000';
 
   @override
   void dispose() {
@@ -52,237 +42,8 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     super.dispose();
   }
 
-  Future<void> _onSyncFromServer() async {
-    if (_syncBusy) return;
-    final base = ref.read(imageBaseUrlProvider);
-    final uid = ref.read(userIdProvider);
-    if (base == null || base.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Image / MCP HTTP URL is not configured.'),
-          ),
-        );
-      }
-      return;
-    }
-    if (uid == null || uid.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Not signed in.')));
-      }
-      return;
-    }
-    setState(() => _syncBusy = true);
-    try {
-      final result = await postBofaSync(
-        imageBaseUrl: base,
-        userId: uid,
-        httpClient: ref.read(nexusHttpClientProvider),
-      );
-      ref.invalidate(tellerTransactionsProvider);
-      await ref.read(tellerTransactionsProvider.future);
-      if (mounted) {
-        final counts = result.counts;
-        final inserted = counts['new'] ?? 0;
-        final changed = counts['changed'] ?? 0;
-        final removed = counts['removed'] ?? 0;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'BofA sync complete: $inserted new, $changed changed, $removed removed.',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('BofA sync failed: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _syncBusy = false);
-    }
-  }
-
-  Future<void> _saveTellerEnrollment(TellerData enrollment) async {
-    if (_connectBusy) return;
-    final base = ref.read(imageBaseUrlProvider);
-    final uid = ref.read(userIdProvider);
-    if (base == null || base.isEmpty || uid == null || uid.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Not signed in or HTTP URL missing.')),
-        );
-      }
-      return;
-    }
-
-    setState(() => _connectBusy = true);
-    try {
-      await registerTellerEnrollment(
-        imageBaseUrl: base,
-        userId: uid,
-        enrollment: enrollment,
-        httpClient: ref.read(nexusHttpClientProvider),
-      );
-      ref.invalidate(tellerAccountsProvider);
-      await ref.read(tellerAccountsProvider.future);
-      await _onSyncFromServer();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bank account connected.')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Teller connect failed: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _connectBusy = false);
-    }
-  }
-
-  void _openTellerConnect() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TellerConnect(
-          config: const TellerConfig(
-            appId: _tellerAppId,
-            environment: TellerEnvironment.development,
-          ),
-          onEnrollment: (enrollment) {
-            Navigator.of(context).pop();
-            _saveTellerEnrollment(enrollment);
-          },
-          onExit: () => Navigator.of(context).pop(),
-        ),
-      ),
-    );
-  }
-
-  void _showTellerAccountsSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final accountsAsync = ref.watch(tellerAccountsProvider);
-            return SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Bank accounts',
-                            style: GoogleFonts.inter(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.slate900,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Refresh accounts',
-                          onPressed: () =>
-                              ref.invalidate(tellerAccountsProvider),
-                          icon: const Icon(
-                            Icons.refresh,
-                            size: 20,
-                            color: AppColors.slate400,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    accountsAsync.when(
-                      loading: () => const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                      error: (e, _) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Text(
-                          '$e',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppColors.red600,
-                          ),
-                        ),
-                      ),
-                      data: (accounts) {
-                        if (accounts.isEmpty) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Text(
-                              'No bank accounts connected.',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppColors.slate500,
-                              ),
-                            ),
-                          );
-                        }
-                        return Flexible(
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: accounts.length,
-                            separatorBuilder: (_, _) =>
-                                const Divider(height: 1),
-                            itemBuilder: (_, index) =>
-                                _TellerAccountRow(account: accounts[index]),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    FilledButton.icon(
-                      onPressed: _connectBusy
-                          ? null
-                          : () {
-                              Navigator.of(sheetContext).pop();
-                              _openTellerConnect();
-                            },
-                      icon: _connectBusy
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.add, size: 18),
-                      label: Text(
-                        _connectBusy ? 'Connecting...' : 'Connect bank account',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final workspaceMode = ref.watch(externalWorkspaceModeProvider);
-    if (!isDesktopLayout(context) &&
-        workspaceMode == ExternalWorkspaceMode.review) {
-      return const SuggestionReviewScreen();
-    }
     final listAsync = ref.watch(tellerTransactionsInRangeProvider);
     final dateRange = ref.watch(expenseDateRangeProvider);
     final sortMode =
@@ -319,58 +80,9 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                       ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
-                  Expanded(child: Text('Ext', style: refAppBarTitleLarge())),
-                  Tooltip(
-                    message: 'Bank accounts',
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                      onPressed: _connectBusy ? null : _showTellerAccountsSheet,
-                      icon: _connectBusy
-                          ? SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.teal600,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.account_balance_outlined,
-                              color: AppColors.slate400,
-                              size: 22,
-                            ),
-                    ),
+                  Expanded(
+                    child: Text('Transactions', style: refAppBarTitleLarge()),
                   ),
-                  if (isDesktopLayout(context))
-                    Tooltip(
-                      message: 'Fetch from BofA (server sync)',
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 40,
-                          minHeight: 40,
-                        ),
-                        onPressed: _syncBusy ? null : _onSyncFromServer,
-                        icon: _syncBusy
-                            ? SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.teal600,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.refresh,
-                                color: AppColors.slate400,
-                                size: 22,
-                              ),
-                      ),
-                    ),
                   const ExpenseDateRangeCalendarButton(),
                   const SizedBox(width: 4),
                   const ExpenseAppMenuButton(),
@@ -379,10 +91,6 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
             ),
           ),
           const ExpenseDateRangeBar(bottomPadding: 12),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(RefLayout.px5, 0, RefLayout.px5, 12),
-            child: ExternalModeControl(compact: true),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               RefLayout.px5,
@@ -485,7 +193,10 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
             child: ColoredBox(
               color: AppColors.slate50.withValues(alpha: 0.5),
               child: RefreshIndicator(
-                onRefresh: _onSyncFromServer,
+                onRefresh: () async {
+                  ref.invalidate(tellerTransactionsProvider);
+                  await ref.read(tellerTransactionsProvider.future);
+                },
                 color: AppColors.teal600,
                 child: listAsync.when(
                   loading: () => ListView(
@@ -606,7 +317,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
     WidgetRef ref,
     List<TellerTransactionRow> rows,
   ) {
-    final accountNames = ref.watch(tellerAccountNameByIdProvider);
+    final accountNames = const <String, String>{};
     final items = <Widget>[];
     String? lastDate;
     for (final r in rows) {
@@ -654,7 +365,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
   }
 
   List<Widget> _buildFlatItems(WidgetRef ref, List<TellerTransactionRow> rows) {
-    final accountNames = ref.watch(tellerAccountNameByIdProvider);
+    final accountNames = const <String, String>{};
     return [
       for (final r in rows)
         Padding(
@@ -853,76 +564,6 @@ class _TellerSortButton extends StatelessWidget {
           ),
           if (selected)
             const Icon(Icons.check_rounded, size: 18, color: AppColors.teal600),
-        ],
-      ),
-    );
-  }
-}
-
-class _TellerAccountRow extends StatelessWidget {
-  const _TellerAccountRow({required this.account});
-
-  final TellerLinkedAccount account;
-
-  @override
-  Widget build(BuildContext context) {
-    final detail = account.detailLine;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.slate100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.account_balance_outlined,
-              size: 19,
-              color: AppColors.slate500,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  account.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.slate900,
-                  ),
-                ),
-                if (detail.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    detail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (!account.enabled)
-            Text(
-              'Off',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.slate400,
-              ),
-            ),
         ],
       ),
     );

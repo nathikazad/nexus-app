@@ -57,6 +57,7 @@ void main() {
       if (request is http.MultipartRequest) {
         expect(request.headers['x-user-id'], isNull);
         expect(request.fields['text'], isNotEmpty);
+        expect(request.fields.containsKey('x_sync_enabled'), isFalse);
         expect(request.fields['categories'], isNotNull);
       }
       return http.Response(
@@ -68,7 +69,6 @@ void main() {
             'status': 'succeeded',
             'last_error': null,
           },
-          'x_sync': {'enabled': false, 'status': 'skipped'},
           'warnings': [],
         }),
         200,
@@ -87,7 +87,6 @@ void main() {
       images: const [],
       categories: const ['Activity'],
       publishEnabled: true,
-      xSyncEnabled: true,
     );
     await repository.updateMicroblog(
       id: 4627,
@@ -111,48 +110,6 @@ void main() {
       '/microblogs/4627',
       '/microblogs/4627',
     ]);
-  });
-
-  test('microblog repository reports saved post X sync failures', () async {
-    final client = _RecordingClient(
-      (_) async => http.Response(
-        jsonEncode({
-          'ok': true,
-          'microblog_id': 4627,
-          'x_sync': {
-            'enabled': true,
-            'status': 'manual_action_required',
-            'last_error': 'X requires verification',
-          },
-          'warnings': ['X requires verification'],
-        }),
-        200,
-      ),
-    );
-    final repository = MicroblogPostRepository(
-      'http://mcp.local',
-      graphqlClient: Object(),
-      client: client,
-    );
-
-    expect(
-      () => repository.createMicroblog(
-        text: 'hello',
-        postedAt: DateTime.utc(2026, 7, 9),
-        mediaUrl: '',
-        images: const [],
-        categories: const [],
-        publishEnabled: true,
-        xSyncEnabled: true,
-      ),
-      throwsA(
-        isA<XSyncException>().having(
-          (error) => error.message,
-          'message',
-          'X requires verification',
-        ),
-      ),
-    );
   });
 
   testWidgets('renders feed shell and opens compose sheet', (tester) async {
@@ -182,6 +139,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('New microblog'), findsOneWidget);
+    expect(find.text('Post to X'), findsNothing);
+    expect(find.text('Publish to mirror'), findsOneWidget);
     expect(find.text('Save microblog'), findsOneWidget);
   });
 }

@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/domain/teller/teller_transaction.dart';
 import 'package:nx_expense/features/teller/teller_transaction_detail_page.dart';
 
 Widget _wrapWithProviderScope(GoRouter router) {
-  return ProviderScope(
-    overrides: [tellerAccountNameByIdProvider.overrideWith((ref) => const {})],
-    child: MaterialApp.router(routerConfig: router),
-  );
+  return ProviderScope(child: MaterialApp.router(routerConfig: router));
 }
 
 void main() {

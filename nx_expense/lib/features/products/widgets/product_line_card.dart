@@ -6,7 +6,7 @@ import 'package:nx_db/auth.dart';
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
-import 'package:nx_expense/data/suggestion/suggestion_api.dart';
+import 'package:nx_expense/data/product/product_asset_url.dart';
 
 class ProductLineCard extends StatelessWidget {
   const ProductLineCard({
@@ -182,7 +182,7 @@ class ProductThumbnail extends ConsumerWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Image.network(
-        resolveSuggestionAssetUrl(base, path),
+        resolveProductAssetUrl(base, path),
         headers: headers,
         width: size,
         height: size,

@@ -1561,15 +1561,6 @@ class ComposeSheet extends StatefulWidget {
   State<ComposeSheet> createState() => _ComposeSheetState();
 }
 
-class XSyncException implements Exception {
-  const XSyncException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
 class _ComposeSheetState extends State<ComposeSheet> {
   final _textController = TextEditingController();
   final _mediaController = TextEditingController();
@@ -1580,7 +1571,6 @@ class _ComposeSheetState extends State<ComposeSheet> {
   final Set<String> _selectedCategories = {};
   DateTime _postedAt = DateTime.now();
   bool _publishEnabled = true;
-  bool _xSyncEnabled = true;
   bool _saving = false;
   String _savingLabel = 'Saving...';
 
@@ -1749,19 +1739,6 @@ class _ComposeSheetState extends State<ComposeSheet> {
                   ? null
                   : (value) => setState(() => _publishEnabled = value),
             ),
-            if (!_isEditing)
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _xSyncEnabled,
-                activeThumbColor: const Color(0xff18181b),
-                title: const Text('Post to X'),
-                subtitle: const Text(
-                  'Uses the private Pi Firefox session after saving.',
-                ),
-                onChanged: _saving
-                    ? null
-                    : (value) => setState(() => _xSyncEnabled = value),
-              ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -1848,7 +1825,6 @@ class _ComposeSheetState extends State<ComposeSheet> {
           images: _selectedImages,
           categories: normalizedTags(_selectedCategories),
           publishEnabled: _publishEnabled,
-          xSyncEnabled: _xSyncEnabled,
         );
       } else {
         await widget.repository.updateMicroblog(
@@ -1875,13 +1851,6 @@ class _ComposeSheetState extends State<ComposeSheet> {
       );
     } catch (error) {
       if (!mounted) return;
-      if (error is XSyncException) {
-        Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Microblog saved, but X sync failed: $error')),
-        );
-        return;
-      }
       logNxPost(
         '${_isEditing ? 'edit' : 'create'} microblog failed error=$error',
       );
@@ -2424,9 +2393,8 @@ class MicroblogPostRepository {
     required List<SelectedPostImage> images,
     required List<String> categories,
     required bool publishEnabled,
-    required bool xSyncEnabled,
   }) async {
-    logNxPost('creating microblog publish=$publishEnabled xSync=$xSyncEnabled');
+    logNxPost('creating microblog publish=$publishEnabled');
     final cleanText = text.trim();
     final cleanCategories = normalizedTags(categories);
     final payload = await submitMicroblogMultipart(
@@ -2438,7 +2406,6 @@ class MicroblogPostRepository {
       images: images,
       categories: cleanCategories,
       publishEnabled: publishEnabled,
-      xSyncEnabled: xSyncEnabled,
     );
     logNxPost('create microblog complete body=${jsonEncode(payload)}');
   }
@@ -2479,7 +2446,6 @@ class MicroblogPostRepository {
     required List<SelectedPostImage> images,
     required List<String> categories,
     required bool publishEnabled,
-    bool xSyncEnabled = false,
     List<Map<String, dynamic>> existingMedia = const [],
   }) async {
     final request =
@@ -2488,7 +2454,6 @@ class MicroblogPostRepository {
           ..fields['text'] = text
           ..fields['posted_at'] = postedAt.toUtc().toIso8601String()
           ..fields['publish_enabled'] = '$publishEnabled'
-          ..fields['x_sync_enabled'] = '$xSyncEnabled'
           ..fields['categories'] = jsonEncode(normalizedTags(categories))
           ..fields['media_url'] = mediaUrl.trim();
     if (existingMedia.isNotEmpty) {
@@ -2511,16 +2476,6 @@ class MicroblogPostRepository {
     final payload = jsonDecode(response.body);
     if (payload is! Map<String, dynamic> || payload['ok'] != true) {
       throw StateError('Invalid microblog response');
-    }
-    final xSync = payload['x_sync'];
-    if (xSync is Map) {
-      final status = xSync['status']?.toString();
-      if (status == 'failed' || status == 'manual_action_required') {
-        final message = xSync['last_error']?.toString();
-        throw XSyncException(
-          message == null || message.isEmpty ? 'X sync failed' : message,
-        );
-      }
     }
     final warnings = payload['warnings'];
     if (warnings is List && warnings.isNotEmpty) {
