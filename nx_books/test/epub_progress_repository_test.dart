@@ -31,6 +31,23 @@ Map<String, dynamic> position(int n) => {
 };
 
 void main() {
+  test('web progress goes to the server without a persistent outbox', () async {
+    SharedPreferences.setMockInitialValues({});
+    final remote = Remote();
+    final repository = EpubProgressRepository(
+      account: 'web',
+      remote: remote,
+      persistData: false,
+    );
+    addTearDown(repository.dispose);
+    await repository.save(1, position(1));
+    expect(await repository.load(1), position(1));
+    await repository.flush();
+    expect((await SharedPreferences.getInstance()).getKeys(), isEmpty);
+    remote.offline = true;
+    await expectLater(repository.save(1, position(2)), throwsStateError);
+  });
+
   test('nested progress preserves every attachment metadata field', () {
     final file = {
       'link': '/books/book.epub',
@@ -54,17 +71,20 @@ void main() {
     expect(epubProgressAttribute, 'book_file');
   });
   setUp(() => SharedPreferences.setMockInitialValues({}));
-  test('source links use local preferences without a network request', () async {
-    final remote = Remote()..value = position(1);
-    final repo = EpubProgressRepository(account: 'a', remote: remote);
-    expect(await repo.load(1), position(1));
-    expect(remote.reads, 1);
-    remote.value = position(2);
-    expect(await repo.load(1, refreshRemote: false), position(1));
-    expect(await repo.load(2, refreshRemote: false), isNull);
-    expect(remote.reads, 1);
-    repo.dispose();
-  });
+  test(
+    'source links use local preferences without a network request',
+    () async {
+      final remote = Remote()..value = position(1);
+      final repo = EpubProgressRepository(account: 'a', remote: remote);
+      expect(await repo.load(1), position(1));
+      expect(remote.reads, 1);
+      remote.value = position(2);
+      expect(await repo.load(1, refreshRemote: false), position(1));
+      expect(await repo.load(2, refreshRemote: false), isNull);
+      expect(remote.reads, 1);
+      repo.dispose();
+    },
+  );
   test('offline progress survives reopening and syncs when online', () async {
     final remote = Remote()..offline = true;
     var repo = EpubProgressRepository(account: 'a', remote: remote);

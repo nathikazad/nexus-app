@@ -264,8 +264,13 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<List<NxDocument>> listRecent({int limit = 20}) async {
-    final rows = await _listAll();
-    return rows.take(limit).toList();
+    if (limit <= 0) return [];
+    final models = await _fetchDocumentsAndBooks({
+      'model_type': kDocumentModelTypeName,
+      'order_by': {'key': 'updated_at', 'direction': 'DESC'},
+      'limit': limit,
+    });
+    return _sortedDocumentSummaries(models).take(limit).toList();
   }
 
   @override
@@ -362,7 +367,12 @@ class KgqlDocumentRepository implements DocumentRepository {
     );
   }
 
-  Future<List<NxDocument>> _listAll() async {
+  Future<List<NxDocument>>? _allSummariesInFlight;
+
+  Future<List<NxDocument>> _listAll() => _allSummariesInFlight ??=
+      _fetchAllSummaries().whenComplete(() => _allSummariesInFlight = null);
+
+  Future<List<NxDocument>> _fetchAllSummaries() async {
     final models = await _fetchDocumentsAndBooks({
       'model_type': kDocumentModelTypeName,
     });

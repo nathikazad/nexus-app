@@ -24,19 +24,24 @@ final libraryRefreshProvider = Provider<LibraryRefresh>((ref) {
   };
 });
 
-final offlineAllDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
-  return _watchDocuments(ref, const CatalogQuery.all());
-});
+final offlineAllDocumentsProvider =
+    StreamProvider.autoDispose<List<NxDocument>>((ref) {
+      return _watchDocuments(ref, const CatalogQuery.all());
+    });
 
-final offlineRecentDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
-  return _watchDocuments(ref, const CatalogQuery.recent());
-});
+final offlineRecentDocumentsProvider =
+    StreamProvider.autoDispose<List<NxDocument>>((ref) {
+      return _watchDocuments(ref, const CatalogQuery.recent());
+    });
 
-final offlinePinnedDocumentsProvider = StreamProvider<List<NxDocument>>((ref) {
-  return _watchDocuments(ref, const CatalogQuery.pinned());
-});
+final offlinePinnedDocumentsProvider =
+    StreamProvider.autoDispose<List<NxDocument>>((ref) {
+      return _watchDocuments(ref, const CatalogQuery.pinned());
+    });
 
-final offlineBooksProvider = StreamProvider<List<NxDocument>>((ref) {
+final offlineBooksProvider = StreamProvider.autoDispose<List<NxDocument>>((
+  ref,
+) {
   return _watchDocuments(ref, const CatalogQuery.books());
 });
 
@@ -48,7 +53,9 @@ final offlineDocumentSearchProvider = StreamProvider.autoDispose
       return _watchDocuments(ref, CatalogQuery.search(searchText));
     });
 
-final offlineTagSystemsProvider = StreamProvider<List<TagSystem>>((ref) {
+final offlineTagSystemsProvider = StreamProvider.autoDispose<List<TagSystem>>((
+  ref,
+) {
   return _watchDocuments(
     ref,
     const CatalogQuery.all(),

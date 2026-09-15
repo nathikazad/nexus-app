@@ -1,3 +1,4 @@
+import 'package:nx_offline/nx_offline.dart' show AppDataPolicy;
 import 'package:nx_voice/background_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,9 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
-        retainAuthSessionWhenOfflineProvider.overrideWithValue(!kIsWeb),
+        retainAuthSessionWhenOfflineProvider.overrideWithValue(
+          AppDataPolicy.current.storesOfflineData,
+        ),
         nexusClientAppIdProvider.overrideWithValue(
           kIsWeb ? 'nx_hypnosis_web' : 'nx_hypnosis',
         ),

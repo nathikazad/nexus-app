@@ -10,6 +10,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test(
+    'web content ignores legacy offline data and does not persist reads or saves',
+    () async {
+      const identity = DocumentIdentity(id: 7, modelType: 'Book');
+      SharedPreferences.setMockInitialValues({
+        'nx_books.offline.user.document.Book.7': 'old cached body',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final before = {for (final key in prefs.getKeys()) key: prefs.get(key)};
+      final remote = _OnlineRemote();
+      final repository = CachedDocumentContentRepository(
+        remote: remote,
+        accountKey: 'user',
+        persistData: false,
+      );
+      final content = (await repository.load(identity))!;
+      expect(content.plainText, 'Server body');
+      await repository.save(content);
+      expect({for (final key in prefs.getKeys()) key: prefs.get(key)}, before);
+      remote.offline = true;
+      await expectLater(
+        repository.load(identity),
+        throwsA(isA<SocketException>()),
+      );
+    },
+  );
+
+  test(
     'legacy book content moves to a verified file and leaves preferences',
     () async {
       const identity = DocumentIdentity(id: 7, modelType: 'Book');
@@ -59,4 +86,22 @@ class _OfflineRemote implements DocumentContentRepository {
   @override
   Future<DocumentContent> save(DocumentContent content) async =>
       throw const SocketException('offline');
+}
+
+class _OnlineRemote implements DocumentContentRepository {
+  bool offline = false;
+  @override
+  Future<DocumentContent?> load(DocumentIdentity identity) async {
+    if (offline) throw const SocketException('offline');
+    return DocumentContent(
+      identity: identity,
+      title: 'Book',
+      plainText: 'Server body',
+      jsonDocument: const {},
+      updatedAt: DateTime.utc(2026),
+    );
+  }
+
+  @override
+  Future<DocumentContent> save(DocumentContent content) async => content;
 }

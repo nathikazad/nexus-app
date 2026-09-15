@@ -49,3 +49,23 @@ dart format --set-exit-if-changed lib test
 flutter test
 flutter analyze
 ```
+
+## Browser and installed app policy
+
+`AppDataPolicy.current` is the shared platform decision for Docs, Cards, Books,
+and Hypnosis. Installed apps retain account data and synchronize their offline
+library; browsers use remote repositories and do not hydrate a local library or
+prefetch its attachments. Use the lazy `select` branches when constructing stores
+or repositories so a browser never initializes a native store. Authentication
+storage and small UI preferences are separate from library persistence.
+
+Web views load independently of the app-state worker. The shared
+`nx_db.AppSyncClient.refreshIfChanged` refreshes those views when the server root
+changes; it does not download snapshots. Docs refreshes observed catalogs and
+open sessions, Books and Cards invalidate their visible data providers, and
+Hypnosis refreshes its ordinary collection endpoint. Native apps retain the
+manifest/snapshot path. Failed refreshes must not acknowledge a root.
+
+Books must not use the preferences cache as a web fallback: its web catalog uses
+the remote repository directly, and document content and EPUB position storage
+have persistence disabled. Browser HTTP caching of app assets is unaffected.

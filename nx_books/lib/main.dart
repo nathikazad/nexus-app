@@ -1,3 +1,4 @@
+import 'package:nx_offline/nx_offline.dart' show AppDataPolicy;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +15,9 @@ void main() {
         nexusClientAppIdProvider.overrideWithValue(
           kIsWeb ? 'nx_books_web' : 'nx_books',
         ),
-        retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
+        retainAuthSessionWhenOfflineProvider.overrideWithValue(
+          AppDataPolicy.current.storesOfflineData,
+        ),
       ],
       child: const NexusBooksApp(),
     ),

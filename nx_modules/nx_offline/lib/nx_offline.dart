@@ -2,6 +2,7 @@ library;
 
 export 'src/core/sync_models.dart';
 export 'src/flutter/offline_lifecycle.dart';
+export 'src/flutter/app_data_policy.dart';
 export 'src/outbox/outbox_processor.dart';
 export 'src/outbox/retry_scheduler.dart';
 export 'src/session/cached_session.dart';

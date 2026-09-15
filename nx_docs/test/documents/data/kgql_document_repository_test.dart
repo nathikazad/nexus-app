@@ -12,6 +12,30 @@ void main() {
   });
 
   test(
+    'recent lists request a server limit and omit document bodies',
+    () async {
+      final client = _MockGraphQLClient();
+      when(() => client.query(any())).thenAnswer((invocation) async {
+        final options = invocation.positionalArguments.single as QueryOptions;
+        final filter = options.variables['filter'] as Map;
+        expect(filter['limit'], 20);
+        expect(filter['order_by'], {'key': 'updated_at', 'direction': 'DESC'});
+        final struct = options.variables['struct'] as Map;
+        expect(struct.containsKey('document'), isFalse);
+        expect(struct.containsKey('json_document'), isFalse);
+        return _result({'getKgqlModels': <Object?>[]});
+      });
+      final repository = KgqlDocumentRepository(
+        client: client,
+        loadDocumentSchema: _unusedSchema,
+        loadDocumentSnapSchema: _unusedSchema,
+      );
+      expect(await repository.listRecent(), isEmpty);
+      verify(() => client.query(any())).called(2);
+    },
+  );
+
+  test(
     'general document listings are completed by a separate Book query',
     () async {
       final client = _MockGraphQLClient();

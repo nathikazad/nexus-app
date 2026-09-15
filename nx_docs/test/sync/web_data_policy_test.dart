@@ -1,3 +1,4 @@
+import 'package:nx_docs/library/models/catalog_query.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +12,34 @@ import 'package:nx_docs/documents/document_models.dart';
 import '../support/offline_fixtures.dart';
 
 void main() {
+  test(
+    'web refresh fetches only observed catalogs and stops after leaving',
+    () async {
+      final remote = FakeDocumentRemoteApi();
+      final workspace = WebDocumentWorkspace(remoteApi: remote);
+      addTearDown(workspace.close);
+      await workspace.syncLibrary();
+      expect(remote.catalogFetchCount, 0);
+      final loaded = Completer<void>();
+      final subscription = workspace
+          .watchCatalog(const CatalogQuery.recent())
+          .listen((state) {
+            if (!state.isInitialLoading && !loaded.isCompleted) {
+              loaded.complete();
+            }
+          });
+      await loaded.future;
+      expect(remote.catalogFetchCount, 1);
+      await workspace.syncLibrary();
+      expect(remote.catalogFetchCount, 2);
+      await subscription.cancel();
+      await workspace.syncLibrary();
+      expect(remote.catalogFetchCount, 2);
+      expect(remote.syncCount, 0);
+      expect(remote.documentFetchCounts, isEmpty);
+    },
+  );
+
   test(
     'web sync refreshes open documents but preserves a racing draft',
     () async {

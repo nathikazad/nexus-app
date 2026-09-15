@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:drift_flutter/drift_flutter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
@@ -25,7 +24,7 @@ import 'package:nx_docs/sync/remote/unavailable_document_remote_api.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:nx_offline/nx_offline_storage.dart';
 
-final offlineEnabledProvider = Provider<bool>((ref) => !kIsWeb);
+final offlineEnabledProvider = Provider<bool>((ref) => offline.AppDataPolicy.current.storesOfflineData);
 
 final offlineClockProvider = Provider<Clock>((ref) => const SystemClock());
 final offlineIdGeneratorProvider = Provider<IdGenerator>(

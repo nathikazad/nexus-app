@@ -12,11 +12,13 @@ final class CachedDocumentContentRepository
     required this.remote,
     required this.accountKey,
     this.library,
+    this.persistData = true,
   });
 
   final DocumentContentRepository remote;
   final String accountKey;
   final FileLibrary? library;
+  final bool persistData;
   Future<void>? _migration;
   final Map<DocumentIdentity, Future<DocumentContent?>> _downloads = {};
   int generation = 0;
@@ -102,6 +104,7 @@ final class CachedDocumentContentRepository
       (value) => value + 1,
       ifAbsent: () => 1,
     );
+    if (!persistData) return;
     final encoded = jsonEncode(<String, dynamic>{
       'title': content.title,
       'plainText': content.plainText,
@@ -211,6 +214,7 @@ final class CachedDocumentContentRepository
   }
 
   Future<DocumentContent?> _read(DocumentIdentity identity) async {
+    if (!persistData) return null;
     final storage = library;
     String? encoded = await storage?.read(identity.modelType, '${identity.id}');
     if (encoded == null) {

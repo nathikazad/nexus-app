@@ -1,6 +1,5 @@
 import 'cached_session.dart';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'offline_cache.dart';
@@ -79,14 +78,16 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
   late final data = RemoteCollection(
     widget.user,
     stateSession: () =>
-        sync.appStateSyncEnabled && ref.read(authProvider).value != null
+        AppDataPolicy.current.downloadsLibrary &&
+            sync.appStateSyncEnabled &&
+            ref.read(authProvider).value != null
         ? sync.AppSyncClient.forOwner(
             this,
             ref.read(db.graphqlClientProvider),
             'hypnosis',
           ).session
         : null,
-    cache: kIsWeb
+    cache: !AppDataPolicy.current.storesOfflineData
         ? null
         : HypnosisCache.application(
             AccountIdentity(
@@ -101,8 +102,18 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
   );
   // Keep one callback identity across rebuilds so lifecycle sync is not retriggered.
   // ignore: prefer_function_declarations_over_variables
-  late final OfflineSynchronize synchronize = (reason) =>
-      data.refresh(reason: reason);
+  late final OfflineSynchronize synchronize = AppDataPolicy.current.select(
+    native: () =>
+        (reason) => data.refresh(reason: reason),
+    web: () =>
+        (reason) => sync.appStateSyncEnabled
+        ? sync.AppSyncClient.forOwner(
+            this,
+            ref.read(db.graphqlClientProvider),
+            'hypnosis',
+          ).refreshIfChanged(() => data.refresh(reason: reason))
+        : data.refresh(reason: reason),
+  );
   late Future<void> loading = data.initialize().then((_) {
     _loaded = true;
   });
@@ -132,7 +143,9 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
           !snapshot.hasError) {
         return OfflineLifecycle(
           synchronize: synchronize,
-          onlineChanges: kIsWeb ? null : onlineChanges,
+          onlineChanges: !AppDataPolicy.current.storesOfflineData
+              ? null
+              : onlineChanges,
           remoteChanges: ref.watch(sync.appSyncChangesProvider('hypnosis')),
           checkInterval: sync.appStateSyncEnabled
               ? const Duration(seconds: 30)

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_auth/nx_auth.dart';
 import 'package:nx_offline/nx_offline.dart';
@@ -16,7 +15,7 @@ Future<PreferencesCachedSessionStore> hypnosisSessionStore() async =>
 final activeHypnosisUserProvider = FutureProvider<User?>((ref) async {
   final auth = ref.watch(authProvider);
   final user = auth.value;
-  if (kIsWeb) return user;
+  if (!AppDataPolicy.current.storesOfflineData) return user;
   final store = await hypnosisSessionStore();
   if (!ref.mounted) return null;
   if (user != null) {

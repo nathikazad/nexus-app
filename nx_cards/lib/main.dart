@@ -1,3 +1,4 @@
+import 'package:nx_offline/nx_offline.dart' show AppDataPolicy;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +18,9 @@ void main() {
         nexusClientAppIdProvider.overrideWithValue(
           kIsWeb ? 'nx_cards_web' : 'nx_cards',
         ),
-        retainAuthSessionWhenOfflineProvider.overrideWithValue(!kIsWeb),
+        retainAuthSessionWhenOfflineProvider.overrideWithValue(
+          AppDataPolicy.current.storesOfflineData,
+        ),
       ],
       child: const CardSyncLifecycle(child: NexusCardsApp()),
     ),

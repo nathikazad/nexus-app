@@ -67,7 +67,12 @@ class KgqlEpubProgressRemote implements EpubProgressRemote {
 /// Durable, account-scoped latest-value outbox. Does not involve document
 /// bodies or attachment downloads; remote failures never discard local progress.
 class EpubProgressRepository {
-  EpubProgressRepository({required this.account, required this.remote});
+  EpubProgressRepository({
+    required this.account,
+    required this.remote,
+    this.persistData = true,
+  });
+  final bool persistData;
   final String account;
   final EpubProgressRemote remote;
   Future<void> _writes = Future.value();
@@ -102,6 +107,7 @@ class EpubProgressRepository {
     bool refreshRemote = true,
   }) async {
     await _writes;
+    if (!persistData) return remote.load(id);
     final prefs = await SharedPreferences.getInstance();
     var entry = _decode(prefs.getString(_key(id)));
     // An unsent local position always wins over stale server data on reopen.
@@ -124,6 +130,11 @@ class EpubProgressRepository {
 
   Future<void> save(int id, Map<String, dynamic> value) {
     final snapshot = Map<String, dynamic>.from(value);
+    if (!persistData) {
+      final operation = _writes.then((_) => remote.save(id, snapshot));
+      _writes = operation.catchError((Object _) {});
+      return operation;
+    }
     final operation = _writes.then((_) async {
       await _put(await SharedPreferences.getInstance(), id, {
         'value': snapshot,
@@ -147,6 +158,7 @@ class EpubProgressRepository {
       _flushing ??= _flush().whenComplete(() => _flushing = null);
 
   Future<void> _flush() async {
+    if (!persistData) return _writes;
     await _writes;
     final prefs = await SharedPreferences.getInstance();
     try {

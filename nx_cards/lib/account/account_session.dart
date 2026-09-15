@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Native builds retain an account-scoped session for offline access.
-final cardsOfflineEnabledProvider = Provider<bool>((ref) => !kIsWeb);
+final cardsOfflineEnabledProvider = Provider<bool>((ref) => offline.AppDataPolicy.current.storesOfflineData);
 
 final activeCardsSessionProvider = FutureProvider<offline.CachedSession?>((
   ref,

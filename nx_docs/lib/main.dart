@@ -1,3 +1,4 @@
+import 'package:nx_offline/nx_offline.dart' show AppDataPolicy;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +24,9 @@ Future<void> main() async {
         nexusClientAppIdProvider.overrideWithValue(
           kIsWeb ? 'nx_docs_web' : 'nx_docs',
         ),
-        retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
+        retainAuthSessionWhenOfflineProvider.overrideWithValue(
+          AppDataPolicy.current.storesOfflineData,
+        ),
       ],
       child: const OfflineSyncLifecycle(child: NexusDocsApp()),
     ),

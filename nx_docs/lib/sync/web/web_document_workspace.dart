@@ -75,7 +75,8 @@ final class WebDocumentWorkspace implements DocumentWorkspace {
 
   Future<void> _refreshVisibleCatalogs() {
     return Future.wait(<Future<void>>[
-      for (final feed in _catalogs.values) feed.refresh(),
+      for (final feed in _catalogs.values)
+        if (feed.isObserved) feed.refresh(),
     ]);
   }
 
@@ -87,8 +88,7 @@ final class WebDocumentWorkspace implements DocumentWorkspace {
     offline.SyncReason reason = offline.SyncReason.manual,
   }) {
     return Future.wait(<Future<void>>[
-      for (final query in {...libraryCatalogQueries, ..._catalogs.keys})
-        refreshCatalog(query),
+      _refreshVisibleCatalogs(),
       for (final session in _sessions.values.toList()) session.refresh(),
     ]);
   }
@@ -116,17 +116,26 @@ final class _WebCatalogFeed {
       StreamController<CatalogState>.broadcast(sync: true);
   CatalogState _state = const CatalogState();
   Future<void>? _activeRefresh;
-  bool _started = false;
+  int _observers = 0;
+  bool get isObserved => _observers > 0;
   bool _closed = false;
 
-  Stream<CatalogState> watch() async* {
-    if (!_started) {
-      _started = true;
-      unawaited(refresh());
+  Stream<CatalogState> watch() => Stream<CatalogState>.multi((controller) {
+    _observers++;
+    final subscription = _states.stream.listen(
+      controller.addSync,
+      onError: controller.addErrorSync,
+      onDone: controller.closeSync,
+    );
+    controller.addSync(_state);
+    controller.onCancel = () async {
+      _observers--;
+      await subscription.cancel();
+    };
+    if (_observers == 1) {
+      unawaited(refresh().catchError((Object _) {}));
     }
-    yield _state;
-    yield* _states.stream;
-  }
+  });
 
   Future<void> refresh() {
     final active = _activeRefresh;
@@ -157,6 +166,7 @@ final class _WebCatalogFeed {
           error: error,
         ),
       );
+      rethrow;
     }
   }
 
