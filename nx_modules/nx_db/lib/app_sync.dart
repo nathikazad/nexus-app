@@ -37,6 +37,25 @@ final class AppSyncClient {
   final String app;
   late final AppSyncSession session;
   bool _unsupported = false;
+  String? _refreshedRoot;
+
+  /// Browser repositories refresh their existing views only when state changes.
+  /// A failed refresh never advances the locally applied root.
+  Future<void> refreshIfChanged(Future<void> Function() refresh) async {
+    final state = await _request('state', {});
+    if (state['status'] == 'unsupported') {
+      await refresh();
+      return;
+    }
+    if (state['status'] != 'ready' || state['projection_version'] != 1) {
+      throw StateError('Remote app state is not ready');
+    }
+    final root = state['root_hash'] as String;
+    if (root == _refreshedRoot) return;
+    await refresh();
+    _refreshedRoot = root;
+  }
+
   static final _instances = Expando<AppSyncClient>();
   static AppSyncClient forOwner(
     Object owner,

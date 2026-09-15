@@ -87,7 +87,9 @@ final class WebDocumentWorkspace implements DocumentWorkspace {
     offline.SyncReason reason = offline.SyncReason.manual,
   }) {
     return Future.wait(<Future<void>>[
-      for (final query in libraryCatalogQueries) refreshCatalog(query),
+      for (final query in {...libraryCatalogQueries, ..._catalogs.keys})
+        refreshCatalog(query),
+      for (final session in _sessions.values.toList()) session.refresh(),
     ]);
   }
 

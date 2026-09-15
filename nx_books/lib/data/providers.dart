@@ -21,6 +21,7 @@ import 'package:nx_books/data/offline/cached_document_repository.dart';
 import 'package:nx_books/domain/book/book.dart';
 import 'package:nx_books/domain/book/book_repository.dart';
 import 'package:nx_db/auth.dart';
+import 'package:nx_db/app_sync.dart' as app_sync;
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_documents/nx_documents.dart';
 
@@ -199,6 +200,16 @@ final booksLibrarySyncProvider =
     });
 
 final booksLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
+  if (kIsWeb) {
+    if (!app_sync.appStateSyncEnabled || ref.watch(authProvider).value == null)
+      return null;
+    final client = app_sync.AppSyncClient(
+      ref.watch(graphqlClientProvider),
+      'books',
+    );
+    final refresh = ref.watch(refreshBookCatalogProvider);
+    return (_) => client.refreshIfChanged(refresh);
+  }
   final sync = ref.watch(booksLibrarySyncProvider);
   return sync?.requestFull;
 });

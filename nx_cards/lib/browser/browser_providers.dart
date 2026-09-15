@@ -10,6 +10,7 @@ import 'package:nx_cards/sync/native/native_card_library.dart';
 import 'package:nx_cards/sync/remote/remote_card_library.dart';
 import 'package:nx_cards/sync/sync_providers.dart';
 import 'package:nx_db/nx_db.dart';
+import 'package:nx_db/app_sync.dart' as sync;
 import 'package:nx_offline/nx_offline.dart' as offline;
 
 final kgqlCardApiProvider = Provider<CardLibrary?>((ref) {
@@ -97,7 +98,18 @@ final cardsFullSyncProvider = Provider<CardsFullSync>((ref) {
 });
 
 final cardsLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((ref) {
-  if (!ref.watch(cardsOfflineEnabledProvider)) return null;
+  if (!ref.watch(cardsOfflineEnabledProvider)) {
+    if (!sync.appStateSyncEnabled || ref.watch(authProvider).value == null)
+      return null;
+    final client = sync.AppSyncClient(
+      ref.watch(graphqlClientProvider),
+      'cards',
+    );
+    return (_) => client.refreshIfChanged(() async {
+      invalidateCardsData(ref);
+      await ref.read(cardsDashboardProvider.future);
+    });
+  }
   final synchronizer = ref.watch(cardLibrarySynchronizerProvider);
   if (synchronizer == null) return null;
   return (reason) => synchronizer.syncLibrary(reason: reason);

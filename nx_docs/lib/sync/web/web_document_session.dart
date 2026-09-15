@@ -24,6 +24,7 @@ final class WebDocumentSession implements DocumentSession {
   DocumentSessionState _state = const DocumentSessionState();
   Future<void>? _activeRefresh;
   bool _closed = false;
+  int _draftGeneration = 0;
 
   @override
   DocumentSessionState get state => _state;
@@ -43,11 +44,17 @@ final class WebDocumentSession implements DocumentSession {
   }
 
   Future<void> _refresh() async {
-    if (_closed) return;
+    if (_closed || _state.uploadState != DocumentUploadState.clean) return;
+    final generation = _draftGeneration;
     _emit(_state.copyWith(isRefreshing: true, clearError: true));
     try {
       final document = await _remoteApi.fetchDocument(documentId);
       if (_closed) return;
+      if (generation != _draftGeneration ||
+          _state.uploadState != DocumentUploadState.clean) {
+        _emit(_state.copyWith(isRefreshing: false));
+        return;
+      }
       _emit(
         _state.copyWith(
           phase: document == null
@@ -77,6 +84,7 @@ final class WebDocumentSession implements DocumentSession {
 
   @override
   Future<void> saveDraft(NxDocument document) async {
+    _draftGeneration++;
     _emit(
       _state.copyWith(
         phase: DocumentPhase.ready,

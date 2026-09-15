@@ -10,7 +10,7 @@ import 'package:nx_live_agent/src/input/live_agent_input_controller.dart';
 import 'package:nx_live_agent/src/live_agent.dart';
 
 void initializeLiveAgentPlatform() {
-  FlutterForegroundTask.initCommunicationPort();
+  if (!kIsWeb) FlutterForegroundTask.initCommunicationPort();
 }
 
 final class OpenAiRealtimeTransport

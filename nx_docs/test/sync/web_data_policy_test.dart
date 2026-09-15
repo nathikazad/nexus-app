@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_docs/sync/web/web_document_workspace.dart';
@@ -10,6 +11,37 @@ import 'package:nx_docs/documents/document_models.dart';
 import '../support/offline_fixtures.dart';
 
 void main() {
+  test(
+    'web sync refreshes open documents but preserves a racing draft',
+    () async {
+      final remote = FakeDocumentRemoteApi(
+        documents: [offlineTestDocument(id: 4)],
+      );
+      final workspace = WebDocumentWorkspace(remoteApi: remote);
+      addTearDown(workspace.close);
+      final session = workspace.openDocument(4);
+      await session.refresh();
+      remote.replaceRemote(
+        offlineTestDocument(id: 4, title: 'From another device'),
+      );
+      await workspace.syncLibrary();
+      expect(session.state.document!.title, 'From another device');
+      final download = Completer<void>();
+      final upload = Completer<void>();
+      remote.documentBarrier = download.future;
+      remote.saveBarrier = upload.future;
+      final refresh = session.refresh();
+      final save = session.saveDraft(
+        offlineTestDocument(id: 4, title: 'My new draft'),
+      );
+      download.complete();
+      await refresh;
+      expect(session.state.document!.title, 'My new draft');
+      upload.complete();
+      await save;
+    },
+  );
+
   test('web composition creates no SQLite store or uploader', () {
     final remote = FakeDocumentRemoteApi(
       documents: <NxDocument>[offlineTestDocument()],

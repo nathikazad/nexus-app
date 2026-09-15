@@ -4,6 +4,8 @@ import 'package:nx_docs/sync/sync_providers.dart';
 import 'package:nx_docs/workspace/workspace_providers.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:nx_db/app_sync.dart' as sync;
+import 'package:nx_db/riverpod.dart';
+import 'package:nx_db/auth.dart';
 
 class OfflineSyncLifecycle extends ConsumerWidget {
   const OfflineSyncLifecycle({required this.child, super.key});
@@ -27,9 +29,15 @@ class OfflineSyncLifecycle extends ConsumerWidget {
 final offlineLifecycleSyncProvider = Provider<offline.OfflineSynchronize?>((
   ref,
 ) {
-  if (!ref.watch(offlineEnabledProvider)) return null;
+  if (ref.watch(authProvider).value == null) return null;
   final workspace = ref.watch(documentWorkspaceProvider);
   if (workspace == null) return null;
+  if (!ref.watch(offlineEnabledProvider)) {
+    if (!sync.appStateSyncEnabled) return null;
+    final client = sync.AppSyncClient(ref.watch(graphqlClientProvider), 'docs');
+    return (reason) =>
+        client.refreshIfChanged(() => workspace.syncLibrary(reason: reason));
+  }
   return (reason) => workspace.syncLibrary(reason: reason);
 });
 
