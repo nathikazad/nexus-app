@@ -26,10 +26,11 @@ final imageBaseUrlProvider = Provider<String?>((ref) {
 
 final nexusHttpClientProvider = Provider<NexusAuthenticatedClient?>((ref) {
   final user = ref.watch(authProvider).value;
-  if (user == null) return null;
+  if (user == null || user.domainId == null) return null;
   final client = NexusAuthenticatedClient(
     preset: user.preset,
     userId: user.userId,
+    domainId: user.requiredDomainId,
   );
   ref.onDispose(client.close);
   return client;
@@ -40,18 +41,30 @@ final nexusHttpClientProvider = Provider<NexusAuthenticatedClient?>((ref) {
 final nexusRequestHeadersProvider = FutureProvider<Map<String, String>>((ref) {
   final user = ref.watch(authProvider).value;
   if (user == null) return Future.value(const {});
-  return nexusAuthHeaders(user.preset, user.userId);
+  return nexusAuthHeaders(user.preset, user.userId).then(
+    (headers) => {
+      ...headers,
+      if (user.domainId != null) 'x-nexus-domain-id': '${user.domainId}',
+    },
+  );
 }, name: 'nexusRequestHeadersProvider');
 
-enum AppStatus { initializing, authenticated, unauthenticated }
+enum AppStatus { initializing, selectingDomain, authenticated, unauthenticated }
 
 final appStatusProvider = Provider<AppStatus>((ref) {
   return ref
       .watch(authProvider)
       .when(
-        data: (user) =>
-            user == null ? AppStatus.unauthenticated : AppStatus.authenticated,
+        data: (user) => user == null
+            ? AppStatus.unauthenticated
+            : user.domainId == null
+            ? AppStatus.selectingDomain
+            : AppStatus.authenticated,
         loading: () => AppStatus.initializing,
         error: (_, __) => AppStatus.unauthenticated,
       );
 }, name: 'appStatusProvider');
+
+final domainReadyProvider = Provider<bool>(
+  (ref) => ref.watch(authProvider).value?.domainId != null,
+);

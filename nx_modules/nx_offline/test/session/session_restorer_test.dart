@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   const session = CachedSession(
+    domainId: 1,
     serverId: 'production',
     userId: 'user-1',
     application: 'test',
@@ -14,18 +15,21 @@ void main() {
 
   test('network routes do not change the account identity', () {
     const lan = CachedSession(
+      domainId: 1,
       serverId: 'nexus-primary',
       userId: 'user-1',
       application: 'notes',
       route: 'pi_lan',
     );
     const wan = CachedSession(
+      domainId: 1,
       serverId: 'nexus-primary',
       userId: 'user-1',
       application: 'notes',
       route: 'pi_wan',
     );
     const tailscale = CachedSession(
+      domainId: 1,
       serverId: 'nexus-primary',
       userId: 'user-1',
       application: 'notes',
@@ -34,7 +38,7 @@ void main() {
 
     expect(lan.account, wan.account);
     expect(wan.account, tailscale.account);
-    expect(lan.account.key, 'notes:nexus-primary:user-1');
+    expect(lan.account.key, 'notes:nexus-primary:user-1:domain:1');
   });
 
   test('preferences store partitions cached sessions by application', () async {
@@ -53,6 +57,7 @@ void main() {
 
     await first.save(
       const CachedSession(
+        domainId: 1,
         serverId: 'nexus-primary',
         userId: 'user-1',
         application: 'time',

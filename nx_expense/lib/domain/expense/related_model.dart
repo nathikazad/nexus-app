@@ -1,4 +1,4 @@
-/// Lightweight related model row (nested relation on Expense / Transfer).
+/// Lightweight related model row (nested relation on Expense).
 class RelatedModel {
   const RelatedModel({
     required this.id,

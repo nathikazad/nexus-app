@@ -9,7 +9,7 @@ import 'package:nx_db/src/core/client/graphql_client.dart' as graphql_client;
 
 void main() {
   test('createClient allows large initial synchronization responses', () {
-    final c = createClient('http://127.0.0.1:5001/graphql', '1');
+    final c = createClient('http://127.0.0.1:5001/graphql', '1', domainId: 1);
     expect(
       c.queryManager.requestTimeout,
       graphql_client.graphQlQueryRequestTimeout,

@@ -7,7 +7,7 @@ void main() {
     () async {
       final events = <String>[];
       final store = _SessionStore(
-        const CachedSession(userId: '1', backendPreset: 'pi_wan'),
+        const CachedSession(domainId: 1, userId: '1', backendPreset: 'pi_wan'),
         onClear: () => events.add('offline-cleared'),
       );
       final service = AccountLogoutService(
@@ -36,7 +36,7 @@ void main() {
     () async {
       var invalidated = false;
       final store = _SessionStore(
-        const CachedSession(userId: '1', backendPreset: 'pi_wan'),
+        const CachedSession(domainId: 1, userId: '1', backendPreset: 'pi_wan'),
       );
       final service = AccountLogoutService(
         sessionStore: store,

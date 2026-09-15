@@ -5,7 +5,7 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_offline/nx_offline_storage.dart';
 
 /// Stores each model separately; query files describe only membership/coverage.
-/// Expense, Order and Transfer keep their KGQL meaning in this one adapter.
+/// Expense and Order keep their KGQL meaning in this one adapter.
 class ExpenseFileCache {
   ExpenseFileCache(this.library);
   final FileLibrary library;

@@ -4,33 +4,45 @@ import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CachedSession {
-  const CachedSession({required this.userId, required this.backendPreset})
-    : assert(userId != ''),
-      assert(backendPreset != '');
+  const CachedSession({
+    required this.userId,
+    required this.backendPreset,
+    required this.domainId,
+  }) : assert(userId != ''),
+       assert(backendPreset != '');
 
   final String userId;
   final String backendPreset;
+  final int domainId;
 
-  static const String serverId = 'nexus-primary';
+  String get serverId =>
+      BackendPreset.fromKey(backendPreset)?.serverId ??
+      (throw StateError('Unknown server'));
   static const String application = 'nx_notes';
 
   offline.CachedSession get shared => offline.CachedSession(
     serverId: serverId,
     userId: userId,
+    domainId: domainId,
     application: application,
     route: backendPreset,
   );
 
   factory CachedSession.fromShared(offline.CachedSession session) {
-    if (session.serverId != serverId || session.application != application) {
+    if (session.application != application ||
+        session.serverId != BackendPreset.fromKey(session.route)?.serverId) {
       throw StateError('Cached session does not belong to Nx Docs');
     }
-    return CachedSession(userId: session.userId, backendPreset: session.route);
+    return CachedSession(
+      userId: session.userId,
+      backendPreset: session.route,
+      domainId: session.domainId,
+    );
   }
 
   /// Endpoint presets are alternate routes to the same database. They must
   /// never partition a user's local cache or outbox.
-  String get accountKey => 'user:$userId';
+  String get accountKey => '$serverId:user:$userId:domain:$domainId';
 }
 
 abstract interface class SessionStore {
@@ -125,22 +137,33 @@ class PreferencesSessionStore implements SessionStore {
 
   @override
   Future<CachedSession?> load() async {
+    final domainId = preferences.getInt('nx_notes.offline_session.domain_id');
+    if (domainId == null) return null;
     final userId = preferences.getString(userIdKey);
     final preset = preferences.getString(backendPresetKey);
     if (userId == null || userId.isEmpty || preset == null || preset.isEmpty) {
       return null;
     }
-    return CachedSession(userId: userId, backendPreset: preset);
+    return CachedSession(
+      userId: userId,
+      backendPreset: preset,
+      domainId: domainId,
+    );
   }
 
   @override
   Future<void> save(CachedSession session) async {
+    await preferences.setInt(
+      'nx_notes.offline_session.domain_id',
+      session.domainId,
+    );
     await preferences.setString(userIdKey, session.userId);
     await preferences.setString(backendPresetKey, session.backendPreset);
   }
 
   @override
   Future<void> clear() async {
+    await preferences.remove('nx_notes.offline_session.domain_id');
     await preferences.remove(userIdKey);
     await preferences.remove(backendPresetKey);
   }

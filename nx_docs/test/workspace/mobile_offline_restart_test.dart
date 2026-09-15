@@ -1,3 +1,4 @@
+import 'package:nx_offline/nx_offline.dart' as offline;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,8 +34,9 @@ void main() {
 
     SharedPreferences.setMockInitialValues(<String, Object>{});
     const session = CachedSession(
+      domainId: 1,
       userId: 'user-1',
-      backendPreset: 'production',
+      backendPreset: 'hosted',
     );
     final lastOpened = PreferencesLastOpenedDocumentStore(
       await SharedPreferences.getInstance(),
@@ -43,6 +45,12 @@ void main() {
 
     final store = MemoryLocalNotesStore(accountKey: session.accountKey);
     final uploader = BackgroundUploader(
+      account: const offline.AccountIdentity(
+        serverId: 'nexus-primary',
+        userId: '1',
+        domainId: 1,
+        application: 'nx_notes',
+      ),
       localStore: store,
       remoteApi: const UnavailableDocumentRemoteApi(),
       clock: const _Clock(),

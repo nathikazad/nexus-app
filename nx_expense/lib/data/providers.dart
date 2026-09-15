@@ -17,8 +17,6 @@ import 'package:nx_expense/data/order/kgql_order_repository.dart';
 import 'package:nx_expense/data/schema/model_type_view_mapper.dart';
 import 'package:nx_expense/data/teller/expense_timeline_api.dart';
 import 'package:nx_expense/data/teller/teller_timeline_api.dart';
-import 'package:nx_expense/data/transfer/kgql_transfer_repository.dart';
-import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 import 'package:nx_expense/domain/expense/expense.dart';
 import 'package:nx_expense/domain/expense/expense_filter.dart';
 import 'package:nx_expense/domain/expense/expense_repository.dart';
@@ -28,8 +26,6 @@ import 'package:nx_expense/domain/order/order.dart';
 import 'package:nx_expense/domain/expense/related_model.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'package:nx_expense/domain/teller/teller_link.dart';
-import 'package:nx_expense/domain/transfer/transfer.dart';
-import 'package:nx_expense/domain/transfer/transfer_repository.dart';
 
 /// GraphQL client for feature widgets that call data-layer APIs taking [GraphQLClient].
 final expenseGraphqlClientProvider = Provider<GraphQLClient>(
@@ -62,21 +58,6 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
   );
 });
 
-final transferRepositoryProvider = Provider<TransferRepository>((ref) {
-  return KgqlTransferRepository(
-    client: ref.watch(graphqlClientProvider),
-    cache: ref.watch(expenseFileCacheProvider),
-    loadTransferSchema: () =>
-        ref
-            .read(expenseFileCacheProvider)
-            ?.schema(
-              kTransferModelTypeName,
-              () => ref.read(transferSchemaProvider.future),
-            ) ??
-        ref.read(transferSchemaProvider.future),
-  );
-});
-
 final orderRepositoryProvider = Provider<KgqlOrderRepository>((ref) {
   return KgqlOrderRepository(
     client: ref.watch(graphqlClientProvider),
@@ -95,9 +76,6 @@ final orderRepositoryProvider = Provider<KgqlOrderRepository>((ref) {
 final expenseSchemaProvider = kgqlModelTypeByNameProvider(
   kExpenseModelTypeName,
 );
-final transferSchemaProvider = kgqlModelTypeByNameProvider(
-  kTransferModelTypeName,
-);
 final orderSchemaProvider = kgqlModelTypeByNameProvider(kOrderModelTypeName);
 
 final budgetExpenseGoalsMonthProvider =
@@ -110,11 +88,6 @@ final budgetExpenseGoalsMonthProvider =
 
 final expenseSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
   final m = await ref.watch(expenseSchemaProvider.future);
-  return modelTypeViewFromKgql(m);
-});
-
-final transferSchemaViewProvider = FutureProvider<ModelTypeView>((ref) async {
-  final m = await ref.watch(transferSchemaProvider.future);
   return modelTypeViewFromKgql(m);
 });
 
@@ -204,24 +177,6 @@ final expenseListProvider =
       );
     });
 
-final transferListProvider = FutureProvider<List<Transfer>>((ref) async {
-  final repo = ref.watch(transferRepositoryProvider);
-  final range = ref.watch(expenseDateRangeProvider);
-  return repo.list(rangeStart: range.start, rangeEnd: range.end);
-});
-
-final transferListForUiProvider = FutureProvider<List<Transfer>>((ref) async {
-  final list = await ref.watch(transferListProvider.future);
-  final range = ref.watch(expenseDateRangeProvider);
-  final sorted = [...list];
-  final desc = isDateRangeCurrentCalendarMonth(range);
-  sorted.sort((a, b) {
-    final c = transferDateSortKey(a).compareTo(transferDateSortKey(b));
-    return desc ? -c : c;
-  });
-  return sorted;
-});
-
 final orderListProvider = FutureProvider<List<Order>>((ref) async {
   final repo = ref.watch(orderRepositoryProvider);
   final range = ref.watch(expenseDateRangeProvider);
@@ -263,25 +218,11 @@ final orderListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
   );
 });
 
-final transferListSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
-  final repo = ref.watch(transferRepositoryProvider);
-  final range = ref.watch(expenseDateRangeProvider);
-  return repo.listSummary(rangeStart: range.start, rangeEnd: range.end);
-});
-
 final expenseDetailProvider = FutureProvider.family<Expense?, int>((
   ref,
   id,
 ) async {
   final repo = ref.watch(expenseRepositoryProvider);
-  return repo.getById(id);
-});
-
-final transferDetailProvider = FutureProvider.family<Transfer?, int>((
-  ref,
-  id,
-) async {
-  final repo = ref.watch(transferRepositoryProvider);
   return repo.getById(id);
 });
 

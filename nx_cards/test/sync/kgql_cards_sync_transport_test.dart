@@ -1,3 +1,5 @@
+import 'package:nx_db/src/core/client/graphql_client.dart'
+    show bindTestClientDomain;
 import '../../../nx_modules/nx_db/test/support/app_sync_fixture.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/language.dart' show printNode;
@@ -164,7 +166,10 @@ GraphQLClient _client(Map<String, Object?> Function(Request) respond) {
       ),
     );
   });
-  return GraphQLClient(cache: GraphQLCache(), link: link);
+  return bindTestClientDomain(
+    GraphQLClient(cache: GraphQLCache(), link: link),
+    1,
+  );
 }
 
 StudyCard _card() => StudyCard(

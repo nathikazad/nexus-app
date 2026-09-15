@@ -76,7 +76,8 @@ final localNotesStoreProvider = Provider<LocalNotesStore?>((ref) {
 
 final documentRemoteApiProvider = Provider<DocumentRemoteApi>((ref) {
   final user = ref.watch(authProvider).value;
-  if (user == null) return const UnavailableDocumentRemoteApi();
+  if (user == null || user.domainId == null)
+    return const UnavailableDocumentRemoteApi();
   final mutations = RepositoryDocumentRemoteApi(
     repository: ref.watch(documentRepositoryProvider),
     syncTransport: KgqlDocumentSyncTransport(ref.watch(graphqlClientProvider)),
@@ -90,7 +91,10 @@ final backgroundUploaderProvider = Provider<BackgroundUploader?>((ref) {
   if (!ref.watch(offlineEnabledProvider)) return null;
   final local = ref.watch(localNotesStoreProvider);
   if (local == null) return null;
+  final session = ref.watch(activeOfflineSessionProvider).value;
+  if (session == null) return null;
   final uploader = BackgroundUploader(
+    account: session.shared.account,
     localStore: local,
     remoteApi: ref.watch(documentRemoteApiProvider),
     clock: ref.watch(offlineClockProvider),

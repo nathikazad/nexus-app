@@ -219,8 +219,7 @@ class ExpenseDetailContent extends ConsumerWidget {
                           if (expense.relations != null &&
                               expense.relations!.isNotEmpty)
                             for (final e in expense.relations!.entries)
-                              if (e.key != kTransferModelTypeName &&
-                                  e.key != kProductModelTypeName)
+                              if (e.key != kProductModelTypeName)
                                 if (dedupeModelsById(e.value).isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 24),
@@ -250,34 +249,6 @@ class ExpenseDetailContent extends ConsumerWidget {
                                       ],
                                     ),
                                   ),
-
-                          if (expense.relations?[kTransferModelTypeName] !=
-                                  null &&
-                              dedupeModelsById(
-                                expense.relations![kTransferModelTypeName]!,
-                              ).isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    'Transfer',
-                                    style: refSectionTitle(context),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  for (final relM in dedupeModelsById(
-                                    expense.relations![kTransferModelTypeName]!,
-                                  ))
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 10,
-                                      ),
-                                      child: _transferCell(context, ref, relM),
-                                    ),
-                                ],
-                              ),
-                            ),
 
                           _MoreDetailsSection(
                             expense: expense,
@@ -465,73 +436,6 @@ class ExpenseDetailContent extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: decoration,
           child: Text(label, style: chipTextStyle),
-        ),
-      ),
-    );
-  }
-
-  Widget _transferCell(BuildContext context, WidgetRef ref, RelatedModel relM) {
-    final title = transferDisplayTitle(relM);
-    final amt = transferAmountAttribute(relM);
-    final dateStr = transferCellDateLabel(relM);
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: refCardShadow,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => navToTransferDetail(context, ref, relM.id),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate900,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        dateStr,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppColors.slate400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  amt != null ? formatMoney(amt) : '—',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.teal600,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.slate300,
-                  size: 22,
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

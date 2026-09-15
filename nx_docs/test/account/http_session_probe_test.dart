@@ -4,7 +4,11 @@ import 'package:http/testing.dart';
 import 'package:nx_docs/account/account_session.dart';
 
 void main() {
-  const session = CachedSession(userId: '1', backendPreset: 'localhost');
+  const session = CachedSession(
+    domainId: 1,
+    userId: '1',
+    backendPreset: 'localhost',
+  );
 
   test('successful response classifies the session as available', () async {
     final probe = HttpSessionProbe(

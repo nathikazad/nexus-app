@@ -1,3 +1,4 @@
+import 'package:nx_db/auth.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -26,8 +27,11 @@ class NexusDocsApp extends ConsumerWidget {
       ],
       supportedLocales: AppFlowyEditorLocalizations.delegate.supportedLocales,
       routerConfig: ref.watch(routerProvider),
-      builder: (context, child) =>
-          DocumentTextScaleShortcuts(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => DomainSessionGate(
+        child: DocumentTextScaleShortcuts(
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
     );
   }
 }

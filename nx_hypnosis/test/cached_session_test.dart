@@ -14,12 +14,13 @@ class PendingAuth extends AuthController {
 
 void main() {
   test(
-    'saved account opens before auth finishes, rejection clears the shortcut',
+    'saved account waits for auth and domain readiness, rejection clears it',
     () async {
       SharedPreferences.setMockInitialValues({});
       final store = await hypnosisSessionStore();
       await store.save(
         const CachedSession(
+          domainId: 1,
           serverId: 'nexus-primary',
           userId: '7',
           application: 'nx_hypnosis',
@@ -33,10 +34,7 @@ void main() {
       addTearDown(container.dispose);
       final listener = container.listen(activeHypnosisUserProvider, (_, _) {});
       addTearDown(listener.close);
-      expect(
-        (await container.read(activeHypnosisUserProvider.future))!.userId,
-        '7',
-      );
+      expect(await container.read(activeHypnosisUserProvider.future), isNull);
       auth.answer.complete(null);
       await container.read(authProvider.future);
       expect(await container.read(activeHypnosisUserProvider.future), isNull);

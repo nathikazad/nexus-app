@@ -60,7 +60,7 @@ final localCardsStoreProvider = Provider<LocalCardsStore?>((ref) {
 });
 
 final cardsSyncTransportProvider = Provider<CardsSyncTransport?>((ref) {
-  if (ref.watch(authProvider).value == null) return null;
+  if (ref.watch(authProvider).value?.domainId == null) return null;
   return KgqlCardsSyncTransport(ref.watch(graphqlClientProvider));
 });
 

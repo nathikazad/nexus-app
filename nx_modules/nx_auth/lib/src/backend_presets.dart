@@ -27,6 +27,13 @@ enum BackendPreset {
   /// Hosted Nexus authenticates through the self-hosted OIDC provider.
   /// Local Pi/development presets remain direct-only until that deployment
   /// explicitly enables its own identity provider.
+  String get serverId => switch (this) {
+    BackendPreset.hosted => 'nexus-primary',
+    BackendPreset.piLan || BackendPreset.piTailscale => 'nexus-pi',
+    BackendPreset.localhost => 'nexus-localhost',
+    BackendPreset.laptop => 'nexus-laptop',
+  };
+
   bool get requiresOidc => this == BackendPreset.hosted;
 
   static BackendPreset? fromKey(String? s) {

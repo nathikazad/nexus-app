@@ -23,6 +23,7 @@ void main() {
         database: db,
         files: files,
         account: const AccountIdentity(
+          domainId: 1,
           serverId: 'test',
           userId: '1',
           application: 'cards',
@@ -69,6 +70,7 @@ void main() {
         await dir.delete(recursive: true);
       });
       const account = AccountIdentity(
+        domainId: 1,
         serverId: 'test',
         userId: '1',
         application: 'cards',

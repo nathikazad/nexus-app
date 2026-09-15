@@ -10,6 +10,7 @@ class NexusAuthenticatedClient extends http.BaseClient {
   NexusAuthenticatedClient({
     required this.preset,
     required this.userId,
+    this.domainId,
     http.Client? inner,
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
   }) : _inner = inner ?? http.Client(),
@@ -18,8 +19,10 @@ class NexusAuthenticatedClient extends http.BaseClient {
            ((forceRefresh) =>
                nexusAuthHeaders(preset, userId, forceRefresh: forceRefresh));
 
+  bool _closed = false;
   final BackendPreset preset;
   final String userId;
+  final int? domainId;
   final http.Client _inner;
   final Future<Map<String, String>> Function(bool forceRefresh) _authHeaders;
 
@@ -37,6 +40,7 @@ class NexusAuthenticatedClient extends http.BaseClient {
     Uint8List body, {
     required bool forceRefresh,
   }) async {
+    if (_closed) throw StateError('Domain session closed');
     final copy = http.Request(original.method, original.url)
       ..followRedirects = original.followRedirects
       ..maxRedirects = original.maxRedirects
@@ -46,9 +50,14 @@ class NexusAuthenticatedClient extends http.BaseClient {
     copy.headers.remove('x-user-id');
     copy.headers.remove('authorization');
     copy.headers.addAll(await _authHeaders(forceRefresh));
+    if (_closed) throw StateError('Domain session closed');
+    if (domainId != null) copy.headers['x-nexus-domain-id'] = '$domainId';
     return _inner.send(copy);
   }
 
   @override
-  void close() => _inner.close();
+  void close() {
+    _closed = true;
+    _inner.close();
+  }
 }

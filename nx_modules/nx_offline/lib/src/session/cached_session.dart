@@ -8,6 +8,7 @@ final class CachedSession {
     required this.userId,
     required this.application,
     required this.route,
+    required this.domainId,
   }) : assert(serverId != ''),
        assert(userId != ''),
        assert(application != ''),
@@ -18,11 +19,13 @@ final class CachedSession {
   final String userId;
   final String application;
   final String route;
+  final int domainId;
 
   AccountIdentity get account => AccountIdentity(
     serverId: serverId,
     userId: userId,
     application: application,
+    domainId: domainId,
   );
 }
 
@@ -49,16 +52,22 @@ final class PreferencesCachedSessionStore implements CachedSessionStore {
 
   @override
   Future<CachedSession?> load() async {
+    final domainId = preferences.getInt('$_prefix.domain_id');
+    if (domainId == null)
+      return null; // Legacy partitions are retained, never guessed.
+    final savedServerId = preferences.getString('$_prefix.server_id');
+    if (savedServerId == null) return null;
     final route = preferences.getString('$_prefix.route');
     final userId = preferences.getString('$_prefix.user_id');
     if (route == null || route.isEmpty || userId == null || userId.isEmpty) {
       return null;
     }
     return CachedSession(
-      serverId: serverId,
+      serverId: savedServerId,
       userId: userId,
       application: application,
       route: route,
+      domainId: domainId,
     );
   }
 
@@ -70,12 +79,16 @@ final class PreferencesCachedSessionStore implements CachedSessionStore {
     if (session.serverId != serverId) {
       throw StateError('session belongs to a different server');
     }
+    await preferences.setString('$_prefix.server_id', session.serverId);
+    await preferences.setInt('$_prefix.domain_id', session.domainId);
     await preferences.setString('$_prefix.route', session.route);
     await preferences.setString('$_prefix.user_id', session.userId);
   }
 
   @override
   Future<void> clear() async {
+    await preferences.remove('$_prefix.server_id');
+    await preferences.remove('$_prefix.domain_id');
     await preferences.remove('$_prefix.route');
     await preferences.remove('$_prefix.user_id');
   }

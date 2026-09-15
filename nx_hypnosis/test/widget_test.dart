@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_auth/nx_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_hypnosis/app.dart';
 import 'package:nx_hypnosis/desires.dart';
@@ -31,7 +33,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(HypnosisApp(collection: sample()));
+      await tester.pumpWidget(testApp(sample()));
       expect(find.text('Tapes'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
       await tester.tap(find.text('A quiet morning'));
@@ -46,7 +48,7 @@ void main() {
     tester,
   ) async {
     final data = sample();
-    await tester.pumpWidget(HypnosisApp(collection: data));
+    await tester.pumpWidget(testApp(data));
     await tester.tap(find.byTooltip('Desires'));
     await tester.pumpAndSettle();
     expect(find.text('I create useful things.'), findsNothing);
@@ -86,3 +88,13 @@ void main() {
     },
   );
 }
+
+class _TestAuth extends AuthController {
+  @override
+  Future<User?> build() async => null;
+}
+
+Widget testApp(HypnosisCollection data) => ProviderScope(
+  overrides: [authProvider.overrideWith(_TestAuth.new)],
+  child: HypnosisApp(collection: data),
+);

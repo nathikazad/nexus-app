@@ -32,19 +32,13 @@ final class BackgroundUploader {
     this.uploadDelay = const Duration(seconds: 2),
     this.lease = const Duration(minutes: 1),
     this.retryPolicy = const offline.RetryPolicy(),
-    offline.AccountIdentity? account,
+    required offline.AccountIdentity account,
   }) {
     final sharedClock = _SharedClock(clock);
     _processor = offline.OutboxProcessor(
       store: DocumentOutboxStoreAdapter(
         localStore: localStore,
-        account:
-            account ??
-            offline.AccountIdentity(
-              serverId: 'nexus-primary',
-              userId: _userId(localStore.accountKey),
-              application: 'nx_notes',
-            ),
+        account: account,
       ),
       handlers: <offline.MutationHandler>[
         DocumentMutationHandler(localStore: localStore, remoteApi: remoteApi),
@@ -103,13 +97,6 @@ final class BackgroundUploader {
     await _statusSubscription.cancel();
     await _processor.close();
     await _states.close();
-  }
-
-  static String _userId(String accountKey) {
-    const prefix = 'user:';
-    return accountKey.startsWith(prefix)
-        ? accountKey.substring(prefix.length)
-        : accountKey;
   }
 }
 

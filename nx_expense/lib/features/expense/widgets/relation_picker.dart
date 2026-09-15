@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/data/providers.dart';
-import 'package:nx_expense/features/transfers/transfer_relation_picker_page.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
-import 'package:nx_expense/domain/expense/model_names.dart';
 
 /// Result of the relation picker: link to existing model IDs, or create a new related model.
 sealed class RelationPickResult {
@@ -620,17 +617,6 @@ class RelationPickerRow extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () async {
-          if (targetModelTypeName == kTransferModelTypeName) {
-            final res = await context.push<RelationPickResult>(
-              '/pick-transfer-relation',
-              extra: TransferRelationPickerExtra(
-                allowMultiple: allowMultiple,
-                initialIds: valueIds,
-              ),
-            );
-            if (res != null) onPicked(res);
-            return;
-          }
           final res = await showRelationPickerSheet(
             context,
             targetModelTypeName: targetModelTypeName,

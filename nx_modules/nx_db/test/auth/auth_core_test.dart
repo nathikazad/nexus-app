@@ -66,6 +66,11 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
         overrides: [
+          domainLoaderProvider.overrideWithValue(
+            (_) async => const [
+              DomainMembership(id: 1, name: 'Personal', role: 'owner'),
+            ],
+          ),
           authProvider.overrideWith(
             () => AuthController(
               initialDelay: Duration.zero,
@@ -100,6 +105,11 @@ void main() {
       });
       final container = ProviderContainer(
         overrides: [
+          domainLoaderProvider.overrideWithValue(
+            (_) async => const [
+              DomainMembership(id: 1, name: 'Personal', role: 'owner'),
+            ],
+          ),
           authProvider.overrideWith(
             () => AuthController(
               initialDelay: Duration.zero,
@@ -124,6 +134,11 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
         overrides: [
+          domainLoaderProvider.overrideWithValue(
+            (_) async => const [
+              DomainMembership(id: 1, name: 'Personal', role: 'owner'),
+            ],
+          ),
           authProvider.overrideWith(
             () => AuthController(
               initialDelay: Duration.zero,
@@ -144,6 +159,11 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
         overrides: [
+          domainLoaderProvider.overrideWithValue(
+            (_) async => const [
+              DomainMembership(id: 1, name: 'Personal', role: 'owner'),
+            ],
+          ),
           authProvider.overrideWith(
             () => AuthController(
               initialDelay: Duration.zero,
@@ -174,6 +194,11 @@ void main() {
       });
       final container = ProviderContainer(
         overrides: [
+          domainLoaderProvider.overrideWithValue(
+            (_) async => const [
+              DomainMembership(id: 1, name: 'Personal', role: 'owner'),
+            ],
+          ),
           authProvider.overrideWith(
             () => AuthController(
               initialDelay: Duration.zero,
@@ -192,6 +217,11 @@ void main() {
       final onlineOnly = ProviderContainer();
       final offlineNative = ProviderContainer(
         overrides: [
+          domainLoaderProvider.overrideWithValue(
+            (_) async => const [
+              DomainMembership(id: 1, name: 'Personal', role: 'owner'),
+            ],
+          ),
           retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
         ],
       );

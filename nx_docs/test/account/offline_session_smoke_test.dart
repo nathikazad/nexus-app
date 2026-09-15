@@ -15,7 +15,11 @@ void main() {
     'cached account opens the notes shell while auth is unavailable',
     (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
-      const session = CachedSession(userId: '1', backendPreset: 'localhost');
+      const session = CachedSession(
+        domainId: 1,
+        userId: '1',
+        backendPreset: 'localhost',
+      );
       final workspace = FakeDocumentWorkspace(
         documents: [offlineTestDocument()],
       );

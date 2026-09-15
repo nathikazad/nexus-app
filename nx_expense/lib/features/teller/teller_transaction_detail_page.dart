@@ -213,21 +213,7 @@ class _TellerLinkActions extends ConsumerWidget {
                   },
                   showDividerBelow: true,
                 ),
-                _LinkActionTile(
-                  icon: Icons.link_rounded,
-                  iconColor: AppColors.slate500,
-                  title: 'Link transfer',
-                  subtitle: 'Choose an existing transfer',
-                  onTap: () {
-                    if (isDesktopLayout(context)) {
-                      ref.read(tellerPanel3Provider.notifier).state =
-                          TellerPanel3State.linkTransferPicker(row);
-                    } else {
-                      context.push('/teller/link-transfer', extra: row);
-                    }
-                  },
-                  showDividerBelow: true,
-                ),
+
                 _LinkActionTile(
                   icon: Icons.add_rounded,
                   iconColor: AppColors.teal600,
@@ -259,21 +245,6 @@ class _TellerLinkActions extends ConsumerWidget {
                         queryParameters: q,
                       );
                       context.push(uri.toString());
-                    }
-                  },
-                  showDividerBelow: true,
-                ),
-                _LinkActionTile(
-                  icon: Icons.add_rounded,
-                  iconColor: AppColors.teal600,
-                  title: 'New transfer',
-                  subtitle: 'Create and link',
-                  onTap: () {
-                    if (isDesktopLayout(context)) {
-                      ref.read(tellerPanel3Provider.notifier).state =
-                          TellerPanel3State.newTransferCreate(row);
-                    } else {
-                      context.push('/teller/transfer-create', extra: row);
                     }
                   },
                   showDividerBelow: false,
@@ -392,8 +363,7 @@ class _LinkedModelTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isExpense = model.modelTypeName == kExpenseModelTypeName;
-    final isTransfer = model.modelTypeName == kTransferModelTypeName;
-    final tappable = isExpense || isTransfer;
+    final tappable = isExpense;
     final subtitle = '${model.modelTypeName} · #${model.id}';
 
     final card = Container(
@@ -423,11 +393,7 @@ class _LinkedModelTile extends ConsumerWidget {
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
-                          if (isExpense) {
-                            navToExpenseFromTellerLink(context, ref, model.id);
-                          } else {
-                            navToTransferFromTellerLink(context, ref, model.id);
-                          }
+                          navToExpenseFromTellerLink(context, ref, model.id);
                         },
                         borderRadius: BorderRadius.circular(
                           RefLayout.rounded2xl,

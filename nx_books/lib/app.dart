@@ -24,11 +24,13 @@ class NexusBooksApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(dark: darkMode),
         routerConfig: router,
-        builder: (context, child) => ReadingCompanionHost(
-          router: router,
-          enabled: user != null,
-          sessionKey: user?.userId,
-          child: child!,
+        builder: (context, child) => DomainSessionGate(
+          child: ReadingCompanionHost(
+            router: router,
+            enabled: user?.domainId != null,
+            sessionKey: user?.domainId == null ? null : user!.sessionKey,
+            child: child!,
+          ),
         ),
       ),
     );

@@ -470,8 +470,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                         final rels = relsAll.where((rt) {
                                           final link = rt.link;
                                           return link.isNotEmpty &&
-                                              link != kOrderModelTypeName &&
-                                              link != kTransferModelTypeName;
+                                              link != kOrderModelTypeName;
                                         }).toList();
                                         final rows = <Widget>[];
                                         for (var i = 0; i < rels.length; i++) {
@@ -503,67 +502,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                       },
                                     ),
                                   ),
-                                  Builder(
-                                    builder: (context) {
-                                      RelationTypeView? transferRt;
-                                      for (final rt in schema.relations) {
-                                        final link = rt.link;
-                                        if (link == kTransferModelTypeName) {
-                                          transferRt = rt;
-                                          break;
-                                        }
-                                      }
-                                      if (transferRt == null) {
-                                        return const SizedBox.shrink();
-                                      }
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          const SizedBox(height: 24),
-                                          Text(
-                                            'Transfer',
-                                            style: refSectionTitle(context),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    RefLayout.rounded2xl,
-                                                  ),
-                                              border: Border.all(
-                                                color: AppColors.slate100,
-                                              ),
-                                              boxShadow: refCardShadow,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 4,
-                                            ),
-                                            child: RelationPickerRow(
-                                              targetModelTypeName:
-                                                  kTransferModelTypeName,
-                                              valueIds:
-                                                  _relations[kTransferModelTypeName] ??
-                                                  [],
-                                              pendingCreate:
-                                                  _relationCreates[kTransferModelTypeName],
-                                              allowMultiple:
-                                                  (transferRt.multiplicity ??
-                                                      'many') !=
-                                                  'one',
-                                              onPicked: (r) =>
-                                                  _onRelationPicked(
-                                                    kTransferModelTypeName,
-                                                    r,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
+
                                   if (widget.expenseId != null) ...[
                                     const SizedBox(height: 24),
                                     ExpenseTellerLinksFormSection(
@@ -578,25 +517,6 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                       expenseId: widget.expenseId!,
                                     ),
                                     const SizedBox(height: 24),
-                                    OutlinedButton.icon(
-                                      icon: const Icon(
-                                        Icons.swap_horiz_outlined,
-                                        size: 20,
-                                      ),
-                                      label: Text(
-                                        'Transform to transfer',
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        context.push(
-                                          '/transfer/form?fromExpenseId=${widget.expenseId}',
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(height: 12),
                                     OutlinedButton.icon(
                                       icon: const Icon(
                                         Icons.delete_outline,

@@ -52,6 +52,7 @@ class NoteCompanionController extends ChangeNotifier {
     required this.documentId,
     required this.socketUrl,
     required this.userId,
+    required this.domainId,
     required DocumentAudioService audioService,
     required NoteTranscriptLoader transcriptLoader,
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
@@ -96,6 +97,7 @@ class NoteCompanionController extends ChangeNotifier {
   final int documentId;
   final String socketUrl;
   final String userId;
+  final int domainId;
   final NoteAiSession _session;
   final NxMicrophoneOpusStreamer _microphone;
   final NxWavAudioPlayer _player;
@@ -384,6 +386,7 @@ class NoteCompanionController extends ChangeNotifier {
       NoteAiSessionConfig(
         socketUrl: socketUrl,
         userId: userId,
+        domainId: domainId,
         documentId: documentId,
         authHeaders: _authHeaders,
       ),

@@ -98,20 +98,27 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       baseUrl: baseUrl,
       client: httpClient,
     );
+    final voiceUser = ref.read(authProvider).value;
+    if (voiceUser?.domainId == null) return;
     final initialAudio = widget.document.audio;
     final controller = NoteCompanionController(
+      domainId: voiceUser!.requiredDomainId,
       documentId: widget.document.id,
       socketUrl: socketUrl,
       userId: userId,
       audioService: audioService,
       transcriptLoader: ref.read(noteTranscriptLoaderProvider),
       authHeaders: (forceRefresh) {
-        final user = ref.read(authProvider).value;
-        if (user == null) return Future.value(const {});
+        final user = voiceUser;
         return nexusAuthHeaders(
           user.preset,
           userId,
           forceRefresh: forceRefresh,
+        ).then(
+          (headers) => {
+            ...headers,
+            'x-nexus-domain-id': '${user.requiredDomainId}',
+          },
         );
       },
       initialAudio: initialAudio == null

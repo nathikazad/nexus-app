@@ -5,60 +5,12 @@ import 'package:nx_expense/data/expense/expense_attr_keys.dart';
 import 'package:nx_expense/domain/expense/expense.dart';
 import 'package:nx_expense/domain/expense/related_model.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
-import 'package:nx_expense/domain/transfer/transfer.dart';
-
-/// Row title: Cash when `to` is Cash; otherwise linked Company name or model name.
-String transferDisplayTitle(dynamic model) {
-  final String name;
-  final Map<String, dynamic>? attributes;
-  final Map<String, List<RelatedModel>>? relations;
-  if (model is Transfer) {
-    name = model.name;
-    attributes = model.attributes;
-    relations = model.relations;
-  } else if (model is RelatedModel) {
-    name = model.name;
-    attributes = model.attributes;
-    relations = model.relations;
-  } else {
-    throw ArgumentError.value(model, 'model', 'transferDisplayTitle');
-  }
-  final to = attributes?['to'];
-  if (to is String && to.toLowerCase() == 'cash') {
-    return 'Cash';
-  }
-  final companies = relations?['Company'];
-  if (companies != null && companies.isNotEmpty) {
-    return companies.first.name;
-  }
-  return name;
-}
-
-num? transferAmountAttribute(dynamic model) {
-  Map<String, dynamic>? attributes;
-  if (model is Transfer) {
-    attributes = model.attributes;
-  } else if (model is RelatedModel) {
-    attributes = model.attributes;
-  } else {
-    throw ArgumentError.value(model, 'model', 'transferAmountAttribute');
-  }
-  final raw = attributes?['amount'];
-  if (raw is num) return raw;
-  return num.tryParse('$raw');
-}
 
 String expenseDateSortKey(Expense m) {
   final raw = m.attributes?['date'];
-  if (raw is String && raw.isNotEmpty)
+  if (raw is String && raw.isNotEmpty) {
     return normalizeDateAttributeSortKey(raw);
-  return m.createdAt ?? '';
-}
-
-String transferDateSortKey(Transfer m) {
-  final raw = m.attributes?['date'];
-  if (raw is String && raw.isNotEmpty)
-    return normalizeDateAttributeSortKey(raw);
+  }
   return m.createdAt ?? '';
 }
 
@@ -68,28 +20,10 @@ String expenseDateCellLabel(Expense model) {
   return formatModelDate(model.createdAt);
 }
 
-String transferCellDateLabel(dynamic model) {
-  Map<String, dynamic>? attributes;
-  String? createdAt;
-  if (model is Transfer) {
-    attributes = model.attributes;
-    createdAt = model.createdAt;
-  } else if (model is RelatedModel) {
-    attributes = model.attributes;
-    createdAt = model.createdAt;
-  } else {
-    throw ArgumentError.value(model, 'model', 'transferCellDateLabel');
-  }
-  final raw = attributes?['date'];
-  if (raw is String && raw.isNotEmpty) return formatModelDate(raw);
-  return formatModelDate(createdAt);
-}
-
-/// Reads [attributes] for expense / transfer / KGQL [Model] / [RelatedModel].
+/// Reads [attributes] for expense / KGQL [Model] / [RelatedModel].
 dynamic attributeValue(dynamic model, String? key) {
   if (key == null) return null;
   if (model is Expense) return model.attributes?[key];
-  if (model is Transfer) return model.attributes?[key];
   if (model is RelatedModel) return model.attributes?[key];
   if (model is Model) return model.attributes?[key];
   return null;
@@ -111,7 +45,6 @@ String? primaryNumberAttributeKey(dynamic schema) {
 
 String modelDateCellLabel(dynamic model) {
   if (model is Expense) return expenseDateCellLabel(model);
-  if (model is Transfer) return transferCellDateLabel(model);
   if (model is RelatedModel) {
     final raw = model.attributes?['date'];
     if (raw is String && raw.isNotEmpty) return formatModelDate(raw);
@@ -127,7 +60,6 @@ String modelDateCellLabel(dynamic model) {
 
 String modelDateSortKey(dynamic model) {
   if (model is Expense) return expenseDateSortKey(model);
-  if (model is Transfer) return transferDateSortKey(model);
   if (model is RelatedModel) {
     final raw = model.attributes?['date'];
     if (raw is String && raw.isNotEmpty) {
@@ -344,12 +276,6 @@ List<MapEntry<String, double>> parseDaySpendEntries(Map<String, dynamic> raw) {
 }
 
 double numAttr(Expense m, String key) {
-  final raw = m.attributes?[key];
-  if (raw is num) return raw.toDouble();
-  return double.tryParse('$raw') ?? 0;
-}
-
-double numAttrTransfer(Transfer m, String key) {
   final raw = m.attributes?[key];
   if (raw is num) return raw.toDouble();
   return double.tryParse('$raw') ?? 0;

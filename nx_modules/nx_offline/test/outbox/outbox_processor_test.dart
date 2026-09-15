@@ -7,6 +7,7 @@ import '../support/fakes.dart';
 
 void main() {
   const account = AccountIdentity(
+    domainId: 1,
     serverId: 'nexus-primary',
     userId: 'user-1',
     application: 'test',

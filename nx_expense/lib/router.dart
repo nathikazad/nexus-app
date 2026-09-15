@@ -26,12 +26,6 @@ import 'package:nx_expense/features/tag/tag_systems_page.dart';
 import 'package:nx_expense/features/teller/teller_expense_link_picker_page.dart';
 import 'package:nx_expense/features/teller/teller_link_picker_page.dart';
 import 'package:nx_expense/features/teller/teller_list_page.dart';
-import 'package:nx_expense/features/teller/teller_transfer_link_picker_page.dart';
-import 'package:nx_expense/features/teller/teller_transfer_quick_create_page.dart';
-import 'package:nx_expense/features/transfers/transfer_detail_page.dart';
-import 'package:nx_expense/features/transfers/transfer_form_page.dart';
-import 'package:nx_expense/features/transfers/transfer_relation_picker_page.dart';
-import 'package:nx_expense/features/transfers/transfers_list_page.dart';
 
 DateTimeRange? _routeDateRange(GoRouterState state) {
   final q = state.uri.queryParameters;
@@ -166,10 +160,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(
-        path: '/transfers',
-        builder: (context, state) => const TransfersListScreen(),
-      ),
+
       GoRoute(
         path: '/orders',
         builder: (context, state) => const OrdersListScreen(),
@@ -223,44 +214,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(
-        path: '/pick-transfer-relation',
-        builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! TransferRelationPickerExtra) {
-            return const Scaffold(
-              body: Center(child: Text('Invalid navigation')),
-            );
-          }
-          return TransferRelationPickerScreen(
-            allowMultiple: extra.allowMultiple,
-            initialIds: extra.initialIds,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/transfer/form',
-        builder: (context, state) {
-          final from = state.uri.queryParameters['fromExpenseId'];
-          return TransferFormScreen(
-            prefillFromExpenseId: from != null ? int.tryParse(from) : null,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/transfer/form/:id',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return TransferFormScreen(transferId: id);
-        },
-      ),
-      GoRoute(
-        path: '/transfer/:id',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return TransferDetailScreen(transferId: id);
-        },
-      ),
+
       GoRoute(
         path: '/expense/:expenseId/link-teller',
         builder: (context, state) {
@@ -268,13 +222,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return TellerLinkPickerScreen(modelId: id);
         },
       ),
-      GoRoute(
-        path: '/transfer/:transferId/link-teller',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['transferId']!);
-          return TellerLinkPickerScreen(modelId: id);
-        },
-      ),
+
       GoRoute(
         path: '/teller/link-expense',
         builder: (context, state) {
@@ -287,30 +235,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return TellerExpenseLinkPickerScreen(row: extra);
         },
       ),
-      GoRoute(
-        path: '/teller/link-transfer',
-        builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! TellerTransaction) {
-            return const Scaffold(
-              body: Center(child: Text('Missing external transaction')),
-            );
-          }
-          return TellerTransferLinkPickerScreen(row: extra);
-        },
-      ),
-      GoRoute(
-        path: '/teller/transfer-create',
-        builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! TellerTransaction) {
-            return const Scaffold(
-              body: Center(child: Text('Missing external transaction')),
-            );
-          }
-          return TellerTransferQuickCreateScreen(row: extra);
-        },
-      ),
+
       GoRoute(
         path: '/expense/:id',
         builder: (context, state) {

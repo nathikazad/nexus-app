@@ -29,16 +29,16 @@ import 'package:nx_documents/nx_documents.dart';
 final booksFileLibraryProvider = Provider<FileLibrary?>((ref) {
   if (!offline.AppDataPolicy.current.storesOfflineData) return null;
   final user = ref.watch(authProvider).value;
-  if (user == null) return null;
-  final library = FileLibrary.application(
-    'nx_books:nexus-primary:${user.userId}',
-  );
+  if (user == null || user.domainId == null) return null;
+  final library = FileLibrary.application('nx_books:${user.storageKey}');
   ref.onDispose(() => unawaited(library.close()));
   return library;
 });
 
 final bookRepositoryProvider = Provider<BookRepository>((ref) {
-  final userId = ref.watch(authProvider).value?.userId ?? 'last-session';
+  final userId = ref.watch(authProvider).value?.domainId == null
+      ? 'no-session'
+      : ref.watch(authProvider).value!.storageKey;
   final reads = ref.watch(appReadsProvider('books'));
   final remote = AppBookRepository(
     client: ref.watch(graphqlClientProvider),
@@ -58,7 +58,7 @@ final epubProgressRepositoryProvider = Provider<EpubProgressRepository>((ref) {
   final user = ref.watch(authProvider).value;
   final repository = EpubProgressRepository(
     persistData: offline.AppDataPolicy.current.storesOfflineData,
-    account: '${user?.preset.key}:${user?.userId}',
+    account: user?.domainId == null ? 'no-session' : user!.storageKey,
     remote: KgqlEpubProgressRemote(ref.watch(graphqlClientProvider)),
   );
   ref.onDispose(repository.dispose);
@@ -67,7 +67,9 @@ final epubProgressRepositoryProvider = Provider<EpubProgressRepository>((ref) {
 
 final bookDocumentRepositoryProvider =
     Provider<CachedDocumentContentRepository>((ref) {
-      final userId = ref.watch(authProvider).value?.userId ?? 'last-session';
+      final userId = ref.watch(authProvider).value?.domainId == null
+          ? 'no-session'
+          : ref.watch(authProvider).value!.storageKey;
       final repository = CachedDocumentContentRepository(
         persistData: offline.AppDataPolicy.current.storesOfflineData,
         remote: AppBookDocumentRepository(
@@ -99,9 +101,11 @@ final readingHistoryStoreProvider = Provider<ReadingHistoryStore?>((ref) {
 
 final downloadReportStoreProvider = Provider<DownloadReportStore?>((ref) {
   final user = ref.watch(authProvider).value;
-  if (!offline.AppDataPolicy.current.storesOfflineData || user == null)
+  if (!offline.AppDataPolicy.current.storesOfflineData ||
+      user == null ||
+      user.domainId == null)
     return null;
-  return PreferencesDownloadReportStore('nexus-primary:${user.userId}');
+  return PreferencesDownloadReportStore(user.storageKey);
 });
 
 final downloadReportProvider = FutureProvider<DownloadReport?>((ref) async {
@@ -110,9 +114,11 @@ final downloadReportProvider = FutureProvider<DownloadReport?>((ref) async {
 
 final bookFileReportStoreProvider = Provider<BookFileReportStore?>((ref) {
   final user = ref.watch(authProvider).value;
-  if (!offline.AppDataPolicy.current.storesOfflineData || user == null)
+  if (!offline.AppDataPolicy.current.storesOfflineData ||
+      user == null ||
+      user.domainId == null)
     return null;
-  return PreferencesBookFileReportStore('nexus-primary:${user.userId}');
+  return PreferencesBookFileReportStore(user.storageKey);
 });
 
 final bookFileReportProvider = FutureProvider<BookFileReport?>((ref) async {
@@ -127,12 +133,10 @@ final bookFileCacheProvider = Provider<BookFileCache?>((ref) {
       client == null)
     return null;
   final cache = BookFileCache(
-    accountKey: 'nexus-primary:${user.userId}',
+    accountKey: user.storageKey,
     origin: Uri.parse(resolve(user.preset).imageHttp),
     client: client,
-    files: BinaryContentFiles.application(
-      'nx_books:nexus-primary:${user.userId}',
-    ),
+    files: BinaryContentFiles.application('nx_books:${user.storageKey}'),
     reportStore: ref.watch(bookFileReportStoreProvider),
     onReportChanged: () {
       if (ref.mounted) ref.invalidate(bookFileReportProvider);
@@ -166,7 +170,7 @@ final booksLibrarySyncProvider =
     Provider<offline.SyncSupervisor<DocumentIdentity>?>((ref) {
       if (!offline.AppDataPolicy.current.storesOfflineData ||
           !ref.watch(offlineBookHydrationEnabledProvider) ||
-          ref.watch(authProvider).value == null) {
+          ref.watch(authProvider).value?.domainId == null) {
         return null;
       }
       final client = ref.watch(graphqlClientProvider);
@@ -223,10 +227,17 @@ final booksLibrarySyncProvider =
     });
 
 final booksDataSessionProvider = Provider<AppDataSession?>((ref) {
+  if (ref.watch(authProvider).value?.domainId == null) return null;
   final library = ref.watch(booksLibrarySyncProvider);
-  return createAppSession(ref,
-    definition: AppDataDefinition(name: 'books', refreshVisible: ref.watch(refreshBookCatalogProvider)),
-    offline: library == null ? null : offline.PersistentSyncBackend(library.requestFull),
+  return createAppSession(
+    ref,
+    definition: AppDataDefinition(
+      name: 'books',
+      refreshVisible: ref.watch(refreshBookCatalogProvider),
+    ),
+    offline: library == null
+        ? null
+        : offline.PersistentSyncBackend(library.requestFull),
     onlineChanges: ref.watch(booksOnlineChangesProvider),
   );
 });
@@ -304,9 +315,10 @@ final optimisticBookOrdersProvider =
       Map<BookReadingState, OptimisticBookOrder>
     >(OptimisticBookOrders.new);
 
-final bookMutationControllerProvider = Provider<BookMutationController>(
-  BookMutationController.new,
-);
+final bookMutationControllerProvider = Provider<BookMutationController>((ref) {
+  ref.watch(authProvider);
+  return BookMutationController(ref);
+});
 
 class BookMutationController {
   BookMutationController(this._ref);
@@ -452,7 +464,10 @@ class OptimisticBookOrders
   int _revision = 0;
 
   @override
-  Map<BookReadingState, OptimisticBookOrder> build() => const {};
+  Map<BookReadingState, OptimisticBookOrder> build() {
+    ref.watch(authProvider);
+    return const {};
+  }
 
   OptimisticBookOrder setOrder(BookReadingState lane, List<int> bookIds) {
     final order = OptimisticBookOrder(
@@ -494,7 +509,10 @@ List<NxBook> booksInLaneOrder(
 
 class SelectedBookId extends Notifier<int?> {
   @override
-  int? build() => null;
+  int? build() {
+    ref.watch(authProvider);
+    return null;
+  }
 
   void select(int? id) {
     state = id;

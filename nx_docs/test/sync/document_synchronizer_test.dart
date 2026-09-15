@@ -26,6 +26,12 @@ void main() {
       ],
     );
     uploader = BackgroundUploader(
+      account: const offline.AccountIdentity(
+        serverId: 'nexus-primary',
+        userId: '1',
+        domainId: 1,
+        application: 'nx_notes',
+      ),
       localStore: local,
       remoteApi: remote,
       clock: const _Clock(),

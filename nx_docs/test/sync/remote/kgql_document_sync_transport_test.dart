@@ -1,3 +1,5 @@
+import 'package:nx_db/src/core/client/graphql_client.dart'
+    show bindTestClientDomain;
 import '../../../../nx_modules/nx_db/test/support/app_sync_fixture.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -15,7 +17,7 @@ void main() {
   test(
     'manifest request uses the shared server API and bulk timeout',
     () async {
-      final client = _MockGraphQLClient();
+      final client = bindTestClientDomain(_MockGraphQLClient(), 1);
       when(() => client.query(any())).thenAnswer((call) async {
         final options = call.positionalArguments.single as QueryOptions;
         expect(options.variables['app'], 'docs');
@@ -43,7 +45,7 @@ void main() {
     },
   );
   test('maps a changed KGQL payload into the domain sync bundle', () async {
-    final client = _MockGraphQLClient();
+    final client = bindTestClientDomain(_MockGraphQLClient(), 1);
     when(() => client.query(any())).thenAnswer(
       (call) async => QueryResult(
         options: QueryOptions(document: gql('query { __typename }')),

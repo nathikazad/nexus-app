@@ -112,6 +112,7 @@ void main() {
   test('keeps assistant answers from separate text turns distinct', () async {
     final socket = _FakeSocket();
     final controller = NoteCompanionController(
+      domainId: 1,
       documentId: 4450,
       socketUrl: 'wss://socket.example',
       userId: '1',
@@ -167,6 +168,7 @@ void main() {
       );
     }
     final controller = NoteCompanionController(
+      domainId: 1,
       documentId: 4450,
       socketUrl: 'wss://socket.example',
       userId: '1',
@@ -195,6 +197,7 @@ void main() {
 
   test('reports playback so the mic action can become stop', () async {
     final controller = NoteCompanionController(
+      domainId: 1,
       documentId: 4450,
       socketUrl: 'wss://socket.example',
       userId: '1',
@@ -231,6 +234,7 @@ void main() {
     () async {
       final notePlayer = _FakeStoredAudioPlayer();
       final controller = NoteCompanionController(
+        domainId: 1,
         documentId: 4450,
         socketUrl: 'wss://socket.example',
         userId: '1',

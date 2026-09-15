@@ -3,17 +3,33 @@ import 'package:nx_docs/account/account_session.dart';
 
 void main() {
   test('endpoint routes share one user cache identity', () {
-    const lan = CachedSession(userId: '7', backendPreset: 'pi_lan');
-    const wan = CachedSession(userId: '7', backendPreset: 'pi_wan');
-    const tailscale = CachedSession(userId: '7', backendPreset: 'pi_tailscale');
+    const lan = CachedSession(
+      domainId: 1,
+      userId: '7',
+      backendPreset: 'pi_lan',
+    );
+    const wan = CachedSession(
+      domainId: 1,
+      userId: '7',
+      backendPreset: 'pi_wan',
+    );
+    const tailscale = CachedSession(
+      domainId: 1,
+      userId: '7',
+      backendPreset: 'pi_tailscale',
+    );
 
     expect(
       <String>{lan.accountKey, wan.accountKey, tailscale.accountKey},
-      {'user:7'},
+      {'nexus-pi:user:7:domain:1', 'nexus-primary:user:7:domain:1'},
     );
   });
 
-  const session = CachedSession(userId: 'user-1', backendPreset: 'production');
+  const session = CachedSession(
+    domainId: 1,
+    userId: 'user-1',
+    backendPreset: 'hosted',
+  );
 
   test(
     'cached session opens offline when the backend is unreachable',
@@ -25,7 +41,7 @@ void main() {
       ).restore();
 
       expect(result.mode, SessionMode.offline);
-      expect(result.session!.accountKey, 'user:user-1');
+      expect(result.session!.accountKey, 'nexus-primary:user:user-1:domain:1');
       expect(await store.load(), same(session));
     },
   );
@@ -73,7 +89,7 @@ void main() {
       erasePartition: (key) async => erased.add(key),
     ).run(session: session, downloadedData: DownloadedDataLogoutPolicy.erase);
 
-    expect(erased, ['user:user-1']);
+    expect(erased, ['nexus-primary:user:user-1:domain:1']);
   });
 }
 

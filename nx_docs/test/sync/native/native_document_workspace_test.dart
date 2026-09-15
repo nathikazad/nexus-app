@@ -1,3 +1,4 @@
+import 'package:nx_offline/nx_offline.dart' as offline;
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +30,12 @@ void main() {
     clock = _Clock(DateTime.utc(2026, 7, 27, 12));
     ids = _Ids();
     uploader = BackgroundUploader(
+      account: const offline.AccountIdentity(
+        serverId: 'nexus-primary',
+        userId: '1',
+        domainId: 1,
+        application: 'nx_notes',
+      ),
       localStore: local,
       remoteApi: remote,
       clock: clock,
@@ -55,12 +62,15 @@ void main() {
     await local.dispose();
   });
 
-  test('demand before subscription publishes notFound for a deleted restored tab', () async {
-    await workspace.ensureDocumentAvailable(999999);
-    final session = workspace.openDocument(999999);
-    expect(session.state.phase, DocumentPhase.notFound);
-    expect(session.state.document, isNull);
-  });
+  test(
+    'demand before subscription publishes notFound for a deleted restored tab',
+    () async {
+      await workspace.ensureDocumentAvailable(999999);
+      final session = workspace.openDocument(999999);
+      expect(session.state.phase, DocumentPhase.notFound);
+      expect(session.state.document, isNull);
+    },
+  );
 
   test('cached catalog is emitted without a network request', () async {
     final cached = offlineTestDocument(id: 7, title: 'Cached recent');

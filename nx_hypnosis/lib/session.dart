@@ -39,13 +39,11 @@ class HypnosisSession extends ConsumerWidget {
     final session = ref.watch(authProvider);
     final cached = ref.watch(activeHypnosisUserProvider);
     final user = cached.value ?? session.value;
-    if (user != null) {
-      return ConnectedHypnosis(
-        key: ValueKey('${user.preset}-${user.userId}'),
-        user: user,
-      );
+    if (user != null && user.domainId != null) {
+      return ConnectedHypnosis(key: ValueKey(user.sessionKey), user: user);
     }
     return MaterialApp(
+      builder: (context, child) => DomainSessionGate(child: child!),
       title: 'NX Hypnosis',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -112,8 +110,9 @@ class _ConnectedHypnosisState extends ConsumerState<ConnectedHypnosis> {
         ? null
         : HypnosisCache.application(
             AccountIdentity(
-              serverId: 'nexus-primary',
+              serverId: widget.user.preset.serverId,
               userId: widget.user.userId,
+              domainId: widget.user.requiredDomainId,
               application: 'nx_hypnosis',
             ).key,
           ),

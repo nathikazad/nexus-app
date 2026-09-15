@@ -18,7 +18,7 @@ import 'package:nx_db/nx_db.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 
 final kgqlCardApiProvider = Provider<CardLibrary?>((ref) {
-  if (ref.watch(authProvider).value == null) return null;
+  if (ref.watch(authProvider).value?.domainId == null) return null;
   return KgqlCardApi(
     ref.watch(graphqlClientProvider),
     reads: ref.watch(appReadsProvider('cards')),

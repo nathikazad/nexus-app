@@ -70,11 +70,11 @@ query TellerTimelineEventsForRange(\$start: Datetime!, \$end: Datetime!, \$first
 }
 ''';
 
-/// True when [row] has at least one linked model of type Expense or Transfer.
-bool tellerRowHasExpenseOrTransferLink(TellerTransaction row) {
+/// True when [row] has at least one linked model of type Expense.
+bool tellerRowHasExpenseLink(TellerTransaction row) {
   for (final m in row.linkedModels) {
     final t = m.modelTypeName;
-    if (t == kExpenseModelTypeName || t == kTransferModelTypeName) {
+    if (t == kExpenseModelTypeName) {
       return true;
     }
   }

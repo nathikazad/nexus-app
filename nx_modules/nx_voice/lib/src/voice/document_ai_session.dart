@@ -8,6 +8,7 @@ class DocumentAiSessionConfig {
   const DocumentAiSessionConfig({
     required this.socketUrl,
     required this.userId,
+    required this.domainId,
     required this.documentId,
     required this.authHeaders,
     this.clientApp = 'nx_notes',
@@ -20,14 +21,17 @@ class DocumentAiSessionConfig {
   final String selection;
   final String socketUrl;
   final String userId;
+  final int domainId;
   final int documentId;
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
-  String get key => '$socketUrl|$userId|$documentId|$agentId|$selection';
+  String get key =>
+      '$socketUrl|$userId|$domainId|$documentId|$agentId|$selection';
 
   DocumentAiSessionConfig withSelection(String text) => DocumentAiSessionConfig(
         socketUrl: socketUrl,
         userId: userId,
+        domainId: domainId,
         documentId: documentId,
         authHeaders: authHeaders,
         clientApp: clientApp,
@@ -36,6 +40,7 @@ class DocumentAiSessionConfig {
       );
 
   Map<String, String> get headers => <String, String>{
+        'X-Nexus-Domain-Id': '$domainId',
         'X-Client-App': clientApp,
         'X-Agent-Id': agentId,
         'X-Document-Id': documentId.toString(),

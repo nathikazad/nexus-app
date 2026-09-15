@@ -33,3 +33,17 @@
   correct. Before removing a completed worktree, commit and merge its intended
   changes into the main checkout, preserve unrelated local edits, and retain any
   useful ignored diagnostics or artifacts outside the worktree.
+
+## Domain sessions
+
+- Hypnosis, Cards, Docs and Books use NX Auth's selected domain. Identity alone
+  is not data readiness: wait for `User.domainId` / `domainReadyProvider`.
+- Send `X-Nexus-Domain-Id` on every data transport, including voice and GraphQL
+  WebSocket connection payloads. Never infer a domain from a model type.
+- Storage identity is logical server + user + domain + app. Preserve pending
+  edits in their original partition; never adopt an old unscoped queue by guess.
+- Bind clients and asynchronous work to their session. Domain switching must
+  dispose the old sync/voice clients before new work starts.
+- The server contract and current rollout status are documented in
+  `../servers/docs/domain-sessions.md`. Other apps are outside this rollout;
+  do not add compatibility fallbacks for them.

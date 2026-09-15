@@ -157,7 +157,8 @@ void main() {
 }
 
 class _IntegrationHarness {
-  _IntegrationHarness() : client = createClient(_graphqlEndpoint, _userId) {
+  _IntegrationHarness()
+    : client = createClient(_graphqlEndpoint, _userId, domainId: 1) {
     repo = KgqlDocumentRepository(
       client: client,
       loadDocumentSchema: () =>

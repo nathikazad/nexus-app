@@ -1,3 +1,4 @@
+import 'package:nx_auth/nx_auth.dart';
 import 'package:flutter/rendering.dart';
 import 'timed_story.dart';
 import 'dart:async';
@@ -19,6 +20,7 @@ class HypnosisApp extends StatelessWidget {
   final VoidCallback? onLogout;
   @override
   Widget build(BuildContext context) => MaterialApp(
+    builder: (context, child) => DomainSessionGate(child: child!),
     title: 'NX Hypnosis',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(

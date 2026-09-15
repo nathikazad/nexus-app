@@ -16,7 +16,11 @@ class RemoteCollection extends HypnosisCollection {
     this.stateSession,
   }) : client =
            transport ??
-           NexusAuthenticatedClient(preset: user.preset, userId: user.userId),
+           NexusAuthenticatedClient(
+             preset: user.preset,
+             userId: user.userId,
+             domainId: user.requiredDomainId,
+           ),
        super([], [], '') {
     synchronizer = SyncSupervisor<String>(
       reconciler: _CollectionPull(_pull),
@@ -76,7 +80,8 @@ class RemoteCollection extends HypnosisCollection {
       synchronizer.requestFull(reason);
 
   Future<void> refreshVisible() => _serialize(() async {
-    final response = await client.get(endpoint('/apps/hypnosis/initial'))
+    final response = await client
+        .get(endpoint('/apps/hypnosis/initial'))
         .timeout(const Duration(seconds: 30));
     await _persist(response.statusCode, response.body);
   });

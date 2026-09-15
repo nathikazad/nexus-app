@@ -47,7 +47,7 @@ void main() {
         },
       );
       final data = RemoteCollection(
-        User(userId: '1', preset: BackendPreset.hosted),
+        User(domainId: 1, userId: '1', preset: BackendPreset.hosted),
         stateSession: () => session,
       );
       await data.initialize();

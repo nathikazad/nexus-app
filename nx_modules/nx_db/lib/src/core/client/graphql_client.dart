@@ -171,17 +171,34 @@ class GraphQLConfig {
   static const String defaultUserId = '1';
 }
 
+final _clientDomains = Expando<int>('domain');
+@visibleForTesting
+T bindTestClientDomain<T extends GraphQLClient>(T client, int domainId) {
+  if (domainId <= 0 ||
+      (_clientDomains[client] != null && _clientDomains[client] != domainId)) {
+    throw StateError('A client cannot change its domain');
+  }
+  _clientDomains[client] = domainId;
+  return client;
+}
+
+int domainForClient(GraphQLClient client) =>
+    _clientDomains[client] ??
+    (throw StateError('GraphQL client has no selected domain'));
+
 GraphQLClient createClient(
   String endpoint,
   String userId, {
+  required int domainId,
   String auditSourceKind = 'nx_mobile',
   BackendPreset? preset,
 }) {
   final ep = normalizeHttpEndpoint(endpoint);
   final usesOidc = preset?.requiresOidc ?? false;
-  final defaultHeaders = usesOidc
-      ? const <String, String>{}
-      : buildHttpLinkDefaultHeaders(ep, userId);
+  final defaultHeaders = <String, String>{
+    if (!usesOidc) ...buildHttpLinkDefaultHeaders(ep, userId),
+    'x-nexus-domain-id': '$domainId',
+  };
 
   final httpLink = HttpLink(ep, defaultHeaders: defaultHeaders);
 
@@ -197,8 +214,9 @@ GraphQLClient createClient(
       initialPayload: usesOidc
           ? () async => {
               'authorization': 'Bearer ${await nexusOidcService.accessToken()}',
+              'x-nexus-domain-id': '$domainId',
             }
-          : {'x-user-id': userId},
+          : {'x-user-id': userId, 'x-nexus-domain-id': '$domainId'},
       headers: defaultHeaders,
     ),
   );
@@ -220,9 +238,11 @@ GraphQLClient createClient(
     transport,
   ]);
 
-  return GraphQLClient(
+  final client = GraphQLClient(
     link: link,
     cache: GraphQLCache(),
     queryRequestTimeout: graphQlQueryRequestTimeout,
   );
+  _clientDomains[client] = domainId;
+  return client;
 }

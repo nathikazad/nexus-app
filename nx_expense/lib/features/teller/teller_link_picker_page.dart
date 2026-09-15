@@ -11,7 +11,7 @@ import 'package:nx_expense/data/teller/expense_timeline_api.dart';
 import 'package:nx_expense/data/teller/teller_timeline_api.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
 
-/// Pick a Teller transaction to link to a model (Expense, Transfer, …); on success, pops back.
+/// Pick a Teller transaction to link to a model (Expense); on success, pops back.
 class TellerLinkPickerScreen extends ConsumerWidget {
   const TellerLinkPickerScreen({super.key, required this.modelId});
 

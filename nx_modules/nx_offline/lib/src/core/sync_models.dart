@@ -24,6 +24,7 @@ final class AccountIdentity {
     required this.serverId,
     required this.userId,
     required this.application,
+    required this.domainId,
   }) : assert(serverId != ''),
        assert(userId != ''),
        assert(application != '');
@@ -31,18 +32,20 @@ final class AccountIdentity {
   final String serverId;
   final String userId;
   final String application;
+  final int domainId;
 
-  String get key => '$application:$serverId:$userId';
+  String get key => '$application:$serverId:$userId:domain:$domainId';
 
   @override
   bool operator ==(Object other) =>
       other is AccountIdentity &&
       serverId == other.serverId &&
       userId == other.userId &&
-      application == other.application;
+      application == other.application &&
+      domainId == other.domainId;
 
   @override
-  int get hashCode => Object.hash(serverId, userId, application);
+  int get hashCode => Object.hash(serverId, userId, application, domainId);
 }
 
 final class EntityKey {

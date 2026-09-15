@@ -6,7 +6,7 @@ import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
 import 'date_attribute_picker_field.dart';
 
-/// One schema attribute row for Expense / Transfer create–edit forms (boolean, number, date, string).
+/// One schema attribute row for Expense create–edit forms (boolean, number, date, string).
 class ModelAttributeFormField extends StatelessWidget {
   const ModelAttributeFormField({
     super.key,

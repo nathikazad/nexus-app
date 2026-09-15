@@ -25,6 +25,7 @@ class NxVoiceSocketClient {
 
   WebSocketChannel? _channel;
   String? _url;
+  int _generation = 0;
   Map<String, String>? _headers;
   Future<Map<String, String>> Function(bool forceRefresh)? _authHeaders;
   bool _isConnected = false;
@@ -50,6 +51,8 @@ class NxVoiceSocketClient {
     Map<String, String>? headers,
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
   }) async {
+    _generation++;
+    _queue.clear();
     _url = url;
     _headers = headers;
     _authHeaders = authHeaders;
@@ -57,21 +60,28 @@ class NxVoiceSocketClient {
   }
 
   Future<bool> _connect({required bool forceRefresh}) async {
+    final generation = _generation;
     final url = _url;
     if (url == null) return false;
 
     try {
       final headers = <String, String>{
-        ...?_headers,
         ...?await _authHeaders?.call(forceRefresh),
+        ...?_headers,
       };
-      _channel = IOWebSocketChannel.connect(
+      if (generation != _generation || _url == null) return false;
+      final channel = IOWebSocketChannel.connect(
         url,
         headers: headers,
         pingInterval: const Duration(seconds: 20),
         connectTimeout: const Duration(seconds: 10),
       );
-      await _channel!.ready;
+      _channel = channel;
+      await channel.ready;
+      if (generation != _generation || _url == null) {
+        await channel.sink.close();
+        return false;
+      }
       _isConnected = true;
       _reconnectAttempts = 0;
       onConnected?.call();
@@ -89,6 +99,7 @@ class NxVoiceSocketClient {
       );
       return true;
     } catch (error) {
+      if (generation != _generation || _url == null) return false;
       if (!forceRefresh && _authHeaders != null) {
         return _connect(forceRefresh: true);
       }
@@ -175,6 +186,8 @@ class NxVoiceSocketClient {
   }
 
   Future<void> disconnect({bool clearQueuedPackets = true}) async {
+    _generation++;
+    _url = null;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _isConnected = false;

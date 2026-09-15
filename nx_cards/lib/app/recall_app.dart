@@ -1,3 +1,4 @@
+import 'package:nx_db/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/routes.dart';
@@ -17,6 +18,7 @@ class NexusCardsApp extends ConsumerWidget {
       theme: buildRecallTheme(),
       darkTheme: buildRecallDarkTheme(),
       themeMode: appearance.themeMode,
+      builder: (context, child) => DomainSessionGate(child: child!),
       routerConfig: ref.watch(routerProvider),
     );
   }

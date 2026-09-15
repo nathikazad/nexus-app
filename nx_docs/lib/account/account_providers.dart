@@ -10,23 +10,17 @@ final activeOfflineSessionProvider = FutureProvider<CachedSession?>((
   final store = PreferencesSessionStore(preferences);
   final auth = ref.watch(authProvider);
   final user = auth.value;
+  if (user != null && user.domainId == null) return null;
   if (user != null) {
     final session = CachedSession(
       userId: user.userId,
+      domainId: user.requiredDomainId,
       backendPreset: user.preset.key,
     );
     await store.save(session);
     return session;
   }
-  final cached = await store.load();
-  if (cached == null) return null;
-  final probe = HttpSessionProbe();
-  ref.onDispose(probe.close);
-  final result = await OfflineSessionRestorer(
-    store: store,
-    probe: probe.call,
-  ).restore();
-  return result.session;
+  return null;
 });
 
 typedef AccountLogoutAction = Future<void> Function();

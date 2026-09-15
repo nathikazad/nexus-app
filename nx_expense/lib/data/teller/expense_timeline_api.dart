@@ -221,7 +221,7 @@ Future<void> linkExpenseToTimelineEvent(
   }
 }
 
-/// Same junction row as [linkExpenseToTimelineEvent]; use for Transfer (or any model).
+/// Same junction row as [linkExpenseToTimelineEvent]; use for any model.
 Future<void> linkModelToTimelineEvent(
   GraphQLClient client, {
   required int modelId,

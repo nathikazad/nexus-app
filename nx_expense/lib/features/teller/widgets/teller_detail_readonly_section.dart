@@ -10,7 +10,7 @@ import 'package:nx_expense/features/teller/teller_transaction_detail_page.dart';
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/formatting/teller_display.dart';
 
-/// Read-only Teller timeline links for any model (Expense, Transfer, …).
+/// Read-only Teller timeline links for any model (Expense).
 class TellerDetailReadonlySection extends ConsumerWidget {
   const TellerDetailReadonlySection({super.key, required this.modelId});
 

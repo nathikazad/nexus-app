@@ -5,27 +5,25 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../core/client/db_audit_context.dart';
 import '../documents/get_kgql_model_type.graphql.dart';
 import '../documents/get_kgql_model_type_all.graphql.dart';
-import '../documents/resolve_model_type_domain_options.graphql.dart';
 import '../documents/set_kgql_model_type.graphql.dart';
 import '../models/model_type.dart';
-import '../models/model_type_domain_options.dart';
 import '../requests/set_model_type_request.dart';
 import 'mutation_debug.dart';
 
 /// Default struct for loading a full [ModelType] by name (Expense / Transfer apps).
 Map<String, dynamic> get kgqlFullModelTypeStruct => const {
-      'id': true,
-      'name': true,
-      'type_kind': true,
-      'description': true,
-      'agent_instructions': true,
-      'parent': true,
-      'children': true,
-      'mixins': true,
-      'attributes': true,
-      'relations': true,
-      'tag_systems': true,
-    };
+  'id': true,
+  'name': true,
+  'type_kind': true,
+  'description': true,
+  'agent_instructions': true,
+  'parent': true,
+  'children': true,
+  'mixins': true,
+  'attributes': true,
+  'relations': true,
+  'tag_systems': true,
+};
 
 /// Loads a single [ModelType] by name (e.g. `"Expense"`).
 Future<ModelType> fetchKgqlModelTypeByName(
@@ -55,8 +53,9 @@ Future<ModelType> fetchKgqlModelTypeByName(
     throw StateError('getKgqlModelType returned null');
   }
 
-  final jsonArray =
-      raw is String ? json.decode(raw) as List<dynamic> : raw as List<dynamic>;
+  final jsonArray = raw is String
+      ? json.decode(raw) as List<dynamic>
+      : raw as List<dynamic>;
 
   if (jsonArray.isEmpty) {
     throw StateError('Model type "$modelTypeName" not found');
@@ -106,7 +105,8 @@ Future<List<ModelType>> fetchAllModelTypes(GraphQLClient client) async {
   }).toList();
 
   print(
-      '📊 getAllModelTypes: Received ${allModelTypes.length} root model types');
+    '📊 getAllModelTypes: Received ${allModelTypes.length} root model types',
+  );
 
   return allModelTypes;
 }
@@ -173,34 +173,6 @@ Future<ModelType?> fetchKgqlModelTypeById(
   return ModelType.fromJson(modelTypeJson, recursive: true);
 }
 
-/// Returns the domains available for a model type for the current user.
-Future<ModelTypeDomainOptions> fetchModelTypeDomainOptions(
-  GraphQLClient client, {
-  required String modelTypeName,
-}) async {
-  final result = await client.query(
-    QueryOptions(
-      document: gql(resolveModelTypeDomainOptionsQuery),
-      variables: {'modelTypeName': modelTypeName},
-      fetchPolicy: FetchPolicy.networkOnly,
-    ),
-  );
-
-  if (result.hasException) {
-    throw result.exception!;
-  }
-
-  final raw = result.data?['resolveModelTypeDomainOptions'];
-  if (raw == null) {
-    return ModelTypeDomainOptions(modelType: modelTypeName, domains: const []);
-  }
-
-  final json = raw is String
-      ? jsonDecode(raw) as Map<String, dynamic>
-      : Map<String, dynamic>.from(raw as Map);
-  return ModelTypeDomainOptions.fromJson(json);
-}
-
 /// Creates or updates a model type via `set_kgql_model_types`.
 Future<int> setKgqlModelType(
   GraphQLClient client,
@@ -209,7 +181,8 @@ Future<int> setKgqlModelType(
   String auditSourceKind = '',
 }) async {
   final requestJson = request.toJson();
-  final context = auditContext ??
+  final context =
+      auditContext ??
       currentDbAuditContext() ??
       DbAuditContext.create(
         sourceKind: auditSourceKind,
@@ -219,9 +192,7 @@ Future<int> setKgqlModelType(
 
   try {
     final variables = {
-      'input': {
-        'data': requestJson,
-      },
+      'input': {'data': requestJson},
     };
     final result = await runWithDbAuditContext(
       context,

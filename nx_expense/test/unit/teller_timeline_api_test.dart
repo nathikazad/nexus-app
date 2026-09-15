@@ -188,7 +188,7 @@ void main() {
     });
   });
 
-  group('tellerRowHasExpenseOrTransferLink', () {
+  group('tellerRowHasExpenseLink', () {
     TellerTransactionRow rowWithLinks(List<LinkedTellerModel> models) {
       return TellerTransactionRow(
         time: DateTime.utc(2026, 3, 10, 8),
@@ -199,12 +199,12 @@ void main() {
     }
 
     test('false when no linked models', () {
-      expect(tellerRowHasExpenseOrTransferLink(rowWithLinks([])), isFalse);
+      expect(tellerRowHasExpenseLink(rowWithLinks([])), isFalse);
     });
 
-    test('false when only non-expense non-transfer types', () {
+    test('false when only non-expense types', () {
       expect(
-        tellerRowHasExpenseOrTransferLink(
+        tellerRowHasExpenseLink(
           rowWithLinks([
             const LinkedTellerModel(
               id: 1,
@@ -219,40 +219,9 @@ void main() {
 
     test('true when linked Expense', () {
       expect(
-        tellerRowHasExpenseOrTransferLink(
+        tellerRowHasExpenseLink(
           rowWithLinks([
             const LinkedTellerModel(id: 2, name: 'E', modelTypeName: 'Expense'),
-          ]),
-        ),
-        isTrue,
-      );
-    });
-
-    test('true when linked Transfer', () {
-      expect(
-        tellerRowHasExpenseOrTransferLink(
-          rowWithLinks([
-            const LinkedTellerModel(
-              id: 3,
-              name: 'T',
-              modelTypeName: 'Transfer',
-            ),
-          ]),
-        ),
-        isTrue,
-      );
-    });
-
-    test('true when both Expense and Transfer present', () {
-      expect(
-        tellerRowHasExpenseOrTransferLink(
-          rowWithLinks([
-            const LinkedTellerModel(id: 2, name: 'E', modelTypeName: 'Expense'),
-            const LinkedTellerModel(
-              id: 3,
-              name: 'T',
-              modelTypeName: 'Transfer',
-            ),
           ]),
         ),
         isTrue,

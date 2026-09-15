@@ -15,18 +15,17 @@ final graphqlClientProvider = Provider<GraphQLClient>((ref) {
   final auditSourceKind = ref.watch(dbAuditSourceKindProvider);
   final user = ref.watch(authProvider).value;
 
-  if (userId == null || endpoint == null) {
-    return createClient(
-      GraphQLConfig.defaultEndpoint,
-      GraphQLConfig.defaultUserId,
-      auditSourceKind: auditSourceKind,
-    );
+  if (userId == null || endpoint == null || user?.domainId == null) {
+    throw StateError('A selected domain is required');
   }
 
-  return createClient(
+  final client = createClient(
     endpoint,
     userId,
     auditSourceKind: auditSourceKind,
-    preset: user?.preset,
+    preset: user!.preset,
+    domainId: user.requiredDomainId,
   );
+  ref.onDispose(() => client.link.dispose());
+  return client;
 }, name: 'graphqlClientProvider');

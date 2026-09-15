@@ -18,6 +18,7 @@ void main() {
     mic = _Microphone();
     controller = ReadingCompanionController(
       config: DocumentAiSessionConfig(
+        domainId: 1,
         socketUrl: 'ws://test',
         userId: '1',
         documentId: 7,

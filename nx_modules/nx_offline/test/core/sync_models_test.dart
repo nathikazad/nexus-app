@@ -15,6 +15,7 @@ void main() {
     final mutation = PendingMutation(
       operationId: 'op-1',
       account: const AccountIdentity(
+        domainId: 1,
         serverId: 'production',
         userId: 'user-1',
         application: 'test',
@@ -48,6 +49,7 @@ void main() {
     final mutation = PendingMutation(
       operationId: 'blocked',
       account: const AccountIdentity(
+        domainId: 1,
         serverId: 'nexus-primary',
         userId: 'user-1',
         application: 'test',

@@ -9,7 +9,11 @@ import 'package:nx_docs/sync/native/notes_database.dart';
 
 void main() {
   test('reuses one database while the same account session rebuilds', () async {
-    const session = CachedSession(userId: '1', backendPreset: 'pi_tailscale');
+    const session = CachedSession(
+      domainId: 1,
+      userId: '1',
+      backendPreset: 'pi_tailscale',
+    );
     var databaseCreations = 0;
     final container = ProviderContainer(
       overrides: [
@@ -37,7 +41,11 @@ void main() {
   });
 
   test('account switching selects an isolated sync database', () async {
-    var session = const CachedSession(userId: '1', backendPreset: 'pi_wan');
+    var session = const CachedSession(
+      domainId: 1,
+      userId: '1',
+      backendPreset: 'pi_wan',
+    );
     var databaseCreations = 0;
     final container = ProviderContainer(
       overrides: [
@@ -54,13 +62,17 @@ void main() {
 
     await container.read(activeOfflineSessionProvider.future);
     final first = container.read(localNotesStoreProvider)!;
-    session = const CachedSession(userId: '2', backendPreset: 'pi_wan');
+    session = const CachedSession(
+      domainId: 1,
+      userId: '2',
+      backendPreset: 'pi_wan',
+    );
     container.invalidate(activeOfflineSessionProvider);
     await container.read(activeOfflineSessionProvider.future);
     final second = container.read(localNotesStoreProvider)!;
 
-    expect(first.accountKey, 'user:1');
-    expect(second.accountKey, 'user:2');
+    expect(first.accountKey, 'nexus-primary:user:1:domain:1');
+    expect(second.accountKey, 'nexus-primary:user:2:domain:1');
     expect(identical(first, second), isFalse);
     expect(databaseCreations, 2);
   });

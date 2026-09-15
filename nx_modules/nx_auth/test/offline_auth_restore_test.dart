@@ -20,6 +20,7 @@ void main() {
     });
     final container = ProviderContainer(
       overrides: [
+        domainLoaderProvider.overrideWithValue((_) async => const []),
         retainAuthSessionWhenOfflineProvider.overrideWithValue(offlineAllowed),
         nexusClientAppIdProvider.overrideWithValue('nx_books'),
         oidcSessionRestoreProvider.overrideWithValue(remote),

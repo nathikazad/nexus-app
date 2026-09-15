@@ -52,7 +52,7 @@ void main() {
       final library = DynamicLibrary.open(
         '../nx_modules/nx_opus_macos/macos/nx_opus_macos/opus.xcframework/macos-arm64_x86_64/opus.framework/opus',
       );
-      initOpus(library);
+      initOpus(library as dynamic);
       final encoder = SimpleOpusEncoder(
         sampleRate: 16000,
         channels: 1,

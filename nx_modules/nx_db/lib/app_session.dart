@@ -14,7 +14,7 @@ AppDataSession? createAppSession(
   OfflineSyncBackend? offline,
   Stream<bool>? onlineChanges,
 }) {
-  if (ref.watch(authProvider).value == null) return null;
+  if (ref.watch(authProvider).value?.domainId == null) return null;
   final client = AppSyncClient(
     ref.watch(graphqlClientProvider),
     definition.name,

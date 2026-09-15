@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nx_expense/core/formatting/format.dart';
-import 'package:nx_expense/domain/transfer/transfer.dart';
 import 'package:nx_expense/data/schema/kgql_schema_helpers.dart';
 
 void main() {
@@ -100,18 +99,6 @@ void main() {
       });
       final out = sortModelsByDateDesc([a, b]);
       expect(out.map((m) => m.id), [2, 1]);
-    });
-  });
-
-  group('transferCellDateLabel', () {
-    test('matches modelDateCellLabel for same date attrs', () {
-      const t = Transfer(
-        id: 1,
-        name: 'T',
-        modelTypeId: 1,
-        attributes: {'date': '2026-05-01'},
-      );
-      expect(transferCellDateLabel(t), modelDateCellLabel(t));
     });
   });
 }

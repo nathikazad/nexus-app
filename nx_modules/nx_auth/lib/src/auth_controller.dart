@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'backend_ping.dart';
 import 'backend_presets.dart';
 import 'oidc_service.dart';
 import 'user.dart';
 import 'session_availability.dart';
+import 'domain_session.dart';
 
 typedef OidcSessionRestore =
     Future<NexusIdentity?> Function(BackendPreset preset, String clientAppId);
@@ -25,6 +25,7 @@ class AuthController extends AsyncNotifier<User?> {
     this.skipBackendPing = false,
   });
 
+  int _generation = 0;
   final Duration initialDelay;
   final bool skipBackendPing;
 
@@ -73,7 +74,7 @@ class AuthController extends AsyncNotifier<User?> {
           if (ref.read(retainAuthSessionWhenOfflineProvider) &&
               userId != null &&
               userId.isNotEmpty) {
-            return User(userId: userId, preset: preset);
+            return await _restoreDomain(User(userId: userId, preset: preset));
           }
           rethrow;
         }
@@ -82,32 +83,16 @@ class AuthController extends AsyncNotifier<User?> {
           return null;
         }
         await prefs.setString(PrefsKeys.userId, identity.userId);
-        return User(userId: identity.userId, preset: preset);
+        return await _restoreDomain(
+          User(userId: identity.userId, preset: preset),
+        );
       }
 
       if (userId != null && userId.isNotEmpty && preset != null) {
         print(
           '[AuthController] Found saved credentials: userId=$userId preset=${preset.key}',
         );
-        if (!skipBackendPing) {
-          try {
-            final urls = resolve(preset);
-            print('[AuthController] restore ping → ${urls.graphqlHttp}');
-            await pingGraphqlBackend(
-              graphqlHttpUrl: urls.graphqlHttp,
-              userId: userId,
-            );
-          } catch (e) {
-            print('[AuthController] restore ping failed: $e');
-            if (!ref.read(retainAuthSessionWhenOfflineProvider)) {
-              print('[AuthController] clearing session → login required');
-              await _clearSessionPrefs(prefs);
-              return null;
-            }
-            print('[AuthController] keeping saved session for offline access');
-          }
-        }
-        return User(userId: userId, preset: preset);
+        return await _restoreDomain(User(userId: userId, preset: preset));
       }
 
       print('[AuthController] No saved credentials found');
@@ -119,6 +104,7 @@ class AuthController extends AsyncNotifier<User?> {
   }
 
   Future<String?> login(String userId, BackendPreset preset) async {
+    final generation = ++_generation;
     print('[AuthController] login() - user: $userId preset: ${preset.key}');
     state = const AsyncValue.loading();
 
@@ -134,32 +120,105 @@ class AuthController extends AsyncNotifier<User?> {
           ref.read(nexusClientAppIdProvider),
         );
         resolvedUserId = identity.userId;
-      } else if (!skipBackendPing) {
-        await pingGraphqlBackend(
-          graphqlHttpUrl: urls.graphqlHttp,
-          userId: userId,
-        );
       }
 
+      if (generation != _generation || !ref.mounted) return 'Sign-in cancelled';
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(PrefsKeys.userId, resolvedUserId);
       await prefs.setString(PrefsKeys.endpoint, urls.graphqlHttp);
       await prefs.setString(PrefsKeys.backendPreset, preset.key);
       await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
 
-      final user = User(userId: resolvedUserId, preset: preset);
+      final user = await _restoreDomain(
+        User(userId: resolvedUserId, preset: preset),
+      );
+      if (generation != _generation || !ref.mounted) return 'Sign-in cancelled';
       state = AsyncValue.data(user);
       print('[AuthController] Login successful');
       return null;
     } catch (e, stackTrace) {
       final errorMessage = e.toString().replaceFirst('Exception: ', '');
       print('[AuthController] Login error: $errorMessage');
-      state = AsyncValue.error(e, stackTrace);
+      if (generation == _generation && ref.mounted)
+        state = AsyncValue.error(e, stackTrace);
       return errorMessage;
     }
   }
 
+  String _domainKey(User user) =>
+      'nexus.domain.${user.preset.key}.${user.userId}';
+
+  Future<User> _restoreDomain(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getInt(_domainKey(user));
+    List<DomainMembership> domains;
+    try {
+      domains = await ref.read(domainLoaderProvider)(user);
+    } on AuthSessionRejected {
+      await prefs.remove(_domainKey(user));
+      rethrow;
+    } on AuthServiceUnavailable {
+      if (ref.read(retainAuthSessionWhenOfflineProvider) && saved != null) {
+        return User(
+          userId: user.userId,
+          preset: user.preset,
+          domainId: saved,
+          domainName: prefs.getString('${_domainKey(user)}.name'),
+        );
+      }
+      return user;
+    }
+    final candidates = domains.where((d) => d.id == saved).toList();
+    final selected = domains.length == 1
+        ? domains.single
+        : candidates.firstOrNull;
+    if (selected == null) {
+      await prefs.remove(_domainKey(user));
+      return user;
+    }
+    await prefs.setInt(_domainKey(user), selected.id);
+    await prefs.setString('${_domainKey(user)}.name', selected.name);
+    return User(
+      userId: user.userId,
+      preset: user.preset,
+      domainId: selected.id,
+      domainName: selected.name,
+    );
+  }
+
+  Future<void> selectDomain(int id) async {
+    final user = state.value;
+    if (user == null) return;
+    final generation = ++_generation;
+    final domains = await ref.read(domainLoaderProvider)(user);
+    if (!ref.mounted || generation != _generation || state.value != user)
+      return;
+    final selected = domains.singleWhere((d) => d.id == id);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_domainKey(user), id);
+    await prefs.setString('${_domainKey(user)}.name', selected.name);
+    if (!ref.mounted || generation != _generation || state.value != user)
+      return;
+    state = AsyncValue.data(
+      User(
+        userId: user.userId,
+        preset: user.preset,
+        domainId: id,
+        domainName: selected.name,
+      ),
+    );
+  }
+
+  void clearDomain() {
+    _generation++;
+    final user = state.value;
+    if (user != null) {
+      state = AsyncValue.data(User(userId: user.userId, preset: user.preset));
+    }
+  }
+
   Future<void> logout() async {
+    _generation++;
     print('[AuthController] logout() - Logging out user');
     final currentUser = state.value;
     state = const AsyncValue.loading();

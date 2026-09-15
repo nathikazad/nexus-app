@@ -167,6 +167,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     final controller = ReadingCompanionController(
       hasNetwork: ref.read(booksNetworkAvailableProvider),
       config: DocumentAiSessionConfig(
+        domainId: user.requiredDomainId,
         socketUrl: url,
         userId: user.userId,
         documentId: identity.id,
@@ -175,7 +176,16 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
             ? 'nx_books_epub'
             : 'nx_books',
         authHeaders: (refresh) =>
-            nexusAuthHeaders(user.preset, user.userId, forceRefresh: refresh),
+            nexusAuthHeaders(
+              user.preset,
+              user.userId,
+              forceRefresh: refresh,
+            ).then(
+              (headers) => {
+                ...headers,
+                'x-nexus-domain-id': '${user.requiredDomainId}',
+              },
+            ),
       ),
     );
     _historyStore = ref.read(readingHistoryStoreProvider);

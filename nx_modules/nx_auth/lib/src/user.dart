@@ -5,7 +5,19 @@ class User {
   final String userId;
   final BackendPreset preset;
 
-  User({required this.userId, required this.preset});
+  final int? domainId;
+  final String? domainName;
+  User({
+    required this.userId,
+    required this.preset,
+    this.domainId,
+    this.domainName,
+  });
+  int get requiredDomainId =>
+      domainId ?? (throw StateError('Select a domain first'));
+  String get storageKey =>
+      '${preset.serverId}:$userId:domain:$requiredDomainId';
+  String get sessionKey => '${preset.key}:$storageKey';
 
   @override
   bool operator ==(Object other) =>
@@ -13,10 +25,11 @@ class User {
       other is User &&
           runtimeType == other.runtimeType &&
           userId == other.userId &&
-          preset == other.preset;
+          preset == other.preset &&
+          domainId == other.domainId;
 
   @override
-  int get hashCode => userId.hashCode ^ preset.hashCode;
+  int get hashCode => Object.hash(userId, preset, domainId);
 }
 
 /// Fixed login choices used by direct Pi/development deployments.

@@ -21,9 +21,6 @@ final selectedExpenseIdProvider = StateProvider<int?>((ref) => null);
 /// Empty = blank third column.
 final panel3StackProvider = StateProvider<List<Panel3State>>((ref) => const []);
 
-// --- Transfers ---
-final selectedTransferIdProvider = StateProvider<int?>((ref) => null);
-
 // --- Teller tab ---
 final selectedTellerRowProvider = StateProvider<TellerTransactionRow?>(
   (ref) => null,
@@ -43,38 +40,21 @@ class TellerPanel3State {
   const TellerPanel3State.expense(int id)
     : this._(kind: TellerPanel3Kind.expense, detailId: id);
 
-  const TellerPanel3State.transfer(int id)
-    : this._(kind: TellerPanel3Kind.transfer, detailId: id);
-
   const TellerPanel3State.linkExpensePicker(TellerTransactionRow row)
     : this._(kind: TellerPanel3Kind.linkExpensePicker, tellerRow: row);
-
-  const TellerPanel3State.linkTransferPicker(TellerTransactionRow row)
-    : this._(kind: TellerPanel3Kind.linkTransferPicker, tellerRow: row);
 
   const TellerPanel3State.newExpenseForm(TellerTransactionRow row)
     : this._(kind: TellerPanel3Kind.newExpenseForm, tellerRow: row);
 
-  const TellerPanel3State.newTransferCreate(TellerTransactionRow row)
-    : this._(kind: TellerPanel3Kind.newTransferCreate, tellerRow: row);
-
   final TellerPanel3Kind kind;
 
-  /// [TellerPanel3Kind.expense] / [TellerPanel3Kind.transfer] detail id.
   final int? detailId;
 
   /// Row context for pickers / create flows.
   final TellerTransactionRow? tellerRow;
 }
 
-enum TellerPanel3Kind {
-  expense,
-  transfer,
-  linkExpensePicker,
-  linkTransferPicker,
-  newExpenseForm,
-  newTransferCreate,
-}
+enum TellerPanel3Kind { expense, linkExpensePicker, newExpenseForm }
 
 void closeTellerPanel3(WidgetRef ref) {
   ref.read(tellerPanel3Provider.notifier).state = null;
@@ -109,14 +89,7 @@ class TagSystemsPanelSelection {
   final int? editId;
 }
 
-enum Panel3Type {
-  none,
-  transfer,
-  teller,
-  tagExpenses,
-  relationExpenses,
-  expenseDetail,
-}
+enum Panel3Type { none, teller, tagExpenses, relationExpenses, expenseDetail }
 
 class Panel3State {
   const Panel3State({
@@ -169,14 +142,6 @@ void navToExpenseDetail(BuildContext context, WidgetRef ref, int id) {
     clearPanel3(ref);
   } else {
     context.push('/expense/$id');
-  }
-}
-
-void navToTransferDetail(BuildContext context, WidgetRef ref, int transferId) {
-  if (isDesktopLayout(context)) {
-    pushPanel3(ref, Panel3State(type: Panel3Type.transfer, id: transferId));
-  } else {
-    context.push('/transfer/$transferId');
   }
 }
 
@@ -239,18 +204,6 @@ void navToExpenseDetailFromPanel3(
   }
 }
 
-void navToTransferDetailDirect(
-  BuildContext context,
-  WidgetRef ref,
-  int transferId,
-) {
-  if (isDesktopLayout(context)) {
-    ref.read(selectedTransferIdProvider.notifier).state = transferId;
-  } else {
-    context.push('/transfer/$transferId');
-  }
-}
-
 void navAfterExpenseDelete(BuildContext context, WidgetRef ref) {
   if (isDesktopLayout(context)) {
     ref.read(selectedExpenseIdProvider.notifier).state = null;
@@ -287,38 +240,6 @@ void navExpenseDetailBack(
   }
   ref.read(selectedExpenseIdProvider.notifier).state = null;
   clearPanel3(ref);
-}
-
-/// Back from transfer detail (embedded or full-screen).
-void navTransferDetailBack(
-  BuildContext context,
-  WidgetRef ref,
-  int transferId,
-) {
-  if (!isDesktopLayout(context)) {
-    context.pop();
-    return;
-  }
-  final tp = ref.read(tellerPanel3Provider);
-  if (tp != null &&
-      tp.kind == TellerPanel3Kind.transfer &&
-      tp.detailId == transferId) {
-    ref.read(tellerPanel3Provider.notifier).state = null;
-    return;
-  }
-  final stack = ref.read(panel3StackProvider);
-  if (stack.isNotEmpty &&
-      stack.last.type == Panel3Type.transfer &&
-      stack.last.id == transferId) {
-    popPanel3(ref);
-    return;
-  }
-  final sel = ref.read(selectedTransferIdProvider);
-  if (sel == transferId) {
-    ref.read(selectedTransferIdProvider.notifier).state = null;
-    return;
-  }
-  context.pop();
 }
 
 void navTellerTxDetailBack(
@@ -387,23 +308,5 @@ void navToExpenseFromTellerLink(
     final router = GoRouter.of(context);
     router.pop();
     router.push('/expense/$expenseId');
-  }
-}
-
-/// From Teller detail: desktop shows linked transfer in the Teller third column;
-/// mobile opens the transfer route (pops Teller detail first).
-void navToTransferFromTellerLink(
-  BuildContext context,
-  WidgetRef ref,
-  int transferId,
-) {
-  if (isDesktopLayout(context)) {
-    ref.read(tellerPanel3Provider.notifier).state = TellerPanel3State.transfer(
-      transferId,
-    );
-  } else {
-    final router = GoRouter.of(context);
-    router.pop();
-    router.push('/transfer/$transferId');
   }
 }

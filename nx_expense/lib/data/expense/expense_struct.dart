@@ -42,18 +42,7 @@ Map<String, dynamic> buildExpenseDetailStruct(ModelType schema) {
   for (final rel in schema.relations ?? const <RelationshipType>[]) {
     final link = rel.link;
     if (link is String && link.isNotEmpty) {
-      if (link == kTransferModelTypeName) {
-        struct[link] = {
-          'id': true,
-          'name': true,
-          'description': true,
-          'created_at': true,
-          'amount': true,
-          'date': true,
-          'to': true,
-          'Company': {'id': true, 'name': true},
-        };
-      } else if (link == kProductModelTypeName) {
+      if (link == kProductModelTypeName) {
         struct[link] = {
           'id': true,
           'name': true,

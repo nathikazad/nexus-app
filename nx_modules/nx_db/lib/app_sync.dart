@@ -12,16 +12,16 @@ final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
   ref,
   app,
 ) {
-  if (!appStateSyncEnabled || ref.watch(authProvider).value == null)
+  if (!appStateSyncEnabled || ref.watch(authProvider).value?.domainId == null)
     return null;
   final client = ref.watch(graphqlClientProvider);
   return client
       .subscribe(
         SubscriptionOptions(
           document: gql(r'''
-    subscription AppSyncChanged($app:String!) { appSyncChanged(app:$app) }
+    subscription AppSyncChanged($app:String!,$domainId:Int!) { appSyncChanged(app:$app,domainId:$domainId) }
   '''),
-          variables: {'app': app},
+          variables: {'app': app, 'domainId': domainForClient(client)},
           fetchPolicy: FetchPolicy.noCache,
         ),
       )
@@ -91,15 +91,19 @@ final class AppSyncClient {
         document: gql(
           state
               ? r'''
-      query AppSyncState($app:String!) { appSyncState(app:$app) }
+      query AppSyncState($app:String!,$domainId:Int!) { appSyncState(app:$app,domainId:$domainId) }
     '''
               : r'''
-      query AppSyncSnapshot($app:String!,$revision:String!,$itemIds:[Int!],$collectionIds:[String!]) {
-        appSyncSnapshot(app:$app,revision:$revision,itemIds:$itemIds,collectionIds:$collectionIds)
+      query AppSyncSnapshot($app:String!,$domainId:Int!,$revision:String!,$itemIds:[Int!],$collectionIds:[String!]) {
+        appSyncSnapshot(app:$app,domainId:$domainId,revision:$revision,itemIds:$itemIds,collectionIds:$collectionIds)
       }
     ''',
         ),
-        variables: {'app': app, ...variables},
+        variables: {
+          ...variables,
+          'app': app,
+          'domainId': domainForClient(client),
+        },
         fetchPolicy: FetchPolicy.noCache,
         queryRequestTimeout: const Duration(seconds: 30),
       ),

@@ -30,63 +30,67 @@ GraphQLClient _integrationClient() {
       ? fromEnv
       : kIntegrationTestBackendUrls.graphqlHttp;
   final userId = Platform.environment['NX_DB_INTEGRATION_USER_ID'] ?? '1';
-  return createClient(graphqlHttp, userId);
+  return createClient(graphqlHttp, userId, domainId: 1);
 }
 
 void main() {
-  group('IN13 integration (RUN_NX_DB_INTEGRATION=true, localhost PGDB)', () {
-    late GraphQLClient client;
+  group(
+    'IN13 integration (RUN_NX_DB_INTEGRATION=true, localhost PGDB)',
+    () {
+      late GraphQLClient client;
 
-    setUpAll(() {
-      client = _integrationClient();
-    });
+      setUpAll(() {
+        client = _integrationClient();
+      });
 
-    test('IN13.1 live getKgqlModelType parses', () async {
-      final result = await client.query(
-        QueryOptions(
-          document: gql(getAllModelTypesQuery),
-          fetchPolicy: FetchPolicy.networkOnly,
-        ),
-      );
-      expect(result.hasException, isFalse, reason: '${result.exception}');
-      final raw = result.data?['getKgqlModelType'];
-      expect(raw, isNotNull);
-      final list = raw is String
-          ? json.decode(raw) as List<dynamic>
-          : raw as List<dynamic>;
-      expect(list, isNotEmpty);
-      final first = list.first as Map<String, dynamic>;
-      ModelType.fromJson(first, recursive: true);
-    });
+      test('IN13.1 live getKgqlModelType parses', () async {
+        final result = await client.query(
+          QueryOptions(
+            document: gql(getAllModelTypesQuery),
+            fetchPolicy: FetchPolicy.networkOnly,
+          ),
+        );
+        expect(result.hasException, isFalse, reason: '${result.exception}');
+        final raw = result.data?['getKgqlModelType'];
+        expect(raw, isNotNull);
+        final list = raw is String
+            ? json.decode(raw) as List<dynamic>
+            : raw as List<dynamic>;
+        expect(list, isNotEmpty);
+        final first = list.first as Map<String, dynamic>;
+        ModelType.fromJson(first, recursive: true);
+      });
 
-    test('IN13.2 live getKgqlModels no parse exception', () async {
-      final result = await client.query(
-        QueryOptions(
-          document: gql(kgqlGetKgqlModelsQuery),
-          variables: {
-            'filter': {'model_type': 'Expense'},
-            'struct': {'id': true, 'name': true},
-          },
-          fetchPolicy: FetchPolicy.networkOnly,
-        ),
-      );
-      if (result.hasException) {
-        fail('GraphQL error: ${result.exception}');
-      }
-      final raw = result.data?['getKgqlModels'];
-      expect(raw, isNotNull);
-      if (raw is String) {
-        json.decode(raw);
-      }
-    });
+      test('IN13.2 live getKgqlModels no parse exception', () async {
+        final result = await client.query(
+          QueryOptions(
+            document: gql(kgqlGetKgqlModelsQuery),
+            variables: {
+              'filter': {'model_type': 'Expense'},
+              'struct': {'id': true, 'name': true},
+            },
+            fetchPolicy: FetchPolicy.networkOnly,
+          ),
+        );
+        if (result.hasException) {
+          fail('GraphQL error: ${result.exception}');
+        }
+        final raw = result.data?['getKgqlModels'];
+        expect(raw, isNotNull);
+        if (raw is String) {
+          json.decode(raw);
+        }
+      });
 
-    test('IN13.3 live aggregate parseable', () async {
-      final out = await getKgqlAggregate(
-        client,
-        {'model_type': 'Expense'},
-        {'metric': 'count', 'key': null, 'group': null},
-      );
-      expect(out, isNotEmpty);
-    });
-  }, skip: !_runIntegration);
+      test('IN13.3 live aggregate parseable', () async {
+        final out = await getKgqlAggregate(
+          client,
+          {'model_type': 'Expense'},
+          {'metric': 'count', 'key': null, 'group': null},
+        );
+        expect(out, isNotEmpty);
+      });
+    },
+    skip: !_runIntegration,
+  );
 }

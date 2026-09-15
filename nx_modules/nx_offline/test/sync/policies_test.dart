@@ -3,6 +3,7 @@ import 'package:nx_offline/nx_offline.dart';
 
 void main() {
   const account = AccountIdentity(
+    domainId: 1,
     serverId: 'production',
     userId: 'user-1',
     application: 'test',

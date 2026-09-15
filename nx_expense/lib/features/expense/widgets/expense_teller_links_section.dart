@@ -20,7 +20,7 @@ class ModelTellerLinksFormSection extends ConsumerStatefulWidget {
 
   final int modelId;
 
-  /// Registered route, e.g. `/expense/12/link-teller` or `/transfer/12/link-teller`.
+  /// Registered route, e.g. `/expense/12/link-teller`.
   final String linkPickerRoute;
 
   @override

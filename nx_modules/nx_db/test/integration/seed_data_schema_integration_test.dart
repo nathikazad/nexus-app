@@ -74,7 +74,7 @@ GraphQLClient _client() {
       ? fromEnv
       : kIntegrationTestBackendUrls.graphqlHttp;
   final userId = Platform.environment['NX_DB_INTEGRATION_USER_ID'] ?? '1';
-  return createClient(graphqlHttp, userId);
+  return createClient(graphqlHttp, userId, domainId: 1);
 }
 
 void _collectModelTypeNames(ModelType mt, Set<String> out) {
@@ -125,11 +125,13 @@ Future<List<ModelType>> _fetchModelTypeRoots(GraphQLClient client) async {
   expect(result.hasException, isFalse, reason: '${result.exception}');
   final raw = result.data?['getKgqlModelType'];
   expect(raw, isNotNull);
-  final list =
-      raw is String ? json.decode(raw) as List<dynamic> : raw! as List<dynamic>;
+  final list = raw is String
+      ? json.decode(raw) as List<dynamic>
+      : raw! as List<dynamic>;
   return list
       .map(
-          (e) => ModelType.fromJson(e as Map<String, dynamic>, recursive: true))
+        (e) => ModelType.fromJson(e as Map<String, dynamic>, recursive: true),
+      )
       .toList();
 }
 
@@ -161,11 +163,14 @@ Future<ModelType?> _fetchModelTypeById(GraphQLClient client, int id) async {
   expect(result.hasException, isFalse, reason: '${result.exception}');
   final raw = result.data?['getKgqlModelType'];
   if (raw == null) return null;
-  final list =
-      raw is String ? json.decode(raw) as List<dynamic> : raw as List<dynamic>;
+  final list = raw is String
+      ? json.decode(raw) as List<dynamic>
+      : raw as List<dynamic>;
   if (list.isEmpty) return null;
-  return ModelType.fromJson(list.first as Map<String, dynamic>,
-      recursive: true);
+  return ModelType.fromJson(
+    list.first as Map<String, dynamic>,
+    recursive: true,
+  );
 }
 
 void main() {
@@ -184,16 +189,22 @@ void main() {
         _collectModelTypeNames(r, names);
       }
       for (final expected in _kSeedModelTypeNames) {
-        expect(names, contains(expected),
-            reason: 'Missing model type "$expected" — seed / API mismatch');
+        expect(
+          names,
+          contains(expected),
+          reason: 'Missing model type "$expected" — seed / API mismatch',
+        );
       }
     });
 
     test('Expense type: cost, relation to Company, tag systems', () async {
       final roots = await _fetchModelTypeRoots(client);
       final expense = _findInForest(roots, 'Expense');
-      expect(expense, isNotNull,
-          reason: 'Expense model type not found in tree');
+      expect(
+        expense,
+        isNotNull,
+        reason: 'Expense model type not found in tree',
+      );
 
       final detailed = await _fetchModelTypeById(client, expense!.id);
       expect(detailed, isNotNull);
@@ -201,35 +212,51 @@ void main() {
 
       final attrKeys =
           mt.attributes?.map((a) => a.key).whereType<String>().toSet() ?? {};
-      expect(attrKeys, contains('cost'),
-          reason: 'Expense should define `cost` (seed-data § attributes)');
+      expect(
+        attrKeys,
+        contains('cost'),
+        reason: 'Expense should define `cost` (seed-data § attributes)',
+      );
 
-      final links = mt.relations
+      final links =
+          mt.relations
               ?.map((r) => r.link?.toString())
               .whereType<String>()
               .toSet() ??
           {};
-      expect(links, contains('Company'),
-          reason: 'Expense should relate to Company (`expense_for` target)');
+      expect(
+        links,
+        contains('Company'),
+        reason: 'Expense should relate to Company (`expense_for` target)',
+      );
 
       final tagNames = mt.tagSystems?.map((s) => s.name).toSet() ?? {};
       for (final n in _kExpenseTagSystemNames) {
-        expect(tagNames, contains(n),
-            reason: 'Missing Expense tag system "$n"');
+        expect(
+          tagNames,
+          contains(n),
+          reason: 'Missing Expense tag system "$n"',
+        );
       }
 
       final categoryList =
           mt.tagSystems?.where((s) => s.name == 'Category').toList() ?? [];
-      expect(categoryList.length, 1,
-          reason: 'Single Category tag system expected');
+      expect(
+        categoryList.length,
+        1,
+        reason: 'Single Category tag system expected',
+      );
       final category = categoryList.first;
       final catNames = <String>{};
       for (final node in category.nodes) {
         _collectTagNodeNames(node, catNames);
       }
       for (final root in _kCategoryRootNames) {
-        expect(catNames, contains(root),
-            reason: 'Category tree should include root "$root"');
+        expect(
+          catNames,
+          contains(root),
+          reason: 'Category tree should include root "$root"',
+        );
       }
     });
 
@@ -242,7 +269,7 @@ void main() {
       expect(detailed, isNotNull);
       final keys =
           detailed!.attributes?.map((a) => a.key).whereType<String>().toSet() ??
-              {};
+          {};
       expect(keys, isNot(contains('age')));
       expect(keys, isNot(contains('desire')));
       expect(keys, isNot(contains('preference')));
@@ -258,11 +285,7 @@ void main() {
               'id': true,
               'name': true,
               'model_type_id': true,
-              'attributes': {
-                'id': true,
-                'key': true,
-                'value': true,
-              },
+              'attributes': {'id': true, 'key': true, 'value': true},
             },
           },
           fetchPolicy: FetchPolicy.networkOnly,
@@ -274,11 +297,15 @@ void main() {
       final list = raw is String
           ? json.decode(raw) as List<dynamic>
           : raw as List<dynamic>;
-      expect(list, isNotEmpty,
-          reason: 'Seed demo should include Expense models');
+      expect(
+        list,
+        isNotEmpty,
+        reason: 'Seed demo should include Expense models',
+      );
 
-      final models =
-          list.map((e) => Model.fromJson(e as Map<String, dynamic>)).toList();
+      final models = list
+          .map((e) => Model.fromJson(e as Map<String, dynamic>))
+          .toList();
 
       var anyCost = false;
       for (final m in models) {
@@ -287,16 +314,20 @@ void main() {
           anyCost = true;
           break;
         }
-        final fromList =
-            m.attributesList?.where((a) => a.key == 'cost').toList();
+        final fromList = m.attributesList
+            ?.where((a) => a.key == 'cost')
+            .toList();
         if (fromList != null && fromList.isNotEmpty) {
           anyCost = true;
           break;
         }
       }
-      expect(anyCost, isTrue,
-          reason:
-              'At least one Expense model should expose `cost` (seed-data § Expenses)');
+      expect(
+        anyCost,
+        isTrue,
+        reason:
+            'At least one Expense model should expose `cost` (seed-data § Expenses)',
+      );
     });
   }, skip: !_runIntegration);
 }

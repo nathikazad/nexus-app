@@ -402,7 +402,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
       if (!_deletedOnly && deleted) return false;
       if (_pendingOnly && (deleted || !_isPending(row))) return false;
       if (_deletedOnly && !deleted) return false;
-      if (_unlinkedOnly && tellerRowHasExpenseOrTransferLink(row)) {
+      if (_unlinkedOnly && tellerRowHasExpenseLink(row)) {
         return false;
       }
       if (query.isEmpty) return true;
@@ -689,12 +689,12 @@ class _TellerCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ] else if (!tellerRowHasExpenseOrTransferLink(row)) ...[
+                    ] else if (!tellerRowHasExpenseLink(row)) ...[
                       const SizedBox(width: 8),
                       Padding(
                         padding: const EdgeInsets.only(top: 1),
                         child: Tooltip(
-                          message: 'No expense or transfer linked yet',
+                          message: 'No expense linked yet',
                           child: Icon(
                             Icons.link_off_rounded,
                             size: 18,

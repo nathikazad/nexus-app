@@ -20,10 +20,7 @@ import 'package:nx_expense/features/tag/tag_system_form_page.dart';
 import 'package:nx_expense/features/tag/tag_systems_page.dart';
 import 'package:nx_expense/features/teller/teller_expense_link_picker_page.dart';
 import 'package:nx_expense/features/teller/teller_list_page.dart';
-import 'package:nx_expense/features/teller/teller_transfer_link_picker_page.dart';
-import 'package:nx_expense/features/teller/teller_transfer_quick_create_page.dart';
 import 'package:nx_expense/features/teller/teller_transaction_detail_page.dart';
-import 'package:nx_expense/features/transfers/transfer_detail_page.dart';
 import 'desktop_nav.dart';
 import 'panel_chrome.dart';
 
@@ -235,11 +232,6 @@ class _ExpensePanel3 extends ConsumerWidget {
           key: ValueKey('p3-expense-${state.id}'),
           expenseId: state.id!,
         );
-      case Panel3Type.transfer:
-        return TransferDetailScreen(
-          key: ValueKey('transfer-${state.id}'),
-          transferId: state.id!,
-        );
       case Panel3Type.teller:
         return TellerTransactionDetailScreen(
           key: ValueKey('teller-${state.tellerRow!.eventId}'),
@@ -363,11 +355,6 @@ class _TellerPanel3 extends ConsumerWidget {
           key: ValueKey('teller-p3-expense-${state.detailId}'),
           expenseId: state.detailId!,
         );
-      case TellerPanel3Kind.transfer:
-        return TransferDetailScreen(
-          key: ValueKey('teller-p3-transfer-${state.detailId}'),
-          transferId: state.detailId!,
-        );
       case TellerPanel3Kind.linkExpensePicker:
         final row = state.tellerRow!;
         return PanelChrome(
@@ -387,26 +374,6 @@ class _TellerPanel3 extends ConsumerWidget {
             ),
           ],
           body: TellerExpenseLinkPickerBody(row: row, embedded: true),
-        );
-      case TellerPanel3Kind.linkTransferPicker:
-        final row = state.tellerRow!;
-        return PanelChrome(
-          title: 'Link transfer',
-          leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: AppColors.slate400,
-              size: 22,
-            ),
-            onPressed: () => closeTellerPanel3(ref),
-          ),
-          actions: [
-            const Padding(
-              padding: EdgeInsets.only(right: 4),
-              child: ExpenseDateRangeCalendarButton(),
-            ),
-          ],
-          body: TellerTransferLinkPickerBody(row: row, embedded: true),
         );
       case TellerPanel3Kind.newExpenseForm:
         final row = state.tellerRow!;
@@ -430,20 +397,6 @@ class _TellerPanel3 extends ConsumerWidget {
             prefillAmount: amt,
             prefillDate: p['date']?.toString(),
           ),
-        );
-      case TellerPanel3Kind.newTransferCreate:
-        final row = state.tellerRow!;
-        return PanelChrome(
-          title: 'New transfer',
-          leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: AppColors.slate400,
-              size: 22,
-            ),
-            onPressed: () => closeTellerPanel3(ref),
-          ),
-          body: TellerTransferQuickCreateScreen(row: row, embedded: true),
         );
     }
   }

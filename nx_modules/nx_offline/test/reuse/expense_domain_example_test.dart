@@ -5,6 +5,7 @@ import 'package:nx_offline/nx_offline.dart';
 
 void main() {
   const account = AccountIdentity(
+    domainId: 1,
     serverId: 'nexus-primary',
     userId: 'user-1',
     application: 'nx_expense',

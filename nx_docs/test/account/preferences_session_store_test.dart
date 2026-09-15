@@ -10,8 +10,9 @@ void main() {
       final preferences = await SharedPreferences.getInstance();
       final store = PreferencesSessionStore(preferences);
       const session = CachedSession(
+        domainId: 1,
         userId: 'user-1',
-        backendPreset: 'production',
+        backendPreset: 'hosted',
       );
 
       await store.save(session);

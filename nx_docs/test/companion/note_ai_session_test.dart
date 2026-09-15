@@ -84,6 +84,7 @@ void main() {
 
     await session.connect(
       NoteAiSessionConfig(
+        domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
         documentId: 4209,
@@ -92,6 +93,7 @@ void main() {
     );
 
     expect(socket.headers, <String, String>{
+      'X-Nexus-Domain-Id': '1',
       'X-Client-App': 'nx_notes',
       'X-Agent-Id': 'nx_notes',
       'X-Document-Id': '4209',
@@ -107,6 +109,7 @@ void main() {
 
     await session.connect(
       NoteAiSessionConfig(
+        domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
         documentId: 1,
@@ -115,6 +118,7 @@ void main() {
     );
     await session.connect(
       NoteAiSessionConfig(
+        domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
         documentId: 2,
@@ -132,16 +136,16 @@ void main() {
 
     await session.connect(
       NoteAiSessionConfig(
+        domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
         documentId: 1,
-        authHeaders: (_) async => {
-          'authorization': 'Bearer account-a',
-        },
+        authHeaders: (_) async => {'authorization': 'Bearer account-a'},
       ),
     );
     await session.connect(
       NoteAiSessionConfig(
+        domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '8',
         documentId: 1,
@@ -166,6 +170,7 @@ void main() {
     final session = NoteAiSession(socket: socket);
     await session.connect(
       NoteAiSessionConfig(
+        domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
         documentId: 42,
