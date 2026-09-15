@@ -138,8 +138,8 @@ class _HomeScaffold extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Review settings',
-            icon: const Icon(Icons.tune_outlined),
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
             ),

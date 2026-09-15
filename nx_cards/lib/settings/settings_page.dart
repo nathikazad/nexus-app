@@ -23,7 +23,7 @@ class SettingsPage extends ConsumerWidget {
     final appearance = ref.watch(appearanceProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review settings'),
+        title: const Text('Settings'),
         actions: [
           IconButton(
             key: const Key('app-bar-sign-out-button'),
