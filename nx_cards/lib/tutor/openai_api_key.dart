@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 final class OpenAiBuildConfiguration {
   const OpenAiBuildConfiguration({
     required this.apiKey,
@@ -15,5 +17,5 @@ const openAiApiKey = String.fromEnvironment('OPENAI_API_KEY');
 
 const openAiBuildConfiguration = OpenAiBuildConfiguration(
   apiKey: openAiApiKey,
-  requiredForBuild: bool.fromEnvironment('dart.vm.product'),
+  requiredForBuild: !kIsWeb && bool.fromEnvironment('dart.vm.product'),
 );

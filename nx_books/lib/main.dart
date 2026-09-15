@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_books/app.dart';
@@ -10,7 +11,9 @@ void main() {
     ProviderScope(
       overrides: [
         dbAuditSourceKindProvider.overrideWithValue('nx_books'),
-        nexusClientAppIdProvider.overrideWithValue('nx_books'),
+        nexusClientAppIdProvider.overrideWithValue(
+          kIsWeb ? 'nx_books_web' : 'nx_books',
+        ),
         retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
       ],
       child: const NexusBooksApp(),

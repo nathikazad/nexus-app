@@ -14,7 +14,9 @@ void main() {
     ProviderScope(
       overrides: [
         dbAuditSourceKindProvider.overrideWithValue('nx_cards'),
-        nexusClientAppIdProvider.overrideWithValue('nx_cards'),
+        nexusClientAppIdProvider.overrideWithValue(
+          kIsWeb ? 'nx_cards_web' : 'nx_cards',
+        ),
         retainAuthSessionWhenOfflineProvider.overrideWithValue(!kIsWeb),
       ],
       child: const CardSyncLifecycle(child: NexusCardsApp()),

@@ -42,20 +42,30 @@ class NexusOidcConfig {
         .whereType<String>()
         .toList(growable: false);
     final expectedScheme = clientAppId.replaceAll('_', '-');
+    const webPaths = {
+      'nx_docs_web': '/docs/auth.html',
+      'nx_cards_web': '/flashcards/auth.html',
+      'nx_books_web': '/books/auth.html',
+      'nx_hypnosis_web': '/hypnosis-app/auth.html',
+    };
     final webRedirect =
         kIsWeb &&
-        clientAppId == 'nx_hypnosis_web' &&
-        redirectUri.toString() == 'http://127.0.0.1:8769/auth.html' &&
-        logoutUri.toString() == 'http://127.0.0.1:8769/auth.html' &&
-        Uri.base.origin == redirectUri.origin;
+        webPaths.containsKey(clientAppId) &&
+        redirectUri.scheme == 'https' &&
+        redirectUri.origin == Uri.base.origin &&
+        redirectUri.path == webPaths[clientAppId] &&
+        !redirectUri.hasQuery &&
+        !redirectUri.hasFragment &&
+        logoutUri == redirectUri;
     if (json['app_id'] != clientAppId ||
         issuer.scheme != 'https' ||
         clientId.isEmpty ||
         audience.isEmpty ||
         !allowedAudiences.contains(audience) ||
-        (!webRedirect &&
-            (redirectUri.scheme != expectedScheme ||
-                logoutUri.scheme != expectedScheme)) ||
+        (clientAppId.endsWith('_web')
+            ? !webRedirect
+            : (redirectUri.scheme != expectedScheme ||
+                  logoutUri.scheme != expectedScheme)) ||
         !scopes.contains('openid')) {
       throw const FormatException(
         'Nexus returned an invalid OIDC configuration',
