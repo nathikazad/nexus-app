@@ -76,169 +76,197 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
   @override
   Widget build(BuildContext context) {
     final last = _index == widget.cards.length - 1;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.title} · Draw'),
-        leading: IconButton(
-          tooltip: 'Quit drawing practice',
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back),
-        ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'CARD ${_index + 1} OF ${widget.cards.length}',
-                        key: const ValueKey<String>('draw-practice-progress'),
-                        style: monoLabel,
-                      ),
-                      const Spacer(),
-                      Text(
-                        'Practice only',
-                        style: monoLabel.copyWith(color: RecallColors.faint),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    height: 180,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: RecallPalette.of(context).soft,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: RecallPalette.of(context).line),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Flexible(
-                                  child: Visibility(
-                                    visible: _letterVisible,
-                                    maintainSize: true,
-                                    maintainAnimation: true,
-                                    maintainState: true,
-                                    child: SingleChildScrollView(
-                                      child: Text(
-                                        _letter,
-                                        textAlign: TextAlign.center,
-                                        key: const ValueKey<String>(
-                                          'draw-practice-letter',
-                                        ),
-                                        style: TextStyle(
-                                          fontSize: _letter.runes.length == 1
-                                              ? 82
-                                              : 32,
-                                          height: 1,
-                                          fontWeight: FontWeight.w500,
-                                          color: RecallPalette.of(context).ink,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _sound,
-                                  key: const ValueKey<String>(
-                                    'draw-practice-sound',
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: RecallColors.muted,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_audioUrl case final audioUrl?
-                              when widget.audioRepository != null) ...[
-                            const SizedBox(width: 12),
-                            PronunciationButton(
-                              key: ValueKey<String>(
-                                'draw-practice-audio-${_card.id}',
-                              ),
-                              audioUrl: audioUrl,
-                              repository: widget.audioRepository!,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('PRACTICE', style: monoLabel),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: ScriptDrawingCanvas(
-                      controller: _drawingController,
-                      semanticsLabel: _letterVisible
-                          ? 'Drawing area for $_letter'
-                          : 'Drawing area',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sideBySide =
+            constraints.maxWidth >= 840 ||
+            (constraints.maxWidth >= 600 && constraints.maxHeight < 500);
+        final prompt = Container(
+          height: sideBySide
+              ? null
+              : (constraints.maxHeight * .28).clamp(120.0, 220.0),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: RecallPalette.of(context).soft,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: RecallPalette.of(context).line),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      IconButton.outlined(
-                        tooltip: 'Erase',
-                        onPressed: _drawingController.hasStrokes
-                            ? _drawingController.clear
-                            : null,
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                      const SizedBox(width: 12),
-                      IconButton.filledTonal(
-                        tooltip: _letterVisible
-                            ? 'Hide character'
-                            : 'Show character',
-                        onPressed: () =>
-                            setState(() => _letterVisible = !_letterVisible),
-                        icon: Icon(
-                          _letterVisible
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                      Flexible(
+                        child: Visibility(
+                          visible: _letterVisible,
+                          maintainSize: true,
+                          maintainAnimation: true,
+                          maintainState: true,
+                          child: SingleChildScrollView(
+                            child: Text(
+                              _letter,
+                              textAlign: TextAlign.center,
+                              key: const ValueKey<String>(
+                                'draw-practice-letter',
+                              ),
+                              style: TextStyle(
+                                fontSize: _letter.runes.length == 1 ? 82 : 32,
+                                height: 1,
+                                fontWeight: FontWeight.w500,
+                                color: RecallPalette.of(context).ink,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      IconButton.filled(
-                        tooltip: last ? 'Finish' : 'Next',
-                        onPressed: _next,
-                        icon: Icon(
-                          last
-                              ? Icons.check_circle_outline
-                              : Icons.arrow_forward,
+                      const SizedBox(height: 8),
+                      Text(
+                        _sound,
+                        key: const ValueKey<String>('draw-practice-sound'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: RecallColors.muted,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ],
                   ),
+                ),
+                if (_audioUrl case final audioUrl?
+                    when widget.audioRepository != null) ...[
+                  const SizedBox(width: 12),
+                  PronunciationButton(
+                    key: ValueKey<String>('draw-practice-audio-${_card.id}'),
+                    audioUrl: audioUrl,
+                    repository: widget.audioRepository!,
+                  ),
                 ],
+              ],
+            ),
+          ),
+        );
+        final practice = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('PRACTICE', style: monoLabel),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ScriptDrawingCanvas(
+                controller: _drawingController,
+                semanticsLabel: _letterVisible
+                    ? 'Drawing area for $_letter'
+                    : 'Drawing area',
+              ),
+            ),
+          ],
+        );
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('${widget.title} · Draw'),
+            leading: IconButton(
+              tooltip: 'Quit drawing practice',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
+            ),
+          ),
+          body: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'CARD ${_index + 1} OF ${widget.cards.length}',
+                            key: const ValueKey<String>(
+                              'draw-practice-progress',
+                            ),
+                            style: monoLabel,
+                          ),
+                          const Spacer(),
+                          Text(
+                            'Practice only',
+                            style: monoLabel.copyWith(
+                              color: RecallColors.faint,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: sideBySide
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(flex: 2, child: prompt),
+                                  const SizedBox(width: 24),
+                                  Expanded(flex: 3, child: practice),
+                                ],
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  prompt,
+                                  const SizedBox(height: 16),
+                                  Expanded(child: practice),
+                                ],
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton.outlined(
+                            tooltip: 'Erase',
+                            onPressed: _drawingController.hasStrokes
+                                ? _drawingController.clear
+                                : null,
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton.filledTonal(
+                            tooltip: _letterVisible
+                                ? 'Hide character'
+                                : 'Show character',
+                            onPressed: () => setState(
+                              () => _letterVisible = !_letterVisible,
+                            ),
+                            icon: Icon(
+                              _letterVisible
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton.filled(
+                            tooltip: last ? 'Finish' : 'Next',
+                            onPressed: _next,
+                            icon: Icon(
+                              last
+                                  ? Icons.check_circle_outline
+                                  : Icons.arrow_forward,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

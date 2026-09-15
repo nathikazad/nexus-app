@@ -1,3 +1,4 @@
+import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -55,31 +56,19 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
         children: [
           Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1050),
+              constraints: const BoxConstraints(maxWidth: 1200),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = constraints.maxWidth >= 720
-                          ? (constraints.maxWidth - 14) / 2
-                          : constraints.maxWidth;
-                      return Wrap(
-                        spacing: 14,
-                        runSpacing: 14,
-                        children: [
-                          for (final category in categories)
-                            SizedBox(
-                              width: width,
-                              child: _LanguageCategoryCard(
-                                category: category,
-                                data: data,
-                                language: language,
-                              ),
-                            ),
-                        ],
-                      );
-                    },
+                  AdaptiveCardGrid(
+                    children: [
+                      for (final category in categories)
+                        _LanguageCategoryCard(
+                          category: category,
+                          data: data,
+                          language: language,
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -365,7 +354,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 900),
+                      constraints: const BoxConstraints(maxWidth: 1200),
                       child: Row(
                         children: [
                           Expanded(
@@ -397,7 +386,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                 ),
                 Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 900),
+                    constraints: const BoxConstraints(maxWidth: 1200),
                     child: _searching
                         ? Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),

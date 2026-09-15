@@ -1,3 +1,4 @@
+import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -174,7 +175,7 @@ class _SourcesDashboard extends StatelessWidget {
       children: [
         Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1050),
+            constraints: const BoxConstraints(maxWidth: 1200),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -184,7 +185,7 @@ class _SourcesDashboard extends StatelessWidget {
                       'Choose a language, then script, words, or phrases.',
                 ),
                 const SizedBox(height: 12),
-                _SourceGrid(
+                AdaptiveCardGrid(
                   children: [
                     for (final language in data.languages)
                       _SourceCard(
@@ -220,7 +221,7 @@ class _SourcesDashboard extends StatelessWidget {
                     subtitle: 'Open a book to browse all of its flashcards.',
                   ),
                   const SizedBox(height: 12),
-                  _SourceGrid(
+                  AdaptiveCardGrid(
                     children: [
                       for (final book in books)
                         _SourceCard(
@@ -278,28 +279,6 @@ class _LibrarySectionTitle extends StatelessWidget {
         style: const TextStyle(fontSize: 12, color: RecallColors.muted),
       ),
     ],
-  );
-}
-
-class _SourceGrid extends StatelessWidget {
-  const _SourceGrid({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final width = constraints.maxWidth >= 720
-          ? (constraints.maxWidth - 14) / 2
-          : constraints.maxWidth;
-      return Wrap(
-        spacing: 14,
-        runSpacing: 14,
-        children: [
-          for (final child in children) SizedBox(width: width, child: child),
-        ],
-      );
-    },
   );
 }
 

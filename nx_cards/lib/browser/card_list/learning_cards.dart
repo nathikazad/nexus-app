@@ -1,3 +1,4 @@
+import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -40,7 +41,7 @@ class LearningCardsTab extends ConsumerWidget {
       children: [
         Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
+            constraints: const BoxConstraints(maxWidth: 1200),
             child: cards.isEmpty
                 ? Container(
                     padding: const EdgeInsets.all(20),
@@ -54,7 +55,10 @@ class LearningCardsTab extends ConsumerWidget {
                       style: const TextStyle(color: RecallColors.muted),
                     ),
                   )
-                : Column(
+                : AdaptiveCardGrid(
+                    minimumCardWidth: 430,
+                    maxColumns: 2,
+                    spacing: 10,
                     children: [
                       for (final card in cards)
                         Padding(

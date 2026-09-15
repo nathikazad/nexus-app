@@ -59,7 +59,7 @@ class BookPage extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 900),
+                      constraints: const BoxConstraints(maxWidth: 1200),
                       child: Row(
                         children: [
                           Expanded(
@@ -92,7 +92,7 @@ class BookPage extends ConsumerWidget {
                 ),
                 Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 900),
+                    constraints: const BoxConstraints(maxWidth: 1200),
                     child: TabBar(
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,

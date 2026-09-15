@@ -5,7 +5,7 @@ study. Its source tree tells that story before it explains the framework:
 
 ```text
 main.dart
-  -> app/            Flutter root, routes, and theme
+  -> app/            Flutter root, routes, theme, and shared layout
   -> browser/        finding cards through languages and books
      -> data/
         -> kgql/     fetch and translate the server representation
@@ -60,6 +60,20 @@ outbox. UI code must not know either persistence representation.
 Native builds are local-first: Drift is the readable state and changes are
 queued through the outbox. Web builds use the remote KGQL library directly.
 
+## Tablet layouts
+
+Library sources and language categories use `app/adaptive_card_grid.dart` to
+choose one to three columns from the available window width and text scale.
+Card lists use up to two wider columns. Content remains centered with a
+1200 logical-pixel maximum width; settings and reading screens keep their
+narrower readable widths.
+
+Drawing practice puts the reference beside the canvas on wide windows and
+short landscape windows, and stacks them on narrow windows. The same drawing
+controller survives resizing. Erase, Hide/Show, and Next remain together below.
+Layout tests cover phone, tablet portrait/landscape, split-screen, and enlarged
+text in the grid.
+
 ## OpenAI build configuration
 
 AI study requires `OPENAI_API_KEY` from the Git-ignored
@@ -81,7 +95,7 @@ For a direct local Flutter run, pass
 - `main.dart` stays a tiny entrypoint.
 - Business policy does not import Flutter, Riverpod, KGQL, Drift, or HTTP.
 - Each capability owns its providers and production adapters.
-- `app/` contains only the Flutter root, routes, and theme.
+- `app/` contains only the Flutter root, routes, theme, and shared layout.
 - Capability code imports another capability through its public facade.
 - New generic top-level `core/`, `data/`, `domain/`, `features/`, or `utils/`
   roots are not allowed; top-level folders should name part of the product
