@@ -153,6 +153,39 @@ class _HypnosisHomeState extends State<HypnosisHome> {
     );
   }
 
+  void openSettings() => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Settings'),
+      content: SizedBox(
+        width: 360,
+        child: SingleChildScrollView(
+          child: ListenableBuilder(
+            listenable: data,
+            builder: (context, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const DomainSettingsTile(),
+                if (data is RemoteCollection) ...[
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  syncStatus(),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+
   bool saving = false;
   Future<void> perform(Future<void> Function() action) async {
     if (saving) return;
@@ -370,26 +403,6 @@ class _HypnosisHomeState extends State<HypnosisHome> {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Settings'),
-                    content: const SizedBox(
-                      width: 360,
-                      child: DomainSettingsTile(),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
-                      ),
-                    ],
-                  ),
-                ),
-                child: const Text('Settings'),
-              ),
-              const SizedBox(width: 8),
               IconButton.outlined(
                 tooltip: 'Desires',
                 onPressed: () => go(View.desires),
@@ -401,11 +414,16 @@ class _HypnosisHomeState extends State<HypnosisHome> {
                 icon: const Icon(Icons.favorite_border_rounded, size: 21),
               ),
               const SizedBox(width: 12),
-              if (data.desires.isNotEmpty)
-                plus('Create a story', () {
-                  selectedDesire = data.desires.first;
-                  go(View.storyForm);
-                }),
+              IconButton.filled(
+                tooltip: 'Settings',
+                onPressed: openSettings,
+                style: IconButton.styleFrom(
+                  fixedSize: const Size(44, 44),
+                  backgroundColor: ink,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.settings_outlined, size: 22),
+              ),
             ],
           ),
         ),
@@ -780,7 +798,6 @@ class _HypnosisHomeState extends State<HypnosisHome> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        syncStatus(),
                         if (saving) const LinearProgressIndicator(),
                         body(),
                       ],

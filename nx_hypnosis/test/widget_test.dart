@@ -36,6 +36,13 @@ void main() {
       await tester.pumpWidget(testApp(sample()));
       expect(find.text('Tapes'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byTooltip('Create a story'), findsNothing);
+      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('A quiet morning'));
       await tester.pumpAndSettle();
       expect(find.text('Let your hands rest.'), findsOneWidget);
