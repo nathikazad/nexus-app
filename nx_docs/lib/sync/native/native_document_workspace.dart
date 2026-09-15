@@ -83,9 +83,9 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
 
   @override
   Future<void> ensureDocumentAvailable(int documentId) {
-    final active = _sessions[documentId];
-    if (active != null) return active.refresh();
-    return _synchronizer.requestDocuments({documentId});
+    // Demand can arrive before the editor subscribes to its session. Create
+    // that session first so a missing remote item publishes notFound as well.
+    return openDocument(documentId).refresh();
   }
 
   @override

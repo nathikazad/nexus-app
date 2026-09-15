@@ -55,6 +55,13 @@ void main() {
     await local.dispose();
   });
 
+  test('demand before subscription publishes notFound for a deleted restored tab', () async {
+    await workspace.ensureDocumentAvailable(999999);
+    final session = workspace.openDocument(999999);
+    expect(session.state.phase, DocumentPhase.notFound);
+    expect(session.state.document, isNull);
+  });
+
   test('cached catalog is emitted without a network request', () async {
     final cached = offlineTestDocument(id: 7, title: 'Cached recent');
     await local.replaceCatalog(const CatalogQuery.recent(), <DocumentSummary>[
