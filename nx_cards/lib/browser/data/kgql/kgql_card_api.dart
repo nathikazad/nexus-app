@@ -75,7 +75,13 @@ class KgqlCardApi implements CardLibrary {
   final GraphQLClient _client;
 
   @override
-  Future<List<StudyCard>> listCards() => fetchKgqlCards(_client);
+  Future<List<StudyCard>> listCards() => _cardsInFlight ??= fetchKgqlCards(
+    _client,
+  ).whenComplete(() => _cardsInFlight = null);
+
+  // Dashboard, language filters and sync refresh share only an active request.
+  // Completed data is not persisted or reused as an offline browser cache.
+  Future<List<StudyCard>>? _cardsInFlight;
 
   @override
   Future<List<String>> listLanguages() async {

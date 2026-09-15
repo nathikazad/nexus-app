@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_schema.dart';
@@ -5,6 +6,34 @@ import 'package:nx_cards/browser/data/kgql/kgql_card_api.dart';
 import 'package:nx_cards/browser/browser.dart';
 
 void main() {
+  test(
+    'simultaneous dashboard and language reads share one request, then refresh',
+    () async {
+      final gate = Completer<void>();
+      var requests = 0;
+      final repository = KgqlCardApi(
+        GraphQLClient(
+          cache: GraphQLCache(),
+          link: Link.function((request, [forward]) async* {
+            requests++;
+            await gate.future;
+            yield Response(
+              data: {'__typename': 'Query', 'getKgqlModels': <Object?>[]},
+              response: const {},
+            );
+          }),
+        ),
+      );
+      final cards = repository.listCards();
+      final languages = repository.listLanguages();
+      gate.complete();
+      await Future.wait([cards, languages]);
+      expect(requests, 4);
+      await repository.listCards();
+      expect(requests, 8);
+    },
+  );
+
   test('creates language content as a Word', () async {
     Request? captured;
     final repository = KgqlCardApi(

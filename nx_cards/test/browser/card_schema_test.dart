@@ -1,7 +1,57 @@
+import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_schema.dart';
 
 void main() {
+  for (final invalid in [false, true]) {
+    test(
+      'schema accepts empty metadata but rejects incompatible constraints: $invalid',
+      () async {
+        final client = GraphQLClient(
+          cache: GraphQLCache(),
+          link: Link.function((request, [forward]) async* {
+            final name =
+                ((request.variables['input'] as Map)['model_types'] as List)
+                    .single;
+            final schema =
+                (name == cardModelType
+                        ? buildCardSchemaRequest()
+                        : buildLanguageCardSchemaRequest())
+                    .toJson();
+            yield Response(
+              data: {
+                '__typename': 'Query',
+                'getKgqlModelType': [
+                  {
+                    'id': name == cardModelType ? 66 : 67,
+                    'name': name,
+                    if (name == languageCardModelType)
+                      'parent': {'id': 66, 'name': cardModelType},
+                    'attributes': [
+                      for (final attr
+                          in schema['attribute_definitions'] as List)
+                        {
+                          'key': attr['key'],
+                          'value_type': attr['value_type'],
+                          'required': attr['required'],
+                          'metadata': invalid && attr['key'] == attrCardDetails
+                              ? {'wrong': true}
+                              : attr['constraints'] ?? {},
+                        },
+                    ],
+                    'tag_systems': [],
+                  },
+                ],
+              },
+              response: const {},
+            );
+          }),
+        );
+        expect((await inspectCardsSchema(client)).ready, !invalid);
+      },
+    );
+  }
+
   test('card schema keeps only query fields outside versioned JSON', () {
     final json = buildCardSchemaRequest().toJson();
     final attributes = (json['attribute_definitions'] as List<dynamic>)

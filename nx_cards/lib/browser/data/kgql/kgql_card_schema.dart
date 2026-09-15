@@ -222,7 +222,10 @@ bool _hasAttributeDefinitions(
     return current != null &&
         current.valueType == desired.valueType &&
         current.required == desired.required &&
-        _deepEquals(current.constraints, desired.constraints);
+        _deepEquals(
+          current.constraints ?? const {},
+          desired.constraints ?? const {},
+        );
   });
 }
 
@@ -292,7 +295,10 @@ Future<void> _syncAttributeDefinitions(
     if (definition != null &&
         definition.valueType == desired.valueType &&
         definition.required == desired.required &&
-        _deepEquals(definition.constraints, desired.constraints)) {
+        _deepEquals(
+          definition.constraints ?? const {},
+          desired.constraints ?? const {},
+        )) {
       continue;
     }
     changes.add(
