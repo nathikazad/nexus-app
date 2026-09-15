@@ -62,7 +62,7 @@ final domainMembershipsProvider = FutureProvider<List<DomainMembership>>((
   return ref.watch(domainLoaderProvider)(user);
 });
 
-/// A single gate and switcher shared by every supported application.
+/// Blocks application data until a domain has been selected.
 class DomainSessionGate extends ConsumerWidget {
   const DomainSessionGate({super.key, required this.child});
   final Widget child;
@@ -139,30 +139,31 @@ class DomainSessionGate extends ConsumerWidget {
         ),
       );
     }
-    return Column(
-      children: [
-        Material(
-          child: SafeArea(
-            bottom: false,
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                const Icon(Icons.folder_outlined, size: 18),
-                TextButton(
-                  onPressed: () =>
-                      ref.read(authProvider.notifier).clearDomain(),
-                  child: Text(
-                    '${user.domainName ?? 'Domain ${user.domainId}'} ▾',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Expanded(
-          child: KeyedSubtree(key: ValueKey(user.sessionKey), child: child),
-        ),
-      ],
+    return KeyedSubtree(key: ValueKey(user.sessionKey), child: child);
+  }
+}
+
+/// Account settings entry; the login gate owns the actual membership picker.
+class DomainSettingsTile extends ConsumerWidget {
+  const DomainSettingsTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).value;
+    if (user?.domainId == null) return const SizedBox.shrink();
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.folder_outlined, size: 18),
+      title: const Text('Domain'),
+      subtitle: Text(user!.domainName ?? 'Domain ${user.domainId}'),
+      trailing: TextButton(
+        onPressed: () {
+          final auth = ref.read(authProvider.notifier);
+          Navigator.of(context).pop();
+          auth.clearDomain();
+        },
+        child: const Text('Switch'),
+      ),
     );
   }
 }

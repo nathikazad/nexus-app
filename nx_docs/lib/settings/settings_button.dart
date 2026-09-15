@@ -1,3 +1,4 @@
+import 'package:nx_db/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_docs/app/version_provider.dart';
@@ -117,6 +118,9 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              const DomainSettingsTile(),
+              const Divider(),
+              const SizedBox(height: 12),
               Text('Appearance', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 10),
               SegmentedButton<bool>(

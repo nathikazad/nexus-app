@@ -26,9 +26,29 @@ void main() {
               ],
             ),
           ],
-          child: const MaterialApp(
+          child: MaterialApp(
             home: DomainSessionGate(
-              child: Scaffold(body: Text('Domain content')),
+              child: Scaffold(
+                body: Builder(
+                  builder: (context) => Column(
+                    children: [
+                      const Text('Domain content'),
+                      TextButton(
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => const AlertDialog(
+                            content: SizedBox(
+                              width: 360,
+                              child: DomainSettingsTile(),
+                            ),
+                          ),
+                        ),
+                        child: const Text('Settings'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -39,7 +59,12 @@ void main() {
       await tester.tap(find.text('Home'));
       await tester.pumpAndSettle();
       expect(find.text('Domain content'), findsOneWidget);
-      await tester.tap(find.text('Home ▾'));
+      expect(find.text('Home ▾'), findsNothing);
+      expect(find.text('Domain'), findsNothing);
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Home'), findsOneWidget);
+      await tester.tap(find.text('Switch'));
       await tester.pumpAndSettle();
       expect(find.text('Choose a domain'), findsOneWidget);
       expect(find.text('Domain content'), findsNothing);

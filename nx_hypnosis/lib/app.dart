@@ -370,6 +370,26 @@ class _HypnosisHomeState extends State<HypnosisHome> {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Settings'),
+                    content: const SizedBox(
+                      width: 360,
+                      child: DomainSettingsTile(),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                ),
+                child: const Text('Settings'),
+              ),
+              const SizedBox(width: 8),
               IconButton.outlined(
                 tooltip: 'Desires',
                 onPressed: () => go(View.desires),

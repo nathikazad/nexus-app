@@ -139,6 +139,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const DomainSettingsTile(),
+              const Divider(),
+              const SizedBox(height: 18),
               const Text(
                 'Appearance',
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),

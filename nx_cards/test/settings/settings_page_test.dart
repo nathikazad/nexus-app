@@ -1,3 +1,4 @@
+import 'package:nx_db/auth.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -16,6 +17,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authProvider.overrideWith(
+            () => AuthController(initialDelay: Duration.zero),
+          ),
           reviewProgressionSettingsProvider.overrideWith(
             (ref) async => const ReviewProgressionSettings(),
           ),
@@ -49,6 +53,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authProvider.overrideWith(
+            () => AuthController(initialDelay: Duration.zero),
+          ),
           reviewProgressionSettingsProvider.overrideWith(
             (ref) async => const ReviewProgressionSettings(),
           ),
@@ -77,6 +84,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authProvider.overrideWith(
+            () => AuthController(initialDelay: Duration.zero),
+          ),
           reviewProgressionSettingsProvider.overrideWith(
             (ref) async => const ReviewProgressionSettings(),
           ),
