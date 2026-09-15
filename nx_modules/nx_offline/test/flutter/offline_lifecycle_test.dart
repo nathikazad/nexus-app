@@ -40,7 +40,8 @@ void main() {
   testWidgets(
     'visible inactive windows keep syncing; hidden windows catch up on resume',
     (tester) async {
-      final hints = StreamController<String>();
+      final hints = StreamController<String>.broadcast();
+      addTearDown(hints.close);
       final reasons = <SyncReason>[];
       await tester.pumpWidget(
         MaterialApp(
@@ -65,7 +66,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(reasons.last, SyncReason.appResumed);
       await tester.pumpWidget(const SizedBox());
-      await hints.close();
     },
   );
 
