@@ -47,3 +47,42 @@
 - The server contract and current rollout status are documented in
   `../servers/docs/domain-sessions.md`. Other apps are outside this rollout;
   do not add compatibility fallbacks for them.
+
+## NX Cards generation and imports
+
+- Treat a card as content plus scheduling data. Copying text, tags, translations,
+  or audio from a reference collection is not a complete card import.
+- Prefer the normal card-creation path. Before a scripted or database import,
+  inspect the current creation defaults in nx_cards/lib/browser/data/kgql/kgql_card_api.dart,
+  `emptyScheduleJson` in nx_cards/lib/browser/data/kgql/kgql_card_mapper.dart,
+  and `CardSchedule.initial` in nx_cards/lib/browser/data/models/memory.dart.
+  Match these defaults rather than inventing a partial payload.
+- New language cards need an explicit initial schedule with `from_language`,
+  `to_language`, and `transliteration` enabled. The current format is version 3,
+  algorithm `fsrs`; each cue starts with state `learning`, step 0, zero review
+  and lapse counts, and null due date, last-reviewed time, stability, and
+  difficulty. Include empty review history using the normal creation format.
+  Missing schedules currently decode as disabled cues: Study can show those
+  cards while Recall silently excludes them.
+- Verify the intended user and personal/shared domain, model type, Language tag,
+  and category tags (for example Word Category = Noun). Do not copy another
+  person's schedules, review history, or learning progress. New cards normally
+  start as `not_started` (Future), unsuspended; preserve the user's chosen status
+  if explicitly specified. A Current/Future status is distinct from a cue's
+  enabled flag and its New/Learning/Retained memory state.
+- Content or audio updates must preserve existing schedules, review history,
+  learning status, and deliberate cue settings. Restrict any repair to the
+  identified defective records; do not reset progress or enable intentionally
+  disabled cues in bulk. Imports must detect duplicates and target only the
+  intended user/domain.
+- Verify saved data and the app sync payload, including every expected recall
+  cue. Then verify representative cards in both Study and Recall with matching
+  filters. New cards are not due yet, and Future cards may be excluded by the
+  normal Recall UI; test with an appropriate eligible card or automated fixture
+  rather than changing real learning progress just to make a count nonzero.
+  Record expected versus actual counts and distinguish eligibility from due
+  status. Row counts, successful sync, or audio playback alone are insufficient.
+- For importer/creation-code changes, add regression coverage proving that a new
+  language card has enabled recall cues and enters the recall candidate list
+  when its status and filters permit it. If device verification is unavailable,
+  report that limit explicitly instead of claiming end-to-end verification.
