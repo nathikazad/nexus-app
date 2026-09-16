@@ -369,22 +369,6 @@ class _DocumentScrollAnchor {
   int get hashCode => Object.hash(documentId, blockIndex, blockKey, alignment);
 }
 
-_DocumentScrollAnchor? _scrollAnchorFromJsonDocument(
-  Map<String, dynamic> jsonDocument,
-) {
-  final viewState = jsonDocument['view_state'];
-  if (viewState is! Map) {
-    return null;
-  }
-  final scrollAnchor = viewState['scroll_anchor'];
-  if (scrollAnchor is! Map) {
-    return null;
-  }
-  return _DocumentScrollAnchor.tryParse(
-    Map<String, dynamic>.from(scrollAnchor),
-  );
-}
-
 _DocumentEditorMode _editorModeFromJsonDocument(
   Map<String, dynamic> jsonDocument,
 ) {
@@ -402,17 +386,13 @@ _DocumentEditorMode _editorModeFromJsonDocument(
 Map<String, dynamic> _jsonDocumentViewState(
   Map<String, dynamic> jsonDocument, {
   required _DocumentEditorMode editorMode,
-  _DocumentScrollAnchor? scrollAnchor,
 }) {
   final existing = jsonDocument['view_state'];
   return <String, dynamic>{
-    if (existing is Map) ...Map<String, dynamic>.from(existing),
+    if (existing is Map)
+      for (final entry in Map<String, dynamic>.from(existing).entries)
+        if (entry.key != 'scroll_anchor') entry.key: entry.value,
     'editor_mode': editorMode.storageValue,
-    if (scrollAnchor != null)
-      'scroll_anchor': <String, dynamic>{
-        ...scrollAnchor.toJson(),
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      },
   };
 }
 

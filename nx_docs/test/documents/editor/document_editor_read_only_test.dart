@@ -1,3 +1,5 @@
+import 'package:nx_docs/documents/editor/document_scroll_store.dart';
+import 'package:nx_docs/documents/editor/nx_canvas_session.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,106 @@ import 'package:nx_documents/nx_documents.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('scrolling saves local progress without saving the document', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    const store = DocumentScrollStore('server:user:1:domain:1');
+    final document = _document().copyWith(
+      document: List.generate(80, (i) => 'Paragraph $i').join('\n\n'),
+    );
+    final workspace = FakeDocumentWorkspace(documents: [document]);
+    addTearDown(workspace.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          documentImageAssetServiceProvider.overrideWithValue(null),
+          documentWorkspaceProvider.overrideWithValue(workspace),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: DocumentEditorBody(document: document, scrollStore: store),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 3; i++) {
+      await tester.drag(find.byType(AppFlowyEditor), const Offset(0, -250));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    expect(await store.read('Document', 1), isNotNull);
+    expect(workspace.sessionFor(1)?.saveCount ?? 0, 0);
+    expect(workspace.uploadCount, 0);
+  });
+
+  testWidgets(
+    'synced and local scroll anchors never add space above a canvas',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(1200, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const store = DocumentScrollStore('test-server:user:1:domain:1');
+      final anchor = <String, Object>{
+        'documentId': 1,
+        'blockIndex': 1,
+        'blockKey': 'paragraph:ce7a20a7',
+        'alignment': 0.5,
+      };
+      Future<double> measure({bool legacy = false}) async {
+        final document = _document().copyWith(
+          jsonDocument: {
+            'format': 'appflowy_document',
+            'document': Document(
+              root: Node(
+                type: 'page',
+                children: [nxCanvasNode(), paragraphNode()],
+              ),
+            ).toJson()['document'],
+            if (legacy) 'view_state': {'scroll_anchor': anchor},
+          },
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            key: UniqueKey(),
+            overrides: [
+              documentImageAssetServiceProvider.overrideWithValue(null),
+              documentScrollStoreProvider.overrideWithValue(store),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: DocumentEditorBody(
+                  scrollStore: store,
+                  document: document,
+                  interactionMode: DocumentInteractionMode.readOnly,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final state = tester
+            .widget<AppFlowyEditor>(find.byType(AppFlowyEditor))
+            .editorState;
+        expect(state.document.root.children.map((n) => n.type), [
+          'nx_canvas',
+          'paragraph',
+        ]);
+        return tester
+            .getTopLeft(find.byKey(state.document.root.children.first.key))
+            .dy;
+      }
+
+      final normal = await measure();
+      expect(await measure(legacy: true), closeTo(normal, 1));
+      await store.write('Document', 1, anchor);
+      expect(await measure(), closeTo(normal, 1));
+    },
+  );
+
   test('read mode replaces only the table presentation builder', () {
     expect(
       nxBlockComponentBuilders()[TableBlockKeys.type],

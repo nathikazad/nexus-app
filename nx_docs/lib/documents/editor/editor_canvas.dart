@@ -10,6 +10,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
     required this.onFindBarChanged,
     required this.searchLinkableModels,
     this.onChanged,
+    this.scrollStore,
     this.onLinkableModelSelected,
     this.createLinkedDocument,
     this.uploadDocumentImage,
@@ -19,6 +20,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
     this.active = true,
   });
 
+  final DocumentScrollStore? scrollStore;
   final NxDocument document;
   final DocumentChangeOrigin changeOrigin;
   final double textScaleFactor;
@@ -110,7 +112,8 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   @override
   void didUpdateWidget(covariant _NxAppFlowyEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.document.id != widget.document.id) {
+    if (oldWidget.document.id != widget.document.id ||
+        oldWidget.scrollStore?.scope != widget.scrollStore?.scope) {
       _disposeEditor();
       _createEditor();
       return;
@@ -353,15 +356,11 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     unawaited(onChanged(_currentDraftDocument(), policy));
   }
 
-  NxDocument _currentDraftDocument({_DocumentScrollAnchor? scrollAnchor}) {
+  NxDocument _currentDraftDocument() {
     final plainText = _documentPlainText(_editorState.document).trimRight();
     final baseDocument = widget.document.id == _editorDocumentId
         ? widget.document
         : _editorDocument;
-    final nextScrollAnchor =
-        scrollAnchor ??
-        _lastSavedScrollAnchor ??
-        _scrollAnchorFromJsonDocument(baseDocument.jsonDocument);
     final jsonDocument = <String, dynamic>{
       ...baseDocument.jsonDocument,
       'format': 'appflowy_document',
@@ -369,7 +368,6 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       'view_state': _jsonDocumentViewState(
         baseDocument.jsonDocument,
         editorMode: widget.editorMode,
-        scrollAnchor: nextScrollAnchor,
       ),
     };
     return baseDocument.copyWith(
@@ -523,12 +521,19 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     });
   }
 
-  void _restoreScrollAnchor() {
+  Future<void> _restoreScrollAnchor() async {
     final documentId = _editorDocumentId;
     _scrollAnchorSaveEnabled = false;
     _scrollAnchorRestoreAttempts = 0;
-    final anchor = _scrollAnchorFromJsonDocument(widget.document.jsonDocument);
-    if (!mounted || _editorDocumentId != documentId) {
+    final editor = _editorState;
+    final raw = await widget.scrollStore?.read(
+      widget.document.modelTypeName,
+      documentId,
+    );
+    final anchor = raw == null ? null : _DocumentScrollAnchor.tryParse(raw);
+    if (!mounted ||
+        _editorDocumentId != documentId ||
+        !identical(editor, _editorState)) {
       return;
     }
     if (anchor == null || anchor.documentId != documentId) {
@@ -536,12 +541,17 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       return;
     }
     _lastSavedScrollAnchor = anchor;
-    _attemptScrollAnchorRestore(anchor);
+    _attemptScrollAnchorRestore(anchor, editor);
   }
 
-  void _attemptScrollAnchorRestore(_DocumentScrollAnchor anchor) {
+  void _attemptScrollAnchorRestore(
+    _DocumentScrollAnchor anchor,
+    EditorState editor,
+  ) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _editorDocumentId != anchor.documentId) {
+      if (!mounted ||
+          _editorDocumentId != anchor.documentId ||
+          !identical(editor, _editorState)) {
         return;
       }
       final itemScrollController = _scrollController.itemScrollController;
@@ -550,7 +560,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
           _scrollAnchorRestoreAttempts += 1;
           Timer(
             _scrollAnchorRestoreRetryDelay,
-            () => _attemptScrollAnchorRestore(anchor),
+            () => _attemptScrollAnchorRestore(anchor, editor),
           );
         } else {
           _scrollAnchorSaveEnabled = true;
@@ -558,11 +568,21 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
         return;
       }
 
-      final blockIndex = _resolveScrollAnchorBlockIndex(anchor);
+      final positions =
+          _scrollController.itemPositionsListener.itemPositions.value;
+      final count = _editorState.document.root.children.length;
+      final contentFits =
+          positions.any((p) => p.index == 0 && p.itemLeadingEdge >= 0) &&
+          positions.any((p) => p.index == count - 1 && p.itemTrailingEdge <= 1);
+      final blockIndex = contentFits
+          ? 0
+          : _resolveScrollAnchorBlockIndex(anchor);
       if (blockIndex != null) {
         itemScrollController.jumpTo(
           index: blockIndex,
-          alignment: anchor.alignment,
+          // Align the block at the top; positive alignment can create
+          // blank leading space when the document fits the viewport.
+          alignment: 0,
         );
         _scheduleActiveHeadingPublish();
       }
@@ -582,11 +602,10 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 
   Future<void> _saveScrollAnchorNow() async {
-    final onChanged = widget.onChanged;
+    final store = widget.scrollStore;
     if (!mounted ||
         !widget.active ||
-        !widget.interactionMode.canEditContent ||
-        onChanged == null ||
+        store == null ||
         !_scrollAnchorSaveEnabled) {
       return;
     }
@@ -603,9 +622,10 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
       return;
     }
     _lastSavedScrollAnchor = anchor;
-    await onChanged(
-      _currentDraftDocument(scrollAnchor: anchor),
-      DraftSavePolicy.deferred,
+    await store.write(
+      widget.document.modelTypeName,
+      _editorDocumentId,
+      anchor.toJson(),
     );
   }
 
@@ -617,12 +637,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     if (anchor != null) {
       _lastSavedScrollAnchor = anchor;
     }
-    unawaited(
-      onChanged(
-        _currentDraftDocument(scrollAnchor: anchor),
-        DraftSavePolicy.immediate,
-      ),
-    );
+    unawaited(onChanged(_currentDraftDocument(), DraftSavePolicy.immediate));
   }
 
   _DocumentScrollAnchor? _currentScrollAnchor() {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:nx_docs/documents/editor/document_scroll_store.dart';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:auto_size_text/auto_size_text.dart';
@@ -96,6 +97,7 @@ class DocumentEditorView extends ConsumerWidget {
           children: <Widget>[
             Positioned.fill(
               child: DocumentEditorBody(
+                scrollStore: ref.watch(documentScrollStoreProvider),
                 document: document,
                 changeOrigin: sessionState.origin,
                 contextBar: contextBar,
@@ -142,6 +144,7 @@ class DocumentEditorView extends ConsumerWidget {
 
 class DocumentEditorBody extends ConsumerStatefulWidget {
   const DocumentEditorBody({
+    this.scrollStore,
     required this.document,
     this.changeOrigin = DocumentChangeOrigin.localCache,
     this.contextBar,
@@ -157,6 +160,7 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
     super.key,
   });
 
+  final DocumentScrollStore? scrollStore;
   final NxDocument document;
   final DocumentChangeOrigin changeOrigin;
   final Widget? contextBar;
@@ -645,6 +649,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                                   },
                                 )
                               : _NxAppFlowyEditor(
+                                  scrollStore: widget.scrollStore,
                                   document: widget.document,
                                   changeOrigin: widget.changeOrigin,
                                   textScaleFactor: documentTextScale,
@@ -781,30 +786,15 @@ void _saveAudioScrollAnchor(
   NxDocument document,
   DocumentAudioBlockTiming block,
 ) {
-  final existing = _scrollAnchorFromJsonDocument(document.jsonDocument);
-  if (existing?.blockKey == block.blockKey) return;
+  final store = ref.read(documentScrollStoreProvider);
+  if (store == null) return;
   final anchor = _DocumentScrollAnchor(
     documentId: document.id,
     blockIndex: block.blockIndex,
     blockKey: block.blockKey,
     alignment: 0.18,
   );
-  final jsonDocument = <String, dynamic>{
-    ...document.jsonDocument,
-    'view_state': _jsonDocumentViewState(
-      document.jsonDocument,
-      editorMode: _editorModeFromJsonDocument(document.jsonDocument),
-      scrollAnchor: anchor,
-    ),
-  };
-  unawaited(
-    ref
-        .read(documentMutationControllerProvider)
-        .saveDraft(
-          document.copyWith(jsonDocument: jsonDocument),
-          policy: DraftSavePolicy.deferred,
-        ),
-  );
+  unawaited(store.write(document.modelTypeName, document.id, anchor.toJson()));
 }
 
 double _fittedTitleFontSize({
