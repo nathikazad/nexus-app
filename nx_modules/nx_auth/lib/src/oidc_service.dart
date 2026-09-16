@@ -94,7 +94,6 @@ class NexusOidcService {
     await _ensureInitialized();
     final user = await _manager!.loginAuthorizationCodeFlow(
       loginHint: profile?.loginHint,
-      promptOverride: profile == null ? null : const ['login'],
     );
     if (user == null) throw Exception('Sign-in was cancelled');
     final identity = await _loadIdentity(preset);

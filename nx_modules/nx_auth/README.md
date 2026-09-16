@@ -6,7 +6,8 @@ hosted ZITADEL login hints. Update these shared definitions instead of adding
 separate lists to each app.
 
 For hosted sign-in, the selected profile is passed to `AuthController.login`.
-OIDC uses its login hint and requests fresh authentication. `/v1/me` remains
+OIDC uses its login hint without forcing fresh authentication, allowing the
+provider to reuse a matching browser session. `/v1/me` remains
 the authority for the user ID; if it differs from the selected profile, the
 new token session is forgotten and sign-in fails before saving app credentials.
 Local development backends continue using their direct user IDs.
