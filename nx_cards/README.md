@@ -68,9 +68,17 @@ Card lists use up to two wider columns. Content remains centered with a
 1200 logical-pixel maximum width; settings and reading screens keep their
 narrower readable widths.
 
-Drawing practice puts the reference beside the canvas on wide windows and
-short landscape windows, and stacks them on narrow windows. The same drawing
-controller survives resizing. Erase, Hide/Show, and Next remain together below.
+Drawing practice stacks the reference above the canvas at every window width,
+with scrolling on short screens to preserve writing space. The same drawing
+controller survives resizing. Undo and Erase sit inside the drawing frame at the top right. Play, Hide/Show,
+and Next sit below the frame.
+Android drawing practice and writing recall open a separate opaque native
+activity. Compatible tablets use the firmware NoteView; other Android devices
+use a native Canvas view. All drawing, Undo and Erase run inside Android without
+Flutter composition. Audio bytes and individual recall saves use the existing
+account-scoped Flutter repositories. Each recall answer is saved before the
+native screen advances, and the existing recap opens when the session ends.
+Other platforms keep the Flutter drawing screens.
 Layout tests cover phone, tablet portrait/landscape, split-screen, and enlarged
 text in the grid.
 

@@ -45,6 +45,7 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
     WidgetsBinding.instance.addObserver(this);
     _listenToConnectivity();
     _configureCoordinator();
+    _listenToRemoteChanges();
     _synchronize(SyncReason.appStarted);
   }
 
@@ -55,11 +56,14 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
       unawaited(_connectivitySubscription?.cancel());
       _listenToConnectivity();
     }
+    if (oldWidget.remoteChanges != widget.remoteChanges) {
+      unawaited(_remoteSubscription?.cancel());
+      _listenToRemoteChanges();
+    }
     if (!identical(oldWidget.synchronize, widget.synchronize)) {
       _configureCoordinator();
       _synchronize(SyncReason.appStarted);
-    } else if (oldWidget.remoteChanges != widget.remoteChanges ||
-        oldWidget.checkInterval != widget.checkInterval) {
+    } else if (oldWidget.checkInterval != widget.checkInterval) {
       _configureCoordinator();
     }
   }
@@ -97,13 +101,22 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
   }
 
   void _configureCoordinator() {
-    unawaited(_remoteSubscription?.cancel());
     unawaited(_coordinator?.close());
     _periodic?.cancel();
     final synchronize = widget.synchronize;
     _coordinator = synchronize == null
         ? null
         : AppStateCoordinator(synchronize: synchronize);
+    if (widget.checkInterval case final interval? when synchronize != null) {
+      _periodic = Timer.periodic(interval, (_) {
+        if (_foreground) _synchronize(SyncReason.timer);
+      });
+    }
+  }
+
+  void _listenToRemoteChanges() {
+    // Keep this subscription when callbacks or timer settings change. A
+    // single-subscription stream cannot be listened to again after cancellation.
     _remoteSubscription = widget.remoteChanges?.listen(
       (hint) {
         if (_foreground) _coordinator?.hint(hint);
@@ -112,11 +125,6 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
         // Startup/resume and periodic state reads recover missed notifications.
       },
     );
-    if (widget.checkInterval case final interval? when synchronize != null) {
-      _periodic = Timer.periodic(interval, (_) {
-        if (_foreground) _synchronize(SyncReason.timer);
-      });
-    }
   }
 
   @override

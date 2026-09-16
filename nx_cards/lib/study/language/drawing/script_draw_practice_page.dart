@@ -78,13 +78,8 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
     final last = _index == widget.cards.length - 1;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final sideBySide =
-            constraints.maxWidth >= 840 ||
-            (constraints.maxWidth >= 600 && constraints.maxHeight < 500);
         final prompt = Container(
-          height: sideBySide
-              ? null
-              : (constraints.maxHeight * .28).clamp(120.0, 220.0),
+          height: (constraints.maxHeight * .28).clamp(120.0, 220.0),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: RecallPalette.of(context).soft,
@@ -138,15 +133,6 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                     ],
                   ),
                 ),
-                if (_audioUrl case final audioUrl?
-                    when widget.audioRepository != null) ...[
-                  const SizedBox(width: 12),
-                  PronunciationButton(
-                    key: ValueKey<String>('draw-practice-audio-${_card.id}'),
-                    audioUrl: audioUrl,
-                    repository: widget.audioRepository!,
-                  ),
-                ],
               ],
             ),
           ),
@@ -176,44 +162,42 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
             ),
           ),
           body: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'CARD ${_index + 1} OF ${widget.cards.length}',
-                            key: const ValueKey<String>(
-                              'draw-practice-progress',
+            child: LayoutBuilder(
+              builder: (context, bodyConstraints) => SingleChildScrollView(
+                child: SizedBox(
+                  height: bodyConstraints.maxHeight.clamp(
+                    500.0,
+                    double.infinity,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'CARD ${_index + 1} OF ${widget.cards.length}',
+                                  key: const ValueKey<String>(
+                                    'draw-practice-progress',
+                                  ),
+                                  style: monoLabel,
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'Practice only',
+                                  style: monoLabel.copyWith(
+                                    color: RecallColors.faint,
+                                  ),
+                                ),
+                              ],
                             ),
-                            style: monoLabel,
-                          ),
-                          const Spacer(),
-                          Text(
-                            'Practice only',
-                            style: monoLabel.copyWith(
-                              color: RecallColors.faint,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: sideBySide
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(flex: 2, child: prompt),
-                                  const SizedBox(width: 24),
-                                  Expanded(flex: 3, child: practice),
-                                ],
-                              )
-                            : Column(
+                            const SizedBox(height: 12),
+                            Expanded(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   prompt,
@@ -221,45 +205,51 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                   Expanded(child: practice),
                                 ],
                               ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (_audioUrl case final audioUrl?
+                                    when widget.audioRepository != null) ...[
+                                  PronunciationButton(
+                                    key: ValueKey<String>(
+                                      'draw-practice-audio-${_card.id}',
+                                    ),
+                                    audioUrl: audioUrl,
+                                    repository: widget.audioRepository!,
+                                  ),
+                                  const SizedBox(width: 12),
+                                ],
+                                IconButton.filledTonal(
+                                  tooltip: _letterVisible
+                                      ? 'Hide character'
+                                      : 'Show character',
+                                  onPressed: () => setState(
+                                    () => _letterVisible = !_letterVisible,
+                                  ),
+                                  icon: Icon(
+                                    _letterVisible
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton.filled(
+                                  tooltip: last ? 'Finish' : 'Next',
+                                  onPressed: _next,
+                                  icon: Icon(
+                                    last
+                                        ? Icons.check_circle_outline
+                                        : Icons.arrow_forward,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton.outlined(
-                            tooltip: 'Erase',
-                            onPressed: _drawingController.hasStrokes
-                                ? _drawingController.clear
-                                : null,
-                            icon: const Icon(Icons.delete_outline),
-                          ),
-                          const SizedBox(width: 12),
-                          IconButton.filledTonal(
-                            tooltip: _letterVisible
-                                ? 'Hide character'
-                                : 'Show character',
-                            onPressed: () => setState(
-                              () => _letterVisible = !_letterVisible,
-                            ),
-                            icon: Icon(
-                              _letterVisible
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          IconButton.filled(
-                            tooltip: last ? 'Finish' : 'Next',
-                            onPressed: _next,
-                            icon: Icon(
-                              last
-                                  ? Icons.check_circle_outline
-                                  : Icons.arrow_forward,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

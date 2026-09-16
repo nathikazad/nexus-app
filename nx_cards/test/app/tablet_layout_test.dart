@@ -83,21 +83,33 @@ void main() {
       final canvasRect = tester.getRect(canvas);
       final letterRect = tester.getRect(letter);
       expect(canvasRect.height, greaterThan(150));
-      if (size.width >= 840 || size.height < 500) {
-        expect(canvasRect.left, greaterThan(letterRect.right));
-      } else {
-        expect(canvasRect.top, greaterThan(letterRect.bottom));
+      expect(canvasRect.top, greaterThan(letterRect.bottom));
+      final frameRect = tester.getRect(
+        find.byKey(const ValueKey('script-drawing-frame')),
+      );
+      for (final label in ['Undo', 'Erase']) {
+        final button = tester.getRect(find.byTooltip(label));
+        expect(frameRect.contains(button.center), isTrue);
+        expect(button.bottom, lessThanOrEqualTo(canvasRect.top));
       }
+      expect(
+        tester.getRect(find.byTooltip('Hide character')).top,
+        greaterThan(frameRect.bottom),
+      );
+
+      await tester.ensureVisible(find.byTooltip('Hide character'));
       await tester.tap(find.byTooltip('Hide character'));
       await tester.pump();
       expect(letter.hitTestable(), findsNothing);
       await tester.tap(find.byTooltip('Show character'));
+      await tester.ensureVisible(canvas);
       await tester.drag(canvas, const Offset(50, 50));
       await tester.pump();
       final erase = tester.widget<IconButton>(
         find.widgetWithIcon(IconButton, Icons.delete_outline),
       );
       expect(erase.onPressed, isNotNull);
+      await tester.ensureVisible(find.byTooltip('Erase'));
       await tester.tap(find.byTooltip('Erase'));
       await tester.pump();
     }

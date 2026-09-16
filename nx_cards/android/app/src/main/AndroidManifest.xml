@@ -33,6 +33,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".NativeDrawingActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|uiMode" />
         <!-- Close the ordinary browser activity after an accepted callback. -->
         <activity android:name="com.bdayadev.oidc.OidcRedirectActivity"
             tools:node="remove" />

@@ -131,29 +131,12 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
             : 'Write your answer',
         style: const TextStyle(color: RecallColors.faint, fontSize: 12),
       ),
-      const SizedBox(height: 14),
       Expanded(
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 230),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ScriptDrawingCanvas(
-                controller: _drawingController,
-                semanticsLabel: 'Write the answer for ${widget.prompt.prompt}',
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: IconButton(
-                  tooltip: 'Erase',
-                  onPressed: _drawingController.hasStrokes
-                      ? _drawingController.clear
-                      : null,
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                ),
-              ),
-            ],
+          child: ScriptDrawingCanvas(
+            controller: _drawingController,
+            semanticsLabel: 'Write the answer for ${widget.prompt.prompt}',
           ),
         ),
       ),

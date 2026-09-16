@@ -1,3 +1,8 @@
+import 'package:flutter/services.dart';
+import 'package:nx_cards/account/account_session.dart';
+import 'package:nx_cards/scheduling/scheduling.dart';
+import 'package:nx_cards/study/session/recall_recap_page.dart';
+import 'package:nx_cards/study/language/drawing/native_drawing_session.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -8,7 +13,6 @@ import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
-import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/study/language/language_study_page.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
@@ -466,6 +470,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   Future<void> _start() async {
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
+    if (_recallPresentation == RecallPresentation.write &&
+        prompts.every((p) => p.card.content is LanguageCardContent)) {
+      if (await _openNativeDrawing(prompts: prompts)) {
+        await _refreshSetup();
+        return;
+      }
+    }
+    if (!mounted) return;
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => StudySessionPage(
@@ -478,6 +490,92 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       ),
     );
     await _refreshSetup();
+  }
+
+  Future<bool> _openNativeDrawing({
+    List<StudyCard>? cards,
+    List<StudyPrompt>? prompts,
+  }) async {
+    if (!await NativeDrawingSession.isAvailable() || !mounted) return false;
+    final recall = prompts != null;
+    final queue = cards ?? prompts!.map((p) => p.card).toList();
+    final sessionKey = ref.read(activeCardsSessionProvider).value?.account.key;
+    final library = ref.read(cardLibraryProvider);
+    final scheduler = ref.read(cardSchedulerProvider);
+    final audio = ref.read(cardAudioRepositoryProvider);
+    final latest = {for (final card in queue) card.id: card};
+    final ratings = <int, CardRating>{};
+    final handled = await NativeDrawingSession.open(
+      title: widget.title,
+      cards: recall
+          ? prompts.map(NativeDrawingSession.recallCard).toList()
+          : queue.map(NativeDrawingSession.practiceCard).toList(),
+      recall: recall,
+      onAction: (call) async {
+        if (!mounted ||
+            sessionKey !=
+                ref.read(activeCardsSessionProvider).value?.account.key) {
+          throw PlatformException(
+            code: 'session_changed',
+            message: 'Account changed. Close this study session.',
+          );
+        }
+        final args = Map<Object?, Object?>.from(call.arguments as Map);
+        final index = args['index'] as int;
+        if (index < 0 || index >= queue.length) {
+          throw PlatformException(code: 'invalid_card');
+        }
+        if (call.method == 'audio') {
+          final content = queue[index].content as LanguageCardContent;
+          if (audio == null || content.audioUrl == null) {
+            throw PlatformException(code: 'audio_unavailable');
+          }
+          return audio.fetch(content.audioUrl!);
+        }
+        if (call.method == 'rate' && recall) {
+          if (ratings.containsKey(index)) return null;
+          if (index != ratings.length) {
+            throw PlatformException(code: 'invalid_order');
+          }
+          final rating = args['correct'] == true
+              ? CardRating.good
+              : CardRating.again;
+          final prompt = prompts[index].withCard(latest[queue[index].id]!);
+          final time = DateTime.fromMillisecondsSinceEpoch(
+            args['revealedAt'] as int,
+            isUtc: true,
+          );
+          final updated = scheduler.preview(prompt, time)[rating]!.card;
+          await library.saveSchedule(updated);
+          ratings[index] = rating;
+          latest[updated.id] = updated;
+          if (mounted) ref.read(cardsInvalidationProvider)();
+          return null;
+        }
+        throw PlatformException(code: 'unsupported_action');
+      },
+    );
+    if (handled && recall && mounted) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => RecallRecapPage(
+            reviewedCount: ratings.length,
+            totalCount: queue.length,
+            missCount: ratings.values
+                .where((r) => r == CardRating.again)
+                .length,
+            entries: [
+              for (var i = 0; i < queue.length; i++)
+                RecallRecapEntry(
+                  card: latest[queue[i].id]!,
+                  rating: ratings[i],
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    return handled;
   }
 
   Future<void> _startFastRecall() async {
@@ -629,6 +727,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       final hydrated = <StudyCard>[];
       for (final card in selected) {
         hydrated.add(await hydrateStudyCard(ref, card));
+      }
+      if (!mounted) return;
+      if (await _openNativeDrawing(cards: hydrated)) {
+        await _refreshSetup();
+        return;
       }
       if (!mounted) return;
       await Navigator.of(context).push<bool>(
