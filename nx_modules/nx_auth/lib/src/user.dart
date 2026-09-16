@@ -34,13 +34,18 @@ class User {
 
 /// Fixed login choices used by direct Pi/development deployments.
 class AuthLoginProfile {
-  const AuthLoginProfile({required this.label, required this.userId});
+  const AuthLoginProfile({
+    required this.label,
+    required this.userId,
+    this.loginHint,
+  });
 
   final String label;
   final String userId;
+  final String? loginHint;
 }
 
 const authLoginProfiles = <AuthLoginProfile>[
-  AuthLoginProfile(label: 'Nathik', userId: '1'),
-  AuthLoginProfile(label: 'Yareni', userId: '2'),
+  AuthLoginProfile(label: 'Nathik', userId: '1', loginHint: 'nathikazad'),
+  AuthLoginProfile(label: 'Yareni', userId: '2', loginHint: 'yareni'),
 ];

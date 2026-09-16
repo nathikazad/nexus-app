@@ -6,6 +6,7 @@ import 'package:oidc_default_store/oidc_default_store.dart';
 
 import 'backend_presets.dart';
 import 'oidc_config.dart';
+import 'user.dart';
 import 'session_availability.dart';
 
 class NexusIdentity {
@@ -83,13 +84,27 @@ class NexusOidcService {
     });
   }
 
-  Future<NexusIdentity> signIn(BackendPreset preset, String clientAppId) async {
+  Future<NexusIdentity> signIn(
+    BackendPreset preset,
+    String clientAppId, {
+    AuthLoginProfile? profile,
+  }) async {
     _restorePreset = preset;
     _restoreClientAppId = clientAppId;
     await _ensureInitialized();
-    final user = await _manager!.loginAuthorizationCodeFlow();
+    final user = await _manager!.loginAuthorizationCodeFlow(
+      loginHint: profile?.loginHint,
+      promptOverride: profile == null ? null : const ['login'],
+    );
     if (user == null) throw Exception('Sign-in was cancelled');
-    return _loadIdentity(preset);
+    final identity = await _loadIdentity(preset);
+    if (profile != null && identity.userId != profile.userId) {
+      await _manager!.forgetUser();
+      throw Exception(
+        'Please sign in as ${profile.label}. A different account was authenticated.',
+      );
+    }
+    return identity;
   }
 
   Future<String> accessToken({bool forceRefresh = false}) async {

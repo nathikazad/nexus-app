@@ -17,7 +17,11 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
   Future<void> _login() async {
     final error = await ref
         .read(authProvider.notifier)
-        .login(_preset.requiresOidc ? '' : _profile.userId, _preset);
+        .login(
+          _preset.requiresOidc ? '' : _profile.userId,
+          _preset,
+          profile: _profile,
+        );
     if (error != null && mounted) {
       ScaffoldMessenger.of(
         context,
@@ -65,30 +69,12 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
                   style: TextStyle(color: RecallColors.muted),
                 ),
                 const SizedBox(height: 32),
-                if (!_preset.requiresOidc) ...[
-                  DropdownButtonFormField<AuthLoginProfile>(
-                    initialValue: _profile,
-                    decoration: const InputDecoration(labelText: 'Person'),
-                    items: [
-                      for (final item in authLoginProfiles)
-                        DropdownMenuItem(value: item, child: Text(item.label)),
-                    ],
-                    onChanged: loading
-                        ? null
-                        : (value) => setState(() => _profile = value!),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                DropdownButtonFormField<BackendPreset>(
-                  initialValue: _preset,
-                  decoration: const InputDecoration(labelText: 'Backend'),
-                  items: [
-                    for (final item in BackendPreset.values)
-                      DropdownMenuItem(value: item, child: Text(item.label)),
-                  ],
-                  onChanged: loading
-                      ? null
-                      : (value) => setState(() => _preset = value!),
+                AuthLoginFields(
+                  preset: _preset,
+                  profile: _profile,
+                  loading: loading,
+                  onPresetChanged: (value) => setState(() => _preset = value),
+                  onProfileChanged: (value) => setState(() => _profile = value),
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
@@ -100,7 +86,7 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
                         )
                       : Text(
                           _preset.requiresOidc
-                              ? 'Continue with passkey'
+                              ? 'Continue to sign in'
                               : 'Log in',
                         ),
                 ),

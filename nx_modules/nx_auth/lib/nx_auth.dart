@@ -10,6 +10,7 @@ export 'src/graphql_http_config.dart';
 export 'src/oidc_config.dart';
 export 'src/oidc_service.dart';
 export 'src/user.dart';
+export 'src/login_fields.dart';
 export 'src/session_availability.dart';
 
 export 'src/domain_session.dart';

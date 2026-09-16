@@ -103,7 +103,11 @@ class AuthController extends AsyncNotifier<User?> {
     }
   }
 
-  Future<String?> login(String userId, BackendPreset preset) async {
+  Future<String?> login(
+    String userId,
+    BackendPreset preset, {
+    AuthLoginProfile? profile,
+  }) async {
     final generation = ++_generation;
     print('[AuthController] login() - user: $userId preset: ${preset.key}');
     state = const AsyncValue.loading();
@@ -118,6 +122,7 @@ class AuthController extends AsyncNotifier<User?> {
         final identity = await nexusOidcService.signIn(
           preset,
           ref.read(nexusClientAppIdProvider),
+          profile: profile,
         );
         resolvedUserId = identity.userId;
       }

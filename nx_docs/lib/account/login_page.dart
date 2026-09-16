@@ -22,6 +22,7 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
         .login(
           _selectedPreset.requiresOidc ? '' : _selectedProfile.userId,
           _selectedPreset,
+          profile: _selectedProfile,
         );
     if (error == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -83,54 +84,14 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
                       style: TextStyle(fontSize: 14, color: AppColors.muted),
                     ),
                     const SizedBox(height: 36),
-                    if (!_selectedPreset.requiresOidc) ...[
-                      const _LoginLabel('PERSON'),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<AuthLoginProfile>(
-                        isExpanded: true,
-                        initialValue: _selectedProfile,
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.person_outline, size: 20),
-                        ),
-                        items: [
-                          for (final profile in authLoginProfiles)
-                            DropdownMenuItem<AuthLoginProfile>(
-                              value: profile,
-                              child: Text(profile.label),
-                            ),
-                        ],
-                        onChanged: loading
-                            ? null
-                            : (profile) {
-                                if (profile != null) {
-                                  setState(() => _selectedProfile = profile);
-                                }
-                              },
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    const _LoginLabel('BACKEND'),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<BackendPreset>(
-                      isExpanded: true,
-                      initialValue: _selectedPreset,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.dns_outlined, size: 20),
-                      ),
-                      items: [
-                        for (final preset in BackendPreset.values)
-                          DropdownMenuItem<BackendPreset>(
-                            value: preset,
-                            child: Text(preset.label),
-                          ),
-                      ],
-                      onChanged: loading
-                          ? null
-                          : (preset) {
-                              if (preset != null) {
-                                setState(() => _selectedPreset = preset);
-                              }
-                            },
+                    AuthLoginFields(
+                      preset: _selectedPreset,
+                      profile: _selectedProfile,
+                      loading: loading,
+                      onPresetChanged: (value) =>
+                          setState(() => _selectedPreset = value),
+                      onProfileChanged: (value) =>
+                          setState(() => _selectedProfile = value),
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
@@ -143,7 +104,7 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
                             )
                           : Text(
                               _selectedPreset.requiresOidc
-                                  ? 'Continue with passkey'
+                                  ? 'Continue to sign in'
                                   : 'Log In',
                             ),
                     ),
@@ -161,24 +122,6 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LoginLabel extends StatelessWidget {
-  const _LoginLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: AppColors.faint,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
       ),
     );
   }
