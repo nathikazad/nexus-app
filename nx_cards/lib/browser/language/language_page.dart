@@ -19,7 +19,9 @@ class LanguagePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(cardsCollectionProvider((language: language, bookId: null)));
+    final dashboard = ref.watch(
+      cardsCollectionProvider((language: language, bookId: null)),
+    );
     return Scaffold(
       appBar: AppBar(title: Text(language)),
       body: dashboard.when(
@@ -123,6 +125,40 @@ class _LanguageCategoryCard extends StatelessWidget {
       language: language,
       cue: StudyCue.fromLanguage,
     );
+    final labelStyle = TextStyle(
+      fontSize: 10,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+    final valueStyle = TextStyle(
+      fontFamily: 'monospace',
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+    double textWidth(String text, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      final width = painter.width.ceilToDouble();
+      painter.dispose();
+      return width;
+    }
+
+    final metrics = <(int, String)>[
+      (cards.length, 'Total'),
+      if (!allCards) (learnt, 'Learnt'),
+      (current, 'Learning'),
+      (due, 'Due'),
+      if (!allCards) (remaining, 'Remaining'),
+    ];
+    final widths = metrics.map((entry) {
+      final labelWidth = textWidth(entry.$2, labelStyle);
+      final valueWidth = textWidth('${entry.$1}', valueStyle);
+      return (labelWidth > valueWidth ? labelWidth : valueWidth) + 8;
+    }).toList();
     Widget metric(int value, String label, double width) => SizedBox(
       key: ValueKey(
         'language-category-${category.toLowerCase()}-${label.toLowerCase()}',
@@ -131,23 +167,9 @@ class _LanguageCategoryCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$value',
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
+          Text('$value', maxLines: 1, softWrap: false, style: valueStyle),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+          Text(label, maxLines: 1, softWrap: false, style: labelStyle),
         ],
       ),
     );
@@ -170,16 +192,15 @@ class _LanguageCategoryCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Reserve a readable icon/title area, then admit metrics from
-              // left to right. As space shrinks, the rightmost metric drops.
-              const identityAndDividerWidth = 135.0;
-              final metricWidth =
-                  constraints.maxWidth - identityAndDividerWidth;
-              final showLearnt = !allCards && metricWidth >= 76;
-              final showLearning = allCards || metricWidth >= 126;
-              final showDue = allCards || metricWidth >= 160;
-              final showRemaining = !allCards && metricWidth >= 212;
-              return Row(
+              final metricWidgets = [
+                for (var i = 0; i < metrics.length; i++)
+                  metric(metrics[i].$1, metrics[i].$2, widths[i]),
+              ];
+              final statsWidth =
+                  widths.fold<double>(0, (a, b) => a + b) +
+                  (metrics.length - 1) * 8;
+              final inline = constraints.maxWidth >= 160 + statsWidth;
+              final identity = Row(
                 children: [
                   Expanded(
                     child: Row(
@@ -221,6 +242,22 @@ class _LanguageCategoryCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                ],
+              );
+              final stats = Wrap(
+                spacing: 8,
+                runSpacing: 12,
+                children: metricWidgets,
+              );
+              if (!inline) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [identity, const SizedBox(height: 16), stats],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: identity),
                   const SizedBox(width: 12),
                   SizedBox(
                     height: 44,
@@ -231,23 +268,7 @@ class _LanguageCategoryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  metric(cards.length, 'Total', 34),
-                  if (showLearnt) ...[
-                    const SizedBox(width: 4),
-                    metric(learnt, 'Learnt', 38),
-                  ],
-                  if (showLearning) ...[
-                    const SizedBox(width: 4),
-                    metric(current, 'Learning', 46),
-                  ],
-                  if (showDue) ...[
-                    const SizedBox(width: 4),
-                    metric(due, 'Due', 30),
-                  ],
-                  if (showRemaining) ...[
-                    const SizedBox(width: 4),
-                    metric(remaining, 'Remaining', 48),
-                  ],
+                  SizedBox(width: statsWidth, child: stats),
                 ],
               );
             },
@@ -297,7 +318,9 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final dashboard = ref.watch(cardsCollectionProvider((language: language, bookId: null)));
+    final dashboard = ref.watch(
+      cardsCollectionProvider((language: language, bookId: null)),
+    );
     final historyWindow =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
     return Scaffold(
