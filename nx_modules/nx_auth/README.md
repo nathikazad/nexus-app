@@ -1,5 +1,9 @@
 # NX Auth
 
+See the [cross-platform callback audit](docs/callback-audit.md) for Android,
+iOS, native macOS and web return paths, observed failures, test coverage and
+the proposed recovery plan.
+
 NX Docs and NX Cards share `AuthLoginFields` for backend and person selection.
 The profiles in `src/user.dart` contain display names, local user IDs, and
 hosted ZITADEL login hints. Update these shared definitions instead of adding

@@ -107,3 +107,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Shared Android browser fixes; Apple/web implementations remain upstream.
+dependency_overrides:
+  oidc_android:
+    path: ../nx_modules/nx_auth/vendor/oidc_android

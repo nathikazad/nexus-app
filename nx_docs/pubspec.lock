@@ -1185,12 +1185,11 @@ packages:
     source: hosted
     version: "3.0.1"
   oidc_android:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: oidc_android
-      sha256: ae30e87871737d397d238bababc4348d99916de122d248a6417bb724592af4f7
-      url: "https://pub.dev"
-    source: hosted
+      path: "../nx_modules/nx_auth/vendor/oidc_android"
+      relative: true
+    source: path
     version: "2.0.1"
   oidc_core:
     dependency: transitive

@@ -1,13 +1,13 @@
 package com.nexus.nx_notes
 
 import android.content.Intent
-import com.ryanheise.audioservice.AudioServiceActivity
+import com.ryanheise.audioservice.AudioServiceFragmentActivity
 import com.nexus.nx_canvas.NativeEditorActivity
 import com.nexus.nx_canvas.NativeEditorFiles
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : AudioServiceActivity() {
+class MainActivity : AudioServiceFragmentActivity() {
     private var canvasResult:MethodChannel.Result?=null
     override fun configureFlutterEngine(engine:FlutterEngine) {
         super.configureFlutterEngine(engine)

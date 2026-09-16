@@ -1,0 +1,110 @@
+group 'com.bdayadev.oidc'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '2.2.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.12.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+        }
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    // Conditional for compatibility with AGP <4.2.
+    if (project.android.hasProperty("namespace")) {
+        namespace 'com.bdayadev.oidc'
+    }
+    
+    compileSdk flutter.compileSdkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+
+
+    defaultConfig {
+        // androidx.browser:browser:1.10.0 declares minSdk 23; a lower value
+        // here fails the manifest merge in any consuming app.
+        minSdkVersion 23
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // No default for oidcRedirectScheme on purpose. A value declared here is
+        // substituted into this library's manifest before the app-level merge and
+        // would override the consuming app's own scheme. Leaving it unresolved
+        // lets the app's placeholder win, matching AppAuth-Android's contract for
+        // appAuthRedirectScheme. An app that omits it fails the merge with an
+        // error naming the placeholder, rather than failing silently at runtime.
+        //
+        // Building this module standalone has no app to supply the value, so its
+        // own unit tests pass one via -PoidcNativeTests. Consumers never set that
+        // flag, so it cannot reach a consuming app's merge.
+        //   ./gradlew :oidc_android:testDebugUnitTest -PoidcNativeTests
+        if (project.hasProperty('oidcNativeTests')) {
+            manifestPlaceholders = [oidcRedirectScheme: 'com.bdayadev.oidc.test']
+        }
+    }
+
+    dependencies {
+        // Custom Tabs / Auth Tab for the system-browser authorization flow.
+        // Pure Kotlin/AAR: ships no .so, so it is 16 KB page-size compliant.
+        implementation 'androidx.browser:browser:1.10.0'
+        testImplementation 'org.jetbrains.kotlin:kotlin-test'
+        testImplementation 'org.mockito:mockito-core:5.0.0'
+        // Robolectric runs the plugin against real android.net.Uri / Activity
+        // implementations on the JVM. The Dart tests mock the Pigeon channel, so
+        // they cannot exercise native redirect capture at all.
+        testImplementation 'org.robolectric:robolectric:4.15.1'
+        testImplementation 'androidx.test:core:1.7.0'
+    }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.returnDefaultValues = true
+        unitTests.all {
+            def configFile = new File(rootProject.projectDir.parentFile, '.dart_tool/package_config.json')
+            if (configFile.exists()) {
+                def config = new groovy.json.JsonSlurper().parse(configFile)
+                def pkg = config.packages.find { it.name == 'oidc_platform_interface' }
+                if (pkg != null) {
+                    systemProperty 'oidc.interfaceRoot', configFile.toURI().resolve(pkg.rootUri).path
+                }
+            }
+            testLogging {
+                events "passed", "skipped", "failed", "standardOut", "standardError"
+                outputs.upToDateWhen {false}
+                showStandardStreams = true
+            }
+        }
+    }
+}

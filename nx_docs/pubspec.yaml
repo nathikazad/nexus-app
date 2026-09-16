@@ -53,6 +53,8 @@ dev_dependencies:
   mocktail: ^1.0.4
 
 dependency_overrides:
+  oidc_android:
+    path: ../nx_modules/nx_auth/vendor/oidc_android
   connectivity_plus: 6.1.5
   # Upstream 3.0.1 omits the arm64 iOS Simulator slice. This local fork
   # supplies the same plugin with an Apple Silicon-compatible XCFramework.

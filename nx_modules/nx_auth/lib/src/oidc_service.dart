@@ -63,6 +63,12 @@ class NexusOidcService {
         allowedAudiences: config.allowedAudiences,
         allowedIdTokenAlgorithms: const ['RS256'],
         supportOfflineAuth: true,
+        options: const OidcPlatformSpecificOptions(
+          android: OidcNativeOptionsAndroid(
+            preferredBrowserPackages: ['com.android.chrome'],
+            flowTimeoutSeconds: 300,
+          ),
+        ),
       ),
     );
     await manager.init();
