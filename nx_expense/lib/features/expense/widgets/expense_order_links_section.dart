@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nx_db/kgql.dart';
+import 'package:nx_expense/data/order/expense_order_links_api.dart';
 
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
@@ -30,12 +30,10 @@ class _ExpenseOrderLinksFormSectionState
     setState(() => _busy = true);
     try {
       final client = ref.read(expenseGraphqlClientProvider);
-      await setKgqlModel(
+      await unlinkExpenseOrder(
         client,
-        SetModelRequest(
-          id: widget.expenseId,
-          relations: [ModelRelation(id: relationId, delete: true)],
-        ),
+        expenseId: widget.expenseId,
+        relationId: relationId,
       );
       ref.invalidate(expenseDetailProvider(widget.expenseId));
     } catch (e) {

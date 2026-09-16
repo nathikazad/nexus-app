@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nx_db/kgql.dart';
+import 'package:nx_expense/data/order/expense_order_links_api.dart';
 
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
@@ -239,17 +239,10 @@ class _PickerOrderCard extends ConsumerWidget {
         onTap: () async {
           final client = ref.read(expenseGraphqlClientProvider);
           try {
-            await setKgqlModel(
+            await linkExpenseOrder(
               client,
-              SetModelRequest(
-                id: expenseId,
-                relations: [
-                  ModelRelation(
-                    modelType: kOrderModelTypeName,
-                    link: [order.id],
-                  ),
-                ],
-              ),
+              expenseId: expenseId,
+              orderId: order.id,
             );
             ref.invalidate(expenseDetailProvider(expenseId));
             if (!pickerContext.mounted) return;

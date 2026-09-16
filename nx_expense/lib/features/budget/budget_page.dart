@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nx_db/goals.dart';
-import 'package:nx_db/kgql.dart';
+import 'package:nx_expense/data/budget/budget_api.dart';
 
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/formatting/format.dart';
@@ -95,43 +94,6 @@ ExpenseFilter _expenseFilterForGoal(ExpenseGoalMonthItem goal) {
 
 String? _goalCategoryNode(ExpenseGoalMonthItem goal) {
   return _tagFilterForGoal(goal)?['node']?.toString();
-}
-
-SetModelRequest _goalSetModelRequest({
-  int? id,
-  required String label,
-  required String categoryNode,
-  required num amount,
-}) {
-  return SetModelRequest(
-    id: id,
-    modelType: id == null ? 'Goal' : null,
-    name: label,
-    attributes: [
-      SetModelAttribute(key: 'label', value: label),
-      SetModelAttribute(key: 'active', value: true),
-      SetModelAttribute(key: 'cadence', value: 'monthly'),
-      SetModelAttribute(key: 'model_type', value: 'Expense'),
-      SetModelAttribute(
-        key: 'filter',
-        value: {
-          'tag_filters': [
-            {
-              'system': 'Spending Category',
-              'node': categoryNode,
-              'include_descendants': true,
-            },
-          ],
-        },
-      ),
-      SetModelAttribute(key: 'selected_attribute', value: 'date'),
-      SetModelAttribute(key: 'aggregation', value: 'sum'),
-      SetModelAttribute(key: 'metric', value: 'cost'),
-      SetModelAttribute(key: 'threshold_op', value: '<='),
-      SetModelAttribute(key: 'threshold_value', value: amount),
-      SetModelAttribute(key: 'meta', value: null),
-    ],
-  );
 }
 
 List<_BudgetCategoryOption> _budgetCategoryOptions(ModelTypeView schema) {
@@ -267,26 +229,19 @@ Future<void> _saveBudgetGoal(
   required num amount,
 }) async {
   final client = ref.read(expenseGraphqlClientProvider);
-  await setKgqlModel(
+  await saveBudgetGoal(
     client,
-    _goalSetModelRequest(
-      id: id,
-      label: label,
-      categoryNode: categoryNode,
-      amount: amount,
-    ),
-    auditSourceKind: 'nx_expense_budget',
+    id: id,
+    label: label,
+    categoryNode: categoryNode,
+    amount: amount,
   );
   ref.invalidate(budgetExpenseGoalsMonthProvider);
 }
 
 Future<void> _deleteBudgetGoal(WidgetRef ref, int id) async {
   final client = ref.read(expenseGraphqlClientProvider);
-  await setKgqlModel(
-    client,
-    SetModelRequest(id: id, delete: true),
-    auditSourceKind: 'nx_expense_budget',
-  );
+  await deleteBudgetGoal(client, id);
   ref.invalidate(budgetExpenseGoalsMonthProvider);
 }
 
