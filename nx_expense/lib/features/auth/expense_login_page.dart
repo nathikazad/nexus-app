@@ -26,7 +26,11 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
 
     final errorMessage = await ref
         .read(authProvider.notifier)
-        .login(_selectedProfile.userId, _selectedPreset);
+        .login(
+          _selectedProfile.userId,
+          _selectedPreset,
+          profile: _selectedProfile,
+        );
 
     if (errorMessage == null) {
       // Login succeeded — navigation handled by auth state listener / router.

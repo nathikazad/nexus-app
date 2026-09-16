@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nx_db/auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_expense/core/theme/app_theme.dart';
@@ -14,6 +15,7 @@ class NexusExpenseApp extends ConsumerWidget {
       title: 'EXPNS.',
       theme: buildExpenseTheme(),
       routerConfig: router,
+      builder: (context, child) => DomainSessionGate(child: child!),
     );
   }
 }

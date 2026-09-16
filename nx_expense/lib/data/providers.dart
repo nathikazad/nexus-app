@@ -35,10 +35,8 @@ final expenseGraphqlClientProvider = Provider<GraphQLClient>(
 final expenseFileCacheProvider = Provider<ExpenseFileCache?>((ref) {
   if (kIsWeb) return null;
   final user = ref.watch(authProvider).value;
-  if (user == null) return null;
-  final library = FileLibrary.application(
-    'nx_expense:nexus-primary:${user.userId}',
-  );
+  if (user?.domainId == null) return null;
+  final library = FileLibrary.application('nx_expense:${user!.sessionKey}');
   ref.onDispose(() => unawaited(library.close()));
   return ExpenseFileCache(library);
 });
