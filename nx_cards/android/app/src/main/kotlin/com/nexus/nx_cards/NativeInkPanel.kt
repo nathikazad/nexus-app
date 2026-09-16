@@ -7,13 +7,11 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
-import android.widget.Button
-import android.view.Gravity
 import android.graphics.drawable.GradientDrawable
 import java.util.IdentityHashMap
 import kotlin.math.roundToInt
 
-/** The tablet firmware owns all live pen samples and screen refreshes. Flutter
+/** The tablet firmware owns all live pen samples and screen refreshes. The activity
  * reads records only for toolbar/layout actions. No drawing-thread hooks or
  * live messages cross into Flutter. */
 class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit) {
@@ -26,7 +24,9 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
     private var ink: View? = null
     private var api: Class<*>? = null
     private val seen = IdentityHashMap<Any, Boolean>()
-    private val strokes = mutableListOf<List<List<Double>>>()
+    private data class Stroke(val points: List<List<Double>>, val erasing: Boolean)
+    private val strokes = mutableListOf<Stroke>()
+    private var erasing = false
     private var stopped = false
     private var started = false
     private var resumed = true
@@ -39,16 +39,6 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         api = Class.forName("com.xrz.NoteView")
         val widget = api!!.getConstructor(Context::class.java).newInstance(context) as View
         ink = widget
-        val toolbar = LinearLayout(context).apply { gravity = Gravity.END }
-        for ((label, command) in listOf("Undo" to "undo", "Erase" to "clear")) {
-            val button = Button(context).apply {
-                text = label; contentDescription = label; isAllCaps = false; textSize = 13f
-                setTextColor(Color.BLACK)
-                setOnClickListener { if (!busy && !stopped) runCatching { edit(command) }.onFailure { fail(it) } }
-            }
-            toolbar.addView(button, LinearLayout.LayoutParams((72*density).roundToInt(), (48*density).roundToInt()))
-        }
-        host.addView(toolbar, LinearLayout.LayoutParams(-1, (48*density).roundToInt()))
         host.addView(widget, LinearLayout.LayoutParams(-1, 0, 1f))
         widget.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
             if ((r-l != or-ol || b-t != ob-ot) && !stopped) {
@@ -62,6 +52,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         ink?.let { api!!.getMethod("setInputEnabled", Boolean::class.javaPrimitiveType).invoke(it, enabled) }
     }
     fun setResumed(value: Boolean) {
+        if (!value) eraseButton(false)
         resumed = value
         runCatching { flag(value && started && !busy && !stopped) }.onFailure { fail(it) }
     }
@@ -82,13 +73,14 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         for (record in records.filterNotNull()) {
             if (seen.put(record, true) != null) continue
             val cls = record.javaClass
-            if (cls.getField("type").getInt(record) != 101) continue
+            val type = cls.getField("type").getInt(record)
+            if (type != 101 && type != 201) continue
             val rotation = rotation()
             val points = (cls.getField("points").get(record) as List<*>).filterNotNull().map { p ->
                 local((p.javaClass.getMethod("getX").invoke(p) as Number).toDouble(),
                     (p.javaClass.getMethod("getY").invoke(p) as Number).toDouble(), rotation)
             }
-            if (points.isNotEmpty()) { strokes.add(points) }
+            if (points.isNotEmpty()) { strokes.add(Stroke(points, type == 201)) }
         }
 
     }
@@ -137,14 +129,13 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
             }
         }
         for (stroke in strokes) {
-            val pts = stroke.map(::panel)
+            paint.color = if (stroke.erasing) Color.WHITE else Color.BLACK
+            paint.strokeWidth = ((if (stroke.erasing) 24 else 3)*density).toFloat()
+            val pts = stroke.points.map(::panel)
             if (pts.size == 1) canvas.drawPoint(pts[0].x, pts[0].y, paint)
             for (i in 1 until pts.size) canvas.drawLine(pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y, paint)
         }
-        val penClass = Class.forName("com.xrz.SimplePen")
-        val pen = penClass.getConstructor().newInstance()
-        penClass.getMethod("setStrokeWidth", Int::class.javaPrimitiveType).invoke(pen, (3*density).roundToInt())
-        api!!.getMethod("setPen", Class.forName("com.xrz.BasePen")).invoke(widget, pen)
+        setPen()
         api!!.getMethod("setDrawGroundMode", Int::class.javaPrimitiveType).invoke(widget, 0)
         api!!.getMethod("resetRecordList").invoke(widget)
         seen.clear()
@@ -152,6 +143,22 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         foreground = image
         flag(resumed && !busy)
     }
+    private fun setPen() {
+        val cls = Class.forName(if (erasing) "com.xrz.Rubber" else "com.xrz.SimplePen")
+        val pen = cls.getConstructor().newInstance()
+        cls.getMethod("setStrokeWidth", Int::class.javaPrimitiveType)
+            .invoke(pen, ((if (erasing) 24 else 3)*density).roundToInt())
+        api!!.getMethod("setPen", Class.forName("com.xrz.BasePen")).invoke(ink, pen)
+    }
+    fun eraseButton(held: Boolean) {
+        if (held == erasing || busy || stopped || !started) return
+        runCatching {
+            api!!.getMethod("finishPen").invoke(ink)
+            erasing = held
+            setPen()
+        }.onFailure { fail(it) }
+    }
+    fun undo() = edit("undo")
     private fun fail(error: Throwable) {
         Log.e("NxCardsInk", "Native ink unavailable", error)
         runCatching { flag(false) }

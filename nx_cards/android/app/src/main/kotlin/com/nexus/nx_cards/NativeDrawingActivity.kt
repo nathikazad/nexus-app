@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.*
@@ -69,19 +70,20 @@ class NativeDrawingActivity : Activity() {
             val height = (resources.displayMetrics.heightPixels * .24).roundToInt().coerceIn(dp(110), dp(240))
             root.addView(scroll, LinearLayout.LayoutParams(-1, height))
             hint = label(12f); root.addView(hint, LinearLayout.LayoutParams(-1, dp(28)))
-            val frame = FrameLayout(this).apply {
+            val frame = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 background = GradientDrawable().apply { setColor(Color.WHITE); setStroke(dp(1), Color.LTGRAY); cornerRadius = dp(12).toFloat() }
             }
             root.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f))
+            controls = LinearLayout(this).apply { gravity = Gravity.END }
+            frame.addView(controls, LinearLayout.LayoutParams(-1, dp(48)))
             if (runCatching { Class.forName("com.xrz.NoteView") }.isSuccess) {
                 native = NativeInkPanel(this) { report(it.message ?: "Drawing error") }
-                frame.addView(native!!.getView(), FrameLayout.LayoutParams(-1, -1))
+                frame.addView(native!!.getView(), LinearLayout.LayoutParams(-1, 0, 1f))
             } else {
                 standard = StandardInkPanel(this)
-                frame.addView(standard, FrameLayout.LayoutParams(-1, -1))
+                frame.addView(standard, LinearLayout.LayoutParams(-1, 0, 1f))
             }
-            controls = LinearLayout(this).apply { gravity = Gravity.CENTER; setPadding(0, dp(8), 0, 0) }
-            root.addView(controls, LinearLayout.LayoutParams(-1, -2))
             setContentView(root)
             updateCard()
             Log.i("NxCardsNative", "Fully native ${if (recall) "recall" else "practice"} activity opened")
@@ -97,16 +99,38 @@ class NativeDrawingActivity : Activity() {
         subtitle.text = if (recall && !revealed) "" else value("subtitle")
         hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
         controls.removeAllViews()
-        if (card["audio"] == true && (!recall || revealed)) controls.addView(button("Play") { play() })
+        control("Undo", "undo") { native?.undo() ?: standard?.undo() }
+        control("Erase", "erase") { native?.clear {} ?: standard?.clear() }
+        if (card["audio"] == true && (!recall || revealed)) control("Play", "play") { play() }
         if (!recall) {
-            controls.addView(button(if (visibleAnswer) "Hide" else "Show") { visibleAnswer = !visibleAnswer; updateCard() })
-            controls.addView(button(if (index == cards.lastIndex) "Finish" else "Next") { advance() })
+            control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
+            control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
-            controls.addView(button("Show answer") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard() })
+            control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard() }
         } else {
-            controls.addView(button("No") { rate(false) })
-            controls.addView(button("Yes") { rate(true) })
+            control("No", "no") { rate(false) }
+            control("Yes", "yes") { rate(true) }
         }
+    }
+    private fun control(label: String, icon: String, action: () -> Unit) {
+        controls.addView(ImageButton(this).apply {
+            contentDescription = label
+            tooltipText = label
+            setImageDrawable(DrawingIcon(icon))
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setBackgroundColor(Color.TRANSPARENT)
+            setOnClickListener { if (!busy) action() }
+        }, LinearLayout.LayoutParams(dp(48), dp(48)))
+    }
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        native?.eraseButton(StylusInput.erasing(event))
+        val result = super.dispatchTouchEvent(event)
+        if (event.actionMasked == MotionEvent.ACTION_CANCEL) native?.eraseButton(false)
+        return result
+    }
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        native?.eraseButton(StylusInput.erasing(event))
+        return super.dispatchGenericMotionEvent(event)
     }
     private fun setBusy(value: Boolean) {
         busy = value; end.isEnabled = !value
