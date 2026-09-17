@@ -123,7 +123,6 @@ class _LanguageCategoryCard extends StatelessWidget {
       DateTime.now(),
       studyCategory: allCards ? null : category,
       language: language,
-      cue: StudyCue.fromLanguage,
     );
     final labelStyle = TextStyle(
       fontSize: 10,
