@@ -46,6 +46,7 @@ class NexusOidcConfig {
       'nx_docs_web': '/docs/auth.html',
       'nx_cards_web': '/flashcards/auth.html',
       'nx_books_web': '/books/auth.html',
+      'nx_expense_web': '/expenses/auth.html',
       'nx_hypnosis_web': '/hypnosis-app/auth.html',
     };
     final webRedirect =

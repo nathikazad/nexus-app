@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_db/auth.dart';
@@ -11,7 +12,9 @@ void main() {
     ProviderScope(
       overrides: [
         dbAuditSourceKindProvider.overrideWithValue('nx_expense'),
-        nexusClientAppIdProvider.overrideWithValue('nx_expense'),
+        nexusClientAppIdProvider.overrideWithValue(
+          kIsWeb ? 'nx_expense_web' : 'nx_expense',
+        ),
       ],
       child: const NexusExpenseApp(),
     ),
