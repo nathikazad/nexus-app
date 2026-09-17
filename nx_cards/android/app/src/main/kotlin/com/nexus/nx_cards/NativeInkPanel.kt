@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
 /** The tablet firmware owns all live pen samples and screen refreshes. The activity
  * reads records only for toolbar/layout actions. No drawing-thread hooks or
  * live messages cross into Flutter. */
-class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit) {
+class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit) : DrawingInkPanel {
     private val main = Handler(Looper.getMainLooper())
     private val host = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -51,7 +51,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
     private fun flag(enabled: Boolean) {
         ink?.let { api!!.getMethod("setInputEnabled", Boolean::class.javaPrimitiveType).invoke(it, enabled) }
     }
-    fun setResumed(value: Boolean) {
+    override fun setResumed(value: Boolean) {
         if (!value) eraseButton(false)
         resumed = value
         runCatching { flag(value && started && !busy && !stopped) }.onFailure { fail(it) }
@@ -150,7 +150,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
             .invoke(pen, ((if (erasing) 24 else 3)*density).roundToInt())
         api!!.getMethod("setPen", Class.forName("com.xrz.BasePen")).invoke(ink, pen)
     }
-    fun eraseButton(held: Boolean) {
+    override fun eraseButton(held: Boolean) {
         if (held == erasing || busy || stopped || !started) return
         runCatching {
             api!!.getMethod("finishPen").invoke(ink)
@@ -158,16 +158,16 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
             setPen()
         }.onFailure { fail(it) }
     }
-    fun undo() = edit("undo")
+    override fun undo() = edit("undo")
     private fun fail(error: Throwable) {
         Log.e("NxCardsInk", "Native ink unavailable", error)
         runCatching { flag(false) }
         onError(error)
     }
     private fun stop() { stopped = true; flag(false) }
-    fun getView(): View = host
-    fun clear(complete: () -> Unit) = edit("clear", complete)
-    fun dispose() {
+    override fun getView(): View = host
+    override fun clear(complete: () -> Unit) = edit("clear", complete)
+    override fun dispose() {
         runCatching { stop() }
         seen.clear()
         foreground = null

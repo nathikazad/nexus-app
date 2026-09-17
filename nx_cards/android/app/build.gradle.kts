@@ -45,5 +45,6 @@ flutter {
 }
 
 dependencies {
+    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:6.1")
     testImplementation("junit:junit:4.13.2")
 }

@@ -73,8 +73,24 @@ with scrolling on short screens to preserve writing space. The same drawing
 controller survives resizing. Undo and Erase sit inside the drawing frame at the top right. Play, Hide/Show,
 and Next sit below the frame.
 Android drawing practice and writing recall open a separate opaque native
-activity. Compatible tablets use the firmware NoteView; other Android devices
-use a native Canvas view. All drawing, Undo and Erase run inside Android without
+activity. Renderer selection checks firmware capabilities: NoteView first
+(the existing RUERTU path), then the Bigme/XRZ HandwrittenClient service, then
+a standard Android Canvas fallback. Bigme renders live segments directly into
+the firmware canvas and updates the ordinary Android surface after pen-up.
+Initialization failures select the fallback; Bigme runtime failures retain recorded
+strokes in the fallback. Undo, clear, pause/resume and surface resize retain the
+same controls. `NxCardsInk` logs selection and `NxCardsBigme` logs connection
+or failure details. Build 20260936 was verified with physical pen input on a
+Bigme HiBreak running Android 14, firmware Bigme_V1.020260716 (handwriting
+service v1.4.0): connection, accepted pen callbacks and visible strokes were
+confirmed, and the user reported it works perfectly. Other firmware versions
+still need device testing; this is not a measured panel-latency result.
+In native drawing practice, Previous stays to the left of Undo and is disabled
+on the first card. It is not shown during recall.
+The undocumented API is described by [inksdk](https://github.com/imedwei/inksdk);
+no vendor binaries are bundled. The Bigme adapter uses AndroidHiddenApiBypass 6.1
+to allow only `com.xrz` firmware APIs within the app process on Android 9+;
+device-wide hidden-API settings remain unchanged. All drawing, Undo and Erase run inside Android without
 Flutter composition. Audio bytes and individual recall saves use the existing
 account-scoped Flutter repositories. Each recall answer is saved before the
 native screen advances, and the existing recap opens when the session ends.

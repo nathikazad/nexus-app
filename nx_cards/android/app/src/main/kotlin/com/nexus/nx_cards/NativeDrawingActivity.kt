@@ -32,8 +32,7 @@ class NativeDrawingActivity : Activity() {
     private var characterHeading: TextView? = null
     private var charactersList: LinearLayout? = null
     private var charactersScroll: ScrollView? = null
-    private var native: NativeInkPanel? = null
-    private var standard: StandardInkPanel? = null
+    private var ink: DrawingInkPanel? = null
     private var index = 0
     private var recall = false
     private var revealed = false
@@ -84,13 +83,8 @@ class NativeDrawingActivity : Activity() {
             root.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f))
             controls = LinearLayout(this).apply { gravity = Gravity.END }
             frame.addView(controls, LinearLayout.LayoutParams(-1, dp(48)))
-            if (runCatching { Class.forName("com.xrz.NoteView") }.isSuccess) {
-                native = NativeInkPanel(this) { report(it.message ?: "Drawing error") }
-                frame.addView(native!!.getView(), LinearLayout.LayoutParams(-1, 0, 1f))
-            } else {
-                standard = StandardInkPanel(this)
-                frame.addView(standard, LinearLayout.LayoutParams(-1, 0, 1f))
-            }
+            ink = InkPanelHost(this, ::report)
+            frame.addView(ink!!.getView(), LinearLayout.LayoutParams(-1, 0, 1f))
             // Keep the phone and recall layouts intact. Tablet practice uses
             // the lower portion for incoming ("used in") card relationships.
             if (!recall && resources.configuration.smallestScreenWidthDp >= 600) {
@@ -140,12 +134,12 @@ class NativeDrawingActivity : Activity() {
         hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
         updateExamples()
         controls.removeAllViews()
-        control("Undo", "undo") { native?.undo() ?: standard?.undo() }
-        control("Erase", "erase") { native?.clear {} ?: standard?.clear() }
+        if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
+        control("Undo", "undo") { ink?.undo() }
+        control("Erase", "erase") { ink?.clear {} }
         if (card["audio"] == true && (!recall || revealed)) control("Play", "play") { play() }
         if (!recall) {
             control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
-            if (index > 0) control("Previous", "previous") { moveTo(index - 1) }
             control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
             control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard() }
@@ -243,8 +237,11 @@ class NativeDrawingActivity : Activity() {
             list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
         }
     }
-    private fun control(label: String, icon: String, action: () -> Unit) {
+    private fun control(label: String, icon: String, enabled: Boolean = true, action: () -> Unit) {
         controls.addView(ImageButton(this).apply {
+            tag = enabled
+            isEnabled = enabled && !busy
+            alpha = if (enabled) 1f else .35f
             contentDescription = label
             tooltipText = label
             setImageDrawable(DrawingIcon(icon))
@@ -254,19 +251,22 @@ class NativeDrawingActivity : Activity() {
         }, LinearLayout.LayoutParams(dp(48), dp(48)))
     }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        native?.eraseButton(StylusInput.erasing(event))
+        ink?.eraseButton(StylusInput.erasing(event))
         val result = super.dispatchTouchEvent(event)
-        if (event.actionMasked == MotionEvent.ACTION_CANCEL) native?.eraseButton(false)
+        if (event.actionMasked == MotionEvent.ACTION_CANCEL) ink?.eraseButton(false)
         return result
     }
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        native?.eraseButton(StylusInput.erasing(event))
+        ink?.eraseButton(StylusInput.erasing(event))
         return super.dispatchGenericMotionEvent(event)
     }
     private fun setBusy(value: Boolean) {
         busy = value; end.isEnabled = !value
-        for (i in 0 until controls.childCount) controls.getChildAt(i).isEnabled = !value
-        native?.setResumed(!value)
+        for (i in 0 until controls.childCount) {
+            val control = controls.getChildAt(i)
+            control.isEnabled = !value && control.tag != false
+        }
+        ink?.setResumed(!value)
     }
     private fun advance() {
         if (index == cards.lastIndex) { stopAudio(); finish(); return }
@@ -281,7 +281,7 @@ class NativeDrawingActivity : Activity() {
                 index = targetIndex; revealed = false; updateCard(); setBusy(false)
             }
         }
-        native?.clear(next) ?: run { standard?.clear(); next() }
+        ink?.clear(next) ?: next()
     }
     private fun rate(correct: Boolean) {
         if (!revealed) return
@@ -319,10 +319,10 @@ class NativeDrawingActivity : Activity() {
     }
     private fun stopAudio() { audioGeneration++; player?.release(); player = null; audioFile?.delete(); audioFile = null }
     private fun report(message: String) { if (::hint.isInitialized) hint.text = message; Log.e("NxCardsNative", message) }
-    override fun onResume() { super.onResume(); native?.setResumed(!busy) }
-    override fun onPause() { native?.setResumed(false); stopAudio(); super.onPause() }
-    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); native?.setResumed(hasFocus && !busy) }
+    override fun onResume() { super.onResume(); ink?.setResumed(!busy) }
+    override fun onPause() { ink?.setResumed(false); stopAudio(); super.onPause() }
+    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy) }
     @Deprecated("Legacy back")
     override fun onBackPressed() { if (!busy) super.onBackPressed() }
-    override fun onDestroy() { native?.dispose(); stopAudio(); super.onDestroy() }
+    override fun onDestroy() { ink?.dispose(); stopAudio(); super.onDestroy() }
 }

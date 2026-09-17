@@ -10,16 +10,17 @@ import android.view.View
 import android.widget.LinearLayout
 
 /** Native Android fallback for devices without the tablet firmware pen. */
-class StandardInkPanel(context: Context) : LinearLayout(context) {
-    private val drawing = Drawing(context)
+internal class StandardInkPanel(context: Context, restored: List<InkStroke> = emptyList()) : LinearLayout(context), DrawingInkPanel {
+    private val drawing = Drawing(context, restored)
     init {
         orientation = VERTICAL
         setBackgroundColor(Color.WHITE)
         addView(drawing, LayoutParams(-1, 0, 1f))
     }
-    fun clear() = drawing.clear()
-    fun undo() = drawing.undo()
-    private class Drawing(context: Context) : View(context) {
+    override fun getView(): View = this
+    override fun clear(complete: () -> Unit) { drawing.clear(); complete() }
+    override fun undo() = drawing.undo()
+    private class Drawing(context: Context, private var restored: List<InkStroke>) : View(context) {
         private data class Stroke(val path: Path, val erasing: Boolean)
         private val paths = mutableListOf<Stroke>()
         private var active = false
@@ -29,9 +30,17 @@ class StandardInkPanel(context: Context) : LinearLayout(context) {
             color = Color.BLACK; strokeWidth = 3 * resources.displayMetrics.density
             style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
         }
-        fun clear() { active = false; paths.clear(); invalidate() }
-        fun undo() { active = false; if (paths.isNotEmpty()) paths.removeAt(paths.lastIndex); invalidate() }
-        override fun onDraw(canvas: Canvas) { super.onDraw(canvas); paths.forEach {
+        fun clear() { restored = emptyList(); active = false; paths.clear(); invalidate() }
+        fun undo() { active = false; if (paths.isNotEmpty()) paths.removeAt(paths.lastIndex) else if (restored.isNotEmpty()) restored = restored.dropLast(1); invalidate() }
+        override fun onDraw(canvas: Canvas) { super.onDraw(canvas);
+            for (stroke in restored) {
+                paint.color = if (stroke.erasing) Color.WHITE else Color.BLACK
+                paint.strokeWidth = (if (stroke.erasing) 24 else 3) * resources.displayMetrics.density
+                val points = stroke.points
+                if (points.size == 1) canvas.drawPoint(points[0].x * width, points[0].y * height, paint)
+                for (i in 1 until points.size) canvas.drawLine(points[i-1].x * width, points[i-1].y * height, points[i].x * width, points[i].y * height, paint)
+            }
+            paths.forEach {
             paint.color = if (it.erasing) Color.WHITE else Color.BLACK
             paint.strokeWidth = (if (it.erasing) 24 else 3) * resources.displayMetrics.density
             canvas.drawPath(it.path, paint)
