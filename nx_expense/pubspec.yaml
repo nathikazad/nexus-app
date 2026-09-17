@@ -37,6 +37,12 @@ dependencies:
   google_fonts: ^6.2.1
   nx_db:
     path: ../nx_modules/nx_db
+  nx_sync:
+    path: ../nx_modules/nx_sync
+  nx_data:
+    path: ../nx_modules/nx_data
+  drift: ^2.34.0
+  crypto: ^3.0.7
   nx_offline:
     path: ../nx_modules/nx_offline
   graphql_flutter: ^5.1.2
@@ -49,7 +55,6 @@ dependency_overrides:
   connectivity_plus: 6.1.4
 
 dev_dependencies:
-  drift: ^2.34.0
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.4

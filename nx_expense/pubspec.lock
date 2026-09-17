@@ -170,7 +170,7 @@ packages:
     source: hosted
     version: "0.3.5+2"
   crypto:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: crypto
       sha256: c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf
@@ -194,7 +194,7 @@ packages:
     source: hosted
     version: "0.7.12"
   drift:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: drift
       sha256: bab55d542d63765f6250ee3e2c62e11bfa1145d4ec2ffa05353c8fb4e10b52c1
@@ -800,7 +800,7 @@ packages:
     source: path
     version: "1.0.0"
   nx_data:
-    dependency: transitive
+    dependency: "direct main"
     description:
       path: "../nx_modules/nx_data"
       relative: true
@@ -821,7 +821,7 @@ packages:
     source: path
     version: "0.1.0"
   nx_sync:
-    dependency: transitive
+    dependency: "direct main"
     description:
       path: "../nx_modules/nx_sync"
       relative: true

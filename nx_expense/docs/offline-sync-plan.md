@@ -1,8 +1,54 @@
 # NX Expense offline and sync redesign
 
-Status: proposed implementation contract, based on the current Books, Cards,
-nx_data, nx_sync, nx_offline and server app runtime. No phase-two runtime changes
-have been made yet.
+Status: implementation in progress. Server contracts and native/web data-layer
+foundations are implemented and tested locally. Existing screens still use the
+old providers; the new composition root is deliberately not mounted yet. Nothing
+from this phase has been deployed and no production events have been migrated.
+
+## Implementation checkpoint
+
+Implemented:
+
+- Registered server Expense adapter, paged live reads, full model projections,
+  reference/schema catalog, monthly collections and independent timeline items.
+- Explicit per-domain event membership with stable sync IDs; a repeat-safe
+  migration command for the user-approved assignment of legacy items to Home.
+- Atomic model commands with durable operation-ID acknowledgements, revision
+  preconditions, conflict responses and timeline linking in the same transaction.
+- Receipt bytes finalized before an atomic event/domain/acknowledgement commit.
+  Retries reuse the event; changed content cannot reuse the same operation ID.
+- Native FileLibrary + shared Drift outbox, append-only operations, frozen retry
+  requests, ordered edits, pending-write protection, receipt files and upload
+  handler. New IDs and pending receipt references resolve before transmission.
+- Shared sync session/supervisor composition, account/domain partitioning and
+  ordered shutdown. Browser repository uses only live reads and memory caching.
+
+Local checks: 40 server tests (shared database, Expense contracts and schema
+reload), 143 Flutter tests, 9 explicitly skipped live GraphQL tests, clean analyzer.
+The broader server runner stops at an existing Books test that opens a separate
+connection without a selected domain (`test_epub_transcript_is_separate_preserved_and_hash_tracked`).
+It therefore has not completed the later GraphQL acceptance stages.
+
+Still required before rollout:
+
+- Replace screen repositories/providers and direct widget transports across
+  Expenses, Orders, Bank, Images, Tags, Stats and Budget; mount AppDataHost.
+- Implement local query/aggregate projections, precise financial/category
+  behavior, bounded foreground date filtering and visible coverage indicators.
+- Add typed optimistic reducers and conflict/retry/discard UI, including
+  relationship creation, schema/tag editing and pending-image presentation.
+- Add attachment download/cache hydration; verify pending receipt linking and
+  all session switches with in-flight work through screen-level tests.
+- Verify concurrent command delivery and generic-write races. The current
+  model-row lock needs acceptance coverage for concurrent relation/attribute
+  writes through other API paths.
+- Perform web/native builds, physical airplane-mode and cross-device checks;
+  then deploy and run the explicit Home migration using verified IDs.
+
+Current server projection rebuilds the complete Expense scope when dirty,
+similar to the existing Hypnosis adapter. Hashes still prevent unchanged payload
+downloads. Timeline invalidations currently conservatively fan out to registered
+scopes; incremental heterogeneous routing/performance remains follow-up work.
 
 ## Existing behavior and reusable foundations
 
