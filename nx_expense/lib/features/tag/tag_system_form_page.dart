@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
@@ -130,9 +129,8 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
     final schemaAsync = ref.watch(expenseSchemaViewProvider);
 
     return schemaAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
+      loading: () => const NavigationLoadingScreen(),
+      error: (e, _) => NavigationErrorScreen(message: 'Unable to load: $e'),
       data: (schema) {
         _ensureFromSchema(schema);
         return Scaffold(
@@ -792,7 +790,7 @@ class _TagSystemFormScreenState extends ConsumerState<TagSystemFormScreen> {
     if (widget.embedded) {
       navTagSystemFormBack(context, ref);
     } else {
-      context.pop();
+      navBack(context);
     }
   }
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -31,21 +30,23 @@ class ExpenseDetailScreen extends ConsumerWidget {
     final modelAsync = ref.watch(expenseDetailProvider(expenseId));
 
     return schemaAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
+      loading: () => const NavigationLoadingScreen(),
+      error: (e, _) => NavigationErrorScreen(message: 'Unable to load: $e'),
       data: (schema) {
         return modelAsync.when(
-          loading: () =>
-              const Scaffold(body: Center(child: CircularProgressIndicator())),
+          loading: () => const NavigationLoadingScreen(),
           error: (e, _) => Scaffold(
-            appBar: AppBar(),
+            appBar: AppBar(
+              leading: BackButton(onPressed: () => navBack(context)),
+            ),
             body: Center(child: SelectableText('$e')),
           ),
           data: (expense) {
             if (expense == null) {
               return Scaffold(
-                appBar: AppBar(),
+                appBar: AppBar(
+                  leading: BackButton(onPressed: () => navBack(context)),
+                ),
                 body: const Center(child: Text('Expense not found')),
               );
             }
@@ -297,7 +298,7 @@ class ExpenseDetailContent extends ConsumerWidget {
               color: AppColors.slate400,
               size: 22,
             ),
-            onPressed: () => context.push('/expense/form/$expenseId'),
+            onPressed: () => navPush(context, '/expense/form/$expenseId'),
           ),
         ],
         body: Column(children: [detailBody]),
@@ -330,7 +331,7 @@ class ExpenseDetailContent extends ConsumerWidget {
               color: AppColors.slate400,
               size: 22,
             ),
-            onPressed: () => context.push('/expense/form/$expenseId'),
+            onPressed: () => navPush(context, '/expense/form/$expenseId'),
           ),
         ],
         bottom: const PreferredSize(
@@ -458,13 +459,15 @@ class ExpenseDetailContent extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => navToRelationExpenses(
-            context,
-            ref,
-            relName: relName,
-            relId: relModel.id,
-            displayName: relModel.name,
-          ),
+          onTap: () => relName == 'Order'
+              ? navPush(context, '/orders/${relModel.id}')
+              : navToRelationExpenses(
+                  context,
+                  ref,
+                  relName: relName,
+                  relId: relModel.id,
+                  displayName: relModel.name,
+                ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(

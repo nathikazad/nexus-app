@@ -1,6 +1,6 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/data/order/expense_order_links_api.dart';
 
@@ -69,8 +69,10 @@ class _ExpenseOrderLinksFormSectionState
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () =>
-                      context.push('/expense/${widget.expenseId}/link-order'),
+                  onTap: () => navPush(
+                    context,
+                    '/expense/${widget.expenseId}/link-order',
+                  ),
                   borderRadius: BorderRadius.circular(20),
                   child: const Padding(
                     padding: EdgeInsets.all(8),

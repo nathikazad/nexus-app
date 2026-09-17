@@ -1,3 +1,4 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -58,11 +59,11 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                           color: AppColors.slate400,
                           size: 22,
                         ),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => navBack(context),
                       ),
                       Expanded(
                         child: Text(
-                          'Link Teller',
+                          'Link transaction',
                           style: refAppBarTitleLarge(),
                         ),
                       ),
@@ -106,6 +107,7 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                   child: RefreshIndicator(
                     onRefresh: () async {
                       ref.invalidate(tellerTransactionsProvider);
+                      ref.invalidate(transactionRouteProvider);
                       ref.invalidate(expenseTimelineLinksProvider(modelId));
                       await ref.read(tellerTransactionsProvider.future);
                     },
@@ -142,7 +144,7 @@ class TellerLinkPickerScreen extends ConsumerWidget {
                                 const SizedBox(height: 12),
                                 Text(
                                   linkedIds.isEmpty && rows.isEmpty
-                                      ? 'No Teller transactions in this range'
+                                      ? 'No bank transactions in this range'
                                       : 'All transactions in this range are already linked',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.inter(
@@ -257,8 +259,9 @@ class _PickerTellerCard extends ConsumerWidget {
             );
             ref.invalidate(expenseTimelineLinksProvider(modelId));
             ref.invalidate(tellerTransactionsProvider);
+            ref.invalidate(transactionRouteProvider);
             if (!pickerContext.mounted) return;
-            Navigator.of(pickerContext).pop();
+            navBack(pickerContext);
           } catch (e) {
             if (pickerContext.mounted) {
               ScaffoldMessenger.of(

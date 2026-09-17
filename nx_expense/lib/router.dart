@@ -1,10 +1,10 @@
+import 'package:nx_expense/features/images/expense_images_page.dart';
+import 'package:nx_expense/core/motion/expense_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/auth.dart';
 
-import 'package:nx_expense/core/layout/layout.dart';
-import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/domain/expense/expense_filter.dart';
 import 'package:nx_expense/domain/teller/teller_transaction.dart';
 import 'package:nx_expense/features/auth/expense_login_page.dart';
@@ -15,7 +15,6 @@ import 'package:nx_expense/features/expense/expense_dashboard_page.dart';
 import 'package:nx_expense/features/expense/expense_detail_page.dart';
 import 'package:nx_expense/features/expense/expense_form_page.dart';
 import 'package:nx_expense/features/expense/expense_list_page.dart';
-import 'package:nx_expense/features/expense/expense_list_view_model.dart';
 import 'package:nx_expense/features/expense/scoped_expense_list.dart';
 import 'package:nx_expense/features/orders/order_detail_page.dart';
 import 'package:nx_expense/features/orders/order_link_picker_page.dart';
@@ -27,33 +26,60 @@ import 'package:nx_expense/features/teller/teller_expense_link_picker_page.dart'
 import 'package:nx_expense/features/teller/teller_link_picker_page.dart';
 import 'package:nx_expense/features/teller/teller_list_page.dart';
 
-DateTimeRange? _routeDateRange(GoRouterState state) {
-  final q = state.uri.queryParameters;
-  final start = DateTime.tryParse(q['start'] ?? '');
-  final end = DateTime.tryParse(q['end'] ?? '');
-  if (start == null || end == null) return null;
+import 'package:nx_expense/features/teller/transaction_route_page.dart';
+
+DateTimeRange? _dayRange(String value) {
+  final date = DateTime.tryParse(value);
+  return date == null ? null : DateTimeRange(start: date, end: date);
+}
+
+DateTimeRange? _routeDateRange(Uri uri) {
+  final start = DateTime.tryParse(uri.queryParameters['start'] ?? '');
+  final end = DateTime.tryParse(uri.queryParameters['end'] ?? '');
+  if (start == null || end == null || end.isBefore(start)) return null;
   return DateTimeRange(start: start, end: end);
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
-  ref.listen(authProvider, (_, __) => refresh.value++);
-
-  return GoRouter(
+  var sessionChanged = false;
+  ref.listen(authProvider, (previous, next) {
+    final oldUser = previous?.value;
+    final newUser = next.value;
+    if (oldUser?.domainId != null &&
+        newUser?.domainId != null &&
+        oldUser!.sessionKey != newUser!.sessionKey) {
+      sessionChanged = true;
+    }
+    refresh.value++;
+  });
+  final router = GoRouter(
     refreshListenable: refresh,
     initialLocation: '/expenses',
     redirect: (context, state) {
       final user = ref.read(authProvider).value;
-      final path = state.uri.path;
-      if (path == '/') {
+      if (user == null && state.uri.path != '/login') {
+        return Uri(
+          path: '/login',
+          queryParameters: {'next': state.uri.toString()},
+        ).toString();
+      }
+      if (user != null && sessionChanged) {
+        sessionChanged = false;
         return '/expenses';
       }
-      if (user == null && path != '/login') {
-        return '/login';
-      }
-      if (user != null && path == '/login') {
+      if (user != null && state.uri.path == '/login') {
+        final next = Uri.tryParse(state.uri.queryParameters['next'] ?? '');
+        if (next != null &&
+            !next.hasScheme &&
+            !next.hasAuthority &&
+            next.path.startsWith('/') &&
+            next.path != '/login') {
+          return next.toString();
+        }
         return '/expenses';
       }
+      if (state.uri.path == '/') return '/expenses';
       return null;
     },
     routes: [
@@ -61,264 +87,178 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         builder: (context, state) => const ExpenseLoginScreen(),
       ),
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) {
-          final selecting = ref.watch(expenseListSelectionModeProvider);
-          final showFab = navigationShell.currentIndex == 0 && !selecting;
-
-          if (isDesktopLayout(context)) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                Offstage(offstage: true, child: navigationShell),
-                const Positioned.fill(child: DesktopShell()),
-              ],
-            );
-          }
-
-          return Scaffold(
-            extendBody: false,
-            body: navigationShell,
-            floatingActionButton: showFab
-                ? Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: refFabShadow,
-                    ),
-                    child: FloatingActionButton(
-                      onPressed: () => showAddExpenseModal(context),
-                      backgroundColor: AppColors.teal600,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: const CircleBorder(),
-                      child: const Icon(Icons.add_circle_outline, size: 28),
-                    ),
-                  )
-                : null,
-            floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-            floatingActionButtonAnimator: FloatingActionButtonAnimator.scaling,
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: navigationShell.goBranch,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  selectedIcon: Icon(Icons.account_balance_wallet),
-                  label: 'Expenses',
+      ShellRoute(
+        builder: (context, state, child) => DesktopShell(
+          uri: state.uri,
+          child: child,
+          buildDestination: (uri) => buildExpenseDestination(context, uri),
+        ),
+        routes: [
+          for (final path in [
+            '/expenses',
+            '/dashboard',
+            '/budget',
+            '/teller',
+            '/images',
+            '/images/:id',
+            '/orders',
+            '/orders/:id',
+            '/expense/:id/link-order',
+            '/budget/detail/:goalId',
+            '/tag-systems',
+            '/expense/form/:id',
+            '/expense/form',
+            '/expense/:expenseId/link-teller',
+            '/teller/link-expense',
+            '/expense/:id',
+            '/tag-system/form/:id',
+            '/tag-system/form',
+            '/tag-browser/:systemName',
+            '/expenses/by-tag/:systemName/:tagNode',
+            '/expenses/by-relation/:relName/:relId/:relDisplayName',
+            '/expenses/by-date/:date',
+            '/teller/transaction/:eventId',
+          ])
+            GoRoute(
+              path: path,
+              pageBuilder: (context, state) => ExpenseMotion.page(
+                context,
+                state,
+                NavigationLocation(
+                  uri: state.uri,
+                  child: buildExpenseDestination(
+                    context,
+                    state.uri,
+                    extra: state.extra,
+                  ),
                 ),
-                NavigationDestination(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  selectedIcon: Icon(Icons.bar_chart),
-                  label: 'Stats',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.savings_outlined),
-                  selectedIcon: Icon(Icons.savings),
-                  label: 'Budget',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.account_balance_outlined),
-                  selectedIcon: Icon(Icons.account_balance),
-                  label: 'Ext',
-                ),
-              ],
+              ),
             ),
-          );
-        },
-        branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/expenses',
-                builder: (context, state) => const ExpenseListScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/dashboard',
-                builder: (context, state) => const DashboardScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/budget',
-                builder: (context, state) => const BudgetScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/teller',
-                builder: (context, state) => const TellerListScreen(),
-              ),
-            ],
-          ),
         ],
       ),
-
-      GoRoute(
-        path: '/orders',
-        builder: (context, state) => const OrdersListScreen(),
-      ),
-      GoRoute(
-        path: '/orders/:id',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return OrderDetailScreen(orderId: id);
-        },
-      ),
-      GoRoute(
-        path: '/expense/:id/link-order',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return OrderLinkPickerScreen(expenseId: id);
-        },
-      ),
-      GoRoute(
-        path: '/budget/detail/:goalId',
-        builder: (context, state) {
-          final goalId = int.parse(state.pathParameters['goalId']!);
-          return BudgetDetailScreen(goalId: goalId);
-        },
-      ),
-      GoRoute(
-        path: '/tag-systems',
-        builder: (context, state) => const TagSystemsScreen(),
-      ),
-      GoRoute(
-        path: '/expense/form/:id',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return ExpenseFormScreen(expenseId: id);
-        },
-      ),
-      GoRoute(
-        path: '/expense/form',
-        builder: (context, state) {
-          final q = state.uri.queryParameters;
-          final tid = q['tellerEventId'];
-          final tt = q['tellerEventTime'];
-          final pa = q['prefillAmount'];
-          return ExpenseFormScreen(
-            pendingTellerEventId: tid,
-            pendingTellerEventTime: tt != null ? DateTime.tryParse(tt) : null,
-            prefillName: q['prefillName'],
-            prefillDescription: q['prefillDescription'],
-            prefillAmount: pa != null ? num.tryParse(pa) : null,
-            prefillDate: q['prefillDate'],
-          );
-        },
-      ),
-
-      GoRoute(
-        path: '/expense/:expenseId/link-teller',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['expenseId']!);
-          return TellerLinkPickerScreen(modelId: id);
-        },
-      ),
-
-      GoRoute(
-        path: '/teller/link-expense',
-        builder: (context, state) {
-          final extra = state.extra;
-          if (extra is! TellerTransaction) {
-            return const Scaffold(
-              body: Center(child: Text('Missing external transaction')),
-            );
-          }
-          return TellerExpenseLinkPickerScreen(row: extra);
-        },
-      ),
-
-      GoRoute(
-        path: '/expense/:id',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return ExpenseDetailScreen(expenseId: id);
-        },
-      ),
-      GoRoute(
-        path: '/tag-system/form/:id',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return TagSystemFormScreen(tagSystemId: id);
-        },
-      ),
-      GoRoute(
-        path: '/tag-system/form',
-        builder: (context, state) => const TagSystemFormScreen(),
-      ),
-      GoRoute(
-        path: '/tag-browser/:systemName',
-        builder: (context, state) {
-          final name = Uri.decodeComponent(state.pathParameters['systemName']!);
-          return TagBrowserScreen(systemName: name);
-        },
-      ),
-      GoRoute(
-        path: '/expenses/by-tag/:systemName/:tagNode',
-        builder: (context, state) {
-          final systemName = Uri.decodeComponent(
-            state.pathParameters['systemName']!,
-          );
-          final tagNode = Uri.decodeComponent(state.pathParameters['tagNode']!);
-          final includeDescendants =
-              state.uri.queryParameters['includeDescendants'] != 'false';
-          final title = state.uri.queryParameters['title'] ?? tagNode;
-          return scopedExpenseListScreen(
-            title: title,
-            initialDateRange: _routeDateRange(state),
-            initialFilter: ExpenseFilter(
-              tagFilters: [
-                {
-                  'system': systemName,
-                  'node': tagNode,
-                  'include_descendants': includeDescendants,
-                },
-              ],
-            ),
-          );
-        },
-      ),
-      GoRoute(
-        path: '/expenses/by-relation/:relName/:relId/:relDisplayName',
-        builder: (context, state) {
-          final relName = Uri.decodeComponent(state.pathParameters['relName']!);
-          final relId = int.parse(state.pathParameters['relId']!);
-          final relDisplayName = Uri.decodeComponent(
-            state.pathParameters['relDisplayName']!,
-          );
-          return scopedExpenseListScreen(
-            title: relDisplayName,
-            initialDateRange: _routeDateRange(state),
-            initialFilter: ExpenseFilter(
-              relationFilters: {
-                relName: {relId},
-              },
-              relationFilterLabels: {
-                relName: {relId: relDisplayName},
-              },
-            ),
-          );
-        },
-      ),
-      GoRoute(
-        path: '/expenses/by-date/:date',
-        builder: (context, state) {
-          final date = Uri.decodeComponent(state.pathParameters['date']!);
-          return scopedExpenseListScreen(
-            title: date,
-            initialDateRange: _routeDateRange(state),
-            initialFilter: const ExpenseFilter(),
-          );
-        },
-      ),
     ],
+    errorBuilder: (context, state) =>
+        const NavigationErrorScreen(message: 'Page not found'),
   );
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
+  return router;
 });
+
+/// Same destination builder for the active route and its desktop parent pane.
+Widget buildExpenseDestination(BuildContext context, Uri uri, {Object? extra}) {
+  final q = uri.queryParameters;
+  try {
+    switch (uri.pathSegments) {
+      case ['expenses']:
+        return const ExpenseListScreen();
+      case ['dashboard']:
+        return const DashboardScreen();
+      case ['budget']:
+        return const BudgetScreen();
+      case ['teller']:
+        return const TellerListScreen();
+      case ['images']:
+        return ExpenseImagesScreen(
+          filter: const ['all', 'linked', 'unlinked'].contains(q['filter'])
+              ? q['filter']!
+              : 'all',
+        );
+      case ['images', final id]:
+        return ExpenseImageDetailScreen(id: id, time: q['time']);
+      case ['orders']:
+        return const OrdersListScreen();
+      case ['tag-systems']:
+        return const TagSystemsScreen();
+      case ['orders', final id]:
+        return OrderDetailScreen(orderId: _modelId(id));
+      case ['expense', final id, 'link-order']:
+        return OrderLinkPickerScreen(expenseId: _modelId(id));
+      case ['expense', final id, 'link-teller']:
+        return TellerLinkPickerScreen(modelId: _modelId(id));
+      case ['budget', 'detail', final id]:
+        return BudgetDetailScreen(goalId: _modelId(id));
+      case ['expense', 'form', final id]:
+        return ExpenseFormScreen(expenseId: _modelId(id));
+      case ['expense', 'form']:
+        return ExpenseFormScreen(
+          pendingTellerEventId: q['tellerEventId'],
+          pendingTellerEventTime: DateTime.tryParse(q['tellerEventTime'] ?? ''),
+          prefillName: q['prefillName'],
+          prefillDescription: q['prefillDescription'],
+          prefillAmount: num.tryParse(q['prefillAmount'] ?? ''),
+          prefillDate: q['prefillDate'],
+        );
+      case ['expense', final id]:
+        return ExpenseDetailScreen(expenseId: _modelId(id));
+      case ['teller', 'transaction', final id]:
+        return TransactionRouteScreen(eventId: id, time: q['time']);
+      case ['teller', 'link-expense']:
+        if (q['eventId'] case final String id) {
+          return TransactionRouteScreen(
+            eventId: id,
+            time: q['time'],
+            linkPicker: true,
+          );
+        }
+        if (extra is TellerTransaction) {
+          return TellerExpenseLinkPickerScreen(row: extra);
+        }
+        return const NavigationErrorScreen(message: 'Missing bank transaction');
+      case ['tag-system', 'form', final id]:
+        return TagSystemFormScreen(tagSystemId: _modelId(id));
+      case ['tag-system', 'form']:
+        return const TagSystemFormScreen();
+      case ['tag-browser', final name]:
+        return TagBrowserScreen(systemName: name);
+      case ['expenses', 'by-tag', final system, final node]:
+        return scopedExpenseListScreen(
+          title: q['title'] ?? node,
+          initialDateRange: _routeDateRange(uri),
+          initialFilter: ExpenseFilter(
+            tagFilters: [
+              {
+                'system': system,
+                'node': node,
+                'include_descendants': q['includeDescendants'] != 'false',
+              },
+            ],
+          ),
+        );
+      case ['expenses', 'by-relation', final type, final rawId, final name]:
+        final id = _modelId(rawId);
+        return scopedExpenseListScreen(
+          title: name,
+          initialDateRange: _routeDateRange(uri),
+          initialFilter: ExpenseFilter(
+            relationFilters: {
+              type: {id},
+            },
+            relationFilterLabels: {
+              type: {id: name},
+            },
+          ),
+        );
+      case ['expenses', 'by-date', final date]:
+        final range = _routeDateRange(uri) ?? _dayRange(date);
+        if (range == null) throw const FormatException('Invalid date');
+        return scopedExpenseListScreen(
+          title: date,
+          initialDateRange: range,
+          initialFilter: const ExpenseFilter(),
+        );
+      default:
+        return const NavigationErrorScreen(message: 'Page not found');
+    }
+  } on FormatException {
+    return const NavigationErrorScreen(message: 'Invalid page address');
+  }
+}
+
+int _modelId(String value) {
+  final id = int.parse(value);
+  if (id <= 0) throw const FormatException('Invalid model ID');
+  return id;
+}

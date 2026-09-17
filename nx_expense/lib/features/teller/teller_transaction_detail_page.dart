@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
@@ -83,7 +82,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
 
     if (isDesktopLayout(context)) {
       return PanelChrome(
-        title: 'External transaction',
+        title: 'Bank transaction',
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back,
@@ -110,7 +109,7 @@ class TellerTransactionDetailScreen extends ConsumerWidget {
           onPressed: () => navTellerTxDetailBack(context, ref, row),
         ),
         centerTitle: true,
-        title: Text('External transaction', style: refAppBarTitleBase()),
+        title: Text('Bank transaction', style: refAppBarTitleBase()),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: AppColors.slate100),
@@ -204,12 +203,11 @@ class _TellerLinkActions extends ConsumerWidget {
                   title: 'Link expense',
                   subtitle: 'Choose an existing expense',
                   onTap: () {
-                    if (isDesktopLayout(context)) {
-                      ref.read(tellerPanel3Provider.notifier).state =
-                          TellerPanel3State.linkExpensePicker(row);
-                    } else {
-                      context.push('/teller/link-expense', extra: row);
-                    }
+                    navPush(
+                      context,
+                      transactionLocation(row, linkPicker: true),
+                      extra: row,
+                    );
                   },
                   showDividerBelow: true,
                 ),
@@ -220,32 +218,22 @@ class _TellerLinkActions extends ConsumerWidget {
                   title: 'New expense',
                   subtitle: 'Create and link',
                   onTap: () {
-                    if (isDesktopLayout(context)) {
-                      ref.read(tellerPanel3Provider.notifier).state =
-                          TellerPanel3State.newExpenseForm(row);
-                    } else {
-                      final p = row.payload;
-                      final amt = num.tryParse(
-                        p['amount']?.toString().trim() ?? '',
-                      );
-                      final q = <String, String>{
-                        'tellerEventId': row.eventId,
-                        'tellerEventTime': formatTimelineLocalTimestamp(
-                          row.time,
-                        ),
-                        'prefillName': tellerTransactionTitleLine(p),
-                      };
-                      if (amt != null) q['prefillAmount'] = amt.toString();
-                      final date = p['date']?.toString();
-                      if (date != null && date.isNotEmpty) {
-                        q['prefillDate'] = date;
-                      }
-                      final uri = Uri(
-                        path: '/expense/form',
-                        queryParameters: q,
-                      );
-                      context.push(uri.toString());
+                    final p = row.payload;
+                    final amt = num.tryParse(
+                      p['amount']?.toString().trim() ?? '',
+                    );
+                    final q = <String, String>{
+                      'tellerEventId': row.eventId,
+                      'tellerEventTime': formatTimelineLocalTimestamp(row.time),
+                      'prefillName': tellerTransactionTitleLine(p),
+                    };
+                    if (amt != null) q['prefillAmount'] = amt.toString();
+                    final date = p['date']?.toString();
+                    if (date != null && date.isNotEmpty) {
+                      q['prefillDate'] = date;
                     }
+                    final uri = Uri(path: '/expense/form', queryParameters: q);
+                    navPush(context, uri.toString());
                   },
                   showDividerBelow: false,
                 ),
@@ -343,10 +331,9 @@ class _LinkedModelTile extends ConsumerWidget {
     try {
       await deleteExpenseTimelineLink(client, id);
       if (!context.mounted) return;
+      ref.invalidate(expenseTimelineLinksProvider(model.id));
       ref.invalidate(tellerTransactionsProvider);
-      if (isDesktopLayout(context)) {
-        await refreshTellerSelectionAfterLinkChange(ref, row.eventId);
-      }
+      ref.invalidate(transactionRouteProvider);
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,

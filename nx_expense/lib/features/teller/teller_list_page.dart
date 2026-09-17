@@ -11,7 +11,6 @@ import 'package:nx_expense/data/providers.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/features/expense/widgets/expense_date_range_bar.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
-import 'teller_transaction_detail_page.dart';
 
 enum _TellerSortMode {
   dateAsc,
@@ -66,7 +65,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
               ),
               child: Row(
                 children: [
-                  if (Navigator.of(context).canPop())
+                  if (navCanBack(context))
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
@@ -78,7 +77,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                         color: AppColors.slate400,
                         size: 22,
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => navBack(context),
                     ),
                   Expanded(
                     child: Text('Transactions', style: refAppBarTitleLarge()),
@@ -103,7 +102,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
               onChanged: (_) => setState(() {}),
               style: GoogleFonts.inter(fontSize: 14, color: AppColors.slate900),
               decoration: InputDecoration(
-                hintText: 'Search external transactions...',
+                hintText: 'Search bank transactions...',
                 hintStyle: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppColors.slate400,
@@ -195,6 +194,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
               child: RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(tellerTransactionsProvider);
+                  ref.invalidate(transactionRouteProvider);
                   await ref.read(tellerTransactionsProvider.future);
                 },
                 color: AppColors.teal600,
@@ -246,8 +246,8 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
                                   const SizedBox(height: 12),
                                   Text(
                                     rows.isEmpty
-                                        ? 'No external transactions in this range'
-                                        : 'No external transactions match',
+                                        ? 'No bank transactions in this range'
+                                        : 'No bank transactions match',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
@@ -346,16 +346,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
             row: r,
             accountName: externalTransactionAccountLabel(r, accountNames),
             onTap: (ctx) {
-              if (isDesktopLayout(ctx)) {
-                ref.read(selectedTellerRowProvider.notifier).state = r;
-                ref.read(tellerPanel3Provider.notifier).state = null;
-              } else {
-                Navigator.of(ctx).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TellerTransactionDetailScreen(row: r),
-                  ),
-                );
-              }
+              navToTransaction(ctx, r);
             },
           ),
         ),
@@ -374,16 +365,7 @@ class _TellerListScreenState extends ConsumerState<TellerListScreen> {
             row: r,
             accountName: externalTransactionAccountLabel(r, accountNames),
             onTap: (ctx) {
-              if (isDesktopLayout(ctx)) {
-                ref.read(selectedTellerRowProvider.notifier).state = r;
-                ref.read(tellerPanel3Provider.notifier).state = null;
-              } else {
-                Navigator.of(ctx).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TellerTransactionDetailScreen(row: r),
-                  ),
-                );
-              }
+              navToTransaction(ctx, r);
             },
           ),
         ),
@@ -491,7 +473,7 @@ class _TellerSortButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<_TellerSortMode>(
-      tooltip: 'Sort external transactions',
+      tooltip: 'Sort bank transactions',
       offset: const Offset(0, 36),
       onSelected: onSelected,
       itemBuilder: (context) => [

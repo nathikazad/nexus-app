@@ -257,7 +257,7 @@ Future<({DateTime time, String eventId})> createTellerTimelineEvent(
   final dateStr = payload['date']?.toString();
   if (dateStr == null || dateStr.isEmpty) {
     throw ArgumentError(
-      'Teller payload must include a "date" field (YYYY-MM-DD).',
+      'Transaction payload must include a "date" field (YYYY-MM-DD).',
     );
   }
   final d = DateTime.tryParse(dateStr);

@@ -77,8 +77,8 @@ ThemeData buildExpenseTheme() {
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: Colors.white,
       elevation: 0,
-      height: 80,
-      indicatorColor: Colors.transparent,
+      height: 72,
+      indicatorColor: AppColors.teal100,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return GoogleFonts.inter(
@@ -98,8 +98,9 @@ ThemeData buildExpenseTheme() {
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: AppColors.teal600,
       foregroundColor: Colors.white,
-      elevation: 8,
-      shape: const CircleBorder(),
+      elevation: 3,
+      hoverElevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(

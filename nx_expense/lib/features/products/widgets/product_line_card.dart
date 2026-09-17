@@ -50,112 +50,129 @@ class ProductLineCard extends StatelessWidget {
       if (unitPrice != null) '${formatMoney(unitPrice)} each',
       ...additionalDetails.where((value) => value.trim().isNotEmpty),
     ];
-    final content = Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ProductThumbnail(imageUrl: imageUrl, size: thumbnailSize),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.slate900,
-                        ),
-                      ),
-                    ),
-                    if (badge != null) ...[const SizedBox(width: 8), badge!],
-                  ],
-                ),
-                if (brand?.trim().isNotEmpty == true) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    brand!,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                ],
-                if (details.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    details.join(' · '),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      height: 1.45,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.slate500,
-                    ),
-                  ),
-                ],
-                if (footer != null) ...[const SizedBox(height: 9), footer!],
-              ],
-            ),
-          ),
-          if (lineTotal != null) ...[
-            const SizedBox(width: 12),
-            Text(
-              formatMoney(lineTotal),
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.teal600,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-          if (onRelatedExpenses != null) ...[
-            const SizedBox(width: 4),
-            IconButton(
-              key: const Key('product-related-expenses-action'),
-              tooltip: 'Other expenses with this product',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(
-                Icons.receipt_long_outlined,
-                size: 19,
-                color: AppColors.slate400,
-              ),
-              onPressed: onRelatedExpenses,
-            ),
-          ],
-          if (onOpenItem != null)
-            IconButton(
-              key: const Key('product-open-item-action'),
-              tooltip: 'Open product page',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(
-                Icons.open_in_new,
-                size: 18,
-                color: AppColors.slate400,
-              ),
-              onPressed: onOpenItem,
-            ),
-        ],
+    Widget amount() => Text(
+      formatMoney(lineTotal),
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: AppColors.teal600,
+        fontFeatures: const [FontFeature.tabularFigures()],
       ),
     );
-
-    if (!decorated) return content;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-        border: Border.all(color: AppColors.slate100),
-        boxShadow: refCardShadow,
-      ),
-      child: content,
+    List<Widget> actions() => [
+      if (onRelatedExpenses != null)
+        IconButton(
+          key: const Key('product-related-expenses-action'),
+          tooltip: 'Other expenses with this product',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(
+            Icons.receipt_long_outlined,
+            size: 19,
+            color: AppColors.slate500,
+          ),
+          onPressed: onRelatedExpenses,
+        ),
+      if (onOpenItem != null)
+        IconButton(
+          key: const Key('product-open-item-action'),
+          tooltip: 'Open product page',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(
+            Icons.open_in_new,
+            size: 18,
+            color: AppColors.teal700,
+          ),
+          onPressed: onOpenItem,
+        ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 420;
+        final content = Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ProductThumbnail(imageUrl: imageUrl, size: thumbnailSize),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: compact ? 3 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.slate900,
+                            ),
+                          ),
+                        ),
+                        if (badge != null) ...[
+                          const SizedBox(width: 8),
+                          badge!,
+                        ],
+                      ],
+                    ),
+                    if (brand?.trim().isNotEmpty == true) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        brand!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    ],
+                    if (details.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        details.join(' · '),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.slate500,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                    if (footer != null) ...[const SizedBox(height: 9), footer!],
+                    if (compact) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (lineTotal != null) amount(),
+                          ...actions(),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (!compact) ...[
+                if (lineTotal != null) ...[const SizedBox(width: 12), amount()],
+                ...actions(),
+              ],
+            ],
+          ),
+        );
+        if (!decorated) return content;
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+            border: Border.all(color: AppColors.slate100),
+            boxShadow: refCardShadow,
+          ),
+          child: content,
+        );
+      },
     );
   }
 }

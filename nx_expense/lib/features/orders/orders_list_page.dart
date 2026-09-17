@@ -1,6 +1,7 @@
+import 'package:nx_expense/core/motion/expense_motion.dart';
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:nx_expense/core/formatting/format.dart';
@@ -36,20 +37,21 @@ class OrdersListScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 40,
-                      minHeight: 40,
+                  if (navCanBack(context) || !isDesktopLayout(context))
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: AppColors.slate400,
+                        size: 22,
+                      ),
+                      onPressed: () => navBack(context, fallback: '/expenses'),
                     ),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: AppColors.slate400,
-                      size: 22,
-                    ),
-                    onPressed: () => context.pop(),
-                  ),
                   const SizedBox(width: 4),
                   Expanded(child: Text('Orders', style: refAppBarTitleLarge())),
                   const ExpenseDateRangeCalendarButton(),
@@ -190,7 +192,7 @@ class OrdersListScreen extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: _OrderRow(
             order: order,
-            onOpen: () => context.push('/orders/${order.id}'),
+            onOpen: () => navPush(context, '/orders/${order.id}'),
           ),
         ),
       );
@@ -210,62 +212,64 @@ class _OrderRow extends StatelessWidget {
     final itemLabel = order.itemCount == 1
         ? '1 item'
         : '${order.itemCount} items';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-            border: Border.all(color: AppColors.slate100),
-            boxShadow: refCardShadow,
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.orderNumber,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.slate900,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+    return HoverLift(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onOpen,
+          borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+              border: Border.all(color: AppColors.slate100),
+              boxShadow: refCardShadow,
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.orderNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.slate900,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${order.companyName ?? 'Unknown'} · $itemLabel',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate500,
+                      const SizedBox(height: 6),
+                      Text(
+                        '${order.companyName ?? 'Unknown'} · $itemLabel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.slate500,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                formatMoney(order.total),
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.teal600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                const SizedBox(width: 12),
+                Text(
+                  formatMoney(order.total),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.teal600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

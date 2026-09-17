@@ -1,3 +1,4 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,7 +45,7 @@ class TagBrowserScreen extends ConsumerWidget {
                 color: AppColors.slate400,
                 size: 22,
               ),
-              onPressed: () => context.pop(),
+              onPressed: () => navBack(context),
             ),
             centerTitle: true,
             title: Text(displayTitle, style: refAppBarTitleBase()),

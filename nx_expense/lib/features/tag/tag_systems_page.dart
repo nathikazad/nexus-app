@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
@@ -49,7 +48,7 @@ class TagSystemsScreen extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      if (context.canPop())
+                      if (navCanBack(context) || !isDesktopLayout(context))
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -61,7 +60,8 @@ class TagSystemsScreen extends ConsumerWidget {
                             color: AppColors.slate400,
                             size: 22,
                           ),
-                          onPressed: () => context.pop(),
+                          onPressed: () =>
+                              navBack(context, fallback: '/expenses'),
                         ),
                       Expanded(
                         child: Text(

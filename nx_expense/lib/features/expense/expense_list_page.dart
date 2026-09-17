@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/core/formatting/format.dart';
@@ -238,7 +237,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                                   color: AppColors.slate400,
                                   size: 22,
                                 ),
-                                onPressed: () => context.pop(),
+                                onPressed: () => navBack(context),
                               ),
                             if (widget.title != null) const SizedBox(width: 4),
                             Expanded(

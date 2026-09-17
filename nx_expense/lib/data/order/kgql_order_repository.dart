@@ -57,7 +57,12 @@ class KgqlOrderRepository {
   Map<String, dynamic> _orderStruct(ModelType schema) {
     final struct = buildKgqlStructFromSchema(schema);
     struct[kCompanyModelTypeName] = {'id': true, 'name': true};
-    struct[kProductModelTypeName] = {'id': true, 'name': true};
+    struct[kProductModelTypeName] = {
+      'id': true,
+      'name': true,
+      'image_url': true,
+      'item_url': true,
+    };
     struct['relations'] = {
       'relation_id': true,
       'model_id': true,
@@ -112,7 +117,12 @@ OrderProduct _productFromModel(Model product, Iterable<Relation> relations) {
     tax: _numAttr(extras?['tax']),
     status: _stringAttr(extras?['status']),
     deliveryDate: _stringAttr(extras?['delivery_date']),
-    itemUrl: _stringAttr(extras?['item_url']),
+    itemUrl:
+        _stringAttr(extras?['item_url']) ??
+        _stringAttr(product.attributes?['item_url']),
+    imageUrl:
+        _stringAttr(extras?['image_url']) ??
+        _stringAttr(product.attributes?['image_url']),
     extras: extras,
   );
 }

@@ -10,6 +10,7 @@ class OrderProduct {
     this.status,
     this.deliveryDate,
     this.itemUrl,
+    this.imageUrl,
     this.extras,
   });
 
@@ -23,6 +24,10 @@ class OrderProduct {
   final String? status;
   final String? deliveryDate;
   final String? itemUrl;
+  final String? imageUrl;
+
+  num? get effectiveLineTotal =>
+      lineTotal ?? (unitPrice == null ? null : unitPrice! * (quantity ?? 1));
   final Map<String, dynamic>? extras;
 }
 
@@ -46,6 +51,19 @@ class Order {
   final String? companyName;
   final Map<String, dynamic>? extras;
   final List<OrderProduct> products;
+
+  String? get sourceUrl {
+    for (final key in ['order_details_url', 'source_url', 'order_url']) {
+      final value = extras?[key]?.toString().trim();
+      final uri = value == null ? null : Uri.tryParse(value);
+      if (uri != null &&
+          (uri.scheme == 'https' || uri.scheme == 'http') &&
+          uri.host.isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
 
   int get itemCount {
     if (products.isEmpty) return 0;

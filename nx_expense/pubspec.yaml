@@ -53,6 +53,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.4
+  shared_preferences: ^2.5.5
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -68,6 +69,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - assets/fonts/
     - shorebird.yaml
 
   # The following line ensures that the Material Icons font is

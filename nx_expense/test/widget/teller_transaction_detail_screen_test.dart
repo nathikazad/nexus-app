@@ -40,9 +40,10 @@ void main() {
       await tester.pumpWidget(_wrapWithProviderScope(router));
       await tester.pumpAndSettle();
 
-      expect(find.text('External transaction'), findsOneWidget);
+      expect(find.text('Bank transaction'), findsOneWidget);
       expect(find.text('Source'), findsOneWidget);
-      expect(find.text('Teller'), findsOneWidget);
+      expect(find.text('Bank import'), findsOneWidget);
+      expect(find.textContaining('Teller'), findsNothing);
       expect(find.text('Coffee shop'), findsOneWidget);
       expect(find.text('\$4.50'), findsOneWidget);
       expect(find.text('debit'), findsOneWidget);

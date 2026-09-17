@@ -1,3 +1,4 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +7,9 @@ import 'package:nx_db/auth.dart';
 
 import 'package:nx_expense/core/theme/app_theme.dart';
 
-enum _ExpenseAppMenuAction { orders, tags, logout }
+enum _ExpenseAppMenuAction { orders, tags, images, logout }
 
-/// Panel from the right: Tags (tag systems) and Log out.
+/// Secondary sections and account actions.
 class ExpenseAppEndDrawer extends ConsumerWidget {
   const ExpenseAppEndDrawer({super.key});
 
@@ -47,7 +48,7 @@ class ExpenseAppEndDrawer extends ConsumerWidget {
               ),
               onTap: () {
                 Navigator.of(context).pop();
-                context.push('/orders');
+                navPush(context, '/orders');
               },
             ),
 
@@ -66,7 +67,25 @@ class ExpenseAppEndDrawer extends ConsumerWidget {
               ),
               onTap: () {
                 Navigator.of(context).pop();
-                context.push('/tag-systems');
+                navPush(context, '/tag-systems');
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.slate600,
+                size: 22,
+              ),
+              title: Text(
+                'Images',
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                navPush(context, '/images');
               },
             ),
             ListTile(
@@ -111,9 +130,11 @@ class ExpenseAppMenuButton extends ConsumerWidget {
       onSelected: (action) async {
         switch (action) {
           case _ExpenseAppMenuAction.orders:
-            context.push('/orders');
+            navPush(context, '/orders');
           case _ExpenseAppMenuAction.tags:
-            context.push('/tag-systems');
+            navPush(context, '/tag-systems');
+          case _ExpenseAppMenuAction.images:
+            navPush(context, '/images');
           case _ExpenseAppMenuAction.logout:
             await ref.read(authProvider.notifier).logout();
             if (context.mounted) context.go('/login');
@@ -130,6 +151,11 @@ class ExpenseAppMenuButton extends ConsumerWidget {
           value: _ExpenseAppMenuAction.tags,
           icon: Icons.label_outlined,
           label: 'Tags',
+        ),
+        _item(
+          value: _ExpenseAppMenuAction.images,
+          icon: Icons.photo_library_outlined,
+          label: 'Images',
         ),
         _item(
           value: _ExpenseAppMenuAction.logout,

@@ -1,3 +1,4 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -266,7 +267,7 @@ Future<void> _showBudgetGoalSheet(
       row != null &&
       context.mounted &&
       context.canPop()) {
-    context.pop();
+    navBack(context);
   }
 }
 
@@ -382,7 +383,7 @@ class _BudgetContent extends ConsumerWidget {
           for (var i = 0; i < rows.length; i++) ...[
             _BudgetRow(
               row: rows[i],
-              onTap: () => context.push('/budget/detail/${rows[i].id}'),
+              onTap: () => navPush(context, '/budget/detail/${rows[i].id}'),
             ),
             if (i != rows.length - 1) const SizedBox(height: 10),
           ],
@@ -422,7 +423,7 @@ class BudgetDetailScreen extends ConsumerWidget {
                       Icons.arrow_back,
                       color: AppColors.slate500,
                     ),
-                    onPressed: () => context.pop(),
+                    onPressed: () => navBack(context),
                   ),
                   Expanded(child: Text('Budget', style: refAppBarTitleLarge())),
                   goals.maybeWhen(
@@ -1076,7 +1077,7 @@ class _BudgetGroupedExpenseList extends StatelessWidget {
           child: ExpenseCard(
             expense: expense,
             schema: schema,
-            onTap: () => context.push('/expense/${expense.id}'),
+            onTap: () => navPush(context, '/expense/${expense.id}'),
           ),
         ),
       );

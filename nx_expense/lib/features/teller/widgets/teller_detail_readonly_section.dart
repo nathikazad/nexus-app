@@ -6,7 +6,6 @@ import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:nx_expense/core/layout/layout.dart';
 import 'package:nx_expense/data/providers.dart';
-import 'package:nx_expense/features/teller/teller_transaction_detail_page.dart';
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/formatting/teller_display.dart';
 
@@ -26,7 +25,7 @@ class TellerDetailReadonlySection extends ConsumerWidget {
         loading: () => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Teller', style: refSectionTitle(context)),
+            Text('Transactions', style: refSectionTitle(context)),
             const SizedBox(height: 12),
             const Center(
               child: Padding(
@@ -43,10 +42,10 @@ class TellerDetailReadonlySection extends ConsumerWidget {
         error: (e, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Teller', style: refSectionTitle(context)),
+            Text('Transactions', style: refSectionTitle(context)),
             const SizedBox(height: 8),
             Text(
-              'Could not load Teller links.',
+              'Could not load transaction links.',
               style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate400),
             ),
           ],
@@ -58,11 +57,11 @@ class TellerDetailReadonlySection extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Teller', style: refSectionTitle(context)),
+              Text('Transactions', style: refSectionTitle(context)),
               const SizedBox(height: 12),
               if (tellerLinks.isEmpty)
                 Text(
-                  'No linked Teller transactions.',
+                  'No linked bank transactions.',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppColors.slate400,
@@ -86,22 +85,7 @@ class TellerDetailReadonlySection extends ConsumerWidget {
                           child: InkWell(
                             onTap: () {
                               final row = link.toTellerTransaction();
-                              if (isDesktopLayout(context)) {
-                                pushPanel3(
-                                  ref,
-                                  Panel3State(
-                                    type: Panel3Type.teller,
-                                    tellerRow: row,
-                                  ),
-                                );
-                              } else {
-                                Navigator.of(context).push<void>(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) =>
-                                        TellerTransactionDetailScreen(row: row),
-                                  ),
-                                );
-                              }
+                              navToTransaction(context, row);
                             },
                             borderRadius: BorderRadius.circular(
                               RefLayout.rounded2xl,

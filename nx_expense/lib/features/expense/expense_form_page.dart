@@ -37,7 +37,7 @@ class ExpenseFormScreen extends ConsumerStatefulWidget {
 
   final int? expenseId;
 
-  /// Desktop Teller panel 3: no app bar; close via [desktop_nav.closeTellerPanel3].
+  /// Omit the app bar when embedded in another view.
   final bool embedded;
 
   /// When creating, link to this Teller timeline row after save (`/expense/form?...`).
@@ -215,20 +215,20 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         : const AsyncValue<Expense?>.data(null);
 
     return schemaAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
+      loading: () => const NavigationLoadingScreen(),
+      error: (e, _) => NavigationErrorScreen(message: 'Unable to load: $e'),
       data: (schema) {
         _ensureControllers(schema);
         _applyNewExpenseDefaults();
         return existingAsync.when(
-          loading: () =>
-              const Scaffold(body: Center(child: CircularProgressIndicator())),
-          error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
+          loading: () => const NavigationLoadingScreen(),
+          error: (e, _) => NavigationErrorScreen(message: 'Unable to load: $e'),
           data: (existing) {
             if (widget.expenseId != null && existing == null) {
               return Scaffold(
-                appBar: AppBar(),
+                appBar: AppBar(
+                  leading: BackButton(onPressed: () => navBack(context)),
+                ),
                 body: const Center(child: Text('Expense not found')),
               );
             }
@@ -290,7 +290,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                             color: AppColors.slate400,
                             size: 22,
                           ),
-                          onPressed: () => context.pop(),
+                          onPressed: () => navBack(context),
                         ),
                         centerTitle: true,
                         title: Text(title, style: refAppBarTitleBase()),
@@ -736,21 +736,11 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
           tellerEventTime: widget.pendingTellerEventTime!,
         );
         ref.invalidate(expenseTimelineLinksProvider(savedId));
-        if (mounted && isDesktopLayout(context)) {
-          await refreshTellerSelectionAfterLinkChange(
-            ref,
-            widget.pendingTellerEventId!,
-          );
-        } else {
-          ref.invalidate(tellerTransactionsProvider);
-        }
+        ref.invalidate(tellerTransactionsProvider);
+        ref.invalidate(transactionRouteProvider);
       }
       if (mounted) {
-        if (widget.embedded) {
-          closeTellerPanel3(ref);
-        } else {
-          context.pop();
-        }
+        navBack(context);
       }
     } catch (e) {
       if (mounted) {
@@ -766,16 +756,18 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
 
 /// Centered modal: name + cost, then full form at `/expense/form/:id`.
 void showAddExpenseModal(BuildContext context) {
+  final origin = NavigationLocation.of(context);
   showDialog<void>(
     context: context,
     barrierDismissible: true,
     barrierColor: Colors.black54,
-    builder: (ctx) => const _AddExpenseModal(),
+    builder: (ctx) => _AddExpenseModal(origin: origin),
   );
 }
 
 class _AddExpenseModal extends ConsumerStatefulWidget {
-  const _AddExpenseModal();
+  const _AddExpenseModal({required this.origin});
+  final Uri origin;
 
   @override
   ConsumerState<_AddExpenseModal> createState() => _AddExpenseModalState();
@@ -939,8 +931,14 @@ class _AddExpenseModalState extends ConsumerState<_AddExpenseModal> {
       invalidateExpenseListCache(ref);
       if (!mounted) return;
       final router = GoRouter.of(context);
+      final origin = widget.origin;
       Navigator.of(context).pop();
-      router.push('/expense/form/$id');
+      router.push(
+        Uri(
+          path: '/expense/form/$id',
+          queryParameters: {'from': origin.toString()},
+        ).toString(),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

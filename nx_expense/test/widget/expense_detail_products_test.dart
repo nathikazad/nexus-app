@@ -7,7 +7,7 @@ import 'package:nx_expense/domain/expense/expense.dart';
 import 'package:nx_expense/domain/expense/expense_product_line.dart';
 import 'package:nx_expense/domain/expense/related_model.dart';
 import 'package:nx_expense/domain/schema/model_type_view.dart';
-import 'package:nx_expense/features/desktop/desktop_nav.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nx_expense/features/expense/expense_detail_page.dart';
 
 void main() {
@@ -44,13 +44,9 @@ void main() {
     final relatedAction = find.byKey(
       const Key('product-related-expenses-action'),
     );
-    final container = ProviderScope.containerOf(tester.element(productCard));
     await tester.tap(relatedAction.first);
-    expect(
-      container.read(panel3StackProvider).single.type,
-      Panel3Type.relationExpenses,
-    );
-    expect(container.read(panel3StackProvider).single.id, 91);
+    await tester.pumpAndSettle();
+    expect(find.text('Product expenses 91'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -80,11 +76,24 @@ Widget _testApp() {
       userIdProvider.overrideWith((ref) => null),
       expenseTimelineLinksProvider.overrideWith((ref, id) async => []),
     ],
-    child: const MaterialApp(
-      home: ExpenseDetailContent(
-        schema: _schema,
-        expense: _expense,
-        expenseId: 2755,
+    child: MaterialApp.router(
+      routerConfig: GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const ExpenseDetailContent(
+              schema: _schema,
+              expense: _expense,
+              expenseId: 2755,
+            ),
+          ),
+          GoRoute(
+            path: '/expenses/by-relation/:type/:id/:name',
+            builder: (context, state) => Scaffold(
+              body: Text('Product expenses ${state.pathParameters['id']}'),
+            ),
+          ),
+        ],
       ),
     ),
   );

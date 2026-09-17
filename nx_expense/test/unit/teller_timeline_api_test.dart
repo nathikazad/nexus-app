@@ -184,7 +184,7 @@ void main() {
     });
 
     test('default when empty', () {
-      expect(tellerTransactionTitleLine({}), 'External transaction');
+      expect(tellerTransactionTitleLine({}), 'Bank transaction');
     });
   });
 

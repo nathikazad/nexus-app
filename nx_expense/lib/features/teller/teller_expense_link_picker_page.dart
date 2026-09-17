@@ -26,7 +26,7 @@ class TellerExpenseLinkPickerBody extends ConsumerStatefulWidget {
 
   final TellerTransactionRow row;
 
-  /// When true, successful link clears [tellerPanel3Provider] instead of [Navigator.pop].
+  /// When true, omit the surrounding page chrome.
   final bool embedded;
 
   @override
@@ -329,7 +329,7 @@ class TellerExpenseLinkPickerScreen extends ConsumerWidget {
                       color: AppColors.slate400,
                       size: 22,
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => navBack(context),
                   ),
                   Expanded(
                     child: Text('Link expense', style: refAppBarTitleLarge()),
@@ -386,17 +386,10 @@ class _ExpensePickCard extends ConsumerWidget {
             );
             if (!pickerContext.mounted) return;
             ref.invalidate(expenseTimelineLinksProvider(expense.id));
-            if (isDesktopLayout(pickerContext)) {
-              await refreshTellerSelectionAfterLinkChange(ref, row.eventId);
-            } else {
-              ref.invalidate(tellerTransactionsProvider);
-            }
+            ref.invalidate(tellerTransactionsProvider);
+            ref.invalidate(transactionRouteProvider);
             if (!pickerContext.mounted) return;
-            if (embedded) {
-              closeTellerPanel3(ref);
-            } else {
-              Navigator.of(pickerContext).pop();
-            }
+            navBack(pickerContext);
           } catch (e) {
             if (pickerContext.mounted) {
               ScaffoldMessenger.of(

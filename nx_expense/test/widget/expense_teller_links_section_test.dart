@@ -26,8 +26,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Teller'), findsOneWidget);
+    expect(find.text('Transactions'), findsOneWidget);
     expect(find.byIcon(Icons.add_rounded), findsOneWidget);
-    expect(find.text('No linked Teller transactions.'), findsOneWidget);
+    expect(find.text('No linked bank transactions.'), findsOneWidget);
   });
 }

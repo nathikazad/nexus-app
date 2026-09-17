@@ -1,6 +1,6 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:nx_expense/core/layout/layout.dart';
@@ -39,6 +39,7 @@ class _ModelTellerLinksFormSectionState
       if (!mounted) return;
       ref.invalidate(expenseTimelineLinksProvider(widget.modelId));
       ref.invalidate(tellerTransactionsProvider);
+      ref.invalidate(transactionRouteProvider);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -65,7 +66,9 @@ class _ModelTellerLinksFormSectionState
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Expanded(child: Text('Teller', style: refSectionTitle(context))),
+            Expanded(
+              child: Text('Transactions', style: refSectionTitle(context)),
+            ),
             if (_busy)
               const SizedBox(
                 width: 22,
@@ -81,7 +84,7 @@ class _ModelTellerLinksFormSectionState
                 child: InkWell(
                   onTap: _busy
                       ? null
-                      : () => context.push(widget.linkPickerRoute),
+                      : () => navPush(context, widget.linkPickerRoute),
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
@@ -102,7 +105,7 @@ class _ModelTellerLinksFormSectionState
             child: Center(child: CircularProgressIndicator()),
           ),
           error: (e, _) => Text(
-            'Could not load Teller links: $e',
+            'Could not load transaction links: $e',
             style: GoogleFonts.inter(fontSize: 13, color: AppColors.slate500),
           ),
           data: (links) {
@@ -113,7 +116,7 @@ class _ModelTellerLinksFormSectionState
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
-                  'No linked Teller transactions.',
+                  'No linked bank transactions.',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppColors.slate400,

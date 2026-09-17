@@ -31,13 +31,13 @@ String tellerTransactionTitleLine(Map<String, dynamic> payload) {
   if (cleaned.isNotEmpty) {
     return cleaned.length > 120 ? '${cleaned.substring(0, 120)}…' : cleaned;
   }
-  return 'External transaction';
+  return 'Bank transaction';
 }
 
 String externalTransactionSourceLabel(TellerTransaction row) {
   final source = (row.source ?? '').trim().toLowerCase();
   if (source == kBofaTimelineSource) return 'BofA';
-  if (source == kTellerTimelineSource || source.isEmpty) return 'Teller';
+  if (source == kTellerTimelineSource || source.isEmpty) return 'Bank import';
   return source.toUpperCase();
 }
 
@@ -189,4 +189,38 @@ Future<List<TellerTransaction>> fetchTellerTimelineEvents(
     throw result.exception!;
   }
   return parseTellerTimelineResponse(result.data);
+}
+
+/// Resolve the composite timeline identity, including rows outside list filters.
+Future<TellerTransaction?> fetchTellerTimelineEvent(
+  GraphQLClient client, {
+  required String eventId,
+  required DateTime time,
+}) async {
+  final result = await client.query(
+    QueryOptions(
+      document: gql(r'''
+      query ExpenseTransactionDetail($condition: TimelineEventCondition!) {
+        allTimelineEvents(first: 1, condition: $condition) {
+          nodes {
+            id time payload source eventType
+            modelTimelineEventLinksByEventTimeAndEventId {
+              nodes { id modelByModelId { id name modelTypeByModelTypeId { name } } }
+            }
+          }
+        }
+      }
+    '''),
+      variables: {
+        'condition': {
+          'id': eventId,
+          'time': formatTimelineLocalTimestamp(time),
+        },
+      },
+      fetchPolicy: FetchPolicy.networkOnly,
+    ),
+  );
+  if (result.hasException) throw result.exception!;
+  final rows = parseTellerTimelineResponse(result.data);
+  return rows.isEmpty ? null : rows.single;
 }

@@ -1,8 +1,8 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/core/layout/layout.dart';
@@ -367,7 +367,7 @@ class _ExcludedExpenseRow extends StatelessWidget {
     final amount = amountKey == null ? null : numAttr(expense, amountKey!);
     final date = expenseDateCellLabel(expense);
     return InkWell(
-      onTap: () => context.push('/expense/${expense.id}'),
+      onTap: () => navPush(context, '/expense/${expense.id}'),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
@@ -433,7 +433,8 @@ void _openExpensesForRelation(
   required String displayName,
 }) {
   final range = ref.read(expenseDateRangeProvider);
-  context.push(
+  navPush(
+    context,
     '/expenses/by-relation/${Uri.encodeComponent(relName)}/$relId/'
     '${Uri.encodeComponent(displayName)}?${_dateRangeQuery(range)}',
   );
@@ -452,7 +453,8 @@ void _openExpensesForDay(BuildContext context, String dateKey) {
   final day = _parseDateKey(dateKey);
   if (day == null) return;
   final range = DateTimeRange(start: day, end: day);
-  context.push(
+  navPush(
+    context,
     '/expenses/by-date/${Uri.encodeComponent(_dateOnly(day))}'
     '?${_dateRangeQuery(range)}',
   );
@@ -506,7 +508,8 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
       if (!includeDescendants) 'includeDescendants=false',
       if (title != null) 'title=${Uri.encodeQueryComponent(title)}',
     ].join('&');
-    context.push(
+    navPush(
+      context,
       '/expenses/by-tag/${Uri.encodeComponent(widget.tagSystem.name)}/'
       '${Uri.encodeComponent(tagNode)}?$query',
     );

@@ -1,3 +1,4 @@
+import 'package:nx_expense/data/images/expense_images.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -56,6 +57,8 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
       await fn();
       if (!mounted) return;
       ref.invalidate(expenseTimelineLinksProvider(widget.expenseId));
+      ref.invalidate(expenseImagesProvider);
+      ref.invalidate(expenseImageProvider);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

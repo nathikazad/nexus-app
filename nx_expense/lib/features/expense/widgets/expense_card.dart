@@ -1,3 +1,4 @@
+import 'package:nx_expense/core/motion/expense_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -50,101 +51,109 @@ class ExpenseCard extends StatelessWidget {
         : (selectionMode && selected ? AppColors.teal600 : AppColors.slate100);
     final borderWidth = selectionMode && selected ? 2.0 : 1.0;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-        child: Container(
-          decoration: BoxDecoration(
-            color: ignored ? Colors.red.shade50 : Colors.white,
-            borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-            border: Border.all(color: borderColor, width: borderWidth),
-            boxShadow: refCardShadow,
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (selectionMode) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(right: 10, top: 2),
-                      child: SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: selected ? AppColors.teal600 : Colors.white,
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(
+    return HoverLift(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+          child: Container(
+            decoration: BoxDecoration(
+              color: ignored ? Colors.red.shade50 : Colors.white,
+              borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
+              border: Border.all(color: borderColor, width: borderWidth),
+              boxShadow: refCardShadow,
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (selectionMode) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(right: 10, top: 2),
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
                               color: selected
                                   ? AppColors.teal600
-                                  : AppColors.slate300,
-                              width: 2,
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.teal600
+                                    : AppColors.slate300,
+                                width: 2,
+                              ),
                             ),
+                            child: selected
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Colors.white,
+                                  )
+                                : null,
                           ),
-                          child: selected
-                              ? const Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: Colors.white,
-                                )
-                              : null,
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: Text(
+                        expense.name,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.slate900,
                         ),
                       ),
                     ),
-                  ],
-                  Expanded(
-                    child: Text(
-                      expense.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.slate900,
+                    if (amount != null)
+                      Text(
+                        formatMoney(amount),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: ignored
+                              ? AppColors.slate500
+                              : AppColors.teal600,
+                          decoration: ignored
+                              ? TextDecoration.lineThrough
+                              : null,
+                          decorationColor: AppColors.slate400,
+                        ),
                       ),
+                  ],
+                ),
+                if (visibleRelations.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    visibleRelations
+                        .map((e) => e.value.map((m) => m.name).join(', '))
+                        .join(' \u00b7 '),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate500,
                     ),
                   ),
-                  if (amount != null)
-                    Text(
-                      formatMoney(amount),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: ignored ? AppColors.slate500 : AppColors.teal600,
-                        decoration: ignored ? TextDecoration.lineThrough : null,
-                        decorationColor: AppColors.slate400,
-                      ),
-                    ),
                 ],
-              ),
-              if (visibleRelations.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  visibleRelations
-                      .map((e) => e.value.map((m) => m.name).join(', '))
-                      .join(' \u00b7 '),
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.slate500,
+                if (expense.tags != null && expense.tags!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final e in expense.tags!.entries)
+                        for (final node in e.value) ExpenseTagChip(label: node),
+                    ],
                   ),
-                ),
+                ],
               ],
-              if (expense.tags != null && expense.tags!.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final e in expense.tags!.entries)
-                      for (final node in e.value) ExpenseTagChip(label: node),
-                  ],
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),

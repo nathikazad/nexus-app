@@ -326,3 +326,17 @@ final tellerListSummaryProvider = Provider<AsyncValue<TellerListSummary>>((
     error: (e, st) => AsyncValue.error(e, st),
   );
 });
+
+// A detail route must not depend on the currently selected list date range.
+final transactionRouteProvider = FutureProvider.autoDispose
+    .family<TellerTransaction?, ({String eventId, DateTime time})>((
+      ref,
+      key,
+    ) async {
+      final client = ref.watch(expenseGraphqlClientProvider);
+      return fetchTellerTimelineEvent(
+        client,
+        eventId: key.eventId,
+        time: key.time,
+      );
+    });

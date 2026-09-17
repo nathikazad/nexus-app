@@ -1,3 +1,4 @@
+import 'package:nx_expense/features/desktop/desktop_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,8 +26,9 @@ class OrderLinkPickerScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: expenseAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: SelectableText('Expense: $e')),
+        loading: () => const NavigationLoadingScreen(),
+        error: (e, _) =>
+            NavigationErrorScreen(message: 'Unable to load expense: $e'),
         data: (expense) {
           final linkedIds =
               expense?.relations?[kOrderModelTypeName]
@@ -58,7 +60,7 @@ class OrderLinkPickerScreen extends ConsumerWidget {
                           color: AppColors.slate400,
                           size: 22,
                         ),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => navBack(context),
                       ),
                       Expanded(
                         child: Text('Link Order', style: refAppBarTitleLarge()),
@@ -246,7 +248,7 @@ class _PickerOrderCard extends ConsumerWidget {
             );
             ref.invalidate(expenseDetailProvider(expenseId));
             if (!pickerContext.mounted) return;
-            Navigator.of(pickerContext).pop();
+            navBack(pickerContext);
           } catch (e) {
             if (pickerContext.mounted) {
               ScaffoldMessenger.of(
