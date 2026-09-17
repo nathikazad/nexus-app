@@ -15,10 +15,12 @@ class ExpenseImage {
     required this.time,
     required this.filename,
     this.links = const [],
+    this.hash,
   });
   final String id;
   final DateTime time;
   final String filename;
+  final String? hash;
   final List<ImageModelLink> links;
   bool get isLinked => links.isNotEmpty;
 }

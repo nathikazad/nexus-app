@@ -1,3 +1,5 @@
+import '../sync/expense_sync_providers.dart';
+import '../sync/expense_data_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_expense/data/providers.dart';
@@ -40,6 +42,7 @@ ExpenseImage imageFromTimeline(Map<String, dynamic> row) {
     time: DateTime.parse(row['time'] as String),
     filename: path.replaceAll('\\', '/').split('/').last,
     links: links,
+    hash: payload['sha256'] as String?,
   );
 }
 
@@ -81,11 +84,36 @@ Future<List<ExpenseImage>> fetchExpenseImages(GraphQLClient client) async {
   return images;
 }
 
-final expenseImagesProvider = FutureProvider.autoDispose<List<ExpenseImage>>(
-  (ref) => fetchExpenseImages(ref.watch(expenseGraphqlClientProvider)),
-);
+final expenseImagesProvider = FutureProvider.autoDispose<List<ExpenseImage>>((
+  ref,
+) async {
+  ref.watch(expenseDataGenerationProvider);
+  final data = ref.watch(expenseDataRepositoryProvider);
+  if (data == null) {
+    return fetchExpenseImages(ref.watch(expenseGraphqlClientProvider));
+  }
+  final rows = await data.events();
+  return Future.wait([
+    for (final row in rows)
+      if (row['source'] == 'expense_app' && row['event_type'] == 'image')
+        syncExpenseImage(data, row),
+  ]);
+});
 final expenseImageProvider = FutureProvider.autoDispose
     .family<ExpenseImage?, ({String id, DateTime time})>((ref, key) async {
+      ref.watch(expenseDataGenerationProvider);
+      final data = ref.watch(expenseDataRepositoryProvider);
+      if (data != null) {
+        final rows = await data.events();
+        final found = rows
+            .where(
+              (r) =>
+                  '${r['event_id']}' == key.id &&
+                  DateTime.parse(r['event_time'] as String) == key.time,
+            )
+            .firstOrNull;
+        return found == null ? null : syncExpenseImage(data, found);
+      }
       final client = ref.watch(expenseGraphqlClientProvider);
       final result = await client.query(
         QueryOptions(
@@ -112,3 +140,34 @@ final expenseImageProvider = FutureProvider.autoDispose
           ? null
           : imageFromTimeline(Map<String, dynamic>.from(rows.first as Map));
     });
+
+Future<ExpenseImage> syncExpenseImage(
+  ExpenseDataRepository data,
+  Map<String, dynamic> row,
+) async {
+  final links = <ImageModelLink>[];
+  for (final link in row['links'] as List? ?? []) {
+    final model = await data.visible(link['model_id'] as int);
+    final type = model?['model_type']?['name'];
+    if (model != null && (type == 'Expense' || type == 'Order')) {
+      links.add(
+        ImageModelLink(
+          id: model['id'] as int,
+          name: model['name'] as String,
+          type: type as String,
+        ),
+      );
+    }
+  }
+  final payload = row['payload'] as Map? ?? {};
+  return ExpenseImage(
+    id: '${row['event_id']}',
+    time: DateTime.parse(row['event_time'] as String),
+    filename: (payload['path']?.toString() ?? '')
+        .replaceAll('\\', '/')
+        .split('/')
+        .last,
+    hash: payload['sha256'] as String?,
+    links: links,
+  );
+}

@@ -1,3 +1,4 @@
+import 'package:nx_expense/data/sync/expense_sync_providers.dart';
 import 'package:nx_expense/features/desktop/desktop_shell.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -156,9 +157,9 @@ void main() {
           Stream.value(
             utf8.encode(
               jsonEncode({
-                'ok': true,
+                'status': 'applied',
                 'filename': 'a.jpg',
-                'timelineEvent': {'id': '1', 'time': '2026-09-16T10:15:00'},
+                'entity': {'event_id': '1', 'event_time': '2026-09-16T10:15:00'},
               }),
             ),
           ),
@@ -175,6 +176,7 @@ void main() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(_Auth.new),
+            expenseAssetsProvider.overrideWithValue(null),
             imageBaseUrlProvider.overrideWith((ref) => 'https://example.com'),
             userIdProvider.overrideWith((ref) => '1'),
             nexusHttpClientProvider.overrideWithValue(client),
@@ -197,8 +199,9 @@ void main() {
       await tester.tap(find.text('Choose image'));
       await tester.pumpAndSettle();
       expect(uploaded, isTrue);
-      expect(request!.url.path, '/snapshots');
-      expect(request!.fields['source'], 'expense_app');
+      expect(request!.url.path, '/apps/expense/receipts');
+      expect(request!.fields['domain_id'], '1');
+      expect(request!.fields['operation_id'], isNotEmpty);
       expect(request!.fields.containsKey('modelId'), isFalse);
       expect(find.byType(Card), findsOneWidget);
       expect(

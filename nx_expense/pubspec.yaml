@@ -43,6 +43,7 @@ dependencies:
     path: ../nx_modules/nx_data
   drift: ^2.34.0
   crypto: ^3.0.7
+  connectivity_plus: 6.1.4
   nx_offline:
     path: ../nx_modules/nx_offline
   graphql_flutter: ^5.1.2

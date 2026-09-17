@@ -1,3 +1,4 @@
+import 'package:nx_expense/data/sync/expense_sync_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'receipt_pdf_view.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
@@ -112,6 +113,7 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
       await uploadExpenseSnapshot(
         imageBaseUrl: base,
         userId: userId,
+        domainId: ref.read(authProvider).value!.requiredDomainId,
         bytes: bytes,
         filename: pdf
             ? 'upload.pdf'
@@ -126,6 +128,7 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
       if (!mounted || _session != session) {
         return;
       }
+      ref.read(expenseTransportProvider)?.reads.invalidate();
       ref.invalidate(expenseImagesProvider);
       // New standalone uploads are unlinked and must be visible after success.
       if (widget.filter == 'linked') context.go('/images?filter=unlinked');
@@ -344,7 +347,7 @@ class ExpenseImageView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final base = ref.watch(imageBaseUrlProvider);
-    final headers = ref.watch(nexusRequestHeadersProvider);
+
     if (base == null || image.filename.isEmpty) {
       return const Center(child: Icon(Icons.image_not_supported_outlined));
     }
@@ -357,26 +360,9 @@ class ExpenseImageView extends ConsumerWidget {
           child: Icon(Icons.picture_as_pdf_outlined, size: 64),
         );
       }
-      return ReceiptPdfView(url: uri);
+      return ReceiptPdfView(url: uri, hash: image.hash);
     }
-    return headers.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, _) => const Center(child: Text('Unable to load image')),
-      data: (headers) => Image.network(
-        Uri.parse(
-          '${normalizeHttpEndpoint(base).replaceAll(RegExp(r'/+$'), '')}/images/file',
-        ).replace(queryParameters: {'name': image.filename}).toString(),
-        headers: headers,
-        fit: fit,
-        width: double.infinity,
-        height: double.infinity,
-        loadingBuilder: (context, child, progress) => progress == null
-            ? child
-            : const Center(child: CircularProgressIndicator()),
-        errorBuilder: (_, _, _) =>
-            const Center(child: Icon(Icons.broken_image_outlined, size: 32)),
-      ),
-    );
+    return ReceiptFileView(url: uri, hash: image.hash, fit: fit);
   }
 }
 

@@ -1,3 +1,5 @@
+import 'sync/expense_sync_providers.dart';
+import 'sync/expense_model_cache.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -38,10 +40,14 @@ final expenseFileCacheProvider = Provider<ExpenseFileCache?>((ref) {
   if (user?.domainId == null) return null;
   final library = FileLibrary.application('nx_expense:${user!.sessionKey}');
   ref.onDispose(() => unawaited(library.close()));
-  return ExpenseFileCache(library);
+  final data = ref.watch(expenseDataRepositoryProvider);
+  return data == null
+      ? ExpenseFileCache(library)
+      : ExpenseModelCache(library, data);
 });
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
+  ref.watch(expenseDataGenerationProvider);
   return KgqlExpenseRepository(
     client: ref.watch(graphqlClientProvider),
     cache: ref.watch(expenseFileCacheProvider),
@@ -57,6 +63,7 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
 });
 
 final orderRepositoryProvider = Provider<KgqlOrderRepository>((ref) {
+  ref.watch(expenseDataGenerationProvider);
   return KgqlOrderRepository(
     client: ref.watch(graphqlClientProvider),
     cache: ref.watch(expenseFileCacheProvider),
@@ -78,6 +85,7 @@ final orderSchemaProvider = kgqlModelTypeByNameProvider(kOrderModelTypeName);
 
 final budgetExpenseGoalsMonthProvider =
     FutureProvider<ExpenseGoalMonthResponse>((ref) async {
+      ref.watch(expenseDataGenerationProvider);
       final client = ref.watch(expenseGraphqlClientProvider);
       final range = ref.watch(expenseDateRangeProvider);
       final monthStart = DateTime(range.start.year, range.start.month);
@@ -226,8 +234,22 @@ final expenseDetailProvider = FutureProvider.family<Expense?, int>((
 
 final expenseTimelineLinksProvider =
     FutureProvider.family<List<TellerExpenseLink>, int>((ref, modelId) async {
+      ref.watch(expenseDataGenerationProvider);
       final client = ref.watch(expenseGraphqlClientProvider);
-      return fetchExpenseTimelineLinks(client, modelId);
+      final data = ref.watch(expenseDataRepositoryProvider);
+      if (data == null) return fetchExpenseTimelineLinks(client, modelId);
+      final row = await data.visible(modelId);
+      return [
+        for (final link in row?['timeline_links'] as List? ?? [])
+          TellerExpenseLink(
+            linkId: '${link['id']}',
+            eventId: '${link['event_id']}',
+            eventTime: DateTime.parse(link['event_time'] as String),
+            eventType: link['event_type'] as String?,
+            source: link['source'] as String?,
+            payload: Map<String, dynamic>.from(link['payload'] as Map),
+          ),
+      ];
     });
 
 final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
@@ -238,6 +260,7 @@ final expenseSummaryProvider = FutureProvider<ExpenseSummary>((ref) async {
 /// Relation picker: models of [typeName] with minimal struct.
 final relatedModelsForTypeProvider =
     FutureProvider.family<List<RelatedModel>, String>((ref, typeName) async {
+      ref.watch(expenseDataGenerationProvider);
       final client = ref.watch(expenseGraphqlClientProvider);
       final models = await fetchKgqlModels(
         client,
@@ -255,6 +278,7 @@ final relatedModelsProvider = relatedModelsForTypeProvider;
 final tellerTransactionsProvider = FutureProvider<List<TellerTransaction>>((
   ref,
 ) async {
+  ref.watch(expenseDataGenerationProvider);
   final client = ref.watch(expenseGraphqlClientProvider);
   final range = ref.watch(expenseDateRangeProvider);
   return fetchTellerTimelineEvents(
@@ -333,6 +357,7 @@ final transactionRouteProvider = FutureProvider.autoDispose
       ref,
       key,
     ) async {
+      ref.watch(expenseDataGenerationProvider);
       final client = ref.watch(expenseGraphqlClientProvider);
       return fetchTellerTimelineEvent(
         client,

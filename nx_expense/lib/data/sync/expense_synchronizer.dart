@@ -41,7 +41,14 @@ class ExpenseMutationHandler implements MutationHandler {
 }
 
 class ExpenseReconciler implements PullReconciler<int> {
-  ExpenseReconciler(this.store, this.session);
+  ExpenseReconciler(
+    this.store,
+    this.session, {
+    this.onChanged,
+    this.syncAssets,
+  });
+  final void Function()? onChanged;
+  final Future<void> Function()? syncAssets;
   final ExpenseStore store;
   final AppSyncSession session;
   @override
@@ -68,6 +75,13 @@ class ExpenseReconciler implements PullReconciler<int> {
         'complete': true,
       }),
     );
+    if (wanted.isNotEmpty ||
+        hashes.keys.any(
+          (id) => !manifest.entries.any((entry) => entry['id'] == id),
+        )) {
+      onChanged?.call();
+    }
+    await syncAssets?.call();
   }
 
   @override

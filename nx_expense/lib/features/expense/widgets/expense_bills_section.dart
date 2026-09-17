@@ -1,3 +1,4 @@
+import 'package:nx_expense/data/sync/expense_sync_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:nx_expense/features/images/receipt_pdf_view.dart';
 import 'package:nx_expense/data/images/expense_images.dart';
@@ -28,12 +29,13 @@ Future<void> _showBillImageFullScreen(
   BuildContext context,
   String imageUrl,
   Map<String, String> headers,
+  String? hash,
 ) {
   return Navigator.of(context).push<void>(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (ctx) =>
-          _BillFullScreenPage(imageUrl: imageUrl, headers: headers),
+          _BillFullScreenPage(imageUrl: imageUrl, headers: headers, hash: hash),
     ),
   );
 }
@@ -58,6 +60,8 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
     try {
       await fn();
       if (!mounted) return;
+      ref.read(expenseTransportProvider)?.reads.invalidate();
+      if (!mounted) return;
       ref.invalidate(expenseTimelineLinksProvider(widget.expenseId));
       ref.invalidate(expenseImagesProvider);
       ref.invalidate(expenseImageProvider);
@@ -78,6 +82,9 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
   }
 
   Future<void> _pickAndUpload(Object source) async {
+    final session = ref.read(authProvider).value?.sessionKey;
+    final expenseId = widget.expenseId;
+    if (session == null) return;
     final pdf = source == 'pdf';
     XFile? x;
     if (pdf) {
@@ -95,7 +102,12 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
         imageQuality: 85,
       );
     }
-    if (x == null || !mounted) return;
+    if (x == null ||
+        !mounted ||
+        ref.read(authProvider).value?.sessionKey != session ||
+        widget.expenseId != expenseId) {
+      return;
+    }
 
     final base = ref.read(imageBaseUrlProvider);
     final uid = ref.read(userIdProvider);
@@ -117,6 +129,11 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
     }
 
     final bytes = await x.readAsBytes();
+    if (!mounted ||
+        ref.read(authProvider).value?.sessionKey != session ||
+        widget.expenseId != expenseId) {
+      return;
+    }
     final name = x.name;
     final lower = name.toLowerCase();
     final isPng = lower.endsWith('.png');
@@ -136,6 +153,7 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
       final up = await uploadExpenseSnapshot(
         imageBaseUrl: base,
         userId: uid,
+        domainId: ref.read(authProvider).value!.requiredDomainId,
         bytes: bytes,
         filename: uploadName,
         imageContentType: mediaType,
@@ -143,7 +161,7 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
       );
       await linkExpenseToTimelineEvent(
         client,
-        modelId: widget.expenseId,
+        modelId: expenseId,
         eventTime: up.eventTime,
         eventId: up.eventId,
       );
@@ -260,6 +278,7 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
                     imageBaseUrl: base,
                     userId: uid,
                     filename: _basenameFromPayloadPath(link.payload),
+                    hash: link.payload['sha256'] as String?,
                     onRemove: _busy ? null : () => _onRemove(link),
                   ),
               ],
@@ -277,11 +296,13 @@ class _BillThumb extends ConsumerWidget {
     required this.userId,
     required this.filename,
     this.onRemove,
+    this.hash,
   });
 
   final String imageBaseUrl;
   final String userId;
   final String filename;
+  final String? hash;
   final VoidCallback? onRemove;
 
   @override
@@ -306,7 +327,7 @@ class _BillThumb extends ConsumerWidget {
         Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => _showBillImageFullScreen(context, url, headers),
+            onTap: () => _showBillImageFullScreen(context, url, headers, hash),
             borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
@@ -316,22 +337,13 @@ class _BillThumb extends ConsumerWidget {
                       height: 64,
                       child: Icon(Icons.picture_as_pdf_outlined, size: 36),
                     )
-                  : Image.network(
-                      url,
+                  : SizedBox(
                       width: 64,
                       height: 64,
-                      fit: BoxFit.cover,
-                      headers: headers,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 64,
-                        height: 64,
-                        color: AppColors.slate100,
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: AppColors.slate400,
-                          size: 28,
-                        ),
+                      child: ReceiptFileView(
+                        url: url,
+                        hash: hash,
+                        fit: BoxFit.cover,
                       ),
                     ),
             ),
@@ -365,20 +377,24 @@ class _BillThumb extends ConsumerWidget {
 }
 
 class _BillFullScreenPage extends StatelessWidget {
-  const _BillFullScreenPage({required this.imageUrl, required this.headers});
+  const _BillFullScreenPage({
+    required this.imageUrl,
+    required this.headers,
+    this.hash,
+  });
 
   final String imageUrl;
+  final String? hash;
   final Map<String, String> headers;
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
     if ((Uri.parse(imageUrl).queryParameters['name'] ?? '')
         .toLowerCase()
         .endsWith('.pdf')) {
       return Scaffold(
         appBar: AppBar(title: const Text('PDF receipt')),
-        body: ReceiptPdfView(url: imageUrl),
+        body: ReceiptPdfView(url: imageUrl, hash: hash),
       );
     }
 
@@ -391,33 +407,7 @@ class _BillFullScreenPage extends StatelessWidget {
             child: InteractiveViewer(
               minScale: 0.5,
               maxScale: 6,
-              child: Image.network(
-                imageUrl,
-                headers: headers,
-                fit: BoxFit.contain,
-                width: size.width,
-                height: size.height,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.broken_image_outlined,
-                  color: Colors.white.withValues(alpha: 0.6),
-                  size: 56,
-                ),
-              ),
+              child: ReceiptFileView(url: imageUrl, hash: hash),
             ),
           ),
           SafeArea(

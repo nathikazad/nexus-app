@@ -1,3 +1,5 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'expense_assets.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/app_reads.dart';
@@ -64,10 +66,19 @@ final expenseLibrarySyncProvider = Provider<SyncSupervisor<int>?>((ref) {
   final store = ref.watch(expenseOfflineStoreProvider);
   if (store == null) return null;
   final uploader = ref.watch(expenseOutboxProvider);
+  final assets = ref.watch(expenseAssetsProvider);
   final sync = SyncSupervisor<int>(
     reconciler: ExpenseReconciler(
       store,
       AppSyncClient(ref.watch(graphqlClientProvider), 'expense').session,
+      onChanged: () {
+        if (ref.mounted) {
+          ref.read(expenseDataGenerationProvider.notifier).changed();
+        }
+      },
+      syncAssets: () async {
+        await assets?.synchronize(await store.all());
+      },
     ),
     prepare: () async {
       await uploader?.process();
@@ -113,6 +124,14 @@ final expenseDataSessionProvider = Provider<AppDataSession?>((ref) {
   final sync = ref.watch(expenseLibrarySyncProvider);
   return createAppSession(
     ref,
+    onlineChanges: sync == null
+        ? null
+        : Connectivity().onConnectivityChanged
+              .map(
+                (results) =>
+                    results.any((value) => value != ConnectivityResult.none),
+              )
+              .distinct(),
     definition: AppDataDefinition(
       name: 'expense',
       refreshVisible: () async {
@@ -126,9 +145,6 @@ final expenseDataSessionProvider = Provider<AppDataSession?>((ref) {
         ? null
         : PersistentSyncBackend((reason) async {
             await sync.requestFull(reason);
-            if (ref.mounted) {
-              ref.read(expenseDataGenerationProvider.notifier).changed();
-            }
           }),
   );
 });
@@ -152,4 +168,21 @@ final expenseReceiptsProvider = Provider<ExpenseReceipts?>((ref) {
       }
     },
   );
+});
+
+final expenseAssetsProvider = Provider<ExpenseAssets?>((ref) {
+  final remote = ref.watch(expenseTransportProvider);
+  if (remote == null) return null;
+  final store = ref.watch(expenseOfflineStoreProvider);
+  final assets = ExpenseAssets(
+    client: remote.reads.client,
+    origin: remote.reads.origin,
+    library: store?.library,
+    files: store == null
+        ? null
+        : BinaryContentFiles.application(store.account.key),
+  );
+  if (store != null) store.beforeClose.add(assets.close);
+  ref.onDispose(() => unawaited(assets.close()));
+  return assets;
 });

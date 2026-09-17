@@ -52,12 +52,39 @@ class ExpenseDataRepository {
     final rows = (await native.all())
         .where((e) => e['model_type']?['name'] == family)
         .toList();
-    if (rows.isNotEmpty || await isComplete()) return rows;
+    if (await isComplete()) return rows;
     final live = await reads.items(query: {'kind': kinds[family]!});
     await native.acceptLive(live);
     return (await native.all())
         .where((e) => e['model_type']?['name'] == family)
         .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> events() async {
+    try {
+      return await reads.items(query: {'kind': 'images'});
+    } on AppReadException catch (error) {
+      if (error.statusCode < 500) rethrow;
+      if (store == null || !await isComplete()) rethrow;
+    } catch (_) {
+      if (store == null || !await isComplete()) rethrow;
+    }
+    return (await store!.all()).where((r) => r['kind'] == 'event').toList();
+  }
+
+  /// Visible reads are live; the independent snapshot is the native fallback.
+  Future<Map<String, dynamic>?> visible(int id) async {
+    try {
+      return await reads.read('$id');
+    } on AppReadException catch (error) {
+      if (error.statusCode == 404) return null;
+      if (error.statusCode < 500) rethrow;
+      if (store == null) rethrow;
+      return get(id);
+    } catch (_) {
+      if (store == null) rethrow;
+      return get(id);
+    }
   }
 
   Future<bool> isComplete() async {
@@ -76,6 +103,7 @@ class ExpenseDataRepository {
       }
       final local = await native.get('$id');
       if (local != null) return local;
+      if (await isComplete()) return null;
     }
     try {
       final value = await reads.read('$id');

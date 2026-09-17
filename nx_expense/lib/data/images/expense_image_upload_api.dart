@@ -1,10 +1,12 @@
-import 'dart:convert';
+import 'package:nx_db/app_reads.dart';
+import '../sync/expense_transport.dart';
+import '../sync/expense_data_repository.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:nx_db/auth.dart';
 
-/// Result of `POST /snapshots` with `source=expense_app` after a successful KGQL insert.
+/// Published receipt identity for attaching to an expense or order.
 class ExpenseSnapshotUploadResult {
   const ExpenseSnapshotUploadResult({
     required this.eventId,
@@ -28,69 +30,39 @@ String expenseSnapshotTimestamp12Digits() {
       '${n.second.toString().padLeft(2, '0')}';
 }
 
-/// Upload image bytes to MCP HTTP [imageBaseUrl]/snapshots with `source=expense_app`.
-String _normalizeImageBase(String url) => normalizeHttpEndpoint(url);
-
+/// Publish through the same immutable, checksummed receipt endpoint as sync.
 Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
   required String imageBaseUrl,
   required String userId,
+  required int domainId,
   required List<int> bytes,
   required String filename,
   required MediaType imageContentType,
   required http.Client httpClient,
 }) async {
-  if (bytes.isEmpty || bytes.length > 20 * 1024 * 1024) {
-    throw ArgumentError('Receipt must be smaller than 20 MB');
-  }
-  final trimmed = imageBaseUrl.endsWith('/')
-      ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
-      : imageBaseUrl;
-  final base = _normalizeImageBase(trimmed);
-  final uri = Uri.parse('$base/snapshots');
-  final req = http.MultipartRequest('POST', uri);
-  req.fields['timestamp'] = expenseSnapshotTimestamp12Digits();
-  req.fields['source'] = 'expense_app';
-  final tz = DateTime.now().timeZoneName;
-  req.fields['timezone'] = tz.isNotEmpty ? tz : 'UTC';
-  req.files.add(
-    http.MultipartFile.fromBytes(
-      'file',
-      bytes,
+  final reads = AppReads(
+    httpClient,
+    Uri.parse(normalizeHttpEndpoint(imageBaseUrl)),
+    'expense',
+    cacheResponses: false,
+  );
+  try {
+    final result = await ExpenseTransport(reads).uploadReceipt(
+      operationId: expenseOperationId(),
+      domainId: domainId,
+      capturedAt: DateTime.now().toIso8601String(),
+      timezone: DateTime.now().timeZoneName,
       filename: filename,
-      contentType: imageContentType,
-    ),
-  );
-  final streamed = await httpClient.send(req);
-  final resp = await http.Response.fromStream(streamed);
-  if (resp.statusCode < 200 || resp.statusCode >= 300) {
-    throw StateError('Upload failed (${resp.statusCode}): ${resp.body}');
-  }
-  final decoded = jsonDecode(resp.body);
-  if (decoded is! Map<String, dynamic>) {
-    throw StateError('Invalid upload response');
-  }
-  if (decoded['ok'] != true) {
-    throw StateError('Upload failed: ${resp.body}');
-  }
-  final te = decoded['timelineEvent'];
-  if (te is! Map<String, dynamic>) {
-    throw StateError(
-      'Missing timelineEvent after upload (KGQL insert may have failed)',
+      contentType: imageContentType.toString(),
+      bytes: bytes,
     );
+    final entity = result['entity'] as Map;
+    return ExpenseSnapshotUploadResult(
+      eventId: entity['event_id'].toString(),
+      eventTime: DateTime.parse(entity['event_time'] as String),
+      filename: result['filename'] as String,
+    );
+  } finally {
+    await reads.close();
   }
-  final id = te['id']?.toString();
-  final timeStr = te['time']?.toString();
-  if (id == null || id.isEmpty || timeStr == null || timeStr.isEmpty) {
-    throw StateError('timelineEvent missing id or time');
-  }
-  final eventTime = DateTime.tryParse(timeStr);
-  if (eventTime == null) {
-    throw StateError('Invalid timelineEvent.time: $timeStr');
-  }
-  final fn = decoded['filename']?.toString() ?? '';
-  return ExpenseSnapshotUploadResult(
-    eventId: id,
-    eventTime: eventTime,
-    filename: fn,
-  );
 }
