@@ -143,19 +143,19 @@ void main() {
     expect(find.text('Malayalam'), findsOneWidget);
     expect(find.text('Script'), findsNothing);
     expect(find.byIcon(Icons.arrow_forward), findsNothing);
-    expect(find.byIcon(Icons.tune_outlined), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
     await tester.tap(find.text('Malayalam'));
     await tester.pumpAndSettle();
     expect(find.text('Script'), findsOneWidget);
     expect(find.text('Noun'), findsOneWidget);
     expect(find.text('Adjective'), findsOneWidget);
     expect(find.text('Verb'), findsOneWidget);
-    expect(find.byType(VerticalDivider), findsNWidgets(5));
+    expect(find.byType(VerticalDivider), findsNothing);
     final nounTitle = tester.getCenter(find.text('Noun'));
-    final nounDivider = tester.getCenter(
-      find.byKey(const ValueKey('language-category-divider-Noun')),
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('language-category-noun-total'))).dy,
+      greaterThan(nounTitle.dy),
     );
-    expect(nounDivider.dx, greaterThan(nounTitle.dx));
     final nounLearnt = find.byKey(
       const ValueKey('language-category-noun-learnt'),
     );
@@ -173,7 +173,7 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('language-category-noun-remaining')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('language-category-noun-due')),
@@ -182,7 +182,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('language-category-noun-due')),
-        matching: find.text('0'),
+        matching: find.text('1'),
       ),
       findsOneWidget,
     );
@@ -194,7 +194,7 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('language-category-noun-learnt')),
-      findsNothing,
+      findsOneWidget,
     );
     await tester.binding.setSurfaceSize(const Size(1100, 844));
     await tester.pumpAndSettle();

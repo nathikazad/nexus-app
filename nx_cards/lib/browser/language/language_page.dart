@@ -9,7 +9,7 @@ import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/browser/card_list/learning_cards.dart';
 import 'package:nx_cards/browser/card_list/card_search.dart';
 import 'package:nx_cards/browser/card_list/study_launcher.dart';
-import 'package:nx_cards/browser/language/language_category_order.dart';
+import 'package:nx_cards/browser/language/language_groups.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
 
 class LanguagePage extends ConsumerWidget {
@@ -48,9 +48,7 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
     final sourceCards = language == null
         ? data.cards
         : data.cardsForLanguage(language!);
-    final categories = orderedLanguageCategories(
-      sourceCards.expand((card) => card.studyCategories),
-    );
+    final groups = languageGroups(sourceCards);
     return RefreshIndicator(
       onRefresh: ref.read(cardsLibrarySyncProvider),
       child: ListView(
@@ -70,9 +68,13 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                         data: data,
                         language: language,
                       ),
-                      for (final category in categories)
+                      for (final group in groups)
                         _LanguageCategoryCard(
-                          category: category,
+                          category: group.name,
+                          tagSystem: group.tagSystem,
+                          disambiguate:
+                              groups.where((g) => g.name == group.name).length >
+                              1,
                           data: data,
                           language: language,
                         ),
@@ -94,10 +96,14 @@ class _LanguageCategoryCard extends StatelessWidget {
     required this.data,
     this.language,
     this.allCards = false,
+    this.tagSystem,
+    this.disambiguate = false,
   });
 
   final String category;
   final bool allCards;
+  final String? tagSystem;
+  final bool disambiguate;
   final CardsDashboard data;
   final String? language;
 
@@ -106,7 +112,11 @@ class _LanguageCategoryCard extends StatelessWidget {
     final cards = data.cards
         .where(
           (card) =>
-              (allCards || card.belongsToStudyCategory(category)) &&
+              (allCards ||
+                  LanguageGroup(
+                    category,
+                    tagSystem: tagSystem,
+                  ).contains(card)) &&
               (language == null || data.languageFor(card) == language),
         )
         .toList(growable: false);
@@ -119,11 +129,7 @@ class _LanguageCategoryCard extends StatelessWidget {
     final remaining = cards
         .where((card) => card.learningStatus == LearningStatus.notStarted)
         .length;
-    final due = data.dueCount(
-      DateTime.now(),
-      studyCategory: allCards ? null : category,
-      language: language,
-    );
+    final due = CardsDashboard(cards: cards).dueCount(DateTime.now());
     final labelStyle = TextStyle(
       fontSize: 10,
       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -184,6 +190,8 @@ class _LanguageCategoryCard extends StatelessWidget {
               category: category,
               language: language,
               allCards: allCards,
+              tagSystem: tagSystem,
+              disambiguate: disambiguate,
             ),
           ),
         ),
@@ -227,7 +235,9 @@ class _LanguageCategoryCard extends StatelessWidget {
                         const SizedBox(width: 11),
                         Expanded(
                           child: Text(
-                            category,
+                            disambiguate
+                                ? '$category (${tagSystem ?? 'Type'})'
+                                : category,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -284,10 +294,14 @@ class LanguageCategoryPage extends ConsumerStatefulWidget {
     required this.category,
     this.language,
     this.allCards = false,
+    this.tagSystem,
+    this.disambiguate = false,
   });
 
   final String category;
   final bool allCards;
+  final String? tagSystem;
+  final bool disambiguate;
   final String? language;
 
   @override
@@ -323,7 +337,13 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
     final historyWindow =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
     return Scaffold(
-      appBar: AppBar(title: Text(category)),
+      appBar: AppBar(
+        title: Text(
+          widget.disambiguate
+              ? '$category (${widget.tagSystem ?? 'Type'})'
+              : category,
+        ),
+      ),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => BrowserLoadError(
@@ -335,7 +355,10 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
               .where(
                 (card) =>
                     (widget.allCards ||
-                        card.belongsToStudyCategory(category)) &&
+                        LanguageGroup(
+                          category,
+                          tagSystem: widget.tagSystem,
+                        ).contains(card)) &&
                     (language == null || data.languageFor(card) == language),
               )
               .toList(growable: false);
@@ -359,7 +382,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
             now,
             historyWindow: historyWindow,
           );
-          if (category == 'Phrase') {
+          if (cards.isNotEmpty && cards.every((card) => card.isPhraseCard)) {
             final pastWordIds = <int>{
               for (final card in data.cards)
                 if (card.isWordCard &&
@@ -380,10 +403,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                   : existingOrder[left.id]!.compareTo(existingOrder[right.id]!);
             });
           }
-          final queue = data.studyQueue(
+          final queue = CardsDashboard(cards: cards).studyQueue(
             DateTime.now(),
-            studyCategory: widget.allCards ? null : category,
-            language: language,
             newCardLimit:
                 (learning.length + learnt.length) * StudyCue.values.length,
           );
@@ -400,7 +421,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${cards.length} ${widget.allCards
+                              '${cards.length} ${widget.allCards || widget.tagSystem != null
                                   ? 'cards'
                                   : category == 'Script'
                                   ? 'letters'
@@ -412,8 +433,9 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             title: language == null
                                 ? category
                                 : '$language · $category',
-                            preferenceKey:
-                                'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}',
+                            preferenceKey: widget.tagSystem == null
+                                ? 'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}'
+                                : 'language-tag:${Uri.encodeComponent(language ?? 'all')}:${Uri.encodeComponent(widget.tagSystem!)}:${Uri.encodeComponent(category)}',
                             prompts: queue,
                             studyCards: [...learning, ...learnt],
                             languagePair: language == null
@@ -489,7 +511,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             showScheduleStatus: true,
                             emptyText: category == 'Script'
                                 ? 'No letters are currently being learned.'
-                                : widget.allCards
+                                : widget.allCards || widget.tagSystem != null
                                 ? 'No cards are currently being learned.'
                                 : 'No words are currently being learned.',
                             previousStatus: LearningStatus.notStarted,
@@ -502,7 +524,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             cards: learnt,
                             emptyText: category == 'Script'
                                 ? 'No letters have been marked learnt yet.'
-                                : widget.allCards
+                                : widget.allCards || widget.tagSystem != null
                                 ? 'No cards have been marked learnt yet.'
                                 : 'No words have been marked learnt yet.',
                             previousStatus: LearningStatus.learning,
@@ -513,7 +535,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             cards: notStarted,
                             emptyText: category == 'Script'
                                 ? 'Every letter has been started.'
-                                : widget.allCards
+                                : widget.allCards || widget.tagSystem != null
                                 ? 'Every card has been started.'
                                 : 'Every word has been started.',
                             nextStatus: LearningStatus.learning,
@@ -549,12 +571,12 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
   }
 }
 
-IconData categoryIcon(String category) => switch (category) {
-  'Noun' => Icons.inventory_2_outlined,
-  'Verb' => Icons.directions_run_outlined,
-  'Adjective' => Icons.tune_outlined,
-  'Adverb' => Icons.speed_outlined,
-  'Postposition' => Icons.alt_route_outlined,
-  'Script' => Icons.gesture_outlined,
+IconData categoryIcon(String category) => switch (category.toLowerCase()) {
+  'noun' => Icons.inventory_2_outlined,
+  'verb' => Icons.directions_run_outlined,
+  'adjective' => Icons.tune_outlined,
+  'adverb' => Icons.speed_outlined,
+  'postposition' => Icons.alt_route_outlined,
+  'script' => Icons.gesture_outlined,
   _ => Icons.text_fields_outlined,
 };
