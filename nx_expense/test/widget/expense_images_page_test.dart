@@ -69,7 +69,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(ChoiceChip), findsNWidgets(3));
-      expect(find.text('Add image'), findsOneWidget);
+      expect(find.text('Add receipt'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
@@ -191,8 +191,9 @@ void main() {
       await ProviderScope.containerOf(
         tester.element(find.byType(ExpenseImagesScreen)),
       ).read(authProvider.future);
-      await tester.tap(find.text('Add image'));
+      await tester.tap(find.text('Add receipt'));
       await tester.pumpAndSettle();
+      expect(find.text('Choose PDF'), findsOneWidget);
       await tester.tap(find.text('Choose image'));
       await tester.pumpAndSettle();
       expect(uploaded, isTrue);
@@ -201,7 +202,7 @@ void main() {
       expect(request!.fields.containsKey('modelId'), isFalse);
       expect(find.byType(Card), findsOneWidget);
       expect(
-        find.text('Image uploaded. Ready to reconcile later.'),
+        find.text('Receipt uploaded. Ready to reconcile later.'),
         findsOneWidget,
       );
     },

@@ -1,3 +1,5 @@
+import 'package:file_picker/file_picker.dart';
+import 'receipt_pdf_view.dart';
 import 'package:nx_expense/features/shell/expense_app_end_drawer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +50,7 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
         !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.iOS ||
             defaultTargetPlatform == TargetPlatform.android);
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await showModalBottomSheet<Object>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
@@ -61,6 +63,11 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
                 onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
             ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Choose PDF'),
+              onTap: () => Navigator.pop(context, 'pdf'),
+            ),
+            ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Choose image'),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
@@ -72,9 +79,22 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
     if (source == null || !mounted) return;
     setState(() => _uploading = true);
     try {
-      final file = await ref
-          .read(expenseImagePickerProvider)
-          .pickImage(source: source, imageQuality: 85);
+      final pdf = source == 'pdf';
+      XFile? file;
+      if (pdf) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+          withData: true,
+        );
+        if (result != null) {
+          file = result.xFiles.single;
+        }
+      } else {
+        file = await ref
+            .read(expenseImagePickerProvider)
+            .pickImage(source: source as ImageSource, imageQuality: 85);
+      }
       if (file == null || !mounted || _session != session) {
         return;
       }
@@ -93,8 +113,14 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
         imageBaseUrl: base,
         userId: userId,
         bytes: bytes,
-        filename: png ? 'upload.png' : 'upload.jpg',
-        imageContentType: MediaType('image', png ? 'png' : 'jpeg'),
+        filename: pdf
+            ? 'upload.pdf'
+            : png
+            ? 'upload.png'
+            : 'upload.jpg',
+        imageContentType: pdf
+            ? MediaType('application', 'pdf')
+            : MediaType('image', png ? 'png' : 'jpeg'),
         httpClient: client,
       );
       if (!mounted || _session != session) {
@@ -105,7 +131,7 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
       if (widget.filter == 'linked') context.go('/images?filter=unlinked');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Image uploaded. Ready to reconcile later.'),
+          content: Text('Receipt uploaded. Ready to reconcile later.'),
         ),
       );
     } catch (_) {
@@ -152,7 +178,7 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.add_photo_alternate_outlined),
-        label: Text(_uploading ? 'Uploading…' : 'Add image'),
+        label: Text(_uploading ? 'Uploading…' : 'Add receipt'),
       ),
       body: Column(
         children: [
@@ -321,6 +347,17 @@ class ExpenseImageView extends ConsumerWidget {
     final headers = ref.watch(nexusRequestHeadersProvider);
     if (base == null || image.filename.isEmpty) {
       return const Center(child: Icon(Icons.image_not_supported_outlined));
+    }
+    final uri = Uri.parse(
+      '${normalizeHttpEndpoint(base).replaceAll(RegExp(r'/+$'), '')}/images/file',
+    ).replace(queryParameters: {'name': image.filename}).toString();
+    if (image.filename.toLowerCase().endsWith('.pdf')) {
+      if (fit == BoxFit.cover) {
+        return const Center(
+          child: Icon(Icons.picture_as_pdf_outlined, size: 64),
+        );
+      }
+      return ReceiptPdfView(url: uri);
     }
     return headers.when(
       loading: () => const Center(child: CircularProgressIndicator()),

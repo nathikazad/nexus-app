@@ -1,3 +1,5 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:nx_expense/features/images/receipt_pdf_view.dart';
 import 'package:nx_expense/data/images/expense_images.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,8 +77,24 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
     await _run(() => deleteExpenseTimelineLink(client, link.linkId));
   }
 
-  Future<void> _pickAndUpload(ImageSource source) async {
-    final x = await _picker.pickImage(source: source, imageQuality: 85);
+  Future<void> _pickAndUpload(Object source) async {
+    final pdf = source == 'pdf';
+    XFile? x;
+    if (pdf) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+      if (result != null) {
+        x = result.xFiles.single;
+      }
+    } else {
+      x = await _picker.pickImage(
+        source: source as ImageSource,
+        imageQuality: 85,
+      );
+    }
     if (x == null || !mounted) return;
 
     final base = ref.read(imageBaseUrlProvider);
@@ -102,8 +120,14 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
     final name = x.name;
     final lower = name.toLowerCase();
     final isPng = lower.endsWith('.png');
-    final uploadName = isPng ? 'upload.png' : 'upload.jpg';
-    final mediaType = isPng
+    final uploadName = pdf
+        ? 'upload.pdf'
+        : isPng
+        ? 'upload.png'
+        : 'upload.jpg';
+    final mediaType = pdf
+        ? MediaType('application', 'pdf')
+        : isPng
         ? MediaType('image', 'png')
         : MediaType('image', 'jpeg');
 
@@ -128,12 +152,17 @@ class _ExpenseBillsSectionState extends ConsumerState<ExpenseBillsSection> {
 
   Future<void> _showSourceSheet() async {
     if (_busy) return;
-    final choice = await showModalBottomSheet<ImageSource>(
+    final choice = await showModalBottomSheet<Object>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Choose PDF'),
+              onTap: () => Navigator.pop(ctx, 'pdf'),
+            ),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Take photo'),
@@ -281,24 +310,30 @@ class _BillThumb extends ConsumerWidget {
             borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(RefLayout.rounded2xl),
-              child: Image.network(
-                url,
-                width: 64,
-                height: 64,
-                fit: BoxFit.cover,
-                headers: headers,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 64,
-                  height: 64,
-                  color: AppColors.slate100,
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    color: AppColors.slate400,
-                    size: 28,
-                  ),
-                ),
-              ),
+              child: filename.toLowerCase().endsWith('.pdf')
+                  ? const SizedBox(
+                      width: 64,
+                      height: 64,
+                      child: Icon(Icons.picture_as_pdf_outlined, size: 36),
+                    )
+                  : Image.network(
+                      url,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                      headers: headers,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 64,
+                        height: 64,
+                        color: AppColors.slate100,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: AppColors.slate400,
+                          size: 28,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ),
@@ -338,6 +373,14 @@ class _BillFullScreenPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    if ((Uri.parse(imageUrl).queryParameters['name'] ?? '')
+        .toLowerCase()
+        .endsWith('.pdf')) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('PDF receipt')),
+        body: ReceiptPdfView(url: imageUrl),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.black,

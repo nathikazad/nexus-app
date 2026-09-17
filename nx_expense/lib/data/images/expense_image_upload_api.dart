@@ -39,6 +39,9 @@ Future<ExpenseSnapshotUploadResult> uploadExpenseSnapshot({
   required MediaType imageContentType,
   required http.Client httpClient,
 }) async {
+  if (bytes.isEmpty || bytes.length > 20 * 1024 * 1024) {
+    throw ArgumentError('Receipt must be smaller than 20 MB');
+  }
   final trimmed = imageBaseUrl.endsWith('/')
       ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
       : imageBaseUrl;

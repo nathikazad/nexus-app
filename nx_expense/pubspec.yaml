@@ -50,6 +50,8 @@ dependencies:
   http_parser: ^4.1.0
   image_picker: ^1.1.2
   url_launcher: ^6.3.2
+  file_picker: ^10.3.10
+  pdfrx: ^2.4.8
 
 dependency_overrides:
   connectivity_plus: 6.1.4
