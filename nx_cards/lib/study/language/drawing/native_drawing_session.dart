@@ -1,18 +1,77 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show StringCharacters;
 import 'package:nx_cards/browser/browser.dart';
 
 /// Only session actions cross this bridge; the Android activity owns its UI.
 class NativeDrawingSession {
   static const channel = MethodChannel('nx_cards/drawing-session');
 
-  static Map<String, Object?> practiceCard(StudyCard card) {
+  /// Follow saved Contains links only, including phrase -> word -> character.
+  static List<LanguageCardContent> characterParts(
+    StudyCard card,
+    Map<int, StudyCard> library,
+  ) {
+    final content = card.content as LanguageCardContent;
+    final letters = content.originalScript.trim().characters.toList();
+    if (letters.length <= 1) return const [];
+    final visited = <int>{card.id};
+    final parts = <LanguageCardContent>[];
+    void visit(StudyCard parent) {
+      for (final id in parent.linkedWordIds) {
+        if (!visited.add(id)) continue;
+        final child = library[id];
+        if (child == null || child.content is! LanguageCardContent) continue;
+        final part = child.content as LanguageCardContent;
+        final text = part.originalScript.trim();
+        if (text.characters.length == 1) {
+          // Match whole written letters, not a consonant hidden inside a
+          // combined letter. Stop here so வீ stays வீ, rather than வ் + ஈ.
+          if (letters.contains(text)) parts.add(part);
+          continue;
+        }
+        visit(child);
+      }
+    }
+
+    visit(card);
+    parts.sort(
+      (a, b) => letters
+          .indexOf(a.originalScript.trim())
+          .compareTo(letters.indexOf(b.originalScript.trim())),
+    );
+    return parts;
+  }
+
+  static Map<String, Object?> practiceCard(
+    StudyCard card, {
+    List<LanguageCardContent> characters = const [],
+  }) {
     final content = card.content as LanguageCardContent;
     return {
       'prompt': content.originalScript,
       'answer': content.originalScript,
       'subtitle': '${content.transliteration} · ${content.english}',
       'audio': content.audioUrl?.isNotEmpty == true,
+      'multiCharacter': content.originalScript.trim().characters.length > 1,
+      'characters': [
+        for (final part in characters)
+          {
+            'text': part.originalScript,
+            'transliteration': part.transliteration,
+            'translation': part.english,
+            'audio': part.audioUrl?.trim().isNotEmpty == true,
+          },
+      ],
+      'examples': [
+        for (final example in content.examples)
+          {
+            'text': example.text,
+            'transliteration': example.transliteration,
+            'translation': example.translation,
+            'audio': example.audioUrl?.trim().isNotEmpty == true,
+          },
+      ],
     };
   }
 

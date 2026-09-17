@@ -505,11 +505,30 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final audio = ref.read(cardAudioRepositoryProvider);
     final latest = {for (final card in queue) card.id: card};
     final ratings = <int, CardRating>{};
+    final linkedLibrary = recall
+        ? <int, StudyCard>{}
+        : {for (final card in await library.listCards()) card.id: card};
+    if (!mounted ||
+        sessionKey != ref.read(activeCardsSessionProvider).value?.account.key) {
+      return true;
+    }
+    final characters = [
+      for (final card in queue)
+        recall
+            ? <LanguageCardContent>[]
+            : NativeDrawingSession.characterParts(card, linkedLibrary),
+    ];
     final handled = await NativeDrawingSession.open(
       title: widget.title,
       cards: recall
           ? prompts.map(NativeDrawingSession.recallCard).toList()
-          : queue.map(NativeDrawingSession.practiceCard).toList(),
+          : [
+              for (var i = 0; i < queue.length; i++)
+                NativeDrawingSession.practiceCard(
+                  queue[i],
+                  characters: characters[i],
+                ),
+            ],
       recall: recall,
       onAction: (call) async {
         if (!mounted ||
@@ -527,10 +546,33 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         }
         if (call.method == 'audio') {
           final content = queue[index].content as LanguageCardContent;
-          if (audio == null || content.audioUrl == null) {
+          final exampleIndex = args['exampleIndex'];
+          final characterIndex = args['characterIndex'];
+          var audioUrl = content.audioUrl;
+          if (exampleIndex != null) {
+            final examples = content.examples;
+            if (recall ||
+                exampleIndex is! int ||
+                exampleIndex < 0 ||
+                exampleIndex >= examples.length) {
+              throw PlatformException(code: 'invalid_example');
+            }
+            audioUrl = examples[exampleIndex].audioUrl;
+          }
+          if (characterIndex != null) {
+            if (recall ||
+                exampleIndex != null ||
+                characterIndex is! int ||
+                characterIndex < 0 ||
+                characterIndex >= characters[index].length) {
+              throw PlatformException(code: 'invalid_character');
+            }
+            audioUrl = characters[index][characterIndex].audioUrl;
+          }
+          if (audio == null || audioUrl == null || audioUrl.trim().isEmpty) {
             throw PlatformException(code: 'audio_unavailable');
           }
-          return audio.fetch(content.audioUrl!);
+          return audio.fetch(audioUrl);
         }
         if (call.method == 'rate' && recall) {
           if (ratings.containsKey(index)) return null;

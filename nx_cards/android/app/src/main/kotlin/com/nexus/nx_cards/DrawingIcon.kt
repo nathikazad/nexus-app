@@ -28,6 +28,7 @@ internal class DrawingIcon(private val name: String) : Drawable() {
             "erase" -> { line(3f,14f,13f,4f,21f,12f,13f,20f,9f,20f,3f,14f); line(8f,9f,16f,17f); line(13f,20f,22f,20f) }
             "play" -> line(7f,3f,21f,12f,7f,21f,7f,3f)
             "next" -> { line(4f,12f,20f,12f); line(13f,5f,20f,12f,13f,19f) }
+            "previous" -> { line(20f,12f,4f,12f); line(11f,5f,4f,12f,11f,19f) }
             "yes" -> line(4f,12f,9f,18f,21f,5f)
             "no" -> { line(5f,5f,19f,19f); line(19f,5f,5f,19f) }
             else -> {

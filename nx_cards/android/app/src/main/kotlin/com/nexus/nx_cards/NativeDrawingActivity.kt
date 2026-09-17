@@ -25,6 +25,13 @@ class NativeDrawingActivity : Activity() {
     private lateinit var hint: TextView
     private lateinit var controls: LinearLayout
     private lateinit var end: Button
+    private var examplesList: LinearLayout? = null
+    private var examplesScroll: ScrollView? = null
+    private var examplesCardIndex = -1
+    private var characterColumn: LinearLayout? = null
+    private var characterHeading: TextView? = null
+    private var charactersList: LinearLayout? = null
+    private var charactersScroll: ScrollView? = null
     private var native: NativeInkPanel? = null
     private var standard: StandardInkPanel? = null
     private var index = 0
@@ -84,6 +91,39 @@ class NativeDrawingActivity : Activity() {
                 standard = StandardInkPanel(this)
                 frame.addView(standard, LinearLayout.LayoutParams(-1, 0, 1f))
             }
+            // Keep the phone and recall layouts intact. Tablet practice uses
+            // the lower portion for incoming ("used in") card relationships.
+            if (!recall && resources.configuration.smallestScreenWidthDp >= 600) {
+                val headings = LinearLayout(this)
+                headings.addView(label(13f).apply {
+                    text = "USED IN · EXAMPLES"
+                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                }, LinearLayout.LayoutParams(0, dp(36), 7f))
+                characterHeading = label(13f).apply {
+                    text = "CHARACTERS"
+                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                }
+                headings.addView(characterHeading, LinearLayout.LayoutParams(0, dp(36), 2f).apply { leftMargin = dp(16) })
+                root.addView(headings)
+                val columns = LinearLayout(this)
+                examplesList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                examplesScroll = ScrollView(this).apply {
+                    isFillViewport = true
+                    addView(examplesList)
+                }
+                columns.addView(examplesScroll, LinearLayout.LayoutParams(0, -1, 7f))
+                charactersList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                charactersScroll = ScrollView(this).apply {
+                    isFillViewport = true
+                    addView(charactersList)
+                }
+                characterColumn = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(charactersScroll, LinearLayout.LayoutParams(-1, -1))
+                }
+                columns.addView(characterColumn, LinearLayout.LayoutParams(0, -1, 2f).apply { leftMargin = dp(16) })
+                root.addView(columns, LinearLayout.LayoutParams(-1, 0, 1.2f))
+            }
             setContentView(root)
             updateCard()
             Log.i("NxCardsNative", "Fully native ${if (recall) "recall" else "practice"} activity opened")
@@ -95,21 +135,112 @@ class NativeDrawingActivity : Activity() {
         progress.text = "${index + 1} of ${cards.size}"
         prompt.text = if (recall && revealed) value("answer") else value("prompt")
         prompt.visibility = if (!recall && !visibleAnswer) View.INVISIBLE else View.VISIBLE
-        prompt.textSize = if (!recall && value("prompt").codePointCount(0, value("prompt").length) == 1) 64f else 32f
+        prompt.textSize = if (!recall && card["multiCharacter"] == false) 64f else 32f
         subtitle.text = if (recall && !revealed) "" else value("subtitle")
         hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
+        updateExamples()
         controls.removeAllViews()
         control("Undo", "undo") { native?.undo() ?: standard?.undo() }
         control("Erase", "erase") { native?.clear {} ?: standard?.clear() }
         if (card["audio"] == true && (!recall || revealed)) control("Play", "play") { play() }
         if (!recall) {
             control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
+            if (index > 0) control("Previous", "previous") { moveTo(index - 1) }
             control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
             control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard() }
         } else {
             control("No", "no") { rate(false) }
             control("Yes", "yes") { rate(true) }
+        }
+    }
+    private fun updateExamples() {
+        val list = examplesList ?: return
+        if (examplesCardIndex == index) return
+        examplesCardIndex = index
+        list.removeAllViews()
+        examplesScroll?.scrollTo(0, 0)
+        updateCharacters()
+        val examples = card["examples"] as? List<*> ?: emptyList<Any>()
+        if (examples.isEmpty()) {
+            list.addView(label(16f).apply {
+                text = "No linked examples for this card yet."
+                gravity = Gravity.START
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+            })
+        }
+        examples.forEachIndexed { exampleIndex, item ->
+            val example = item as? Map<*, *> ?: return@forEachIndexed
+            val row = LinearLayout(this).apply {
+                gravity = Gravity.TOP
+                setPadding(dp(12), dp(12), dp(4), dp(12))
+            }
+            val textColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            listOf("text" to 24f, "transliteration" to 16f, "translation" to 16f).forEach { (key, size) ->
+                val value = example[key] as? String ?: ""
+                if (value.isNotBlank()) textColumn.addView(label(size).apply {
+                    text = value
+                    gravity = Gravity.START
+                    setPadding(0, 0, 0, dp(5))
+                }, LinearLayout.LayoutParams(-1, -2))
+            }
+            row.addView(textColumn, LinearLayout.LayoutParams(0, -2, 1f))
+            if (example["audio"] == true) row.addView(ImageButton(this).apply {
+                contentDescription = "Play example: ${example["text"]}"
+                tooltipText = "Play example"
+                setImageDrawable(DrawingIcon("play"))
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                setBackgroundColor(Color.TRANSPARENT)
+                setOnClickListener { if (!busy) play(exampleIndex) }
+            }, LinearLayout.LayoutParams(dp(48), dp(48)))
+            list.addView(row, LinearLayout.LayoutParams(-1, -2))
+            list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
+        }
+    }
+    private fun updateCharacters() {
+        val list = charactersList ?: return
+        val show = card["multiCharacter"] == true
+        characterColumn?.visibility = if (show) View.VISIBLE else View.GONE
+        characterHeading?.visibility = if (show) View.VISIBLE else View.GONE
+        list.removeAllViews()
+        charactersScroll?.scrollTo(0, 0)
+        if (!show) return
+        val characters = card["characters"] as? List<*> ?: emptyList<Any>()
+        if (characters.isEmpty()) list.addView(label(15f).apply {
+            text = "No linked characters yet."
+            gravity = Gravity.START
+            setPadding(0, dp(12), 0, dp(12))
+        })
+        characters.forEachIndexed { characterIndex, item ->
+            val part = item as? Map<*, *> ?: return@forEachIndexed
+            val entry = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, dp(12), 0, dp(12))
+            }
+            val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+            top.addView(label(28f).apply {
+                text = part["text"] as? String ?: ""
+                gravity = Gravity.START
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            if (part["audio"] == true) top.addView(ImageButton(this).apply {
+                contentDescription = "Play character: ${part["text"]}"
+                tooltipText = "Play character"
+                setImageDrawable(DrawingIcon("play"))
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                setBackgroundColor(Color.TRANSPARENT)
+                setOnClickListener { if (!busy) play(characterIndex = characterIndex) }
+            }, LinearLayout.LayoutParams(dp(48), dp(48)))
+            entry.addView(top)
+            listOf("transliteration", "translation").forEach { key ->
+                val value = part[key] as? String ?: ""
+                if (value.isNotBlank()) entry.addView(label(16f).apply {
+                    text = value
+                    gravity = Gravity.START
+                    setPadding(0, dp(5), 0, 0)
+                })
+            }
+            list.addView(entry, LinearLayout.LayoutParams(-1, -2))
+            list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
         }
     }
     private fun control(label: String, icon: String, action: () -> Unit) {
@@ -138,12 +269,16 @@ class NativeDrawingActivity : Activity() {
         native?.setResumed(!value)
     }
     private fun advance() {
+        if (index == cards.lastIndex) { stopAudio(); finish(); return }
+        moveTo(index + 1)
+    }
+    private fun moveTo(targetIndex: Int) {
+        if (targetIndex !in cards.indices || busy) return
         stopAudio()
-        if (index == cards.lastIndex) { finish(); return }
         setBusy(true)
         val next = {
             if (!isFinishing && !isDestroyed) {
-                index++; revealed = false; updateCard(); setBusy(false)
+                index = targetIndex; revealed = false; updateCard(); setBusy(false)
             }
         }
         native?.clear(next) ?: run { standard?.clear(); next() }
@@ -159,11 +294,11 @@ class NativeDrawingActivity : Activity() {
             override fun notImplemented() = error("missing", "Could not save review", null)
         })
     }
-    private fun play() {
+    private fun play(exampleIndex: Int? = null, characterIndex: Int? = null) {
         stopAudio()
         val generation = audioGeneration
         hint.text = "Loading audio…"
-        NativeDrawingBridge.channel?.invokeMethod("audio", mapOf("index" to index), object : MethodChannel.Result {
+        NativeDrawingBridge.channel?.invokeMethod("audio", mapOf("index" to index, "exampleIndex" to exampleIndex, "characterIndex" to characterIndex), object : MethodChannel.Result {
             override fun success(result: Any?) {
                 if (generation != audioGeneration || isFinishing || isDestroyed) return
                 try {

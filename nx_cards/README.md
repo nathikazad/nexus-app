@@ -79,6 +79,20 @@ Flutter composition. Audio bytes and individual recall saves use the existing
 account-scoped Flutter repositories. Each recall answer is saved before the
 native screen advances, and the existing recap opens when the session ends.
 Other platforms keep the Flutter drawing screens.
+Android tablet drawing practice (600dp smallest width and above) also reserves
+the lower portion for a scrollable list of incoming Examples links, with the
+full expression, transliteration, translation, and cached audio playback.
+Multi-character prompts split that area into Examples and a narrow Characters
+column. Character details and playback follow saved Contains links (including
+through linked words), in reading order, with independent scrolling.
+The Android bridge counts complete written letters (grapheme clusters), so
+Tamil vowel signs and pulli stay attached. For example, வீடு shows வீ and டு,
+and combined-letter cards are not replaced by their underlying components.
+Android Study Draw also shows Previous beside Next after the first card.
+Moving either way stops audio, clears the canvas, and reloads the selected
+card's examples and character breakdown; writing recall stays forward-only.
+The list changes with the practice card; phone and writing-recall layouts stay
+unchanged.
 Layout tests cover phone, tablet portrait/landscape, split-screen, and enlarged
 text in the grid.
 
