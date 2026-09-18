@@ -71,27 +71,6 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      automaticallyImplyLeading: false,
-      actions: [
-        IconButton(
-          tooltip: 'Repeat incorrect cards',
-          icon: const Icon(Icons.refresh),
-          onPressed:
-              _progressionFinished &&
-                  widget.entries.any((e) => e.rating == CardRating.again)
-              ? () => widget.onRepeatIncorrect?.call(
-                  _progression?.changes ?? const [],
-                )
-              : null,
-        ),
-        IconButton(
-          tooltip: 'Return to study',
-          icon: const Icon(Icons.arrow_forward),
-          onPressed: () => Navigator.pop(context, true),
-        ),
-      ],
-    ),
     body: SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 40, 24, 28),
@@ -120,20 +99,41 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                     style: const TextStyle(color: RecallColors.muted),
                   ),
                   const SizedBox(height: 14),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 24,
-                    runSpacing: 8,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 12,
                     children: [
-                      _RecapStat(
-                        value: '${widget.reviewedCount - widget.missCount}',
-                        label: 'Recalled',
-                        color: RecallColors.emerald,
+                      Flexible(
+                        child: _RecapStat(
+                          value: '${widget.reviewedCount - widget.missCount}',
+                          label: 'Recalled',
+                          color: RecallColors.emerald,
+                        ),
                       ),
-                      _RecapStat(
-                        value: '${widget.missCount}',
-                        label: 'Not recalled',
-                        color: RecallColors.rose,
+                      Flexible(
+                        child: _RecapStat(
+                          value: '${widget.missCount}',
+                          label: 'Not recalled',
+                          color: RecallColors.rose,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Repeat incorrect cards',
+                        icon: const Icon(Icons.refresh),
+                        onPressed:
+                            _progressionFinished &&
+                                widget.entries.any(
+                                  (e) => e.rating == CardRating.again,
+                                )
+                            ? () => widget.onRepeatIncorrect?.call(
+                                _progression?.changes ?? const [],
+                              )
+                            : null,
+                      ),
+                      IconButton(
+                        tooltip: 'Return to study',
+                        icon: const Icon(Icons.arrow_forward),
+                        onPressed: () => Navigator.pop(context, true),
                       ),
                     ],
                   ),
@@ -303,7 +303,11 @@ class _RecapStat extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
-      Text(label, style: const TextStyle(color: RecallColors.muted)),
+      Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: RecallColors.muted),
+      ),
     ],
   );
 }
