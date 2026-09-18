@@ -136,8 +136,12 @@ class NativeDrawingActivity : Activity() {
         subtitle.text = if (recall && !revealed) "" else value("subtitle")
         hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
         val showContext = !recall || revealed
-        contextHeadings?.visibility = if (showContext) View.VISIBLE else View.GONE
-        contextColumns?.visibility = if (showContext) View.VISIBLE else View.GONE
+        // Reserve the context area before reveal. GONE resizes NoteView when
+        // the answer appears; the firmware can discard pen records during that
+        // resize before our layout listener captures them. INVISIBLE keeps the
+        // ink surface and existing strokes in place without exposing answers.
+        contextHeadings?.visibility = if (showContext) View.VISIBLE else View.INVISIBLE
+        contextColumns?.visibility = if (showContext) View.VISIBLE else View.INVISIBLE
         if (showContext) updateExamples()
         controls.removeAllViews()
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
