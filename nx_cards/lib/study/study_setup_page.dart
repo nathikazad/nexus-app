@@ -598,9 +598,22 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       },
     );
     if (handled && recall && mounted) {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => RecallRecapPage(
+      var missed = incorrectRecallPrompts(prompts, ratings, latest);
+      final action = await Navigator.of(context).push<Object?>(
+        MaterialPageRoute<Object?>(
+          builder: (recapContext) => RecallRecapPage(
+            onRepeatIncorrect: (changes) {
+              for (final change in changes) {
+                final card = latest[change.card.id];
+                if (card != null) {
+                  latest[card.id] = card.copyWith(
+                    learningStatus: change.status,
+                  );
+                }
+              }
+              missed = incorrectRecallPrompts(prompts, ratings, latest);
+              Navigator.pop(recapContext, RecallRecapAction.repeatIncorrect);
+            },
             reviewedCount: ratings.length,
             totalCount: queue.length,
             missCount: ratings.values
@@ -616,6 +629,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           ),
         ),
       );
+      if (action == RecallRecapAction.repeatIncorrect &&
+          mounted &&
+          sessionKey ==
+              ref.read(activeCardsSessionProvider).value?.account.key &&
+          missed.isNotEmpty) {
+        await _openNativeDrawing(prompts: missed);
+      }
     }
     return handled;
   }

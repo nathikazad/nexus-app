@@ -41,18 +41,41 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
   late final Map<int, StudyCard> _latestCards;
 
   StudyPrompt get _prompt {
-    final queued = widget.prompts[_index];
+    final queued = _prompts[_index];
     return queued.withCard(_latestCards[queued.cardId] ?? queued.card);
   }
 
   StudyCard get _card => _prompt.card;
   RecallInteraction get _interaction => widget.interaction;
 
+  late List<StudyPrompt> _prompts;
+
+  void _repeatIncorrect(List<ReviewProgressionChange> changes) {
+    for (final change in changes) {
+      final card = _latestCards[change.card.id];
+      if (card != null) {
+        _latestCards[card.id] = card.copyWith(learningStatus: change.status);
+      }
+    }
+    final missed = incorrectRecallPrompts(_prompts, _ratings, _latestCards);
+    if (missed.isEmpty) return;
+    setState(() {
+      _prompts = missed;
+      _ratings.clear();
+      _index = 0;
+      _revealed = false;
+      _ended = false;
+      _missCount = 0;
+      _outcomes = null;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _prompts = List.of(widget.prompts);
     _latestCards = <int, StudyCard>{
-      for (final prompt in widget.prompts) prompt.cardId: prompt.card,
+      for (final prompt in _prompts) prompt.cardId: prompt.card,
     };
   }
 
@@ -77,8 +100,8 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
       if (rating == CardRating.again) _missCount++;
       ref.read(cardsInvalidationProvider)();
       if (!mounted) return;
-      if (_index + 1 >= widget.prompts.length) {
-        setState(() => _index = widget.prompts.length);
+      if (_index + 1 >= _prompts.length) {
+        setState(() => _index = _prompts.length);
       } else {
         setState(() {
           _index++;
@@ -110,18 +133,18 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
   @override
   Widget build(BuildContext context) {
     ref.watch(cardsDashboardProvider);
-    if (widget.prompts.isEmpty) return const _EmptyStudySessionPage();
-    if (_ended || _index >= widget.prompts.length) {
+    if (_prompts.isEmpty) return const _EmptyStudySessionPage();
+    if (_ended || _index >= _prompts.length) {
       return RecallRecapPage(
+        onRepeatIncorrect: _repeatIncorrect,
         reviewedCount: _index,
-        totalCount: widget.prompts.length,
+        totalCount: _prompts.length,
         missCount: _missCount,
         entries: [
-          for (var index = 0; index < widget.prompts.length; index++)
+          for (var index = 0; index < _prompts.length; index++)
             RecallRecapEntry(
               card:
-                  _latestCards[widget.prompts[index].cardId] ??
-                  widget.prompts[index].card,
+                  _latestCards[_prompts[index].cardId] ?? _prompts[index].card,
               rating: _ratings[index],
             ),
         ],
@@ -164,12 +187,12 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                         _StudyHeader(
                           title: widget.title,
                           current: _index + 1,
-                          total: widget.prompts.length,
+                          total: _prompts.length,
                           onEnd: _endReview,
                         ),
                         const SizedBox(height: 14),
                         LinearProgressIndicator(
-                          value: (_index + 1) / widget.prompts.length,
+                          value: (_index + 1) / _prompts.length,
                           minHeight: 4,
                           borderRadius: BorderRadius.circular(9),
                           color: RecallPalette.of(context).ink,

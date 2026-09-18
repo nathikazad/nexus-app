@@ -6,8 +6,47 @@ import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/session/study_session_page.dart';
+import 'package:nx_cards/study/session/recall_recap_page.dart';
 
 void main() {
+  test(
+    'repeat preserves missed prompt conditions and excludes correct/unreviewed',
+    () {
+      final card = StudyCard(
+        id: 1,
+        content: const LanguageCardContent(
+          english: 'house',
+          originalScript: 'வீடு',
+          transliteration: 'vīṭu',
+        ),
+        schedules: const {},
+        reviewHistory: const {},
+        suspended: false,
+      );
+      final latest = card.copyWith(learningStatus: LearningStatus.learning);
+      final prompts = [
+        StudyPrompt(card: card, cue: StudyCue.toLanguage),
+        StudyPrompt(
+          card: card,
+          cue: StudyCue.fromLanguage,
+          showEnglishAndTransliteration: true,
+        ),
+        StudyPrompt(card: card, cue: StudyCue.transliteration),
+        StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+      ];
+      final repeated = incorrectRecallPrompts(
+        prompts,
+        {0: CardRating.good, 1: CardRating.again, 2: CardRating.hard},
+        {1: latest},
+      );
+      expect(repeated, hasLength(1));
+      expect(repeated.single.card, same(latest));
+      expect(repeated.single.cue, StudyCue.fromLanguage);
+      expect(repeated.single.showEnglishAndTransliteration, isTrue);
+      expect(repeated.single.prompt, 'house\nvīṭu');
+    },
+  );
+
   testWidgets('recall completion recaps every word in all three forms', (
     tester,
   ) async {

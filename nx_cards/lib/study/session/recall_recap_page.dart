@@ -4,6 +4,18 @@ import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/review_progression_service.dart';
 
+enum RecallRecapAction { repeatIncorrect }
+
+List<StudyPrompt> incorrectRecallPrompts(
+  List<StudyPrompt> prompts,
+  Map<int, CardRating> ratings,
+  Map<int, StudyCard> latestCards,
+) => [
+  for (var i = 0; i < prompts.length; i++)
+    if (ratings[i] == CardRating.again)
+      prompts[i].withCard(latestCards[prompts[i].cardId] ?? prompts[i].card),
+];
+
 class RecallRecapEntry {
   const RecallRecapEntry({required this.card, required this.rating});
 
@@ -18,12 +30,14 @@ class RecallRecapPage extends ConsumerStatefulWidget {
     required this.totalCount,
     required this.missCount,
     required this.entries,
+    this.onRepeatIncorrect,
   });
 
   final int reviewedCount;
   final int totalCount;
   final int missCount;
   final List<RecallRecapEntry> entries;
+  final ValueChanged<List<ReviewProgressionChange>>? onRepeatIncorrect;
 
   @override
   ConsumerState<RecallRecapPage> createState() => _RecallRecapPageState();
@@ -32,6 +46,7 @@ class RecallRecapPage extends ConsumerStatefulWidget {
 class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
   ReviewProgressionPlan? _progression;
   Object? _progressionError;
+  bool _progressionFinished = false;
 
   @override
   void initState() {
@@ -49,11 +64,34 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
       if (mounted) setState(() => _progression = result);
     } catch (error) {
       if (mounted) setState(() => _progressionError = error);
+    } finally {
+      if (mounted) setState(() => _progressionFinished = true);
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      automaticallyImplyLeading: false,
+      actions: [
+        IconButton(
+          tooltip: 'Repeat incorrect cards',
+          icon: const Icon(Icons.refresh),
+          onPressed:
+              _progressionFinished &&
+                  widget.entries.any((e) => e.rating == CardRating.again)
+              ? () => widget.onRepeatIncorrect?.call(
+                  _progression?.changes ?? const [],
+                )
+              : null,
+        ),
+        IconButton(
+          tooltip: 'Return to study',
+          icon: const Icon(Icons.arrow_forward),
+          onPressed: () => Navigator.pop(context, true),
+        ),
+      ],
+    ),
     body: SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 40, 24, 28),

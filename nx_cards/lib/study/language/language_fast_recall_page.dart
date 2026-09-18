@@ -32,18 +32,40 @@ class _LanguageFastRecallPageState
   final Set<int> _saving = <int>{};
   String _query = '';
 
+  late List<StudyPrompt> _prompts;
+
+  void _repeatIncorrect(List<ReviewProgressionChange> changes) {
+    for (final change in changes) {
+      final card = _latestCards[change.card.id];
+      if (card != null) {
+        _latestCards[card.id] = card.copyWith(learningStatus: change.status);
+      }
+    }
+    final missed = incorrectRecallPrompts(_prompts, {
+      for (var i = 0; i < _prompts.length; i++)
+        i: ?_ratings[_prompts[i].cardId],
+    }, _latestCards);
+    if (missed.isEmpty) return;
+    setState(() {
+      _prompts = missed;
+      _ratings.clear();
+      _query = '';
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    for (final prompt in widget.prompts) {
+    _prompts = List.of(widget.prompts);
+    for (final prompt in _prompts) {
       _latestCards[prompt.cardId] = prompt.card;
     }
   }
 
   List<StudyPrompt> get _visiblePrompts {
     final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return widget.prompts;
-    return widget.prompts
+    if (query.isEmpty) return _prompts;
+    return _prompts
         .where((queued) {
           final card = _latestCards[queued.cardId] ?? queued.card;
           final content = card.content;
@@ -115,16 +137,17 @@ class _LanguageFastRecallPageState
   @override
   Widget build(BuildContext context) {
     ref.watch(cardsDashboardProvider);
-    if (_ratings.length == widget.prompts.length && _saving.isEmpty) {
+    if (_ratings.length == _prompts.length && _saving.isEmpty) {
       final missCount = _ratings.values
           .where((rating) => rating == CardRating.again)
           .length;
       return RecallRecapPage(
+        onRepeatIncorrect: _repeatIncorrect,
         reviewedCount: _ratings.length,
-        totalCount: widget.prompts.length,
+        totalCount: _prompts.length,
         missCount: missCount,
         entries: [
-          for (final prompt in widget.prompts)
+          for (final prompt in _prompts)
             RecallRecapEntry(
               card: _latestCards[prompt.cardId] ?? prompt.card,
               rating: _ratings[prompt.cardId],
@@ -147,7 +170,7 @@ class _LanguageFastRecallPageState
             itemBuilder: (context, index) {
               if (index == 0) {
                 return _FastRecallHeader(
-                  total: widget.prompts.length,
+                  total: _prompts.length,
                   visible: prompts.length,
                   reviewed: _ratings.length,
                   onSearch: (value) => setState(() => _query = value),

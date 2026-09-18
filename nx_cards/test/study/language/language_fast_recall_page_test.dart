@@ -7,6 +7,7 @@ import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
+import 'package:nx_cards/scheduling/review_progression_service.dart';
 
 void main() {
   testWidgets('grades rows inline, reveals answers, and opens card details', (
@@ -21,6 +22,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          reviewProgressionRunnerProvider.overrideWithValue(
+            (_) async => const ReviewProgressionPlan([]),
+          ),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardLibraryProvider.overrideWithValue(repository),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
@@ -82,6 +86,26 @@ void main() {
     expect(find.text('relief'), findsOneWidget);
     expect(find.text('ആശ്വാസം'), findsOneWidget);
     expect(find.text('āśvāsaṃ'), findsOneWidget);
+    await tester.tap(find.byTooltip('Repeat incorrect cards'));
+    await tester.pumpAndSettle();
+    expect(find.text('Session complete'), findsNothing);
+    expect(find.text('Tap to reveal'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Recalled'));
+    await tester.pumpAndSettle();
+    expect(repository.saved, hasLength(2));
+    expect(
+      repository.saved.last.scheduleFor(StudyCue.fromLanguage).reviewCount,
+      2,
+    );
+    expect(find.text('CORRECT'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh))
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets('a rated row quickly collapses after the answer was revealed', (
