@@ -482,7 +482,14 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                     horizontal: 10,
                                   ),
                                   tabAlignment: TabAlignment.fill,
-                                  labelStyle: const TextStyle(fontSize: 12),
+                                  labelStyle: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  unselectedLabelStyle: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                  ),
                                   tabs: [
                                     Tab(text: 'Current  ${learning.length}'),
                                     Tab(text: 'Past  ${learnt.length}'),

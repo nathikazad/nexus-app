@@ -109,6 +109,9 @@ ThemeData buildRecallTheme() {
   );
   return base.copyWith(
     extensions: const [_lightPalette],
+    segmentedButtonTheme: _selectionButtons(_lightPalette),
+    chipTheme: _selectionChips(_lightPalette),
+    tabBarTheme: _selectionTabs(_lightPalette),
     scaffoldBackgroundColor: RecallColors.background,
     dividerColor: RecallColors.line,
     textTheme: base.textTheme.apply(
@@ -180,6 +183,9 @@ ThemeData buildRecallDarkTheme() {
   );
   return base.copyWith(
     extensions: const [_darkPalette],
+    segmentedButtonTheme: _selectionButtons(_darkPalette),
+    chipTheme: _selectionChips(_darkPalette),
+    tabBarTheme: _selectionTabs(_darkPalette),
     scaffoldBackgroundColor: background,
     dividerColor: line,
     textTheme: base.textTheme.apply(bodyColor: ink, displayColor: ink),
@@ -237,4 +243,63 @@ TextStyle get monoLabel => const TextStyle(
   letterSpacing: 0.8,
   color: RecallColors.faint,
   fontWeight: FontWeight.w500,
+);
+
+// Selection must remain obvious without color on e-ink and grayscale displays.
+SegmentedButtonThemeData _selectionButtons(
+  RecallPalette palette,
+) => SegmentedButtonThemeData(
+  style: ButtonStyle(
+    backgroundColor: WidgetStateProperty.resolveWith(
+      (states) =>
+          states.contains(WidgetState.selected) ? palette.ink : palette.surface,
+    ),
+    foregroundColor: WidgetStateProperty.resolveWith(
+      (states) =>
+          states.contains(WidgetState.selected) ? palette.surface : palette.ink,
+    ),
+    textStyle: WidgetStateProperty.resolveWith(
+      (states) => TextStyle(
+        fontWeight: states.contains(WidgetState.selected)
+            ? FontWeight.w700
+            : FontWeight.w400,
+      ),
+    ),
+    side: WidgetStatePropertyAll(BorderSide(color: palette.ink)),
+    animationDuration: Duration.zero,
+  ),
+);
+
+ChipThemeData _selectionChips(RecallPalette palette) => ChipThemeData(
+  color: WidgetStateProperty.resolveWith(
+    (states) =>
+        states.contains(WidgetState.selected) ? palette.ink : palette.surface,
+  ),
+  labelStyle: TextStyle(
+    color: WidgetStateColor.resolveWith(
+      (states) =>
+          states.contains(WidgetState.selected) ? palette.surface : palette.ink,
+    ),
+    fontWeight: FontWeight.w600,
+  ),
+  secondaryLabelStyle: TextStyle(
+    color: palette.surface,
+    fontWeight: FontWeight.w700,
+  ),
+  checkmarkColor: palette.surface,
+  showCheckmark: true,
+  side: BorderSide(color: palette.ink),
+);
+
+TabBarThemeData _selectionTabs(RecallPalette palette) => TabBarThemeData(
+  indicator: BoxDecoration(
+    color: palette.ink,
+    borderRadius: BorderRadius.circular(8),
+  ),
+  indicatorSize: TabBarIndicatorSize.tab,
+  labelColor: palette.surface,
+  unselectedLabelColor: palette.ink,
+  labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
+  dividerColor: palette.ink,
 );
