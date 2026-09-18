@@ -12,19 +12,23 @@ class LanguageExamples extends StatelessWidget {
     required this.examples,
     required this.audioRepository,
     required this.audioKeyPrefix,
+    this.showHeading = true,
   });
 
   final List<LanguageExample> examples;
   final CardAudioRepository? audioRepository;
   final String audioKeyPrefix;
+  final bool showHeading;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('EXAMPLES', style: monoLabel),
-        const SizedBox(height: 8),
+        if (showHeading) ...[
+          Text('EXAMPLES', style: monoLabel),
+          const SizedBox(height: 8),
+        ],
         for (var index = 0; index < examples.length; index++) ...[
           _ExampleCard(
             example: examples[index],
@@ -119,10 +123,16 @@ class _ExampleCard extends ConsumerWidget {
                 ),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.menu_book_outlined, size: 18),
-                    label: const Text('Open card'),
+                  child: TextButton(
                     onPressed: () => _openPhrase(context, ref),
+                    child: const Wrap(
+                      spacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Icon(Icons.menu_book_outlined, size: 18),
+                        Text('Open card'),
+                      ],
+                    ),
                   ),
                 ),
                 if (audioUrl?.isNotEmpty == true &&

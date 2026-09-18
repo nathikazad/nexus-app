@@ -68,7 +68,7 @@ void main() {
     expect(find.text('fraud'), findsOneWidget);
     expect(find.text('തട്ടിപ്പ്'), findsOneWidget);
     expect(find.text('thattippu'), findsOneWidget);
-    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
+    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
     expect(
       find.ancestor(of: find.text('Examples'), matching: find.byType(Card)),
       findsOneWidget,

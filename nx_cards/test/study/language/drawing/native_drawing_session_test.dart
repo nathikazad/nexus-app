@@ -47,6 +47,25 @@ void main() {
     );
     expect(from['prompt'], 'a long sentence\nhěn cháng de jùzi');
     expect(from['answer'], '很长的句子');
+    expect(
+      from['examples'],
+      NativeDrawingSession.practiceCard(card)['examples'],
+    );
+    expect(from['multiCharacter'], isTrue);
+    const part = LanguageCardContent(
+      english: 'long',
+      originalScript: '长',
+      transliteration: 'cháng',
+      audioUrl: '/long.mp3',
+    );
+    final withParts = NativeDrawingSession.recallCard(
+      StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+      characters: [part],
+    );
+    expect(
+      withParts['characters'],
+      NativeDrawingSession.practiceCard(card, characters: [part])['characters'],
+    );
     final to = NativeDrawingSession.recallCard(
       StudyPrompt(card: card, cue: StudyCue.toLanguage),
     );
@@ -89,8 +108,8 @@ void main() {
     expect(
       NativeDrawingSession.recallCard(
         StudyPrompt(card: card, cue: StudyCue.toLanguage),
-      ).containsKey('examples'),
-      isFalse,
+      )['examples'],
+      practice['examples'],
     );
   });
   test('character breakdown follows saved links in reading order safely', () {

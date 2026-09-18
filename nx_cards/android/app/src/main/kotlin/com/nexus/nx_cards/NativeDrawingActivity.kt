@@ -28,6 +28,8 @@ class NativeDrawingActivity : Activity() {
     private var examplesList: LinearLayout? = null
     private var examplesScroll: ScrollView? = null
     private var examplesCardIndex = -1
+    private var contextHeadings: View? = null
+    private var contextColumns: View? = null
     private var characterColumn: LinearLayout? = null
     private var characterHeading: TextView? = null
     private var charactersList: LinearLayout? = null
@@ -85,10 +87,10 @@ class NativeDrawingActivity : Activity() {
             frame.addView(controls, LinearLayout.LayoutParams(-1, dp(48)))
             ink = InkPanelHost(this, ::report)
             frame.addView(ink!!.getView(), LinearLayout.LayoutParams(-1, 0, 1f))
-            // Keep the phone and recall layouts intact. Tablet practice uses
-            // the lower portion for incoming ("used in") card relationships.
-            if (!recall && resources.configuration.smallestScreenWidthDp >= 600) {
+            // Tablet context is shared by practice and revealed recall.
+            if (resources.configuration.smallestScreenWidthDp >= 600) {
                 val headings = LinearLayout(this)
+                contextHeadings = headings
                 headings.addView(label(13f).apply {
                     text = "USED IN · EXAMPLES"
                     gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -100,6 +102,7 @@ class NativeDrawingActivity : Activity() {
                 headings.addView(characterHeading, LinearLayout.LayoutParams(0, dp(36), 2f).apply { leftMargin = dp(16) })
                 root.addView(headings)
                 val columns = LinearLayout(this)
+                contextColumns = columns
                 examplesList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
                 examplesScroll = ScrollView(this).apply {
                     isFillViewport = true
@@ -132,7 +135,10 @@ class NativeDrawingActivity : Activity() {
         prompt.textSize = if (!recall && card["multiCharacter"] == false) 64f else 32f
         subtitle.text = if (recall && !revealed) "" else value("subtitle")
         hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
-        updateExamples()
+        val showContext = !recall || revealed
+        contextHeadings?.visibility = if (showContext) View.VISIBLE else View.GONE
+        contextColumns?.visibility = if (showContext) View.VISIBLE else View.GONE
+        if (showContext) updateExamples()
         controls.removeAllViews()
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
         control("Undo", "undo") { ink?.undo() }

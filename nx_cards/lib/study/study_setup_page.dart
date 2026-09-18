@@ -505,23 +505,27 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final audio = ref.read(cardAudioRepositoryProvider);
     final latest = {for (final card in queue) card.id: card};
     final ratings = <int, CardRating>{};
-    final linkedLibrary = recall
-        ? <int, StudyCard>{}
-        : {for (final card in await library.listCards()) card.id: card};
+    final linkedLibrary = {
+      for (final card in await library.listCards()) card.id: card,
+    };
     if (!mounted ||
         sessionKey != ref.read(activeCardsSessionProvider).value?.account.key) {
       return true;
     }
     final characters = [
       for (final card in queue)
-        recall
-            ? <LanguageCardContent>[]
-            : NativeDrawingSession.characterParts(card, linkedLibrary),
+        NativeDrawingSession.characterParts(card, linkedLibrary),
     ];
     final handled = await NativeDrawingSession.open(
       title: widget.title,
       cards: recall
-          ? prompts.map(NativeDrawingSession.recallCard).toList()
+          ? [
+              for (var i = 0; i < prompts.length; i++)
+                NativeDrawingSession.recallCard(
+                  prompts[i],
+                  characters: characters[i],
+                ),
+            ]
           : [
               for (var i = 0; i < queue.length; i++)
                 NativeDrawingSession.practiceCard(
@@ -551,8 +555,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           var audioUrl = content.audioUrl;
           if (exampleIndex != null) {
             final examples = content.examples;
-            if (recall ||
-                exampleIndex is! int ||
+            if (exampleIndex is! int ||
                 exampleIndex < 0 ||
                 exampleIndex >= examples.length) {
               throw PlatformException(code: 'invalid_example');
@@ -560,8 +563,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             audioUrl = examples[exampleIndex].audioUrl;
           }
           if (characterIndex != null) {
-            if (recall ||
-                exampleIndex != null ||
+            if (exampleIndex != null ||
                 characterIndex is! int ||
                 characterIndex < 0 ||
                 characterIndex >= characters[index].length) {

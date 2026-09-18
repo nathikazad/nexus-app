@@ -99,43 +99,55 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                     style: const TextStyle(color: RecallColors.muted),
                   ),
                   const SizedBox(height: 14),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 12,
-                    children: [
-                      Flexible(
-                        child: _RecapStat(
-                          value: '${widget.reviewedCount - widget.missCount}',
-                          label: 'Recalled',
-                          color: RecallColors.emerald,
-                        ),
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 20,
+                        children: [
+                          Expanded(
+                            child: _RecapStat(
+                              value:
+                                  '${widget.reviewedCount - widget.missCount}',
+                              label: 'Recalled',
+                              color: RecallColors.emerald,
+                            ),
+                          ),
+                          Expanded(
+                            child: _RecapStat(
+                              value: '${widget.missCount}',
+                              label: 'Not recalled',
+                              color: RecallColors.rose,
+                            ),
+                          ),
+                          Expanded(
+                            child: _RecapAction(
+                              icon: Icons.refresh,
+                              label: 'Retry',
+                              tooltip: 'Repeat incorrect cards',
+                              onPressed:
+                                  _progressionFinished &&
+                                      widget.entries.any(
+                                        (e) => e.rating == CardRating.again,
+                                      )
+                                  ? () => widget.onRepeatIncorrect?.call(
+                                      _progression?.changes ?? const [],
+                                    )
+                                  : null,
+                            ),
+                          ),
+                          Expanded(
+                            child: _RecapAction(
+                              icon: Icons.arrow_forward,
+                              label: 'Finish',
+                              tooltip: 'Return to study',
+                              onPressed: () => Navigator.pop(context, true),
+                            ),
+                          ),
+                        ],
                       ),
-                      Flexible(
-                        child: _RecapStat(
-                          value: '${widget.missCount}',
-                          label: 'Not recalled',
-                          color: RecallColors.rose,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Repeat incorrect cards',
-                        icon: const Icon(Icons.refresh),
-                        onPressed:
-                            _progressionFinished &&
-                                widget.entries.any(
-                                  (e) => e.rating == CardRating.again,
-                                )
-                            ? () => widget.onRepeatIncorrect?.call(
-                                _progression?.changes ?? const [],
-                              )
-                            : null,
-                      ),
-                      IconButton(
-                        tooltip: 'Return to study',
-                        icon: const Icon(Icons.arrow_forward),
-                        onPressed: () => Navigator.pop(context, true),
-                      ),
-                    ],
+                    ),
                   ),
                   if (_progression case final progression?
                       when progression.changed) ...[
@@ -295,18 +307,56 @@ class _RecapStat extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Text(
-        value,
-        style: TextStyle(
-          color: color,
-          fontSize: 24,
-          fontWeight: FontWeight.w700,
+      SizedBox(
+        height: 48,
+        child: Center(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
       ),
       Text(
         label,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: RecallColors.muted),
+        style: const TextStyle(color: RecallColors.muted, fontSize: 12),
+      ),
+    ],
+  );
+}
+
+class _RecapAction extends StatelessWidget {
+  const _RecapAction({
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.onPressed,
+  });
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SizedBox(
+        height: 48,
+        child: IconButton(
+          tooltip: tooltip,
+          onPressed: onPressed,
+          icon: Icon(icon, size: 24),
+        ),
+      ),
+      Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: RecallColors.muted, fontSize: 12),
       ),
     ],
   );

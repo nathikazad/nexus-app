@@ -75,9 +75,13 @@ class NativeDrawingSession {
     };
   }
 
-  static Map<String, Object?> recallCard(StudyPrompt prompt) {
+  static Map<String, Object?> recallCard(
+    StudyPrompt prompt, {
+    List<LanguageCardContent> characters = const [],
+  }) {
     final content = prompt.card.content as LanguageCardContent;
     return {
+      ...practiceCard(prompt.card, characters: characters),
       'prompt': prompt.prompt,
       'answer': prompt.cue == StudyCue.fromLanguage
           ? content.originalScript

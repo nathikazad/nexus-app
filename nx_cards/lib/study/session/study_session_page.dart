@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -202,10 +203,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                         Expanded(
                           child: Center(
                             child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxWidth: 680,
-                                minHeight: 360,
-                              ),
+                              constraints: const BoxConstraints(maxWidth: 680),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(18),
                                 onTap:
@@ -495,6 +493,17 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                             ),
                           ),
                         ),
+                        if (_revealed &&
+                            _card.isLanguageCard &&
+                            TabletRecallContext.visibleOn(context))
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: TabletRecallContext(
+                                key: ValueKey('recall-context-${_card.id}'),
+                                card: _card,
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 18),
                         if (!_revealed)
                           FilledButton.icon(
