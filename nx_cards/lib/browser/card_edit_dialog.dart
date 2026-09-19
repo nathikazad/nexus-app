@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nx_cards/browser/browser.dart';
+import 'package:nx_cards/app/theme.dart';
 
 class CardEditDialog extends StatefulWidget {
   const CardEditDialog({super.key, required this.card, required this.library});
@@ -64,7 +65,28 @@ class _CardEditDialogState extends State<CardEditDialog> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_saving,
     child: AlertDialog(
-      title: const Text('Edit card'),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CARD DETAILS',
+            style: monoLabel.copyWith(color: RecallPalette.of(context).muted),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Edit card',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -.7,
+            ),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(
@@ -95,13 +117,25 @@ class _CardEditDialogState extends State<CardEditDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _saving ? null : _save,
-          child: Text(_saving ? 'Saving…' : 'Save'),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: _saving ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: _saving ? null : _save,
+                child: Text(_saving ? 'Saving…' : 'Save'),
+              ),
+            ),
+          ],
         ),
       ],
     ),
@@ -111,16 +145,42 @@ class _CardEditDialogState extends State<CardEditDialog> {
     String label,
     TextEditingController controller, {
     bool required = false,
-  }) => TextFormField(
-    controller: controller,
-    enabled: !_saving,
-    minLines: 1,
-    maxLines: 5,
-    decoration: InputDecoration(labelText: label),
-    validator: required
-        ? (value) => value == null || value.trim().isEmpty
-              ? 'Enter the ${label.toLowerCase()}.'
-              : null
-        : null,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label.toUpperCase(),
+        style: monoLabel.copyWith(
+          color: RecallPalette.of(context).muted,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 8),
+      TextFormField(
+        controller: controller,
+        enabled: !_saving,
+        minLines: label == 'Transliteration' ? 1 : 2,
+        maxLines: 5,
+        style: TextStyle(
+          fontSize: 17,
+          height: 1.45,
+          color: RecallPalette.of(context).ink,
+        ),
+        decoration: InputDecoration(
+          hintText: label,
+          filled: true,
+          fillColor: RecallPalette.of(context).soft,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+        ),
+        validator: required
+            ? (value) => value == null || value.trim().isEmpty
+                  ? 'Enter the ${label.toLowerCase()}.'
+                  : null
+            : null,
+      ),
+    ],
   );
 }

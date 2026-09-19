@@ -657,7 +657,7 @@ class _Label extends StatelessWidget {
         style: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: RecallColors.violet,
+          color: RecallColors.sky,
         ),
       ),
     ),

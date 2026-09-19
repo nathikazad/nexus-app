@@ -735,14 +735,14 @@ class _StatusOrb extends StatelessWidget {
         shape: BoxShape.circle,
         color: phase == VoiceStudyPhase.listening
             ? RecallColors.emerald
-            : RecallColors.violet,
+            : RecallColors.sky,
         boxShadow: active
             ? [
                 BoxShadow(
                   color:
                       (phase == VoiceStudyPhase.listening
                               ? RecallColors.emerald
-                              : RecallColors.violet)
+                              : RecallColors.sky)
                           .withValues(alpha: 0.24),
                   blurRadius: 28,
                   spreadRadius: 8,

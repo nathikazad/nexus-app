@@ -186,7 +186,7 @@ class _SourcesDashboard extends StatelessWidget {
                       _SourceCard(
                         title: language.name,
                         icon: Icons.translate_outlined,
-                        color: RecallColors.violet,
+                        color: RecallColors.sky,
                         total: language.total,
                         due: language.due,
                         current: language.current,

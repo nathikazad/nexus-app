@@ -10,7 +10,6 @@ class RecallColors {
   static const faint = Color(0xffa1a1aa);
   static const line = Color(0xffe4e4e7);
   static const soft = Color(0xfff4f4f5);
-  static const violet = Color(0xff7c3aed);
   static const orange = Color(0xffc2410c);
   static const rose = Color(0xffbe123c);
   static const sky = Color(0xff0369a1);
@@ -100,15 +99,28 @@ const _darkPalette = RecallPalette(
 ThemeData buildRecallTheme() {
   final base = ThemeData(
     brightness: Brightness.light,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: RecallColors.ink,
-      brightness: Brightness.light,
-      surface: RecallColors.surface,
-    ),
+    colorScheme: _neutralScheme(_lightPalette, Brightness.light),
     useMaterial3: true,
   );
   return base.copyWith(
     extensions: const [_lightPalette],
+    dialogTheme: DialogThemeData(
+      backgroundColor: _lightPalette.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: _lightPalette.line),
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: _lightPalette.surface,
+      surfaceTintColor: Colors.transparent,
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: _lightPalette.ink,
+      selectionColor: RecallColors.sky.withValues(alpha: .2),
+      selectionHandleColor: _lightPalette.ink,
+    ),
     segmentedButtonTheme: _selectionButtons(_lightPalette),
     chipTheme: _selectionChips(_lightPalette),
     tabBarTheme: _selectionTabs(_lightPalette),
@@ -174,15 +186,28 @@ ThemeData buildRecallDarkTheme() {
   const soft = Color(0xff27272a);
   final base = ThemeData(
     brightness: Brightness.dark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xffa78bfa),
-      brightness: Brightness.dark,
-      surface: surface,
-    ),
+    colorScheme: _neutralScheme(_darkPalette, Brightness.dark),
     useMaterial3: true,
   );
   return base.copyWith(
     extensions: const [_darkPalette],
+    dialogTheme: DialogThemeData(
+      backgroundColor: _darkPalette.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: _darkPalette.line),
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: _darkPalette.surface,
+      surfaceTintColor: Colors.transparent,
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: _darkPalette.ink,
+      selectionColor: RecallColors.sky.withValues(alpha: .2),
+      selectionHandleColor: _darkPalette.ink,
+    ),
     segmentedButtonTheme: _selectionButtons(_darkPalette),
     chipTheme: _selectionChips(_darkPalette),
     tabBarTheme: _selectionTabs(_darkPalette),
@@ -303,3 +328,43 @@ TabBarThemeData _selectionTabs(RecallPalette palette) => TabBarThemeData(
   unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
   dividerColor: palette.ink,
 );
+
+// Keep Material's component defaults neutral; seed generation otherwise adds
+// colored surface tones even when the seed itself is near black.
+ColorScheme _neutralScheme(RecallPalette palette, Brightness brightness) {
+  final dark = brightness == Brightness.dark;
+  final blue = dark ? const Color(0xff7dd3fc) : RecallColors.sky;
+  return ColorScheme.fromSeed(
+    seedColor: RecallColors.sky,
+    brightness: brightness,
+  ).copyWith(
+    primary: palette.ink,
+    onPrimary: palette.surface,
+    primaryContainer: palette.soft,
+    onPrimaryContainer: palette.ink,
+    secondary: blue,
+    onSecondary: dark ? RecallColors.ink : Colors.white,
+    secondaryContainer: palette.soft,
+    onSecondaryContainer: palette.ink,
+    tertiary: blue,
+    onTertiary: dark ? RecallColors.ink : Colors.white,
+    tertiaryContainer: palette.soft,
+    onTertiaryContainer: palette.ink,
+    surface: palette.surface,
+    onSurface: palette.ink,
+    surfaceDim: palette.background,
+    surfaceBright: palette.surface,
+    surfaceContainerLowest: palette.surface,
+    surfaceContainerLow: palette.background,
+    surfaceContainer: palette.soft,
+    surfaceContainerHigh: palette.soft,
+    surfaceContainerHighest: palette.soft,
+    onSurfaceVariant: palette.muted,
+    outline: palette.muted,
+    outlineVariant: palette.line,
+    inverseSurface: palette.ink,
+    onInverseSurface: palette.surface,
+    inversePrimary: blue,
+    surfaceTint: Colors.transparent,
+  );
+}

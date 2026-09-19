@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
+import 'package:nx_cards/audio/audio_providers.dart';
+import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/review_progression_service.dart';
 
@@ -84,7 +86,7 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                   const Icon(
                     Icons.auto_awesome_outlined,
                     size: 48,
-                    color: RecallColors.violet,
+                    color: RecallColors.sky,
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -228,13 +230,13 @@ class _RecallWordRecap extends StatelessWidget {
   }
 }
 
-class _RecallWordRecapRow extends StatelessWidget {
+class _RecallWordRecapRow extends ConsumerWidget {
   const _RecallWordRecapRow({required this.entry});
 
   final RecallRecapEntry entry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final (label, color) = switch (entry.rating) {
       CardRating.again => ('INCORRECT', RecallColors.rose),
       CardRating.good ||
@@ -243,6 +245,10 @@ class _RecallWordRecapRow extends StatelessWidget {
       null => ('NOT REVIEWED', RecallColors.muted),
     };
     final content = entry.card.content;
+    final audioUrl = content is LanguageCardContent ? content.audioUrl : null;
+    final audio = audioUrl?.isNotEmpty == true
+        ? ref.watch(cardAudioRepositoryProvider)
+        : null;
     final transliteration = content is LanguageCardContent
         ? content.transliteration
         : '';
@@ -276,15 +282,28 @@ class _RecallWordRecapRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontFamily: 'monospace',
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: .6,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontFamily: 'monospace',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .6,
+                ),
+              ),
+              if (audio != null && audioUrl != null) ...[
+                const SizedBox(height: 6),
+                PronunciationButton(
+                  key: ValueKey('recap-audio-${entry.card.id}-$audioUrl'),
+                  audioUrl: audioUrl,
+                  repository: audio,
+                ),
+              ],
+            ],
           ),
         ],
       ),
