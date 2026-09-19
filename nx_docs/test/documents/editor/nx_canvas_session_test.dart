@@ -195,18 +195,18 @@ void main() {
     },
   );
 
-  test(
-    'autosaves during native editing without acknowledging newer recovery',
-    () async {
+  testWidgets(
+    'live canvas leaves Docs untouched and reconciles only after native return',
+    (tester) async {
       final node = nxCanvasNode();
       final editor = editorWith(node);
       addTearDown(editor.dispose);
+      final initialDrawing = canvasDrawing(node).toJson();
       final opened = Completer<Map<String, dynamic>>();
-      final savedWhileOpen = Completer<void>();
-      final finishLiveSave = Completer<void>();
       Map<String, dynamic>? pending;
       var acknowledgments = 0;
       var saves = 0;
+      var peeks = 0;
       messenger.setMockMethodCallHandler(channel, (call) async {
         switch (call.method) {
           case 'available':
@@ -217,12 +217,14 @@ void main() {
             pending = {
               'documentId': (call.arguments as Map)['documentId'],
               'drawing': drawing.toJson(),
-              'saveToken': 'live-1',
+              'saveToken': 'final-1',
             };
             return opened.future;
           case 'peekDocument':
+            peeks++;
             return pending;
           case 'ackDocument':
+            expectSync(saves, 2);
             acknowledgments++;
             return true;
         }
@@ -231,26 +233,26 @@ void main() {
       final session = NxCanvasSession(
         editor: editor,
         documentId: 'doc-live',
-        autosaveInterval: const Duration(milliseconds: 1),
         persist: () async {
           saves++;
-          if (saves == 2) {
-            savedWhileOpen.complete();
-            await finishLiveSave.future;
-          }
         },
       );
       final opening = session.open(node);
-      await savedWhileOpen.future.timeout(const Duration(seconds: 5));
-      expect(canvasDrawing(node).toJson(), drawing.toJson());
+      await tester.pump();
+      expect(pending, isNotNull);
+      // Several former autosave intervals must not transfer or apply any drawing.
+      await tester.pump(const Duration(seconds: 20));
+      expect(saves, 1);
+      expect(peeks, 0);
       expect(acknowledgments, 0);
-      opened.complete({...pending!, 'saveToken': 'final-2'});
-      await Future<void>.delayed(Duration.zero);
-      expect(acknowledgments, 0);
-      finishLiveSave.complete();
+      expect(canvasDrawing(node).toJson(), initialDrawing);
+      opened.complete(pending!);
+      await tester.pump();
       await opening;
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(canvasDrawing(node).toJson(), drawing.toJson());
       expect(acknowledgments, 1);
-      expect(saves, 3);
+      expect(saves, 2);
     },
   );
 

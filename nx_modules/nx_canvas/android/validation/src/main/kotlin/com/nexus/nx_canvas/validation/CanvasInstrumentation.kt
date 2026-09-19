@@ -133,14 +133,15 @@ class CanvasInstrumentation:Instrumentation() {
                 val record=(list as java.util.LinkedList<*>).last!!
                 record.javaClass.getField("points").get(record)
             }
-            // Duplicate down used to leave an outstanding start forever. Verify the actual
-            // firmware queue confirms release before allowing navigation, without losing ink.
+            // Two real contacts must remain separate without synthetic stroke edges.
+            // Use firmware tool 0 (pen), matching the physical tablet trace.
             runOnMainSync {
-                input.invoke(ink,1,620,820,1024,1)
-                input.invoke(ink,2,622,822,1024,1)
-                input.invoke(ink,1,625,825,1024,1)
-                input.invoke(ink,2,650,850,1024,1)
-                input.invoke(ink,3,680,880,0,1)
+                input.invoke(ink,1,620,820,1024,0)
+                input.invoke(ink,2,622,822,1024,0)
+                input.invoke(ink,3,622,822,0,0)
+                input.invoke(ink,1,625,825,1024,0)
+                input.invoke(ink,2,650,850,1024,0)
+                input.invoke(ink,3,680,880,0,0)
             }
             waitSaved(strokes.size+3)
             val first=Record();val second=Record()

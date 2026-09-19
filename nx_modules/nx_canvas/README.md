@@ -50,8 +50,10 @@ previews are rendered only on navigation or editing transitions.
 
 The shared Android module owns stroke import, rendering, and local recovery:
 
-- `RecordingNoteView` leaves stock firmware drawing in control. Its input hook
-  observes down/up edges only; its draw hook forwards completed record references.
+- `RecordingNoteView` forwards admitted pen events directly to stock firmware.
+  Transitions stop new contacts while allowing the current stroke to finish;
+  no live points are queued, replayed or rewritten by the app. Its observation
+  hook tracks down/up edges; its draw hook forwards completed record references.
   The tablet sends pen input outside Activity touch dispatch. `InkDrainGate`
   waits for completion of all outstanding strokes instead of sleeping 100 ms on
   every navigation action. A completion timeout leaves firmware ink intact.
@@ -68,10 +70,10 @@ The shared Android module owns stroke import, rendering, and local recovery:
   order, viewport, boards and Places. Periodic atomic compaction bounds replay
   cost. A torn trailing frame recovers the last durable revision. Save errors
   remain visible and retry; closing waits for the final durable snapshot.
-- Docs polls durable revisions every three seconds while editing, persists them
-  through its existing document/outbox path, and acknowledges recovery only after
-  the final document save. This preserves recovery across interrupted returns and
-  prevents a slow intermediate save from overwriting the final revision.
+- Native journal checkpoints protect edits during drawing. Docs imports and
+  persists the final drawing on return, then acknowledges that recovery token.
+  No full-document polling, AppFlowy updates, or document sync runs for live ink;
+  canvas edits reach server sync after returning to Docs.
 - `CanvasDiagnostics` records local JSONL spans for input, overview construction/drawing,
   board navigation, render/index/tile work, firmware calls, stroke import, journal
   saves and Docs persistence. A main-thread watchdog samples blocked stacks after
@@ -111,5 +113,5 @@ raster equivalence, tile/buffer reuse, actual firmware pen-up autosave, duplicat
 completion handling, rapid navigation, and background journal writes. JVM tests
 cover geometry, recovery after torn writes, failed compaction, token-specific
 acknowledgment, navigation ordering, stroke barriers, cache eviction, and metrics.
-Docs tests cover real database recovery, live-save/final-save ordering, and local
+Docs tests cover real database recovery, no document work during live ink, return-save ordering, and local
 diagnostic payloads. Device validation also checks stalled main-thread capture and recovery.

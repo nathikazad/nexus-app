@@ -21,13 +21,11 @@ class TabletInputAdapter(context: Context, private val diagnostics: DiagnosticSi
     }
     override var onFault:((String)->Unit)?=null
     private val lifecycle=CanvasInputLifecycle(object:CanvasFirmwarePort {
-        override fun send(packet:CanvasPenPacket)=widget.sendPacket(packet)
+        override fun admitNewStrokes(enabled:Boolean)=widget.admitNewStrokes(enabled)
         override fun isDrained()=widget.isDrained()
-        override fun finishPendingStroke()=widget.finishPendingStroke()
         override fun changeTool(tool:CanvasPenTool)=applyPen(tool.tool,tool.width)
     },scheduler,diagnostics,{onFault?.invoke(it)})
     init {
-        widget.onPacket={packet->scheduler.execute{lifecycle.submit(packet)}}
         widget.onStrokeBoundary = { down, sequence -> onEvent?.invoke(if(down) InputEvent.Down(sequence) else InputEvent.Up(sequence)) }
         widget.onQuiescent = { sequence -> scheduler.execute {
             onEvent?.invoke(InputEvent.Quiescent(sequence));lifecycle.progressed()
@@ -48,7 +46,7 @@ class TabletInputAdapter(context: Context, private val diagnostics: DiagnosticSi
     override val rotation get() = api.getMethod("getAbsoluteRotation").invoke(view) as Int
     override val holder get() = api.getMethod("getHolder").invoke(view) as SurfaceHolder
     override fun enable(enabled: Boolean) {
-        // Gate ingress, not NoteView: firmware must still accept the final up packet.
+        // Gate only new strokes; firmware receives the current stroke unchanged.
         lifecycle.enable(enabled)
     }
     override fun drain(done:(Boolean)->Unit)=lifecycle.drain { ok -> if(ok)capture();done(ok) }
@@ -70,5 +68,5 @@ class TabletInputAdapter(context: Context, private val diagnostics: DiagnosticSi
             api.getMethod("setPen", Class.forName("com.xrz.BasePen")).invoke(view, pen)
         }
     }
-    override fun close() { lifecycle.close();widget.onPacket=null;onFault=null; onEvent = null; widget.onRecord = null; widget.onStrokeBoundary = null; widget.onQuiescent = null }
+    override fun close() { lifecycle.close();onFault=null; onEvent = null; widget.onRecord = null; widget.onStrokeBoundary = null; widget.onQuiescent = null }
 }

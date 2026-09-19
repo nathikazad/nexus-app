@@ -57,6 +57,20 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private var buttonErasing=false
     private lateinit var saveStatus:TextView
     private var destroyed=false
+    private var latestSaveState = CanvasSaveCoordinator.SaveState.SAVED
+    private val idleStatus = CanvasIdleUpdate(scheduler) {
+        if (!destroyed && ::session.isInitialized) {
+            // Completed ink affects history controls, not tool labels or board layout.
+            undoButton.isEnabled = engine.canUndo || nativeTool()
+            redoButton.isEnabled = engine.canRedo
+            val text = when (latestSaveState) {
+                CanvasSaveCoordinator.SaveState.SAVING -> "Saving…"
+                CanvasSaveCoordinator.SaveState.SAVED -> "Saved locally"
+                CanvasSaveCoordinator.SaveState.RETRYING -> "Save failed · retrying…"
+            }
+            if (saveStatus.text.toString() != text) saveStatus.text = text
+        }
+    }
     private val navigation=InkNavigationQueue()
     private var navigationScheduled=false
     private var diagnosticNavigationAt=0L
@@ -107,21 +121,28 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             val widget=this.input.view
             ink=widget
             session=CanvasSessionResources(engine, title, repository, scheduler, components=components,
-                changed={checkpoint();if(!destroyed)updateControls()}, settled={drainAction()},
+                changed={checkpoint();idleStatus.request()}, settled={drainAction()},
                 failed={
                     busy=false;flag(false)
                     if(::session.isInitialized)session.actions.cancel()
                     report(it)
                 },
                 eligible={nativeTool()}, present={frame->this.input.present(frame.bitmap)},
-                renderSettled={resumeInk()}, saveState={state->if(!destroyed)saveStatus.text=when(state) {
-                    CanvasSaveCoordinator.SaveState.SAVING->"Saving…"
-                    CanvasSaveCoordinator.SaveState.SAVED->"Saved locally"
-                    CanvasSaveCoordinator.SaveState.RETRYING->"Save failed · retrying…"
-                }})
+                renderSettled={resumeInk()}, saveState={state->
+                    latestSaveState = state
+                    idleStatus.request()
+                })
             this.input.onFault={message->busy=false;status.text=message;diagnostics.event("input.fault",mapOf("reason" to message))}
             this.input.onEvent={event->scheduler.execute {
-                if(!destroyed)session.imports.accept(event, InputTransform(model.view,this.input.rotation,widget.width,widget.height,density))
+                if(!destroyed) {
+                    when(event) {
+                        is InputEvent.Down -> idleStatus.contact(true)
+                        is InputEvent.Up -> idleStatus.contact(false)
+                        InputEvent.Cancelled -> idleStatus.contact(false)
+                        else -> {}
+                    }
+                    session.imports.accept(event, InputTransform(model.view,this.input.rotation,widget.width,widget.height,density))
+                }
             }}
             flag(false)
             body.addView(widget,FrameLayout.LayoutParams(-1,-1))
@@ -397,6 +418,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     fun onResume(){resumed=true;if(ready)runCatching{resumeInk()}.onFailure{report(it)}}
     fun onDestroy() {
         destroyed=true
+        idleStatus.close()
         if(::input.isInitialized)input.close()
         if(::body.isInitialized && ink != null)body.removeView(ink)
         if(::session.isInitialized)session.close()

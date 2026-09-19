@@ -70,16 +70,26 @@ reintroducing source-set inclusion or raw channel calls in its canvas session.
   before the next snapshot is taken. A failed import stays at the queue head and
   blocks later imports and destructive transitions. Explicit retry uses the retained
   record and its original coordinate transform; it never skips an erasure.
-- `CanvasInputLifecycle` owns raw input and tool requests in one FIFO, behind
-  `CanvasFirmwarePort`. Android touch handlers only request tool changes. A change
-  closes the current segment with an up packet, waits for accepted packets to be
-  processed, changes the pen, then resumes contact and replays buffered packets.
-  Input suppression gates new arrivals without disabling delivery of the final up.
-  Timeout retains the barrier and reports recovery; it cannot clear ink tracking.
-  Retry can re-send an up rejected during focus loss, but only if the firmware
-  has not accepted an up already. Expired callbacks cannot later fire a UI action.
-  `setPen`, record reset, and foreground replacement are confined to the adapter;
-  the public input port exposes an asynchronous drain instead of unsafe finish/reset.
+- `CanvasInputLifecycle` owns only tool requests and drain barriers, behind
+  `CanvasFirmwarePort`. Raw events go directly from `RecordingNoteView.onInputTouch`
+  to the stock firmware, with no packet queue, scheduler hop, replay or synthetic
+  stroke boundaries. Closing admission refuses new contacts but lets an accepted
+  stroke reach its real up. A transition waits for that up and worker completion
+  before changing the pen or replacing the foreground. Mid-contact tool requests
+  therefore take effect after the stroke, not by splitting it. Timeout retains the
+  barrier and exposes retry without blocking the UI or discarding tracked ink.
+  Expired callbacks cannot later fire a UI action. `setPen`, record reset, and
+  foreground replacement remain confined to the adapter.
+- `CanvasIdleUpdate` coalesces presentation-only status changes until 300 ms
+  after contact ends. A new stroke cancels pending presentation work. Completed
+  imports update history controls and the latest save label only; they do not
+  repaint the toolbar or board labels. Journal writes and transition barriers
+  do not depend on this timer. Destroy cancels it and stale callbacks are ignored.
+- Native recovery checkpoints completed edits on the save worker while drawing.
+  Docs does not poll, transfer or apply the drawing to AppFlowy while the canvas is
+  open. It reconciles on return (or recovery after restart), persists the document,
+  then acknowledges the exact recovery token. Server document sync consequently
+  receives canvas edits after reconciliation, not during active handwriting.
 - `CanvasActionGate` owns the one waiting action and its cancellable timer. It
   consults explicit `DrainResult` state. The existing 250 ms unresolved-pen timeout
   remains; import-only waits do not acquire that timeout. Timeout does not erase ink.
@@ -130,8 +140,9 @@ Optional components are wired at assembly rather than reaching into peer modules
 1. Docs persists the canvas/session identity in its document before opening.
 2. `CanvasClient.open()` sends the versioned drawing and identity to the plugin.
 3. The plugin prepares local input and launches the shared editor library.
-4. Completed edits go to the local journal. Docs polls durable revisions and saves
-   them through its existing document/outbox transaction.
+4. Completed edits go to the local journal on the save worker. Docs leaves the
+   native session alone while handwriting, then imports and persists its result
+   on return before acknowledging the journal token.
 5. Closing waits for durable local recovery. Docs saves the final drawing, then
    acknowledges that exact token. A failed host save leaves recovery intact.
 

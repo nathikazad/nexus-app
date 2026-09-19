@@ -12,21 +12,13 @@ import java.util.LinkedList
  */
 class RecordingNoteView(context: Context, private val diagnostics: DiagnosticSink = CanvasDiagnostics) : NoteView(context) {
     private val progress = InkInputProgress()
-    private var lastPacket:CanvasPenPacket?=null
-    var onPacket:((CanvasPenPacket)->Unit)?=null
-    fun isDrained()=progress.isDrained()
-    override fun onInputTouch(action:Int,x:Int,y:Int,pressure:Int,tool:Int):Int {
-        onPacket?.invoke(CanvasPenPacket(action,x,y,pressure,tool))
-        return 0
-    }
-    fun finishPendingStroke() {
-        // A focus loss may reject the synthetic up before it reaches onInputPoint.
-        // Retry only while the accepted input still says down, never after an accepted up.
-        if(progress.isPenDown())lastPacket?.let{sendPacket(it.up())}
-    }
-    fun sendPacket(packet:CanvasPenPacket) {
-        if(packet.tool!=2)lastPacket=packet
-        super.onInputTouch(packet.action,packet.x,packet.y,packet.pressure,packet.tool)
+    fun admitNewStrokes(enabled: Boolean) = progress.admitNewStrokes(enabled)
+    fun isDrained() = progress.isDrained()
+    override fun onInputTouch(action: Int, x: Int, y: Int, pressure: Int, tool: Int): Int {
+        // Direct firmware path: no queue, scheduler, packet copies or synthetic edges.
+        // A transition can refuse a new stroke, but must never swallow the real up.
+        if (!progress.acceptsInput()) return 0
+        return super.onInputTouch(action, x, y, pressure, tool)
     }
     @Volatile var onStrokeBoundary:((Boolean,Long)->Unit)?=null
     @Volatile var onQuiescent:((Long)->Unit)?=null

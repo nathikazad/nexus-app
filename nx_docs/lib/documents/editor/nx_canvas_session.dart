@@ -33,43 +33,11 @@ class NxCanvasSession {
     required this.documentId,
     required this.persist,
     this.client = const MethodChannelCanvasClient(),
-    this.autosaveInterval = const Duration(seconds: 3),
   });
   final EditorState editor;
   final String documentId;
   final Future<void> Function() persist;
   final CanvasClient client;
-  final Duration autosaveInterval;
-  Future<void>? _liveSave;
-  String? _savedToken;
-
-  Future<void> _saveWhileOpen(Node node) async {
-    if (_liveSave != null) return;
-    final work = () async {
-      try {
-        final pending = await _measure(
-          'docs.peek_recovery',
-          () => client.peek(_savedToken),
-        );
-        if (pending != null &&
-            pending.sessionId == identity(node) &&
-            pending.token != _savedToken) {
-          await _save(node, pending, acknowledge: false);
-          _savedToken = pending.token;
-        }
-      } catch (_) {
-        _diagnostic('docs.live_save', 'error');
-        // The native recovery journal remains authoritative. Retry on the next tick.
-      }
-    }();
-    _liveSave = work;
-    try {
-      await work;
-    } finally {
-      _liveSave = null;
-    }
-  }
-
   void _diagnostic(String stage, String phase, {int? elapsedUs}) {
     final data = <String, Object>{
       'stage': stage,
@@ -134,10 +102,8 @@ class NxCanvasSession {
         editor.transaction..updateNode(node, {'canvas_id': newCanvasId()}),
       );
       await _measure("docs.persist", persist);
-      final autosave = Timer.periodic(
-        autosaveInterval,
-        (_) => unawaited(_saveWhileOpen(node)),
-      );
+      // Native recovery checkpoints every completed edit on its save worker.
+      // Keep AppFlowy updates and document serialization out of live handwriting.
       var previousTick = DateTime.now().millisecondsSinceEpoch;
       final heartbeat = Timer.periodic(const Duration(seconds: 5), (_) {
         final now = DateTime.now().millisecondsSinceEpoch;
@@ -159,9 +125,7 @@ class NxCanvasSession {
           ),
         );
       } finally {
-        autosave.cancel();
         heartbeat.cancel();
-        await _liveSave;
       }
       if (value != null) await _save(node, value);
     } finally {
@@ -180,11 +144,7 @@ class NxCanvasSession {
     }
   }
 
-  Future<void> _save(
-    Node node,
-    CanvasSavedDrawing value, {
-    bool acknowledge = true,
-  }) async {
+  Future<void> _save(Node node, CanvasSavedDrawing value) async {
     _ensureEditable(node);
     if (value.sessionId != identity(node) || node.parent == null) {
       throw StateError(
@@ -203,7 +163,7 @@ class NxCanvasSession {
       ),
     );
     await _measure("docs.persist", persist);
-    if (acknowledge && !await client.acknowledge(token)) {
+    if (!await client.acknowledge(token)) {
       throw StateError('A newer canvas recovery copy is waiting to be saved.');
     }
   }
