@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:appflowy_editor/appflowy_editor.dart';
-import 'package:flutter/services.dart';
+import 'package:nx_canvas_core/canvas_client.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nx_canvas_core/drawing.dart';
 
 const nxCanvasBlockType = 'nx_canvas';
@@ -30,12 +32,65 @@ class NxCanvasSession {
     required this.editor,
     required this.documentId,
     required this.persist,
-    this.channel = const MethodChannel('nx_docs/canvas'),
+    this.client = const MethodChannelCanvasClient(),
+    this.autosaveInterval = const Duration(seconds: 3),
   });
   final EditorState editor;
   final String documentId;
   final Future<void> Function() persist;
-  final MethodChannel channel;
+  final CanvasClient client;
+  final Duration autosaveInterval;
+  Future<void>? _liveSave;
+  String? _savedToken;
+
+  Future<void> _saveWhileOpen(Node node) async {
+    if (_liveSave != null) return;
+    final work = () async {
+      try {
+        final pending = await _measure(
+          'docs.peek_recovery',
+          () => client.peek(_savedToken),
+        );
+        if (pending != null &&
+            pending.sessionId == identity(node) &&
+            pending.token != _savedToken) {
+          await _save(node, pending, acknowledge: false);
+          _savedToken = pending.token;
+        }
+      } catch (_) {
+        _diagnostic('docs.live_save', 'error');
+        // The native recovery journal remains authoritative. Retry on the next tick.
+      }
+    }();
+    _liveSave = work;
+    try {
+      await work;
+    } finally {
+      _liveSave = null;
+    }
+  }
+
+  void _diagnostic(String stage, String phase, {int? elapsedUs}) {
+    final data = <String, Object>{
+      'stage': stage,
+      'phase': phase,
+      'dart_time_ms': DateTime.now().millisecondsSinceEpoch,
+      if (elapsedUs != null) 'duration_us': elapsedUs,
+    };
+    debugPrint('[NxCanvasDiagDart] ${jsonEncode(data)}');
+    unawaited(client.diagnostic(data).catchError((Object _) {}));
+  }
+
+  Future<T> _measure<T>(String stage, Future<T> Function() work) async {
+    final clock = Stopwatch()..start();
+    _diagnostic(stage, 'begin');
+    try {
+      return await work();
+    } finally {
+      _diagnostic(stage, 'end', elapsedUs: clock.elapsedMicroseconds);
+    }
+  }
+
   bool _busy = false;
   String identity(Node node) =>
       jsonEncode([documentId, node.attributes['canvas_id']]);
@@ -44,10 +99,8 @@ class NxCanvasSession {
     if (_busy) return false;
     _busy = true;
     try {
-      final pending = await channel.invokeMapMethod<String, dynamic>(
-        'recoverDocument',
-      );
-      if (pending == null || pending['documentId'] != identity(node)) {
+      final pending = await client.recover();
+      if (pending == null || pending.sessionId != identity(node)) {
         return false;
       }
       await _save(node, pending);
@@ -62,16 +115,14 @@ class NxCanvasSession {
     _busy = true;
     try {
       _ensureEditable(node);
-      if (await channel.invokeMethod<bool>('available') != true) {
+      if (!await client.available()) {
         throw StateError(
           'Handwriting is available on the supported ink tablet. This drawing can still be viewed here.',
         );
       }
-      final pending = await channel.invokeMapMethod<String, dynamic>(
-        'recoverDocument',
-      );
+      final pending = await client.recover();
       if (pending != null) {
-        if (pending['documentId'] != identity(node)) {
+        if (pending.sessionId != identity(node)) {
           throw StateError(
             'Another canvas has unsaved changes. Open its document and canvas first to recover them.',
           );
@@ -82,14 +133,36 @@ class NxCanvasSession {
       await editor.apply(
         editor.transaction..updateNode(node, {'canvas_id': newCanvasId()}),
       );
-      await persist();
-      final value = await channel
-          .invokeMapMethod<String, dynamic>('openDocument', {
-            ...canvasDrawing(node).toJson(),
-            'documentId': identity(node),
-            'title': node.attributes['title'] ?? 'Canvas',
-            'backLabel': '‹ Document',
-          });
+      await _measure("docs.persist", persist);
+      final autosave = Timer.periodic(
+        autosaveInterval,
+        (_) => unawaited(_saveWhileOpen(node)),
+      );
+      var previousTick = DateTime.now().millisecondsSinceEpoch;
+      final heartbeat = Timer.periodic(const Duration(seconds: 5), (_) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        _diagnostic(
+          'dart.heartbeat',
+          'sample',
+          elapsedUs: (now - previousTick - 5000) * 1000,
+        );
+        previousTick = now;
+      });
+      CanvasSavedDrawing? value;
+      try {
+        value = await client.open(
+          CanvasOpenRequest(
+            drawing: canvasDrawing(node),
+            sessionId: identity(node),
+            title: node.attributes['title'] as String? ?? 'Canvas',
+            backLabel: '‹ Document',
+          ),
+        );
+      } finally {
+        autosave.cancel();
+        heartbeat.cancel();
+        await _liveSave;
+      }
       if (value != null) await _save(node, value);
     } finally {
       _busy = false;
@@ -107,28 +180,30 @@ class NxCanvasSession {
     }
   }
 
-  Future<void> _save(Node node, Map<String, dynamic> value) async {
+  Future<void> _save(
+    Node node,
+    CanvasSavedDrawing value, {
+    bool acknowledge = true,
+  }) async {
     _ensureEditable(node);
-    if (value['documentId'] != identity(node) || node.parent == null) {
+    if (value.sessionId != identity(node) || node.parent == null) {
       throw StateError(
         'The canvas changed while it was open. Its recovery copy has been kept.',
       );
     }
-    final drawing = Drawing.fromJson(
-      Map<String, dynamic>.from(value['drawing'] as Map),
+    final drawing = value.drawing;
+    final token = value.token;
+    await _measure(
+      'docs.apply_drawing',
+      () => editor.apply(
+        editor.transaction..updateNode(node, {
+          'drawing': drawing.toJson(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }),
+      ),
     );
-    final token = value['saveToken'];
-    if (token is! String) {
-      throw const FormatException('Missing canvas save token');
-    }
-    await editor.apply(
-      editor.transaction..updateNode(node, {
-        'drawing': drawing.toJson(),
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }),
-    );
-    await persist();
-    if (await channel.invokeMethod<bool>('ackDocument', token) != true) {
+    await _measure("docs.persist", persist);
+    if (acknowledge && !await client.acknowledge(token)) {
       throw StateError('A newer canvas recovery copy is waiting to be saved.');
     }
   }

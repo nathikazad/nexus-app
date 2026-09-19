@@ -5,5 +5,16 @@ version: 0.1.0
 environment:
   sdk: ^3.11.0
 dependencies:
+  nx_canvas_model:
+    path: ../nx_canvas_model
   flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.nexus.nx_canvas
+        pluginClass: NxCanvasPlugin
+dev_dependencies:
+  flutter_test:
     sdk: flutter

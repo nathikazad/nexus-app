@@ -5,7 +5,6 @@ plugins {
 }
 
 android {
-    sourceSets.getByName("main").java.srcDir("../../../android/src/main/kotlin")
     namespace = "com.nexus.nx_canvas"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -47,6 +46,7 @@ flutter {
 }
 
 // Signatures only: the installed tablet firmware supplies the actual classes.
-dependencies { compileOnly(project(":vendor-api")) }
 
 dependencies { testImplementation("junit:junit:4.13.2") }
+
+dependencies { implementation(project(":canvas-firmware")); compileOnly(project(":vendor-api")) }

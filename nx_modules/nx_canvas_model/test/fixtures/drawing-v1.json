@@ -1,0 +1,42 @@
+{
+  "format": "nx-canvas",
+  "version": 1,
+  "strokes": [
+    {
+      "id": "cross-board",
+      "points": [
+        [
+          -10.0,
+          20.0,
+          0.25
+        ],
+        [
+          810.0,
+          30.0,
+          1.0
+        ]
+      ],
+      "color": 4278190080,
+      "width": 3.0
+    }
+  ],
+  "view": {
+    "x": -100.0,
+    "y": 20.0,
+    "scale": 1.5
+  },
+  "places": [
+    {
+      "name": "Origin",
+      "view": {
+        "x": 0.0,
+        "y": 0.0,
+        "scale": 1.0
+      }
+    }
+  ],
+  "boards": {
+    "width": 800.0,
+    "height": 1000.0
+  }
+}

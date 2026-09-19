@@ -1,0 +1,6 @@
+name: nx_canvas_model
+description: Platform-independent NX Canvas drawing format and geometry.
+publish_to: none
+version: 0.1.0
+environment:
+  sdk: ^3.11.0

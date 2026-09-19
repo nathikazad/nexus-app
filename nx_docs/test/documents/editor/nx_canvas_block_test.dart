@@ -156,7 +156,7 @@ void main() {
       var saves = 0;
       var opens = 0;
       var acks = 0;
-      const channel = MethodChannel('nx_docs/canvas');
+      const channel = MethodChannel('nx_canvas/editor');
       final messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(channel, (call) async {

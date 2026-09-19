@@ -1,2 +1,8 @@
 # Local device tools, recordings, and retained prototype build artifacts.
 /diagnostics/
+
+# Flutter package outputs (the example maintains its own application lockfile).
+/build/
+/.dart_tool/
+/pubspec.lock
+/.flutter-plugins-dependencies

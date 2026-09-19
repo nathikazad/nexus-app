@@ -19,8 +19,12 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
+    id("com.android.library") version "8.9.1" apply false
     id("com.android.application") version "8.9.1" apply false
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
 }
 
 include(":app")
+
+extra["canvasRoot"] = settingsDir.resolve("../../nx_modules/nx_canvas/android").canonicalPath
+apply(from = "../../nx_modules/nx_canvas/android/modules.settings.gradle.kts")

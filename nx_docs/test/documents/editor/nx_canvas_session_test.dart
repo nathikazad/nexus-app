@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:appflowy_editor/appflowy_editor.dart';
@@ -13,7 +14,7 @@ import '../../support/offline_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const channel = MethodChannel('nx_docs/canvas');
+  const channel = MethodChannel('nx_canvas/editor');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   final drawing = Drawing(
@@ -44,6 +45,63 @@ void main() {
     ),
   );
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+  test(
+    'local diagnostics contain timing metadata without drawing content',
+    () async {
+      final node = nxCanvasNode();
+      final editor = editorWith(node);
+      addTearDown(editor.dispose);
+      final events = <Map<dynamic, dynamic>>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'diagnostic') {
+          events.add(call.arguments as Map);
+        }
+        if (call.method == 'available') return true;
+        if (call.method == 'openDocument') {
+          final args = call.arguments as Map;
+          return {
+            'documentId': args['documentId'],
+            'drawing': drawing.toJson(),
+            'saveToken': 'one',
+          };
+        }
+        if (call.method == 'ackDocument') return true;
+        return null;
+      });
+      await NxCanvasSession(
+        editor: editor,
+        documentId: 'private-document',
+        persist: () async {},
+      ).open(node);
+      await Future<void>.delayed(Duration.zero);
+      for (final stage in ['docs.persist', 'docs.apply_drawing']) {
+        expect(
+          events.any((e) => e['stage'] == stage && e['phase'] == 'begin'),
+          isTrue,
+        );
+        expect(
+          events.any(
+            (e) =>
+                e['stage'] == stage &&
+                e['phase'] == 'end' &&
+                (e['duration_us'] as int) >= 0,
+          ),
+          isTrue,
+        );
+      }
+      expect(
+        events.every(
+          (e) => e.keys.every(
+            ['stage', 'phase', 'dart_time_ms', 'duration_us'].contains,
+          ),
+        ),
+        isTrue,
+      );
+      expect(jsonEncode(events), isNot(contains('private-document')));
+      expect(jsonEncode(events), isNot(contains('pen-1')));
+    },
+  );
 
   test(
     'native result survives real database restart inside document JSON',
@@ -134,6 +192,65 @@ void main() {
         canvasDrawing(restored.root.children[1]).toJson(),
         drawing.toJson(),
       );
+    },
+  );
+
+  test(
+    'autosaves during native editing without acknowledging newer recovery',
+    () async {
+      final node = nxCanvasNode();
+      final editor = editorWith(node);
+      addTearDown(editor.dispose);
+      final opened = Completer<Map<String, dynamic>>();
+      final savedWhileOpen = Completer<void>();
+      final finishLiveSave = Completer<void>();
+      Map<String, dynamic>? pending;
+      var acknowledgments = 0;
+      var saves = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        switch (call.method) {
+          case 'available':
+            return true;
+          case 'recoverDocument':
+            return null;
+          case 'openDocument':
+            pending = {
+              'documentId': (call.arguments as Map)['documentId'],
+              'drawing': drawing.toJson(),
+              'saveToken': 'live-1',
+            };
+            return opened.future;
+          case 'peekDocument':
+            return pending;
+          case 'ackDocument':
+            acknowledgments++;
+            return true;
+        }
+        return null;
+      });
+      final session = NxCanvasSession(
+        editor: editor,
+        documentId: 'doc-live',
+        autosaveInterval: const Duration(milliseconds: 1),
+        persist: () async {
+          saves++;
+          if (saves == 2) {
+            savedWhileOpen.complete();
+            await finishLiveSave.future;
+          }
+        },
+      );
+      final opening = session.open(node);
+      await savedWhileOpen.future.timeout(const Duration(seconds: 5));
+      expect(canvasDrawing(node).toJson(), drawing.toJson());
+      expect(acknowledgments, 0);
+      opened.complete({...pending!, 'saveToken': 'final-2'});
+      await Future<void>.delayed(Duration.zero);
+      expect(acknowledgments, 0);
+      finishLiveSave.complete();
+      await opening;
+      expect(acknowledgments, 1);
+      expect(saves, 3);
     },
   );
 

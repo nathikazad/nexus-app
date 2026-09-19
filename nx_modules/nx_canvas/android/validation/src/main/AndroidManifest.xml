@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Canvas validation" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name="com.nexus.nx_canvas.NativeEditorActivity" android:exported="false" android:screenOrientation="locked" />
+    </application>
+    <instrumentation android:name=".CanvasInstrumentation" android:targetPackage="com.nexus.nx_canvas.validation" android:label="Canvas regression checks" />
+</manifest>

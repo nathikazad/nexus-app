@@ -104,3 +104,16 @@ upload state separately from library progress and automatic retry errors. The
 library supervisor uses Books' bounded exponential retry policy; providers close
 both supervisors when the account scope is disposed. Sync phase/count timestamps
 are logged with the `[NX Docs sync]` prefix without document bodies or credentials.
+
+## Canvas persistence and performance
+
+The native canvas runtime is owned by `nx_modules/nx_canvas`; see its README for
+worker ownership, tile rendering, durable stroke recovery, and tablet checks.
+Docs owns `documents/editor/nx_canvas_session.dart` for periodic document/outbox
+saves while the native editor is open. Canvas diagnostics remain on the tablet;
+Docs does not upload them to the server logs table. See the canvas module README
+for the local capture command. Local canvas saves do not depend on network availability.
+
+Canvas architecture: [shared module boundaries](../nx_modules/nx_canvas/ARCHITECTURE.md).
+Docs uses the typed `CanvasClient` API; `MainActivity` contains no canvas protocol.
+The drawing format and local journal remain compatible with existing documents.

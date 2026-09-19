@@ -1,0 +1,72 @@
+package com.nexus.nx_canvas
+
+import android.content.Context
+import android.graphics.Canvas
+import com.xrz.FlushInfo
+import com.xrz.NoteView
+import com.xrz.PenPoint
+import java.util.LinkedList
+
+/** The stock widget still owns every live point and display refresh. This hook
+ * only forwards completed records, after the firmware has drawn the batch.
+ */
+class RecordingNoteView(context: Context, private val diagnostics: DiagnosticSink = CanvasDiagnostics) : NoteView(context) {
+    private val progress = InkInputProgress()
+    private var lastPacket:CanvasPenPacket?=null
+    var onPacket:((CanvasPenPacket)->Unit)?=null
+    fun isDrained()=progress.isDrained()
+    override fun onInputTouch(action:Int,x:Int,y:Int,pressure:Int,tool:Int):Int {
+        onPacket?.invoke(CanvasPenPacket(action,x,y,pressure,tool))
+        return 0
+    }
+    fun finishPendingStroke() {
+        // A focus loss may reject the synthetic up before it reaches onInputPoint.
+        // Retry only while the accepted input still says down, never after an accepted up.
+        if(progress.isPenDown())lastPacket?.let{sendPacket(it.up())}
+    }
+    fun sendPacket(packet:CanvasPenPacket) {
+        if(packet.tool!=2)lastPacket=packet
+        super.onInputTouch(packet.action,packet.x,packet.y,packet.pressure,packet.tool)
+    }
+    @Volatile var onStrokeBoundary:((Boolean,Long)->Unit)?=null
+    @Volatile var onQuiescent:((Long)->Unit)?=null
+
+    override fun onInputPoint(point:PenPoint) {
+        super.onInputPoint(point)
+        // Firmware input bypasses Activity touch dispatch. Only stroke edges
+        // cross this hook; no points, rendering or IO are sent to Flutter.
+        val boundary = if(point.toolType==2)null else when(point.eventType) {
+            1 -> if(!point.isOutside)true else null
+            3 -> false
+            else -> null
+        }
+        val sequence = progress.submit(boundary)
+        if(boundary != null) {
+            diagnostics.event(if(boundary)"pen.down" else "pen.up",mapOf("sequence" to sequence))
+            onStrokeBoundary?.invoke(boundary,sequence)
+        }
+    }
+    @Volatile var onRecord: ((Any) -> Unit)? = null
+
+    override fun onDraw(canvases: Array<Canvas>, points: LinkedList<*>): FlushInfo? {
+        val records = getRecordList() as LinkedList<*>
+        val before = records.peekLast()
+        val batchStart=System.nanoTime()
+        val batchPoints=points.size
+        val flush = super.onDraw(canvases, points)
+        val batchMs=(System.nanoTime()-batchStart)/1e6
+        if(batchMs>=16 || records.peekLast()!==before)diagnostics.event("firmware.draw_batch",mapOf("duration_ms" to batchMs,"batch_points" to batchPoints,"records" to records.size))
+        if (records.peekLast() !== before) {
+            val added = mutableListOf<Any>()
+            val iterator = records.descendingIterator()
+            while (iterator.hasNext()) {
+                val record = iterator.next() ?: continue
+                if (record === before) break
+                added.add(record)
+            }
+            for (record in added.asReversed()) onRecord?.invoke(record)
+        }
+        progress.processed(batchPoints)?.let { onQuiescent?.invoke(it) }
+        return flush
+    }
+}

@@ -1112,6 +1112,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  nx_canvas_model:
+    dependency: transitive
+    description:
+      path: "../nx_modules/nx_canvas_model"
+      relative: true
+    source: path
+    version: "0.1.0"
   nx_data:
     dependency: transitive
     description:

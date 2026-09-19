@@ -33,9 +33,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <activity android:name="com.nexus.nx_canvas.NativeEditorActivity"
-            android:exported="false" android:screenOrientation="locked"
-            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
