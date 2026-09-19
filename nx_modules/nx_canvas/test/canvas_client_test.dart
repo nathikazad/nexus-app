@@ -33,6 +33,8 @@ void main() {
         final args = call.arguments as Map;
         expect(args['documentId'], 'session');
         expect(args['format'], 'nx-canvas');
+        expect(args['traceId'], 'trace-1');
+        expect(args['openTappedAtMs'], 123);
       }
       return {
         'documentId': 'session',
@@ -46,6 +48,8 @@ void main() {
         sessionId: 'session',
         title: 'Canvas',
         drawing: drawing,
+        traceId: 'trace-1',
+        openTappedAtMs: 123,
       ),
     );
     expect(result!.sessionId, 'session');

@@ -37,24 +37,32 @@ class NxCanvasPlugin : FlutterPlugin, ActivityAware, PluginRegistry.ActivityResu
                         val input = call.arguments as Map<*, *>
                         require(input["documentId"] is String && input["title"] is String)
                         pending = result
+                        val traceId = input["traceId"] as? String ?: "native-open"
+                        CanvasDiagnostics.transitionStart(traceId)
+                        CanvasDiagnostics.event("transition.open.received", mapOf("trace_id" to traceId))
                         repository.io.execute {
                             val prepared = runCatching {
                                 check(repository.document() == null) { "Save the recovered canvas before opening another" }
-                                repository.write("input", input)
+                                CanvasDiagnostics.measure("open.prepare_file") { repository.write("input", input) }
                             }
                             android.os.Handler(android.os.Looper.getMainLooper()).post {
                                 if(pending !== result)return@post
                                 try {
                                     prepared.getOrThrow()
                                     val activity = this.binding?.activity ?: error("Canvas host detached")
-                                    activity.startActivityForResult(Intent(activity, NativeEditorActivity::class.java), REQUEST)
-                                } catch(error: Throwable) { pending = null; result.error("canvas", error.message, null) }
+                                    CanvasDiagnostics.event("transition.open.launch", mapOf("trace_id" to traceId))
+                                    activity.startActivityForResult(Intent(activity, NativeEditorActivity::class.java)
+                                        .putExtra("traceId", traceId)
+                                        .putExtra("openTappedAtMs", (input["openTappedAtMs"] as? Number)?.toLong() ?: System.currentTimeMillis()), REQUEST)
+                                } catch(error: Throwable) { CanvasDiagnostics.event("transition.open.failed"); CanvasDiagnostics.transitionEnd(); pending = null; result.error("canvas", error.message, null) }
                             }
                         }
                     }
                     "diagnostic" -> {
                         val args = call.arguments as? Map<*, *>
-                        val allowed = setOf("stage", "phase", "dart_time_ms", "duration_us")
+                        val allowed = setOf("stage", "phase", "dart_time_ms", "duration_us", "trace_id")
+                        if (args?.get("stage") == "transition.open.tap") CanvasDiagnostics.transitionStart(args["trace_id"] as? String ?: "open")
+                        if (args?.get("stage") in listOf("transition.return.frame", "transition.error")) CanvasDiagnostics.transitionEnd()
                         CanvasDiagnostics.event("dart", args?.entries?.filter { it.key in allowed && (it.value is String || it.value is Number) }?.associate { it.key.toString() to it.value }.orEmpty())
                         result.success(null)
                     }
@@ -72,7 +80,15 @@ class NxCanvasPlugin : FlutterPlugin, ActivityAware, PluginRegistry.ActivityResu
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
         if(requestCode != REQUEST)return false
         val result = pending; pending = null
-        if(result != null)background(result, "returnDocument") { repository.document() }
+        CanvasDiagnostics.event("transition.return.activity_result", mapOf("trace_id" to data?.getStringExtra("traceId")))
+        if(result != null)background(result, "returnDocument") {
+            repository.document()?.toMutableMap()?.apply {
+                put("unchanged", data?.getBooleanExtra("unchanged", false) == true)
+                data?.getStringExtra("traceId")?.let { put("traceId", it) }
+                val tapped = data?.getLongExtra("returnTappedAtMs", 0L) ?: 0L
+                if (tapped > 0) put("returnTappedAtMs", tapped)
+            }
+        }
         return true
     }
     override fun onAttachedToActivity(binding: ActivityPluginBinding) { this.binding = binding; binding.addActivityResultListener(this) }

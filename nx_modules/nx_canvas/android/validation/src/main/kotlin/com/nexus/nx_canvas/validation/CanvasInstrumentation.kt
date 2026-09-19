@@ -32,6 +32,7 @@ class CanvasInstrumentation:Instrumentation() {
         try {
             java.io.File(targetContext.getExternalFilesDir(null),"canvas-diagnostics").deleteRecursively()
             CanvasDiagnostics.start(targetContext)
+            CanvasDiagnostics.transitionStart("validation")
             runOnMainSync { CanvasDiagnostics.measure("validation.main_stall") { Thread.sleep(1600) } }
             Thread.sleep(500)
             val diagnosticFile=java.io.File(targetContext.getExternalFilesDir(null),"canvas-diagnostics/events.jsonl")
@@ -39,6 +40,7 @@ class CanvasInstrumentation:Instrumentation() {
             check(records.any{it.optString("event")=="main.stall" && (it.optJSONArray("main_stack")?.length() ?: 0) > 0}){"Watchdog did not capture blocked main thread"}
             check(records.any{it.optString("event")=="main.recovered"}){"Watchdog did not capture recovery"}
             check(records.any{it.optString("stage")=="validation.main_stall" && it.optDouble("wall_ms")>=1500}){"Timing span missing"}
+            CanvasDiagnostics.transitionEnd()
             val strokes=(0..2).flatMap{board->(0..199).map{line->
                 NativeStroke("$board-$line",listOf(InkPoint(board*800.0+10,line*3.0+20),InkPoint(board*800.0+700,line*3.0+21)),0xff000000L,3.0)
             }} + NativeStroke("crossing",listOf(InkPoint(-300.0,400.0),InkPoint(1900.0,500.0)),0xff000000L,4.0)
@@ -110,6 +112,10 @@ class CanvasInstrumentation:Instrumentation() {
             // Exercise the real firmware activity with synthetic, isolated input.
             repository.document()?.get("saveToken")?.let{repository.acknowledgeDocument(it as String)}
             repository.write("input",mapOf("documentId" to "validation","title" to "Canvas validation")+InkCodec.encode(InkModel(strokes,InkViewport(),emptyList(),InkBoards(800.0,1000.0))))
+            // Same-process handoff and restart fallback must decode identical ink.
+            val cachedScene = InkCodec.model(repository.scene())
+            val diskScene = InkCodec.model(CanvasRepository(targetContext).scene())
+            check(InkSnapshot.of(cachedScene) == InkSnapshot.of(diskScene)) { "Prepared scene differs from durable fallback" }
             val activity=startActivitySync(android.content.Intent(targetContext,NativeEditorActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
             waitForIdleSync()
             val screen=NativeEditorActivity::class.java.getDeclaredField("screen").apply{isAccessible=true}.get(activity)
@@ -175,6 +181,10 @@ class CanvasInstrumentation:Instrumentation() {
                 Thread.sleep(25)
             }
             check(drained){"Eraser import blocked navigation/document return"}
+            Thread.sleep(600);waitForIdleSync()
+            check(diagnosticFile.readLines().any { org.json.JSONObject(it).optString("event") == "overlay.repair" }) {
+                "Completed eraser did not request navigation overlay repair"
+            }
             // Reproduce the actual two-stream race: firmware down can precede the
             // Android stylus-button event. Then release/toggle while points are queued.
             fun button(held:Boolean) {

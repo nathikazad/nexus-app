@@ -842,6 +842,10 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
           // in both modes so switching to Edit cannot reintroduce a blank block.
           useReadTable: true,
           canvasDocumentId: widget.document.id.toString(),
+          // widget.document comes from the stored document session, not the
+          // live editor draft. Pending autosaves continue independently.
+          isCanvasIdentityPersisted: (id) =>
+              hasPersistedCanvasIdentity(widget.document.jsonDocument, id),
           persistCanvasDocument:
               !widget.interactionMode.canEditContent || widget.onChanged == null
               ? null

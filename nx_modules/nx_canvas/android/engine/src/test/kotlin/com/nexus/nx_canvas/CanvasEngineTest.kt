@@ -15,6 +15,22 @@ class CanvasEngineTest {
     private fun stroke(id: String) = NativeStroke(id, listOf(InkPoint(1.0, 2.0)), 0xff000000, 3.0)
     private fun initial() = InkSnapshot(emptyList(), InkViewport(), emptyList(), InkBoards(800.0,1000.0))
     private fun engine() = CanvasEngine("session", initial())
+    @Test fun importedNotificationFollowsSuccessfulApplyAndRetainsEraseKind() {
+        val w=Queue();val o=Queue();val seen=mutableListOf<InkOperationKind>()
+        val e=engine();var saves=0
+        val input=CanvasInputCoordinator(e,w,o,changed={saves++},settled={},failed={throw it},
+            imported={ assertTrue(saves>0);seen.add(it) })
+        for(kind in InkOperationKind.values()) {
+            input.accept(InputEvent.Completed(object:CanvasInputRecord {
+                override val completesStroke=true
+                override fun decode(transform:InputTransform)=InkOperation(kind,stroke(kind.name))
+            }),transform)
+            assertEquals(saves,seen.size)
+            w.run();assertEquals(saves,seen.size)
+            o.run()
+        }
+        assertEquals(InkOperationKind.values().toList(),seen)
+    }
     @Test fun commandsOwnHistoryAndRevisionWithoutExposingMutableModel() {
         val engine = engine()
         engine.dispatch(CanvasCommand.ReplaceInk(listOf(stroke("a"))))

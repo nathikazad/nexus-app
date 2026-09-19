@@ -17,7 +17,7 @@ The integration boundary is `CanvasClient`, not an Android Activity or file path
 | `android/firmware` | Firmware reflection, input record identity and decoding | `TabletInputAdapter` implementing the input port |
 | `android/rendering` | Shared ink painter, spatial index, tiles and bitmap implementation | `BitmapCanvasRenderer` and `DefaultOverviewRenderer` implementing renderer ports |
 | `android/recovery` | Existing checksummed journal and Android file/handoff adapter | `CanvasRecoveryStore`, `CanvasRepository` |
-| `android/diagnostics` | Local rotating logs, watchdog and frame/memory samples | `DiagnosticSink` implementation |
+| `android/diagnostics` | Local transition timelines, slow spans and transition-only watchdog | `DiagnosticSink` implementation |
 | `android/editor` | Screen layout/gestures, lifecycle, dependency assembly | Thin `NativeEditorActivity`, `CanvasEditorScreen`, `CanvasSessionResources` |
 | `android/src` | Flutter plugin registration, lifecycle and method transport | `NxCanvasPlugin` |
 | `android/validation` | Separate device app with isolated storage | Tablet integration suite |
@@ -221,3 +221,43 @@ concavity, dot, sparse-segment, rub, and undo tests.
 Device validation exercises both orders of Android button and firmware down,
 button release before up, repeated mid-stroke changes, toolbar region erase and
 Document while firmware/import work is pending. It uses separate application data.
+
+## Transition diagnostics and erase overlay repair
+
+Opening carries an anonymous trace ID and the tap timestamp through the shared
+request to the native activity. Milestones distinguish host preparation, native
+launch, layout request, foreground presentation and application input admission.
+Returning carries the Document tap timestamp in the activity result (not in the
+recovery journal); Docs reports persistence completion and the next Flutter frame
+with its opening state cleared. Same-device wall time connects the two runtimes;
+phase spans use monotonic clocks. Neither frame callback measures physical panel
+refresh. Use `scripts/summarize_canvas_transitions.py` on captured JSONL to see
+phase durations and end-to-end totals. Clock changes may distort wall totals.
+
+`CanvasInputCoordinator` reports the kind of a successfully applied operation.
+An erase schedules one navigation-overlay invalidation in the existing idle UI
+coordinator; drawing does not. The arrows and board label repaint without a
+foreground replacement. This is a display repair, not isolation of the controls
+from the firmware eraser; they can disappear briefly during the erase gesture.
+
+### Transition cost ownership
+
+Docs keeps unique canvas IDs stable and allocates new IDs only for missing or
+copied identities. Identity and drawing transactions suppress the host's automatic
+save listener because the canvas session explicitly awaits the same persistence
+callback once. Opening waits for persistence only when the canvas ID is absent
+from the host's stored document snapshot (including new/copied blocks). Existing
+identities launch without forcing a save or cancelling pending host autosaves.
+The live editor containing an ID alone is not evidence of durability. Recovery
+with duplicate IDs fails safely without acknowledging or selecting a copy.
+
+The repository retains the transport map only after the atomic input write
+succeeds. Normal launch reuses it; process restart reads the durable file. Native
+return compares the full snapshot against the opening snapshot. Only an unchanged
+visit can skip the Docs mutation/save, after validating the node and session;
+it still acknowledges the exact durable token. This optimization flag is not
+stored in recovery records, so restart recovery always persists the drawing.
+
+The Android Docs host uses Flutter texture rendering to avoid measured SurfaceView
+teardown stalls during activity handoff. The native firmware handwriting surface
+and direct pen forwarding are independent and unchanged.

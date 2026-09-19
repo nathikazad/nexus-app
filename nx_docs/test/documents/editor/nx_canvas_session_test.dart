@@ -64,16 +64,22 @@ void main() {
             'documentId': args['documentId'],
             'drawing': drawing.toJson(),
             'saveToken': 'one',
+            'traceId': args['traceId'],
+            'returnTappedAtMs': DateTime.now().millisecondsSinceEpoch - 10,
           };
         }
         if (call.method == 'ackDocument') return true;
         return null;
       });
-      await NxCanvasSession(
+      final session = NxCanvasSession(
         editor: editor,
         documentId: 'private-document',
         persist: () async {},
-      ).open(node);
+      );
+      await session.open(node);
+      session.reportReturnFrame();
+      session
+          .reportReturnFrame(); // A frame summary is emitted once per return.
       await Future<void>.delayed(Duration.zero);
       for (final stage in ['docs.persist', 'docs.apply_drawing']) {
         expect(
@@ -93,10 +99,31 @@ void main() {
       expect(
         events.every(
           (e) => e.keys.every(
-            ['stage', 'phase', 'dart_time_ms', 'duration_us'].contains,
+            [
+              'stage',
+              'phase',
+              'dart_time_ms',
+              'duration_us',
+              'trace_id',
+            ].contains,
           ),
         ),
         isTrue,
+      );
+      final stages = events.map((e) => e['stage']).toList();
+      expect(stages.first, 'transition.open.tap');
+      expect(
+        stages.indexOf('transition.open.send'),
+        greaterThan(stages.indexOf('docs.persist_identity')),
+      );
+      expect(stages.last, 'transition.return.frame');
+      expect(stages.where((s) => s == 'transition.return.frame'), hasLength(1));
+      expect(events.map((e) => e['trace_id']).toSet(), hasLength(1));
+      expect(
+        events
+            .where((e) => e['stage'] == 'transition.return.frame')
+            .single['duration_us'],
+        greaterThanOrEqualTo(10000),
       );
       expect(jsonEncode(events), isNot(contains('private-document')));
       expect(jsonEncode(events), isNot(contains('pen-1')));
@@ -253,6 +280,254 @@ void main() {
       expect(canvasDrawing(node).toJson(), drawing.toJson());
       expect(acknowledgments, 1);
       expect(saves, 2);
+    },
+  );
+
+  test(
+    'unique canvas identity stays stable and unchanged return skips document mutation',
+    () async {
+      final node = nxCanvasNode();
+      final editor = editorWith(node);
+      addTearDown(editor.dispose);
+      final id = node.attributes['canvas_id'];
+      final before = jsonEncode(node.toJson());
+      var saves = 0;
+      var acks = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'available') return true;
+        if (call.method == 'openDocument') {
+          final args = call.arguments as Map;
+          expect(args['documentId'], jsonEncode(['stable', id]));
+          return {
+            'documentId': args['documentId'],
+            'drawing': drawing.toJson(),
+            'saveToken': 'unchanged',
+            'unchanged': true,
+          };
+        }
+        if (call.method == 'ackDocument') {
+          acks++;
+          return true;
+        }
+        return null;
+      });
+      await NxCanvasSession(
+        editor: editor,
+        documentId: 'stable',
+        isIdentityPersisted: (value) => value == id,
+        persist: () async {
+          saves++;
+        },
+      ).open(node);
+      expect(
+        saves,
+        0,
+      ); // opening leaves the independent host autosave untouched
+      expect(acks, 1);
+      expect(node.attributes['canvas_id'], id);
+      expect(jsonEncode(node.toJson()), before);
+    },
+  );
+
+  test(
+    'copied canvas gets unique identity and canvas writes have one persistence owner',
+    () async {
+      final first = nxCanvasNode();
+      final node = Node(
+        type: nxCanvasBlockType,
+        attributes: Map.from(first.attributes),
+      );
+      final editor = EditorState(
+        document: Document(
+          root: Node(type: 'page', children: [first, node]),
+        ),
+      );
+      addTearDown(editor.dispose);
+      final oldId = first.attributes['canvas_id'];
+      var hostAutosaves = 0;
+      final subscription = editor.transactionStream.listen((event) {
+        final (time, transaction, options) = event;
+        if (time == TransactionTime.after && !options.inMemoryUpdate) {
+          hostAutosaves++;
+        }
+      });
+      addTearDown(subscription.cancel);
+      var saves = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'available') return true;
+        if (call.method == 'openDocument') {
+          return {
+            'documentId': (call.arguments as Map)['documentId'],
+            'drawing': drawing.toJson(),
+            'saveToken': 'changed',
+          };
+        }
+        if (call.method == 'ackDocument') return true;
+        return null;
+      });
+      await NxCanvasSession(
+        editor: editor,
+        documentId: 'copy',
+        persist: () async {
+          saves++;
+        },
+      ).open(node);
+      await Future<void>.delayed(Duration.zero);
+      expect(first.attributes['canvas_id'], oldId);
+      expect(node.attributes['canvas_id'], isNot(oldId));
+      expect(hostAutosaves, 0);
+      expect(saves, 2);
+      expect(canvasDrawing(node).toJson(), drawing.toJson());
+    },
+  );
+
+  test(
+    'ambiguous copied identity preserves recovery without writing or acknowledging',
+    () async {
+      final first = nxCanvasNode();
+      final copy = Node(
+        type: nxCanvasBlockType,
+        attributes: Map.from(first.attributes),
+      );
+      final editor = EditorState(
+        document: Document(
+          root: Node(type: 'page', children: [first, copy]),
+        ),
+      );
+      addTearDown(editor.dispose);
+      var saves = 0;
+      var acks = 0;
+      final session = NxCanvasSession(
+        editor: editor,
+        documentId: 'duplicate',
+        persist: () async {
+          saves++;
+        },
+      );
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'recoverDocument') {
+          return {
+            'documentId': session.identity(first),
+            'drawing': drawing.toJson(),
+            'saveToken': 'keep',
+          };
+        }
+        if (call.method == 'ackDocument') {
+          acks++;
+          return true;
+        }
+        return null;
+      });
+      await expectLater(session.recover(copy), throwsStateError);
+      expect(saves, 0);
+      expect(acks, 0);
+      expect(canvasDrawing(first).strokes, isEmpty);
+      expect(canvasDrawing(copy).strokes, isEmpty);
+    },
+  );
+
+  test('stored identity lookup handles nested, absent and duplicated IDs', () {
+    final node = nxCanvasNode();
+    final id = node.attributes['canvas_id'] as String;
+    final json = {
+      'document': {
+        'type': 'page',
+        'children': [
+          {
+            'type': 'nx_toggle',
+            'children': [node.toJson()],
+          },
+        ],
+      },
+    };
+    expect(hasPersistedCanvasIdentity(json, id), isTrue);
+    expect(hasPersistedCanvasIdentity(json, 'unsaved'), isFalse);
+    expect(hasPersistedCanvasIdentity({}, id), isFalse);
+    expect(
+      hasPersistedCanvasIdentity({
+        'document': {
+          'children': [node.toJson(), node.toJson()],
+        },
+      }, id),
+      isFalse,
+    );
+  });
+
+  test(
+    'new identity waits for durability; failed save cannot launch and retry still waits',
+    () async {
+      final node = nxCanvasNode();
+      final editor = editorWith(node);
+      addTearDown(editor.dispose);
+      var barrier = Completer<void>();
+      var saves = 0;
+      var opens = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'available') return true;
+        if (call.method == 'openDocument') {
+          opens++;
+          return null;
+        }
+        return null;
+      });
+      final session = NxCanvasSession(
+        editor: editor,
+        documentId: 'new',
+        isIdentityPersisted: (_) => false,
+        persist: () {
+          saves++;
+          return barrier.future;
+        },
+      );
+      final first = session.open(node);
+      final failed = expectLater(first, throwsStateError);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(saves, 1);
+      expect(opens, 0);
+      barrier.completeError(StateError('disk failure'));
+      await failed;
+      barrier = Completer<void>();
+      final retry = session.open(node);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(saves, 2);
+      expect(opens, 0);
+      barrier.complete();
+      await retry;
+      expect(opens, 1);
+    },
+  );
+
+  test(
+    'existing canvas launches while an unrelated host save is pending',
+    () async {
+      final node = nxCanvasNode();
+      final editor = editorWith(node);
+      addTearDown(editor.dispose);
+      final backgroundSave = Completer<void>();
+      var opens = 0;
+      var forcedSaves = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'available') return true;
+        if (call.method == 'openDocument') {
+          opens++;
+          return null;
+        }
+        return null;
+      });
+      final session = NxCanvasSession(
+        editor: editor,
+        documentId: 'existing',
+        isIdentityPersisted: (_) => true,
+        persist: () {
+          forcedSaves++;
+          return backgroundSave.future;
+        },
+      );
+      await session.open(node).timeout(const Duration(seconds: 2));
+      expect(opens, 1);
+      expect(forcedSaves, 0);
+      expect(backgroundSave.isCompleted, isFalse);
+      backgroundSave.complete();
     },
   );
 

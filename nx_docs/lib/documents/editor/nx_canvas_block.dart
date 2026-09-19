@@ -1,9 +1,14 @@
 part of 'nx_appflowy_blocks.dart';
 
 class NxCanvasBlockComponentBuilder extends BlockComponentBuilder {
-  NxCanvasBlockComponentBuilder({this.documentId, this.persist});
+  NxCanvasBlockComponentBuilder({
+    this.documentId,
+    this.persist,
+    this.isIdentityPersisted,
+  });
   final String? documentId;
   final Future<void> Function()? persist;
+  final bool Function(String id)? isIdentityPersisted;
   @override
   BlockComponentValidate get validate =>
       (node) => node.children.isEmpty;
@@ -17,6 +22,7 @@ class NxCanvasBlockComponentBuilder extends BlockComponentBuilder {
     editor: Provider.of<EditorState>(context.buildContext, listen: false),
     documentId: documentId,
     persist: persist,
+    isIdentityPersisted: isIdentityPersisted,
   );
 }
 
@@ -30,10 +36,12 @@ class _CanvasBlock extends BlockComponentStatefulWidget {
     required this.editor,
     this.documentId,
     this.persist,
+    this.isIdentityPersisted,
   });
   final EditorState editor;
   final String? documentId;
   final Future<void> Function()? persist;
+  final bool Function(String id)? isIdentityPersisted;
   @override
   State<_CanvasBlock> createState() => _CanvasBlockState();
 }
@@ -53,6 +61,7 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
     editor: widget.editor,
     documentId: widget.documentId!,
     persist: widget.persist!,
+    isIdentityPersisted: widget.isIdentityPersisted,
   );
   @override
   void initState() {
@@ -94,12 +103,18 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
       _opening = true;
       _error = null;
     });
+    final session = _session;
     try {
-      await _session.open(widget.node);
+      await session.open(widget.node);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _opening = false);
+      if (mounted) {
+        setState(() => _opening = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) session.reportReturnFrame();
+        });
+      }
     }
   }
 

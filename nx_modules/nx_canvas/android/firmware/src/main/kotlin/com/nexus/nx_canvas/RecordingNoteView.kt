@@ -34,7 +34,6 @@ class RecordingNoteView(context: Context, private val diagnostics: DiagnosticSin
         }
         val sequence = progress.submit(boundary)
         if(boundary != null) {
-            diagnostics.event(if(boundary)"pen.down" else "pen.up",mapOf("sequence" to sequence))
             onStrokeBoundary?.invoke(boundary,sequence)
         }
     }
@@ -43,11 +42,8 @@ class RecordingNoteView(context: Context, private val diagnostics: DiagnosticSin
     override fun onDraw(canvases: Array<Canvas>, points: LinkedList<*>): FlushInfo? {
         val records = getRecordList() as LinkedList<*>
         val before = records.peekLast()
-        val batchStart=System.nanoTime()
         val batchPoints=points.size
         val flush = super.onDraw(canvases, points)
-        val batchMs=(System.nanoTime()-batchStart)/1e6
-        if(batchMs>=16 || records.peekLast()!==before)diagnostics.event("firmware.draw_batch",mapOf("duration_ms" to batchMs,"batch_points" to batchPoints,"records" to records.size))
         if (records.peekLast() !== before) {
             val added = mutableListOf<Any>()
             val iterator = records.descendingIterator()

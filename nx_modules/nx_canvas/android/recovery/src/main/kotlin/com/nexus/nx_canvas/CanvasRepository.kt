@@ -18,6 +18,9 @@ class CanvasRepository(private val context: Context) {
         lease = id
         return AutoCloseable { synchronized(this) { if(lease == id)lease = null } }
     }
+    // Same-process launch reuses the already decoded transport map, after its
+    // durable file write succeeds. Process restart still reads the atomic file.
+    @Volatile private var preparedScene: Map<*, *>? = null
     private var journal:InkJournal?=null
     @Synchronized fun journal():InkJournal {
         return journal ?: InkJournal(File(context.filesDir,"native-editor-journal.bin")).also{journal=it}
@@ -27,7 +30,10 @@ class CanvasRepository(private val context: Context) {
         val data = if (value is Map<*, *>) JSONObject(value).toString() else JSONArray(value as Collection<*>).toString()
         val target = file(context, name)
         val stream = target.startWrite()
-        try { stream.write(data.toByteArray(Charsets.UTF_8)); target.finishWrite(stream) }
+        try {
+            stream.write(data.toByteArray(Charsets.UTF_8)); target.finishWrite(stream)
+            if (name == "input") preparedScene = value as? Map<*, *>
+        }
         catch (error: Throwable) { target.failWrite(stream); throw error }
     }
     private fun unpack(value: Any?): Any? = when (value) {
@@ -36,7 +42,7 @@ class CanvasRepository(private val context: Context) {
         JSONObject.NULL -> null
         else -> value
     }
-    fun scene() = unpack(JSONObject(String(file(context, "input").readFully(), Charsets.UTF_8))) as Map<*, *>
+    fun scene(): Map<*, *> = preparedScene ?: unpack(JSONObject(String(file(context, "input").readFully(), Charsets.UTF_8))) as Map<*, *>
     fun pending(): List<*> {
         val target = file(context, "output")
         if (!target.baseFile.exists()) return emptyList<Any>()

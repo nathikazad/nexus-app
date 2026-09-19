@@ -36,12 +36,13 @@ class CanvasSessionResources(
     eligible: () -> Boolean, present: (BitmapCanvasFrame) -> Unit,
     renderSettled: () -> Unit, saveState: (CanvasSaveCoordinator.SaveState) -> Unit,
     diagnostics: DiagnosticSink = components.diagnostics,
+    imported: (InkOperationKind) -> Unit = {},
 ) : AutoCloseable {
     private val importExecutor = Executors.newSingleThreadExecutor { Thread(it, "canvas-import") }
     private val renderExecutor = Executors.newSingleThreadExecutor { Thread(it, "canvas-render") }
     private val lease = repository.claim(engine.session)
     private var released = false
-    val imports = CanvasInputCoordinator(engine, CanvasExecutor { importExecutor.execute(it) }, scheduler, diagnostics, changed, settled, failed)
+    val imports = CanvasInputCoordinator(engine, CanvasExecutor { importExecutor.execute(it) }, scheduler, diagnostics, changed, settled, failed, imported)
     val actions = CanvasActionGate({ imports.drain() }, scheduler, {imports.penPending})
     val renders = CanvasRenderCoordinator(components.renderer(diagnostics), CanvasExecutor { renderExecutor.execute(it) }, scheduler,
         {engine.snapshot()}, eligible, present, renderSettled, failed)

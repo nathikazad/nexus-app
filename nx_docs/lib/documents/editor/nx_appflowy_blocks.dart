@@ -13,7 +13,7 @@ import 'package:nx_canvas_core/drawing.dart';
 import 'package:nx_canvas_core/preview.dart';
 import 'package:nx_docs/documents/editor/nx_canvas_session.dart';
 export 'package:nx_docs/documents/editor/nx_canvas_session.dart'
-    show nxCanvasNode, nxCanvasBlockType;
+    show nxCanvasNode, nxCanvasBlockType, hasPersistedCanvasIdentity;
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/documents/editor/nx_document_link.dart';
 import 'package:nx_docs/documents/editor/nx_excalidraw_frame.dart';
@@ -41,6 +41,7 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
   bool useReadTable = false,
   String? canvasDocumentId,
   Future<void> Function()? persistCanvasDocument,
+  bool Function(String id)? isCanvasIdentityPersisted,
   Future<void> Function(String url)? deleteDocumentImage,
   String Function(String url)? resolveDocumentImage,
   String? documentImageBaseUrl,
@@ -67,6 +68,7 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
     nxCanvasBlockType: NxCanvasBlockComponentBuilder(
       documentId: canvasDocumentId,
       persist: persistCanvasDocument,
+      isIdentityPersisted: isCanvasIdentityPersisted,
     ),
   };
   for (final entry in builders.entries) {

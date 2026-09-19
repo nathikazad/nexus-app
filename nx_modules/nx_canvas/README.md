@@ -20,8 +20,12 @@ The native editor returns a durable local journal keyed to a document/canvas
 session. NX Docs applies it to that block, awaits its existing local document
 save, then acknowledges the journal. Failed saves retain recovery data. A
 matching block recovers it on mounting; opening another canvas is blocked until
-that recovery is saved. Each editing launch gets a fresh persisted session ID,
-so copied blocks do not share subsequent edits. Native live ink is not bridged
+that recovery is saved. Unique canvas IDs stay stable; missing or copied IDs
+are replaced and persisted before launch. Existing IDs confirmed in the stored
+document launch without forcing a document save; pending autosaves continue
+independently. New IDs wait for durability even when already present in memory.
+Ambiguous copied-ID recovery is retained
+rather than guessed. Native live ink is not bridged
 per point through Flutter.
 
 On the tablet: enter Edit mode, insert `/canvas`, tap the preview, draw, and use
@@ -74,13 +78,21 @@ The shared Android module owns stroke import, rendering, and local recovery:
   persists the final drawing on return, then acknowledges that recovery token.
   No full-document polling, AppFlowy updates, or document sync runs for live ink;
   canvas edits reach server sync after returning to Docs.
-- `CanvasDiagnostics` records local JSONL spans for input, overview construction/drawing,
-  board navigation, render/index/tile work, firmware calls, stroke import, journal
-  saves and Docs persistence. A main-thread watchdog samples blocked stacks after
-  500 ms, with worker stacks after 2 seconds. Frame, memory and GC samples provide
-  context. Records contain counts/timings, not ink coordinates, titles or document IDs.
-  Producers use a bounded nonblocking queue; a separate writer rotates four 2 MiB
-  files in Android external app storage. No canvas diagnostics go to the server.
+- `CanvasDiagnostics` emits open/return milestones under an anonymous trace ID,
+  phase timings, operations slower than 50 ms, overlay repair, and failures.
+  A main-thread watchdog runs only during transitions. Per-point logs, Dart
+  heartbeats, periodic memory sampling, and window-frame sampling are removed.
+  Logs stay local, with a bounded writer queue and four rotating 2 MiB files.
+  Cross-Dart/native totals use the same device wall clock; individual native and
+  Dart phase durations use monotonic clocks. Clock adjustments can affect totals.
+  `open.presented` means the foreground bitmap was submitted, not measured pixel
+  visibility; `input_enabled` means app admission opened (firmware may still apply
+  its own refresh cooldown). `return.frame` is the Flutter frame after persistence
+  and clearing the opening state, not physical e-ink refresh completion.
+- Completed erases request one repaint of the arrows, dot and board label after
+  the current contact ends and the existing quiet interval expires. This does
+  not replace the firmware bitmap or rebuild the toolbar. Physical display
+  restoration still needs verification on the tablet.
 
 Capture after reproducing (tablet connected via ADB):
 
@@ -115,3 +127,17 @@ cover geometry, recovery after torn writes, failed compaction, token-specific
 acknowledgment, navigation ordering, stroke barriers, cache eviction, and metrics.
 Docs tests cover real database recovery, no document work during live ink, return-save ordering, and local
 diagnostic payloads. Device validation also checks stalled main-thread capture and recovery.
+
+### Automated open/return benchmark
+
+With Docs displaying one existing Canvas preview and mirroring open, run:
+
+```sh
+python3 scripts/benchmark_canvas_navigation.py --cycles 3 --output /tmp/canvas-navigation.jsonl
+```
+
+Run from the mobile repository root. The driver checks the foreground activity,
+requires fresh UI bounds, retries missing Android accessibility trees, and presses
+only Canvas and Document. It never draws or erases. Reported totals start at the
+app click callback, excluding test-driver UI discovery. Device frame milestones
+are not a measurement of the physical e-ink panel's refresh completion.

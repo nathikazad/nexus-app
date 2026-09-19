@@ -36,6 +36,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private val scheduler=AndroidCanvasScheduler(main)
     private lateinit var session: CanvasSessionResources
     private lateinit var input: AndroidCanvasInput
+    private lateinit var openedSnapshot: InkSnapshot
     private lateinit var engine: CanvasEngine
     private val model get()=engine.presentation()
     private val repository by lazy { CanvasServices.repository(applicationContext) }
@@ -57,9 +58,27 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private var buttonErasing=false
     private lateinit var saveStatus:TextView
     private var destroyed=false
+    private val traceId = activity.intent.getStringExtra("traceId") ?: UUID.randomUUID().toString()
+    private val openTappedAtMs = activity.intent.getLongExtra("openTappedAtMs", System.currentTimeMillis())
+    private var returnTappedAtMs = 0L
+    private var initialPresented = false
+    private var openReported = false
+    private fun transition(name: String, tappedAt: Long) {
+        diagnostics.event(name, mapOf("trace_id" to traceId,
+            "wall_ms" to (System.currentTimeMillis() - tappedAt)))
+    }
+    private var overlayRepairPending = false
     private var latestSaveState = CanvasSaveCoordinator.SaveState.SAVED
     private val idleStatus = CanvasIdleUpdate(scheduler) {
         if (!destroyed && ::session.isInitialized) {
+            if (overlayRepairPending) {
+                overlayRepairPending = false
+                if (nativeTool()) {
+                    boardControls.postInvalidateOnAnimation()
+                    boardLabel.postInvalidateOnAnimation()
+                    diagnostics.event("overlay.repair")
+                }
+            }
             // Completed ink affects history controls, not tool labels or board layout.
             undoButton.isEnabled = engine.canUndo || nativeTool()
             redoButton.isEnabled = engine.canRedo
@@ -76,8 +95,9 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private var diagnosticNavigationAt=0L
 
     fun onCreate(state:Bundle?) {
-        if(diagnostics === CanvasDiagnostics) { CanvasDiagnostics.start(applicationContext); CanvasDiagnostics.attach(activity) }
-        diagnostics.event("canvas.open")
+        if(diagnostics === CanvasDiagnostics) { CanvasDiagnostics.start(applicationContext) }
+        CanvasDiagnostics.transitionStart(traceId)
+        transition("transition.open.activity_created", openTappedAtMs)
         density=resources.displayMetrics.density.toDouble()
         val page=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.WHITE)}
         val header=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -117,17 +137,30 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             val pending=diagnostics.measure("open.read_recovery"){repository.document()}
             require(pending==null || pending["documentId"]==documentId){"Another drawing has unsaved changes"}
             engine=CanvasEngine(documentId, InkSnapshot.of(diagnostics.measure("open.decode_model"){InkCodec.model((pending?.get("drawing") as? Map<*,*>)?:input)}))
+            openedSnapshot = engine.snapshot().drawing
             this.input=components.input(this, components.diagnostics)
             val widget=this.input.view
             ink=widget
             session=CanvasSessionResources(engine, title, repository, scheduler, components=components,
+                imported={kind ->
+                    if (kind != InkOperationKind.DRAW) {
+                        overlayRepairPending = true
+                        idleStatus.request()
+                    }
+                },
                 changed={checkpoint();idleStatus.request()}, settled={drainAction()},
                 failed={
                     busy=false;flag(false)
                     if(::session.isInitialized)session.actions.cancel()
                     report(it)
                 },
-                eligible={nativeTool()}, present={frame->this.input.present(frame.bitmap)},
+                eligible={nativeTool()}, present={frame->
+                    this.input.present(frame.bitmap)
+                    if (!initialPresented) {
+                        initialPresented = true
+                        transition("transition.open.presented", openTappedAtMs)
+                    }
+                },
                 renderSettled={resumeInk()}, saveState={state->
                     latestSaveState = state
                     idleStatus.request()
@@ -183,7 +216,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
                     }
                 }
             })
-            diagnostics.event("canvas.ready")
+            transition("transition.open.layout_requested", openTappedAtMs)
         } catch(error:Throwable){report(error)}
     }
     private fun dp(value:Int)=(value*density).roundToInt()
@@ -193,7 +226,15 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     }
     private fun nativeTool()=overview==null && tool in listOf(NativeTool.PEN,NativeTool.RUB,NativeTool.REGION)
     private fun flag(enabled:Boolean){if(::input.isInitialized)input.enable(enabled)}
-    private fun resumeInk(){flag(ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&!rendering&&nativeTool())}
+    private fun resumeInk(){
+        val enabled = ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&!rendering&&nativeTool()
+        flag(enabled)
+        if (enabled && initialPresented && !openReported) {
+            openReported = true
+            transition("transition.open.input_enabled", openTappedAtMs)
+            CanvasDiagnostics.transitionEnd()
+        }
+    }
 
     private fun switchTool(next:NativeTool) {
         if(::boardControls.isInitialized)boardControls.cancelPress()
@@ -297,7 +338,6 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             stylusButtons(event)
 
         }
-        if(event.actionMasked==MotionEvent.ACTION_DOWN || event.actionMasked==MotionEvent.ACTION_UP)diagnostics.event("touch.dispatch",mapOf("action" to event.actionMasked,"event_age_ms" to android.os.SystemClock.uptimeMillis()-event.eventTime,"overlay" to overlayTouch))
         val handled=dispatch()
         if(event.actionMasked==MotionEvent.ACTION_UP || event.actionMasked==MotionEvent.ACTION_CANCEL) {
             val wasOverlay=overlayTouch;overlayTouch=false
@@ -313,7 +353,6 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         val diagnosticSpan=diagnostics.begin("controls.update")
         try {
         if(!::engine.isInitialized)return
-        diagnostics.event("canvas.state", mapOf("tool" to tool.name,"overview" to (overview!=null),"busy" to busy,"rendering" to rendering,"pending_imports" to pendingImports,"pending_saves" to session.saves.pendingSaves,"pen_pending" to penPending,"strokes" to model.strokes.size,"scale" to model.view.scale))
         buttons.forEach{(t,b)->b.isSelected=t==tool;b.setTypeface(null,if(t==tool)Typeface.BOLD else Typeface.NORMAL);b.alpha=if(t==tool)1f else .65f}
         // Include uncollected native strokes: an Undo tap captures them first.
         undoButton.isEnabled=engine.canUndo || nativeTool()
@@ -389,13 +428,25 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private fun checkpoint() { session.saves.checkpoint(engine.snapshot()) }
     private fun checkpointSafely(){runCatching{checkpoint()}.onFailure{report(it)}}
     private fun finishWriting() {
+        if (closing || busy) return
+        returnTappedAtMs = System.currentTimeMillis()
+        CanvasDiagnostics.transitionStart(traceId)
+        transition("transition.return.tap", returnTappedAtMs)
         if(::boardControls.isInitialized)boardControls.cancelPress()
         if(!::engine.isInitialized || !ready){activity.finish();return}
         perform("close") {
+            transition("transition.return.drained", returnTappedAtMs)
             checkpoint();closing=true;flag(false)
             session.saves.barrier { saved ->
-                if(saved) {session.releaseLease();activity.setResult(Activity.RESULT_OK);activity.finish()}
-                else {closing=false;saveStatus.text="Could not save. Please retry before leaving.";resumeInk()}
+                if(saved) {
+                    transition("transition.return.durable", returnTappedAtMs)
+                    session.releaseLease()
+                    activity.setResult(Activity.RESULT_OK, android.content.Intent()
+                        .putExtra("traceId", traceId).putExtra("returnTappedAtMs", returnTappedAtMs)
+                        .putExtra("unchanged", engine.snapshot().drawing == openedSnapshot))
+                    activity.finish()
+                }
+                else {CanvasDiagnostics.event("transition.return.failed");CanvasDiagnostics.transitionEnd();closing=false;saveStatus.text="Could not save. Please retry before leaving.";resumeInk()}
             }
         }
     }

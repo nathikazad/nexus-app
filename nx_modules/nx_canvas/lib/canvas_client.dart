@@ -17,14 +17,20 @@ class CanvasOpenRequest {
     required this.title,
     required this.drawing,
     this.backLabel = '‹ Drawings',
+    this.traceId,
+    this.openTappedAtMs,
   });
   final String sessionId, title, backLabel;
   final Drawing drawing;
+  final String? traceId;
+  final int? openTappedAtMs;
   Map<String, Object?> toJson() => {
     ...drawing.toJson(),
     'documentId': sessionId,
     'title': title,
     'backLabel': backLabel,
+    if (traceId != null) 'traceId': traceId,
+    if (openTappedAtMs != null) 'openTappedAtMs': openTappedAtMs,
   };
 }
 
@@ -33,7 +39,13 @@ class CanvasSavedDrawing {
     required this.sessionId,
     required this.token,
     required this.drawing,
+    this.unchanged = false,
+    this.returnTappedAtMs,
+    this.traceId,
   });
+  final bool unchanged;
+  final int? returnTappedAtMs;
+  final String? traceId;
   final String sessionId, token;
   final Drawing drawing;
   factory CanvasSavedDrawing.fromJson(Map<String, dynamic> json) {
@@ -45,6 +57,9 @@ class CanvasSavedDrawing {
     return CanvasSavedDrawing(
       sessionId: json['documentId'] as String,
       token: json['saveToken'] as String,
+      unchanged: json['unchanged'] == true,
+      returnTappedAtMs: json['returnTappedAtMs'] as int?,
+      traceId: json['traceId'] as String?,
       drawing: Drawing.fromJson(
         Map<String, dynamic>.from(json['drawing'] as Map),
       ),

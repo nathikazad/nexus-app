@@ -11,6 +11,7 @@ class CanvasInputCoordinator(
     private val changed: () -> Unit,
     private val settled: () -> Unit,
     private val failed: (Throwable) -> Unit,
+    private val imported: (InkOperationKind) -> Unit = {},
 ) {
     private val gate = InkDrainGate()
     private var boundarySequence = 0L
@@ -30,7 +31,6 @@ class CanvasInputCoordinator(
             is InputEvent.Quiescent -> {
                 if(event.through >= boundarySequence) {
                     gate.reconcileReleased()
-                    diagnostics.event("input.quiescent", mapOf("through" to event.through, "pending_imports" to pendingImports))
                     settled()
                 }
             }
@@ -52,15 +52,16 @@ class CanvasInputCoordinator(
             val result = runCatching {
                 diagnostics.measure("stroke.import") {
                     val operation = diagnostics.measure("stroke.decode") { record.decode(transform) }
-                    operation?.let { diagnostics.measure("stroke.apply") { before.drawing.model().also(it::apply).strokes } }
+                    operation?.let { diagnostics.measure("stroke.apply") { it.kind to before.drawing.model().also(it::apply).strokes } }
                 }
             }
             owner.execute {
                 try {
-                    val strokes=result.getOrThrow()
+                    val applied=result.getOrThrow()
+                    val strokes=applied?.second
                     strokes?.let { engine.dispatch(CanvasCommand.ReplaceInk(it)) }
                     queue.removeFirst();pendingImports--
-                    if(strokes!=null)changed()
+                    if(strokes!=null) { changed(); imported(applied.first) }
                 } catch (error: Throwable) { importFailed = true; failed(error) }
                 finally { importing = false; next(); settled(); if(pendingImports == 0)drained?.invoke() }
             }
