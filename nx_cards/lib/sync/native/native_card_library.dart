@@ -74,12 +74,8 @@ final class NativeCardLibrary implements CardWorkspace {
         final LanguageCardContent oldContent,
         final LanguageCardContent newContent,
       ) =>
-        LanguageCardContent(
-          english: newContent.english,
-          originalScript: newContent.originalScript,
-          transliteration: newContent.transliteration,
+        newContent.copyWith(
           audioUrl: newContent.audioUrl ?? oldContent.audioUrl,
-          examples: newContent.examples,
         ),
       _ => content,
     };

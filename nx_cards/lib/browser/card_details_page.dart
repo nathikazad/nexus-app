@@ -8,6 +8,8 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/language_examples.dart';
 
+import 'package:nx_cards/browser/card_edit_dialog.dart';
+
 enum CardDetailsTab { examples, stats }
 
 class CardDetailsPage extends ConsumerStatefulWidget {
@@ -28,6 +30,7 @@ class CardDetailsPage extends ConsumerStatefulWidget {
 
 class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
   StudyCard? _loadedCard;
+  CardContent? _editedContent;
   StudyCue? _selectedCue;
   bool _showNotes = false;
   bool _savingStatus = false;
@@ -56,6 +59,19 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     } finally {
       if (mounted) setState(() => _savingStatus = false);
     }
+  }
+
+  Future<void> _edit(StudyCard card) async {
+    final invalidate = ref.read(cardsInvalidationProvider);
+    final library = ref.read(cardLibraryProvider);
+    final content = await showDialog<CardContent>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => CardEditDialog(card: card, library: library),
+    );
+    if (!mounted || content == null) return;
+    setState(() => _editedContent = content);
+    invalidate();
   }
 
   List<StudyCue> get _reviewedCues => [
@@ -89,6 +105,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     }
     final card = (body?.value ?? widget.card).copyWith(
       learningStatus: _updatedStatus,
+      content: _editedContent,
     );
     _loadedCard = card;
     final languageContent = switch (card.content) {
@@ -116,7 +133,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
             ? [
                 IconButton(
                   tooltip: 'Edit card',
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => _edit(card),
                   icon: const Icon(Icons.edit_outlined),
                 ),
                 const SizedBox(width: 6),

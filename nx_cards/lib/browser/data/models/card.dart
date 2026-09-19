@@ -46,6 +46,19 @@ final class LanguageCardContent extends CardContent {
   final String? audioUrl;
   final List<LanguageExample> _examples;
 
+  LanguageCardContent copyWith({
+    String? english,
+    String? originalScript,
+    String? transliteration,
+    String? audioUrl,
+  }) => LanguageCardContent(
+    english: english ?? this.english,
+    originalScript: originalScript ?? this.originalScript,
+    transliteration: transliteration ?? this.transliteration,
+    audioUrl: audioUrl ?? this.audioUrl,
+    examples: _examples,
+  );
+
   // A linked vocabulary item is not a usage example of itself. Keep the
   // underlying relation, but suppress identical text in every example view.
   List<LanguageExample> get examples => _examples
