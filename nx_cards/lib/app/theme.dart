@@ -117,7 +117,7 @@ ThemeData buildRecallTheme() {
       surfaceTintColor: Colors.transparent,
     ),
     textSelectionTheme: TextSelectionThemeData(
-      cursorColor: _lightPalette.ink,
+      cursorColor: RecallColors.sky,
       selectionColor: RecallColors.sky.withValues(alpha: .2),
       selectionHandleColor: _lightPalette.ink,
     ),
@@ -163,7 +163,7 @@ ThemeData buildRecallTheme() {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: RecallColors.ink,
+        backgroundColor: RecallColors.sky,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
       ),
@@ -204,7 +204,7 @@ ThemeData buildRecallDarkTheme() {
       surfaceTintColor: Colors.transparent,
     ),
     textSelectionTheme: TextSelectionThemeData(
-      cursorColor: _darkPalette.ink,
+      cursorColor: _accent(_darkPalette),
       selectionColor: RecallColors.sky.withValues(alpha: .2),
       selectionHandleColor: _darkPalette.ink,
     ),
@@ -247,7 +247,7 @@ ThemeData buildRecallDarkTheme() {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: ink,
+        backgroundColor: _accent(_darkPalette),
         foregroundColor: background,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
       ),
@@ -271,63 +271,68 @@ TextStyle get monoLabel => const TextStyle(
 );
 
 // Selection must remain obvious without color on e-ink and grayscale displays.
-SegmentedButtonThemeData _selectionButtons(
-  RecallPalette palette,
-) => SegmentedButtonThemeData(
-  style: ButtonStyle(
-    backgroundColor: WidgetStateProperty.resolveWith(
-      (states) =>
-          states.contains(WidgetState.selected) ? palette.ink : palette.surface,
-    ),
-    foregroundColor: WidgetStateProperty.resolveWith(
-      (states) =>
-          states.contains(WidgetState.selected) ? palette.surface : palette.ink,
-    ),
-    textStyle: WidgetStateProperty.resolveWith(
-      (states) => TextStyle(
-        fontWeight: states.contains(WidgetState.selected)
-            ? FontWeight.w700
-            : FontWeight.w400,
+SegmentedButtonThemeData _selectionButtons(RecallPalette palette) =>
+    SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? RecallColors.sky
+              : palette.surface,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? Colors.white
+              : palette.ink,
+        ),
+        textStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w400,
+          ),
+        ),
+        side: WidgetStatePropertyAll(BorderSide(color: palette.line)),
+        animationDuration: Duration.zero,
       ),
-    ),
-    side: WidgetStatePropertyAll(BorderSide(color: palette.ink)),
-    animationDuration: Duration.zero,
-  ),
-);
+    );
 
 ChipThemeData _selectionChips(RecallPalette palette) => ChipThemeData(
   color: WidgetStateProperty.resolveWith(
-    (states) =>
-        states.contains(WidgetState.selected) ? palette.ink : palette.surface,
+    (states) => states.contains(WidgetState.selected)
+        ? RecallColors.sky
+        : palette.surface,
   ),
   labelStyle: TextStyle(
     color: WidgetStateColor.resolveWith(
       (states) =>
-          states.contains(WidgetState.selected) ? palette.surface : palette.ink,
+          states.contains(WidgetState.selected) ? Colors.white : palette.ink,
     ),
     fontWeight: FontWeight.w600,
   ),
   secondaryLabelStyle: TextStyle(
-    color: palette.surface,
+    color: Colors.white,
     fontWeight: FontWeight.w700,
   ),
-  checkmarkColor: palette.surface,
+  checkmarkColor: Colors.white,
   showCheckmark: true,
-  side: BorderSide(color: palette.ink),
+  side: BorderSide(color: palette.line),
 );
 
 TabBarThemeData _selectionTabs(RecallPalette palette) => TabBarThemeData(
-  indicator: BoxDecoration(
-    color: palette.ink,
-    borderRadius: BorderRadius.circular(8),
+  indicator: UnderlineTabIndicator(
+    borderSide: BorderSide(color: _accent(palette), width: 3),
+    borderRadius: BorderRadius.circular(3),
   ),
-  indicatorSize: TabBarIndicatorSize.tab,
-  labelColor: palette.surface,
-  unselectedLabelColor: palette.ink,
+  indicatorSize: TabBarIndicatorSize.label,
+  labelColor: _accent(palette),
+  unselectedLabelColor: palette.muted,
   labelStyle: const TextStyle(fontWeight: FontWeight.w700),
   unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
-  dividerColor: palette.ink,
+  dividerColor: palette.line,
 );
+
+Color _accent(RecallPalette palette) =>
+    palette == _darkPalette ? const Color(0xff7dd3fc) : RecallColors.sky;
 
 // Keep Material's component defaults neutral; seed generation otherwise adds
 // colored surface tones even when the seed itself is near black.
@@ -338,13 +343,17 @@ ColorScheme _neutralScheme(RecallPalette palette, Brightness brightness) {
     seedColor: RecallColors.sky,
     brightness: brightness,
   ).copyWith(
-    primary: palette.ink,
-    onPrimary: palette.surface,
-    primaryContainer: palette.soft,
-    onPrimaryContainer: palette.ink,
+    primary: blue,
+    onPrimary: dark ? RecallColors.ink : Colors.white,
+    primaryContainer: dark ? const Color(0xff0c3046) : const Color(0xffe0f2fe),
+    onPrimaryContainer: dark
+        ? const Color(0xffbae6fd)
+        : const Color(0xff075985),
     secondary: blue,
     onSecondary: dark ? RecallColors.ink : Colors.white,
-    secondaryContainer: palette.soft,
+    secondaryContainer: dark
+        ? const Color(0xff0c3046)
+        : const Color(0xffe0f2fe),
     onSecondaryContainer: palette.ink,
     tertiary: blue,
     onTertiary: dark ? RecallColors.ink : Colors.white,
