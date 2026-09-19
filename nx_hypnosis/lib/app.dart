@@ -1,3 +1,4 @@
+import 'playback_state.dart';
 import 'package:nx_auth/nx_auth.dart';
 import 'package:flutter/rendering.dart';
 import 'timed_story.dart';
@@ -91,14 +92,20 @@ class _HypnosisHomeState extends State<HypnosisHome> {
         ? (widget.collection as RemoteCollection).recording
         : null,
   );
+  PlaybackState? playbackState;
   @override
   void initState() {
     super.initState();
+    if (widget.collection case final RemoteCollection remote) {
+      playbackState = PlaybackState.forCollection(listening, remote);
+      unawaited(playbackState!.initialize());
+    }
     data.addListener(_collectionChanged);
   }
 
   void _collectionChanged() {
     if (!mounted) return;
+    playbackState?.libraryChanged();
     setState(() {
       if (selectedDesire != null) {
         selectedDesire = data.desires
@@ -212,6 +219,7 @@ class _HypnosisHomeState extends State<HypnosisHome> {
   @override
   void dispose() {
     data.removeListener(_collectionChanged);
+    playbackState?.dispose();
     listening.dispose();
     followPlayback.dispose();
     super.dispose();

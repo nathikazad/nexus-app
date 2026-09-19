@@ -131,6 +131,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           print('[Router] Authenticated on $location → allowing access');
           return null;
 
+        // Keep data routes gated until authentication has a selected domain.
+        case AppStatus.selectingDomain:
         case AppStatus.unauthenticated:
           if (location == '/login') {
             print('[Router] Unauthenticated on /login → allowing access');

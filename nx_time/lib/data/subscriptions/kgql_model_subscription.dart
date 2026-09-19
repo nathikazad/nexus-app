@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:nx_db/kgql.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_db/riverpod.dart';
 
 const String _subscribeKgqlModelsSubscription = '''
@@ -47,15 +47,9 @@ class KgqlModelChange {
 
 final kgqlModelChangesProvider = StreamProvider.autoDispose
     .family<KgqlModelChange, String>((ref, modelTypeName) async* {
+      final domainId = ref.watch(authProvider).value?.domainId;
+      if (domainId == null) return;
       final client = ref.watch(graphqlClientProvider);
-      final domainOptions = await fetchModelTypeDomainOptions(
-        client,
-        modelTypeName: modelTypeName,
-      );
-      final domainId = _subscriptionDomainId(domainOptions);
-      if (domainId == null) {
-        throw StateError('No domain available for $modelTypeName subscription');
-      }
       final options = SubscriptionOptions(
         document: gql(_subscribeKgqlModelsSubscription),
         variables: {
@@ -77,8 +71,3 @@ final kgqlModelChangesProvider = StreamProvider.autoDispose
         }
       }
     });
-
-int? _subscriptionDomainId(ModelTypeDomainOptions domainOptions) {
-  if (domainOptions.domains.isEmpty) return null;
-  return domainOptions.domains.first.id;
-}

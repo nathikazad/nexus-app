@@ -6,7 +6,7 @@ Android, iOS, and web. The monochrome layout follows `design/bare_bones/index.ht
 ## Production data
 
 The app signs in with Nexus and uses `https://nexus.kgql.io/hypnosis/collection`.
-The backend resolves the authenticated User → Person → desires → hypnosis_tapes.
+The backend resolves the authenticated User → Person → desires → tapes.
 Records are private and stored in the user's personal domain. The app uses the
 shared `nx_auth` package; no user ID or credentials are compiled into it.
 
@@ -40,7 +40,7 @@ parent repository's Shorebird policy.
 Server source lives in the sibling `servers` repository:
 - `nexus/hypnosis/repository.py`: transactional KGQL operations and owner checks.
 - `nexus/http/routes/hypnosis.py`: collection and protected recording endpoints.
-- `pgdb/core_schema/models/Digital_Nouns/{desires,hypnosis_tapes}.json`: catalog.
+- `pgdb/core_schema/models/Digital_Nouns/{desires,tapes}.json`: catalog.
 - `pgdb/scripts/setup_hypnosis.py`: scoped catalog application and rerunnable import.
 
 Production recordings use the persistent `hypnosis_recordings` data directory,
@@ -117,3 +117,23 @@ through the shared spoken-audio session.
 ## Playback-following transcript
 
 When `audio.timeline` has version 1, a checksum matching the recording, and valid ordered segments, the story page displays that recording's text and highlights the active turn. Playback, seeking, and repeat update the selection. Manual scrolling pauses following; the floating “Follow audio” button resumes it. Tapes without valid timing keep the original story view. The recorded text is kept separate from editable story prose so old timings cannot highlight the wrong revision. Following uses the playback position, so speed changes do not require scaling timestamps.
+
+## Saved listening session
+
+Playback checkpoints persist the selected tape, audio revision, position in
+milliseconds, speed, and repeat mode. They are saved locally every five seconds
+and on playback controls/lifecycle changes, in a server/user/domain-specific
+SharedPreferences partition. The player restores paused without loading audio;
+Play loads the recording and seeks before starting. Changed audio revisions
+restart at zero. A failed load keeps the checkpoint available for retry.
+
+`GET/PUT /hypnosis/state` synchronizes checkpoints to
+`users.state.domains[domainId].nx_hypnosis`. No database migration is required.
+The server validates tape access and serializes updates to preserve other apps
+and domains. Newer client UTC timestamps win; equal timestamps are idempotent.
+Devices should have automatic time enabled (timestamps over five minutes ahead
+are rejected). Offline writes retry; delayed responses cannot overwrite a newer
+local action, and incoming state does not interrupt active playback. Explicitly
+closing the player saves an empty selection. Abrupt process termination can lose
+up to the latest five seconds; physical-device background behavior still needs
+verification when installing.

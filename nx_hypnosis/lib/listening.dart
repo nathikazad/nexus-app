@@ -30,6 +30,32 @@ class Listening extends ChangeNotifier {
   bool repeatEnabled = false;
   bool changingRepeat = false;
   String? error;
+  int checkpointRevision = 0;
+  bool opening = false;
+  bool _restorePending = false;
+  Future<void>? _stopping;
+
+  /// Restore UI immediately; load/seek audio only when the user presses play.
+  void restore(
+    Tape? item, {
+    required Duration position,
+    required double speed,
+    required bool repeat,
+  }) {
+    ++_generation;
+    tape = item;
+    this.position = position;
+    this.speed = speed;
+    repeatEnabled = repeat;
+    playing = false;
+    loading = false;
+    duration = Duration.zero;
+    error = null;
+    _restorePending = true;
+    _stopping = _background?.stop().catchError((Object _) {});
+    _update();
+  }
+
   int _generation = 0;
   bool _disposed = false;
   void _update() {
@@ -42,6 +68,7 @@ class Listening extends ChangeNotifier {
     final p = _player = _background!.player;
     _subscriptions.add(
       p.positionStream.listen((v) {
+        if (_restorePending) return;
         position = v;
         _update();
       }),
@@ -74,9 +101,19 @@ class Listening extends ChangeNotifier {
   Future<void> open(Tape item) async {
     if (item.audioAsset == null) return;
     final request = ++_generation;
+    final resume =
+        _restorePending &&
+            tape?.id == item.id &&
+            tape?.audioRevision == item.audioRevision
+        ? position
+        : Duration.zero;
     error = null;
+    opening = true;
     try {
-      if (tape?.id != item.id ||
+      await _stopping;
+      if (_disposed || request != _generation) return;
+      if (_restorePending ||
+          tape?.id != item.id ||
           tape?.audioRevision != item.audioRevision ||
           tape?.audioAsset != item.audioAsset) {
         tape = item;
@@ -106,7 +143,7 @@ class Listening extends ChangeNotifier {
         }
       }
       if (_disposed || request != _generation) return;
-      await _background!.prepare(
+      await _background?.prepare(
         id: item.id,
         title: item.title,
         album: 'NX Hypnosis',
@@ -115,15 +152,29 @@ class Listening extends ChangeNotifier {
       if (_disposed || request != _generation) return;
       await player.setSpeed(speed);
       await player.setLoopMode(repeatEnabled ? LoopMode.one : LoopMode.off);
+      if (_restorePending) {
+        final limit = player.duration;
+        await player.seek(limit != null && resume > limit ? limit : resume);
+        if (_disposed || request != _generation) return;
+        position = limit != null && resume > limit ? limit : resume;
+        _restorePending = false;
+      }
       if (player.processingState == ProcessingState.completed) {
         await player.seek(Duration.zero);
       }
       unawaited(_play());
     } catch (_) {
       if (request == _generation && !_disposed) {
-        tape = null;
+        tape = item;
+        position = resume;
+        _restorePending = true;
         loading = false;
         error = 'The recording could not be loaded. Please try again.';
+        _update();
+      }
+    } finally {
+      if (request == _generation && !_disposed) {
+        opening = false;
         _update();
       }
     }
@@ -148,15 +199,23 @@ class Listening extends ChangeNotifier {
     }
   }
 
-  Future<void> seek(Duration value) => player.seek(
-    Duration(
-      milliseconds: value.inMilliseconds.clamp(0, duration.inMilliseconds),
-    ),
-  );
+  Future<void> seek(Duration value) async {
+    final maximum = duration > Duration.zero
+        ? duration.inMilliseconds
+        : value.inMilliseconds;
+    final target = Duration(
+      milliseconds: value.inMilliseconds.clamp(0, maximum < 0 ? 0 : maximum),
+    );
+    if (!_restorePending) await player.seek(target);
+    position = target;
+    checkpointRevision++;
+    _update();
+  }
+
   Future<void> skip(int seconds) => seek(position + Duration(seconds: seconds));
   Future<void> changeSpeed(double value) async {
     speed = value;
-    await player.setSpeed(value);
+    if (!_restorePending) await player.setSpeed(value);
     _update();
   }
 
@@ -166,7 +225,9 @@ class Listening extends ChangeNotifier {
     _update();
     try {
       final next = !repeatEnabled;
-      await player.setLoopMode(next ? LoopMode.one : LoopMode.off);
+      if (!_restorePending) {
+        await player.setLoopMode(next ? LoopMode.one : LoopMode.off);
+      }
       repeatEnabled = next;
     } catch (_) {
       error = 'Repeat could not be changed. Please try again.';
@@ -178,6 +239,9 @@ class Listening extends ChangeNotifier {
 
   Future<void> close() async {
     ++_generation;
+    _restorePending = false;
+    opening = false;
+    checkpointRevision++;
     tape = null;
     playing = false;
     loading = false;

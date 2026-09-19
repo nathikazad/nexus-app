@@ -47,31 +47,6 @@ class _NxAppFlowyEditor extends StatefulWidget {
   State<_NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
 }
 
-class _EditorFindBarPresentation {
-  const _EditorFindBarPresentation({
-    required this.searchService,
-    required this.onClose,
-    required this.serial,
-  });
-
-  final SearchServiceV3 searchService;
-  final VoidCallback onClose;
-  final int serial;
-}
-
-bool _isRemoteOrigin(DocumentChangeOrigin origin) {
-  return origin == DocumentChangeOrigin.initialRemoteLoad ||
-      origin == DocumentChangeOrigin.remoteRefresh ||
-      origin == DocumentChangeOrigin.snapshotRestore;
-}
-
-String _contentFingerprint(NxDocument document) {
-  final appFlowyDocument = document.jsonDocument['document'];
-  return appFlowyDocument == null
-      ? document.document
-      : jsonEncode(appFlowyDocument);
-}
-
 class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   static const _scrollAnchorSaveDelay = Duration(milliseconds: 450);
   static const _scrollAnchorRestoreRetryDelay = Duration(milliseconds: 80);

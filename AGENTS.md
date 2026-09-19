@@ -1,5 +1,10 @@
 ## iOS installation policy
 
+- All first-party iOS app and example projects target iOS 15.0 or newer. Keep
+  Debug, Profile, and Release deployment targets, the Podfile platform, and
+  CocoaPods post-install deployment targets aligned; Xcode 27 rejects older
+  targets. New projects must use the same minimum.
+
 - Physical iOS installations must be Shorebird-enabled by default. The only
   exception is when the user explicitly asks for a debug installation for
   quick edits, hot reload, or rapid visual iteration; in that case, use

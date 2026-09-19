@@ -25,6 +25,7 @@ import 'package:nx_documents/nx_documents.dart' as shared_documents;
 // import 'package:nx_docs/documents/editor/offline_sync_status_label.dart';
 
 part 'editor_canvas.dart';
+part 'editor_content_state.dart';
 part 'editor_navigation.dart';
 part 'editor_toolbar.dart';
 
