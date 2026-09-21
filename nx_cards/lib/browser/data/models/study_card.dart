@@ -54,7 +54,7 @@ class StudyCard {
       if (category.trim().isNotEmpty) category.trim(),
   }.toList(growable: false);
   String? get wordCategory => wordCategories.firstOrNull;
-  List<String> get studyCategories => isScriptCard
+  List<String> get _primaryStudyCategories => isScriptCard
       ? const <String>['Script']
       : isPhraseCard
       ? const <String>['Phrase']
@@ -63,6 +63,13 @@ class StudyCard {
       : modelTypeName == 'Word'
       ? wordCategories
       : const <String>[];
+  // Additional study groupings reuse the same card without changing its
+  // grammatical category or progression cohort.
+  List<String> get studyCategories => <String>{
+    ..._primaryStudyCategories,
+    for (final category in tags['Study Category'] ?? const <String>[])
+      if (category.trim().isNotEmpty) category.trim(),
+  }.toList(growable: false);
   String? get studyCategory => studyCategories.firstOrNull;
   bool belongsToStudyCategory(String category) =>
       studyCategories.contains(category);
