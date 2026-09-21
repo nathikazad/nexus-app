@@ -2,6 +2,8 @@ import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
+import 'package:nx_cards/audio/audio_providers.dart';
+import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
@@ -181,6 +183,10 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final transliteration = content is LanguageCardContent
         ? content.transliteration
         : '';
+    final audioUrl = content is LanguageCardContent ? content.audioUrl : null;
+    final audio = audioUrl?.isNotEmpty == true
+        ? ref.watch(cardAudioRepositoryProvider)
+        : null;
     final scheduleStatus = cardScheduleStatus(
       widget.card,
       DateTime.now().toUtc(),
@@ -324,6 +330,14 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                         ],
                       ),
                     ),
+                    if (audioUrl?.isNotEmpty == true && audio != null) ...[
+                      const SizedBox(width: 8),
+                      PronunciationButton(
+                        key: ValueKey('card-list-audio-${widget.card.id}'),
+                        audioUrl: audioUrl!,
+                        repository: audio,
+                      ),
+                    ],
                     const SizedBox(width: 12),
                     Icon(
                       _canDrag ? Icons.drag_indicator : Icons.chevron_right,

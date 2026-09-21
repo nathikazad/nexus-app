@@ -472,7 +472,7 @@ void main() {
     final slider = tester.widget<Slider>(
       find.byKey(const ValueKey('retained-recall-slider')),
     );
-    expect(slider.divisions, 5);
+    expect(slider.divisions, 10);
     expect(find.text('0–100%'), findsOneWidget);
     expect(find.text('2 available'), findsOneWidget);
     expect(find.text('0 out of 2 cards are due now'), findsOneWidget);

@@ -1221,7 +1221,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           value: _retainedMaxPercentage.toDouble(),
           min: 0,
           max: 100,
-          divisions: _reviewHistoryWindow,
+          divisions: 10,
           label: '0–$_retainedMaxPercentage%',
           onChanged: _selectRetainedMaxPercentage,
         ),
