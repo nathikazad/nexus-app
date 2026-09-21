@@ -30,3 +30,23 @@ Stages:
 Native `native_ms` is elapsed time from activity creation. Do not time the awaited `NativeDrawingSession.open` as startup: it resolves only when the user ends the entire session.
 
 The offline nested-example regression is covered by a test using a summary parent with no examples, a fully loaded parent with a sentence example, and an unloaded grandchild. It ensures exactly one parent read and no recursive body loading.
+
+## Captured baseline: build 20260943, Android Wi-Fi 10.0.0.8
+
+Drawing, 40 selected cards, 750 cards in the local library:
+
+| Stage | Duration |
+| --- | ---: |
+| Dashboard | <1 ms |
+| Selection plus sequential queue hydration | 12,597 ms |
+| Native availability | 4 ms |
+| Library summary load/index | 259 ms |
+| Example-parent hydration | 694 ms |
+| Derivation | 2 ms |
+| Native ink initialization | 87 ms |
+| Activity creation through first UI post | 950 ms |
+| Tap through first UI post | 14,576 ms |
+
+The user reported about 20 seconds visually. The markers do not include physical panel refresh. Queue preparation accounts for about 86% of the measured tap-to-UI interval; ink initialization is small. This baseline did not split drawing selection from body loading.
+
+The next build overlaps up to eight local card reads, preserves ordering, and deduplicates identical cards across recall cues. Direct example parents use the same bounded reader. `selection_ready` now also splits drawing selection from loading. `card_read` reports database `query_ms` and content read/decode `body_ms`; concurrent durations overlap and must not be summed. Speedup must be verified with a new device run, not inferred from concurrency alone.

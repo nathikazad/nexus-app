@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
 import 'package:nx_cards/account/account_session.dart';
@@ -794,16 +795,19 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         selected.shuffle(Random.secure());
       }
       _startupStep('selection_ready');
-      final hydrated = <StudyPrompt>[];
-      for (final prompt in selected.take(min(_count, selected.length))) {
-        hydrated.add(
+      final chosen = selected.take(min(_count, selected.length)).toList();
+      final bodies = await hydrateStudyQueue(
+        chosen.map((prompt) => prompt.card).toList(),
+        (card) => hydrateStudyCard(ref, card),
+      );
+      final hydrated = [
+        for (var i = 0; i < chosen.length; i++)
           StudyPrompt(
-            card: await hydrateStudyCard(ref, prompt.card),
-            cue: prompt.cue,
+            card: bodies[i],
+            cue: chosen[i].cue,
             showEnglishAndTransliteration: _combinedPrompt,
           ),
-        );
-      }
+      ];
       _startupStep('queue_hydrated count=${hydrated.length}');
       return hydrated;
     } catch (error) {
@@ -882,10 +886,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         }
         return;
       }
-      final hydrated = <StudyCard>[];
-      for (final card in selected) {
-        hydrated.add(await hydrateStudyCard(ref, card));
-      }
+      _startupStep('selection_ready');
+      final hydrated = await hydrateStudyQueue(
+        selected,
+        (card) => hydrateStudyCard(ref, card),
+      );
       _startupStep('queue_hydrated count=${hydrated.length}');
       if (!mounted) return;
       if (await _openNativeDrawing(cards: hydrated)) {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../remote/cards_sync_transport.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -181,9 +182,15 @@ final class DriftLocalCardsStore
 
   @override
   Future<StudyCard?> getCard(int cardId) async {
+    final clock = Stopwatch()..start();
     final row = await _cardQuery(cardId).getSingleOrNull();
+    final queryMs = clock.elapsedMilliseconds;
     if (row == null) return null;
-    return _cardFromRow(row);
+    final card = await _cardFromRow(row);
+    debugPrint(
+      'NxCardsStartup stage=card_read query_ms=$queryMs body_ms=${clock.elapsedMilliseconds - queryMs} total_ms=${clock.elapsedMilliseconds}',
+    );
+    return card;
   }
 
   @override

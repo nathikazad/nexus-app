@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show StringCharacters;
@@ -23,11 +24,12 @@ class NativeDrawingSession {
           for (final example in content.examples)
             if (example.cardId != null) example.cardId!,
     };
-    for (final id in ids) {
-      final parent = library[id];
-      if (parent != null && parent.isSummary) {
-        library[id] = await hydrate(parent);
-      }
+    final parents = await hydrateStudyQueue([
+      for (final id in ids)
+        if (library[id] != null) library[id]!,
+    ], hydrate);
+    for (final parent in parents) {
+      library[parent.id] = parent;
     }
   }
 
