@@ -19,7 +19,9 @@ import kotlin.math.roundToInt
 
 /** A separate opaque Android window: no Flutter surface participates in ink. */
 class NativeDrawingActivity : Activity() {
-    private lateinit var cards: List<Map<*, *>>
+    private lateinit var cards: MutableList<Map<*, *>>
+    private val cardWaiters = mutableMapOf<Int, MutableList<(String?) -> Unit>>()
+    private var loadingCard = false
     private lateinit var progress: TextView
     private lateinit var prompt: TextView
     private lateinit var subtitle: TextView
@@ -64,7 +66,7 @@ class NativeDrawingActivity : Activity() {
         val input = NativeDrawingBridge.input
         if (input == null) { finish(); return }
         try {
-            cards = (input["cards"] as List<*>).map { it as Map<*, *> }
+            cards = (input["cards"] as List<*>).map { it as Map<*, *> }.toMutableList()
             NativeDrawingBridge.activity = WeakReference(this)
             require(cards.isNotEmpty())
             recall = input["recall"] == true
@@ -132,7 +134,7 @@ class NativeDrawingActivity : Activity() {
             mark("layout_built")
             updateCard()
             mark("first_card_bound")
-            root.post { mark("first_ui_post") }
+            root.post { mark("first_ui_post"); prefetch() }
             Log.i("NxCardsNative", "Fully native ${if (recall) "recall" else "practice"} activity opened")
         } catch (e: Throwable) {
             setResult(RESULT_CANCELED, Intent().putExtra("error", e.toString())); finish()
@@ -322,22 +324,57 @@ class NativeDrawingActivity : Activity() {
         })
     }
     @Deprecated("Deprecated in Java")
-    override fun onBackPressed() { if (!busy) super.onBackPressed() }
+    override fun onBackPressed() { if (!busy || loadingCard) super.onBackPressed() }
 
     private fun advance() {
         if (index == cards.lastIndex) { stopAudio(); finish(); return }
         moveTo(index + 1)
     }
+    private fun requestCard(target: Int, done: (String?) -> Unit) {
+        if (cards[target]["pending"] != true) { done(null); return }
+        val existing = cardWaiters[target]
+        if (existing != null) { existing.add(done); return }
+        cardWaiters[target] = mutableListOf(done)
+        fun complete(error: String?) {
+            val callbacks = cardWaiters.remove(target) ?: return
+            if (!isFinishing && !isDestroyed) callbacks.forEach { it(error) }
+        }
+        val channel = NativeDrawingBridge.channel
+        if (channel == null) { complete("Session ended"); return }
+        channel.invokeMethod("prepare", mapOf("index" to target), object : MethodChannel.Result {
+            override fun success(result: Any?) {
+                if (result !is Map<*, *>) { complete("Could not load card. Try again."); return }
+                cards[target] = result
+                complete(null)
+            }
+            override fun error(code: String, message: String?, details: Any?) = complete("Could not load card. Try Next again.")
+            override fun notImplemented() = complete("Card loading unavailable")
+        })
+    }
+    private fun prefetch() {
+        for (target in (index + 1)..minOf(index + 2, cards.lastIndex)) {
+            requestCard(target) { /* Demand navigation retries failed background reads. */ }
+        }
+    }
     private fun moveTo(targetIndex: Int) {
         if (targetIndex !in cards.indices || busy) return
         stopAudio()
         setBusy(true)
-        val next = {
-            if (!isFinishing && !isDestroyed) {
-                index = targetIndex; revealed = false; updateCard(); setBusy(false)
+        loadingCard = true
+        end.isEnabled = true
+        end.setOnClickListener { if (loadingCard || !busy) finish() }
+        hint.text = "Loading card…"
+        requestCard(targetIndex) { error ->
+            loadingCard = false
+            if (error != null) { setBusy(false); report(error); return@requestCard }
+            val next = {
+                if (!isFinishing && !isDestroyed) {
+                    index = targetIndex; revealed = false; updateCard(); setBusy(false)
+                    prefetch()
+                }
             }
+            ink?.clear(next) ?: next()
         }
-        ink?.clear(next) ?: next()
     }
     private fun rate(correct: Boolean) {
         if (!revealed) return

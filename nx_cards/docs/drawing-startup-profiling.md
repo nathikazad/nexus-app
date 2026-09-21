@@ -68,3 +68,11 @@ The user repeated the 40-card drawing launch and reported it was faster. Same de
 | Tap through first UI post | 2,445 ms |
 
 Observed end-to-end reduction: 83.2% (14,576 to 2,445 ms), approximately 6x faster in these two runs. Selected-card loading was the dominant baseline stage and dropped sharply. These are single-run observations, not a controlled benchmark or guaranteed speedup. Recall uses the same bounded hydration helper but has not yet been separately timed on-device. Physical e-ink refresh remains outside the markers.
+
+## Incremental preparation: build 20260945
+
+Drawing and Android writing recall now pass a fixed-size queue with only its first card prepared. The library index reuses the dashboard snapshot instead of rereading the full summary table. Each prepared card includes its direct and derived examples.
+
+After the native UI is initialized, Android requests the next two indices. Advancing replenishes that two-card lookahead. Repeated requests share pending preparation; visited cards remain cached for Previous. Queue order and recall rating indices do not change. If navigation catches up to loading, ink is cleared only after the target card is ready; failed loads can be retried and the session can be exited while waiting. Closing the session invalidates pending results. No card preparation triggers a rating.
+
+New timing markers: `first_card_ready` replaces full `queue_hydrated` on the native path; `card_prepared` records each index's preparation duration, including background work. `library_snapshot` measures indexing the existing dashboard. Compare first-card timing separately from lookahead completion.

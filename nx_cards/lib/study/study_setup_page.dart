@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/lazy_study_queue.dart';
 import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
@@ -492,12 +493,25 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   Future<void> _start() async {
     _beginStartup('recall');
-    final prompts = await _latestSelectedPrompts();
+    final prompts = await _latestSelectedPrompts(
+      deferBodies:
+          _recallPresentation == RecallPresentation.write &&
+          await NativeDrawingSession.isAvailable(),
+    );
     if (!mounted || prompts == null) return;
     if (_recallPresentation == RecallPresentation.write &&
         prompts.every((p) => p.card.content is LanguageCardContent)) {
-      if (await _openNativeDrawing(prompts: prompts)) {
-        await _refreshSetup();
+      try {
+        if (await _openNativeDrawing(prompts: prompts)) {
+          await _refreshSetup();
+          return;
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not start recall: $error')),
+          );
+        }
         return;
       }
     }
@@ -531,164 +545,200 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final latest = {for (final card in queue) card.id: card};
     final ratings = <int, CardRating>{};
     final linkedLibrary = {
-      for (final card in await library.listCards()) card.id: card,
+      for (final card in (await ref.read(cardsDashboardProvider.future)).cards)
+        card.id: card,
     };
-    _startupStep('library_loaded count=${linkedLibrary.length}');
-    await NativeDrawingSession.hydrateExampleParents(
-      queue,
-      linkedLibrary,
-      (card) => hydrateStudyCard(ref, card),
+    _startupStep('library_snapshot count=${linkedLibrary.length}');
+    final characters = List<List<LanguageCardContent>>.generate(
+      queue.length,
+      (_) => [],
     );
-    _startupStep('example_parents_hydrated');
-    if (!mounted ||
-        sessionKey != ref.read(activeCardsSessionProvider).value?.account.key) {
-      return true;
+    final derived = List<List<DerivedLanguageExample>>.generate(
+      queue.length,
+      (_) => [],
+    );
+    var closed = false;
+    void checkSession() {
+      if (closed ||
+          !mounted ||
+          sessionKey !=
+              ref.read(activeCardsSessionProvider).value?.account.key) {
+        throw PlatformException(code: 'session_changed');
+      }
     }
-    final characters = [
-      for (final card in queue)
-        NativeDrawingSession.characterParts(card, linkedLibrary),
-    ];
-    final derived = [
-      for (final card in queue)
-        NativeDrawingSession.derivedExamples(card, linkedLibrary),
-    ];
-    _startupStep('context_derived');
-    final handled = await NativeDrawingSession.open(
-      title: widget.title,
-      cards: recall
-          ? [
-              for (var i = 0; i < prompts.length; i++)
-                NativeDrawingSession.recallCard(
-                  prompts[i],
-                  characters: characters[i],
-                  derived: derived[i],
-                ),
-            ]
-          : [
-              for (var i = 0; i < queue.length; i++)
-                NativeDrawingSession.practiceCard(
-                  queue[i],
-                  characters: characters[i],
-                  derived: derived[i],
-                ),
-            ],
-      recall: recall,
-      onAction: (call) async {
-        if (!mounted ||
-            sessionKey !=
-                ref.read(activeCardsSessionProvider).value?.account.key) {
-          throw PlatformException(
-            code: 'session_changed',
-            message: 'Account changed. Close this study session.',
-          );
-        }
-        final args = Map<Object?, Object?>.from(call.arguments as Map);
-        final index = args['index'] as int;
-        if (index < 0 || index >= queue.length) {
-          throw PlatformException(code: 'invalid_card');
-        }
-        if (call.method == 'exampleCard') {
-          if (recall) {
-            throw PlatformException(code: 'navigation_disabled_in_recall');
-          }
-          final targetId = args['cardId'];
-          final parent = queue[index].content as LanguageCardContent;
-          final permitted = {
-            ...parent.examples.map((e) => e.cardId),
-            ...derived[index].map((e) => e.example.cardId),
-          };
-          final target = targetId is int ? linkedLibrary[targetId] : null;
-          if (target == null ||
-              target.content is! LanguageCardContent ||
-              !permitted.contains(targetId)) {
+
+    final preparations = LazyStudyQueue<Map<String, Object?>>(queue.length, (
+      index,
+    ) async {
+      checkSession();
+      final clock = Stopwatch()..start();
+      final full = await hydrateStudyCard(ref, latest[queue[index].id]!);
+      checkSession();
+      queue[index] = full;
+      // Do not replace a schedule updated by a previous recall cue.
+      if (latest[full.id]!.isSummary) latest[full.id] = full;
+      await NativeDrawingSession.hydrateExampleParents(
+        [full],
+        linkedLibrary,
+        (card) => hydrateStudyCard(ref, card),
+      );
+      checkSession();
+      characters[index] = NativeDrawingSession.characterParts(
+        full,
+        linkedLibrary,
+      );
+      derived[index] = NativeDrawingSession.derivedExamples(
+        full,
+        linkedLibrary,
+      );
+      debugPrint(
+        'NxCardsStartup stage=card_prepared index=$index elapsed_ms=${clock.elapsedMilliseconds}',
+      );
+      return recall
+          ? NativeDrawingSession.recallCard(
+              prompts[index].withCard(full),
+              characters: characters[index],
+              derived: derived[index],
+            )
+          : NativeDrawingSession.practiceCard(
+              full,
+              characters: characters[index],
+              derived: derived[index],
+            );
+    });
+
+    final first = await preparations.prepare(0);
+    _startupStep('first_card_ready');
+    final bool handled;
+    try {
+      handled = await NativeDrawingSession.open(
+        title: widget.title,
+        cards: [
+          first,
+          for (var i = 1; i < queue.length; i++) {'pending': true},
+        ],
+        recall: recall,
+        onAction: (call) async {
+          if (!mounted ||
+              sessionKey !=
+                  ref.read(activeCardsSessionProvider).value?.account.key) {
             throw PlatformException(
-              code: 'example_unavailable',
-              message: 'This example card is not available.',
+              code: 'session_changed',
+              message: 'Account changed. Close this study session.',
             );
           }
-          final details = Navigator.of(context).push<void>(
-            MaterialPageRoute(builder: (_) => CardDetailsPage(card: target)),
-          );
-          try {
-            await NativeDrawingSession.channel.invokeMethod<void>(
-              'showFlutter',
+          final args = Map<Object?, Object?>.from(call.arguments as Map);
+          final index = args['index'] as int;
+          if (index < 0 || index >= queue.length) {
+            throw PlatformException(code: 'invalid_card');
+          }
+          if (call.method == 'prepare') return preparations.prepare(index);
+          if (call.method == 'exampleCard') {
+            if (recall) {
+              throw PlatformException(code: 'navigation_disabled_in_recall');
+            }
+            final targetId = args['cardId'];
+            final parent = queue[index].content as LanguageCardContent;
+            final permitted = {
+              ...parent.examples.map((e) => e.cardId),
+              ...derived[index].map((e) => e.example.cardId),
+            };
+            final target = targetId is int ? linkedLibrary[targetId] : null;
+            if (target == null ||
+                target.content is! LanguageCardContent ||
+                !permitted.contains(targetId)) {
+              throw PlatformException(
+                code: 'example_unavailable',
+                message: 'This example card is not available.',
+              );
+            }
+            final details = Navigator.of(context).push<void>(
+              MaterialPageRoute(builder: (_) => CardDetailsPage(card: target)),
             );
-            await details;
-          } finally {
-            await NativeDrawingSession.channel.invokeMethod<void>(
-              'resumeDrawing',
+            try {
+              await NativeDrawingSession.channel.invokeMethod<void>(
+                'showFlutter',
+              );
+              await details;
+            } finally {
+              await NativeDrawingSession.channel.invokeMethod<void>(
+                'resumeDrawing',
+              );
+            }
+            return null;
+          }
+          if (call.method == 'audio') {
+            final content = queue[index].content as LanguageCardContent;
+            final exampleIndex = args['exampleIndex'];
+            final characterIndex = args['characterIndex'];
+            final derivedIndex = args['derivedIndex'];
+            if ([
+                  exampleIndex,
+                  characterIndex,
+                  derivedIndex,
+                ].where((v) => v != null).length >
+                1) {
+              throw PlatformException(code: 'invalid_audio_target');
+            }
+            var audioUrl = content.audioUrl;
+            if (derivedIndex != null) {
+              if (derivedIndex is! int ||
+                  derivedIndex < 0 ||
+                  derivedIndex >= derived[index].length) {
+                throw PlatformException(code: 'invalid_derived_example');
+              }
+              audioUrl = derived[index][derivedIndex].example.audioUrl;
+            }
+            if (exampleIndex != null) {
+              final examples = content.examples;
+              if (exampleIndex is! int ||
+                  exampleIndex < 0 ||
+                  exampleIndex >= examples.length) {
+                throw PlatformException(code: 'invalid_example');
+              }
+              audioUrl = examples[exampleIndex].audioUrl;
+            }
+            if (characterIndex != null) {
+              if (exampleIndex != null ||
+                  characterIndex is! int ||
+                  characterIndex < 0 ||
+                  characterIndex >= characters[index].length) {
+                throw PlatformException(code: 'invalid_character');
+              }
+              audioUrl = characters[index][characterIndex].audioUrl;
+            }
+            if (audio == null || audioUrl == null || audioUrl.trim().isEmpty) {
+              throw PlatformException(code: 'audio_unavailable');
+            }
+            return audio.fetch(audioUrl);
+          }
+          if (call.method == 'rate' && recall) {
+            if (ratings.containsKey(index)) return null;
+            if (index != ratings.length) {
+              throw PlatformException(code: 'invalid_order');
+            }
+            final rating = args['correct'] == true
+                ? CardRating.good
+                : CardRating.again;
+            final prompt = prompts[index].withCard(latest[queue[index].id]!);
+            final time = DateTime.fromMillisecondsSinceEpoch(
+              args['revealedAt'] as int,
+              isUtc: true,
             );
+            final updated = scheduler.preview(prompt, time)[rating]!.card;
+            await library.saveSchedule(updated);
+            ratings[index] = rating;
+            latest[updated.id] = updated;
+            if (mounted) ref.read(cardsInvalidationProvider)();
+            return null;
           }
-          return null;
-        }
-        if (call.method == 'audio') {
-          final content = queue[index].content as LanguageCardContent;
-          final exampleIndex = args['exampleIndex'];
-          final characterIndex = args['characterIndex'];
-          final derivedIndex = args['derivedIndex'];
-          if ([
-                exampleIndex,
-                characterIndex,
-                derivedIndex,
-              ].where((v) => v != null).length >
-              1) {
-            throw PlatformException(code: 'invalid_audio_target');
-          }
-          var audioUrl = content.audioUrl;
-          if (derivedIndex != null) {
-            if (derivedIndex is! int ||
-                derivedIndex < 0 ||
-                derivedIndex >= derived[index].length) {
-              throw PlatformException(code: 'invalid_derived_example');
-            }
-            audioUrl = derived[index][derivedIndex].example.audioUrl;
-          }
-          if (exampleIndex != null) {
-            final examples = content.examples;
-            if (exampleIndex is! int ||
-                exampleIndex < 0 ||
-                exampleIndex >= examples.length) {
-              throw PlatformException(code: 'invalid_example');
-            }
-            audioUrl = examples[exampleIndex].audioUrl;
-          }
-          if (characterIndex != null) {
-            if (exampleIndex != null ||
-                characterIndex is! int ||
-                characterIndex < 0 ||
-                characterIndex >= characters[index].length) {
-              throw PlatformException(code: 'invalid_character');
-            }
-            audioUrl = characters[index][characterIndex].audioUrl;
-          }
-          if (audio == null || audioUrl == null || audioUrl.trim().isEmpty) {
-            throw PlatformException(code: 'audio_unavailable');
-          }
-          return audio.fetch(audioUrl);
-        }
-        if (call.method == 'rate' && recall) {
-          if (ratings.containsKey(index)) return null;
-          if (index != ratings.length) {
-            throw PlatformException(code: 'invalid_order');
-          }
-          final rating = args['correct'] == true
-              ? CardRating.good
-              : CardRating.again;
-          final prompt = prompts[index].withCard(latest[queue[index].id]!);
-          final time = DateTime.fromMillisecondsSinceEpoch(
-            args['revealedAt'] as int,
-            isUtc: true,
-          );
-          final updated = scheduler.preview(prompt, time)[rating]!.card;
-          await library.saveSchedule(updated);
-          ratings[index] = rating;
-          latest[updated.id] = updated;
-          if (mounted) ref.read(cardsInvalidationProvider)();
-          return null;
-        }
-        throw PlatformException(code: 'unsupported_action');
-      },
-    );
+          throw PlatformException(code: 'unsupported_action');
+        },
+      );
+    } finally {
+      closed = true;
+      preparations.close();
+    }
     if (handled && recall && mounted) {
       var missed = incorrectRecallPrompts(prompts, ratings, latest);
       final action = await Navigator.of(context).push<Object?>(
@@ -744,7 +794,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     await _refreshSetup();
   }
 
-  Future<List<StudyPrompt>?> _latestSelectedPrompts() async {
+  Future<List<StudyPrompt>?> _latestSelectedPrompts({
+    bool deferBodies = false,
+  }) async {
     if (_starting || _cue == null) return null;
     setState(() => _starting = true);
     try {
@@ -796,10 +848,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       }
       _startupStep('selection_ready');
       final chosen = selected.take(min(_count, selected.length)).toList();
-      final bodies = await hydrateStudyQueue(
-        chosen.map((prompt) => prompt.card).toList(),
-        (card) => hydrateStudyCard(ref, card),
-      );
+      final bodies = deferBodies
+          ? chosen.map((p) => p.card).toList()
+          : await hydrateStudyQueue(
+              chosen.map((prompt) => prompt.card).toList(),
+              (card) => hydrateStudyCard(ref, card),
+            );
       final hydrated = [
         for (var i = 0; i < chosen.length; i++)
           StudyPrompt(
@@ -887,16 +941,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         return;
       }
       _startupStep('selection_ready');
+      if (await _openNativeDrawing(cards: selected)) {
+        await _refreshSetup();
+        return;
+      }
       final hydrated = await hydrateStudyQueue(
         selected,
         (card) => hydrateStudyCard(ref, card),
       );
-      _startupStep('queue_hydrated count=${hydrated.length}');
-      if (!mounted) return;
-      if (await _openNativeDrawing(cards: hydrated)) {
-        await _refreshSetup();
-        return;
-      }
       if (!mounted) return;
       await Navigator.of(context).push<bool>(
         MaterialPageRoute<bool>(
