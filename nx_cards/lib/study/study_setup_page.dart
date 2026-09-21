@@ -13,6 +13,7 @@ import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
+import 'package:nx_cards/browser/card_details_page.dart';
 import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/study/language/language_study_page.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
@@ -505,7 +506,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final audio = ref.read(cardAudioRepositoryProvider);
     final latest = {for (final card in queue) card.id: card};
     final ratings = <int, CardRating>{};
-    final sessionCards = [...queue];
     final linkedLibrary = {
       for (final card in await library.listCards()) card.id: card,
     };
@@ -552,7 +552,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         }
         final args = Map<Object?, Object?>.from(call.arguments as Map);
         final index = args['index'] as int;
-        if (index < 0 || index >= sessionCards.length) {
+        if (index < 0 || index >= queue.length) {
           throw PlatformException(code: 'invalid_card');
         }
         if (call.method == 'exampleCard') {
@@ -560,7 +560,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             throw PlatformException(code: 'navigation_disabled_in_recall');
           }
           final targetId = args['cardId'];
-          final parent = sessionCards[index].content as LanguageCardContent;
+          final parent = queue[index].content as LanguageCardContent;
           final permitted = {
             ...parent.examples.map((e) => e.cardId),
             ...derived[index].map((e) => e.example.cardId),
@@ -574,29 +574,23 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               message: 'This example card is not available.',
             );
           }
-          final targetParts = NativeDrawingSession.characterParts(
-            target,
-            linkedLibrary,
+          final details = Navigator.of(context).push<void>(
+            MaterialPageRoute(builder: (_) => CardDetailsPage(card: target)),
           );
-          final targetDerived = NativeDrawingSession.derivedExamples(
-            target,
-            linkedLibrary,
-          );
-          final slot = sessionCards.length;
-          sessionCards.add(target);
-          characters.add(targetParts);
-          derived.add(targetDerived);
-          return {
-            'slot': slot,
-            ...NativeDrawingSession.practiceCard(
-              target,
-              characters: targetParts,
-              derived: targetDerived,
-            ),
-          };
+          try {
+            await NativeDrawingSession.channel.invokeMethod<void>(
+              'showFlutter',
+            );
+            await details;
+          } finally {
+            await NativeDrawingSession.channel.invokeMethod<void>(
+              'resumeDrawing',
+            );
+          }
+          return null;
         }
         if (call.method == 'audio') {
-          final content = sessionCards[index].content as LanguageCardContent;
+          final content = queue[index].content as LanguageCardContent;
           final exampleIndex = args['exampleIndex'];
           final characterIndex = args['characterIndex'];
           final derivedIndex = args['derivedIndex'];

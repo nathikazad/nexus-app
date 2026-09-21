@@ -14,14 +14,12 @@ import android.content.Intent
 import android.util.Log
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.lang.ref.WeakReference
 import kotlin.math.roundToInt
 
 /** A separate opaque Android window: no Flutter surface participates in ink. */
 class NativeDrawingActivity : Activity() {
-    private lateinit var cards: MutableList<Map<*, *>>
-    private var rootCount = 0
-    private data class ReturnCard(val index: Int, val recall: Boolean, val revealed: Boolean, val visible: Boolean)
-    private val returnCards = mutableListOf<ReturnCard>()
+    private lateinit var cards: List<Map<*, *>>
     private lateinit var progress: TextView
     private lateinit var prompt: TextView
     private lateinit var subtitle: TextView
@@ -63,13 +61,13 @@ class NativeDrawingActivity : Activity() {
         val input = NativeDrawingBridge.input
         if (input == null) { finish(); return }
         try {
-            cards = (input["cards"] as List<*>).map { it as Map<*, *> }.toMutableList()
-            rootCount = cards.size
+            cards = (input["cards"] as List<*>).map { it as Map<*, *> }
+            NativeDrawingBridge.activity = WeakReference(this)
             require(cards.isNotEmpty())
             recall = input["recall"] == true
             val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(16), dp(8), dp(16), dp(8)) }
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-            end = button(if (recall) "End" else "Back") { goBack() }
+            end = button(if (recall) "End" else "Back") { finish() }
             header.addView(end)
             header.addView(label(18f).apply { text = input["title"] as? String ?: "Drawing" }, LinearLayout.LayoutParams(0, -2, 1f))
             root.addView(header, LinearLayout.LayoutParams(-1, -2))
@@ -133,8 +131,7 @@ class NativeDrawingActivity : Activity() {
         }
     }
     private fun updateCard() {
-        progress.text = if (returnCards.isEmpty()) "${index + 1} of $rootCount" else "Example card"
-        end.text = if (recall && returnCards.isEmpty()) "End" else "Back"
+        progress.text = "${index + 1} of ${cards.size}"
         prompt.text = if (recall && revealed) value("answer") else value("prompt")
         prompt.visibility = if (!recall && !visibleAnswer) View.INVISIBLE else View.VISIBLE
         prompt.textSize = if (!recall && card["multiCharacter"] == false) 64f else 32f
@@ -155,8 +152,7 @@ class NativeDrawingActivity : Activity() {
         if (card["audio"] == true && (!recall || revealed)) control("Play", "play") { play() }
         if (!recall) {
             control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
-            if (returnCards.isNotEmpty()) control("Back to previous card", "yes") { goBack() }
-            else control(if (index == rootCount - 1) "Finish" else "Next", if (index == rootCount - 1) "yes" else "next") { advance() }
+            control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
             control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard() }
         } else {
@@ -309,40 +305,19 @@ class NativeDrawingActivity : Activity() {
         NativeDrawingBridge.channel?.invokeMethod("exampleCard", mapOf("index" to index, "cardId" to cardId), object : MethodChannel.Result {
             override fun success(result: Any?) {
                 if (isFinishing || isDestroyed) return
-                val nextCard = result as? Map<*, *>
-                val slot = (nextCard?.get("slot") as? Number)?.toInt()
-                if (nextCard == null || slot != cards.size) { setBusy(false); report("Could not open example card"); return }
-                returnCards.add(ReturnCard(index, recall, revealed, visibleAnswer))
-                cards.add(nextCard)
-                val next = {
-                    index = cards.lastIndex; recall = false; revealed = false; visibleAnswer = true
-                    examplesCardIndex = -1
-                    updateCard(); setBusy(false)
-                }
-                ink?.clear(next) ?: next()
+                // Flutter has popped the details route and brought this same
+                // drawing activity forward; keep the card and ink untouched.
+                setBusy(false)
             }
             override fun error(code: String, message: String?, details: Any?) { setBusy(false); report(message ?: "Could not open example card") }
             override fun notImplemented() { setBusy(false); report("Example navigation unavailable") }
         })
     }
-    private fun goBack() {
-        if (busy) return
-        stopAudio()
-        if (returnCards.isEmpty()) { finish(); return }
-        val previous = returnCards.removeAt(returnCards.lastIndex)
-        setBusy(true)
-        val restore = {
-            index = previous.index; recall = previous.recall; revealed = previous.revealed; visibleAnswer = previous.visible
-            examplesCardIndex = -1
-            updateCard(); setBusy(false)
-        }
-        ink?.clear(restore) ?: restore()
-    }
     @Deprecated("Deprecated in Java")
-    override fun onBackPressed() { goBack() }
+    override fun onBackPressed() { if (!busy) super.onBackPressed() }
 
     private fun advance() {
-        if (index == rootCount - 1) { stopAudio(); finish(); return }
+        if (index == cards.lastIndex) { stopAudio(); finish(); return }
         moveTo(index + 1)
     }
     private fun moveTo(targetIndex: Int) {
@@ -395,5 +370,5 @@ class NativeDrawingActivity : Activity() {
     override fun onResume() { super.onResume(); ink?.setResumed(!busy) }
     override fun onPause() { ink?.setResumed(false); stopAudio(); super.onPause() }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy) }
-    override fun onDestroy() { ink?.dispose(); stopAudio(); super.onDestroy() }
+    override fun onDestroy() { if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
 }
