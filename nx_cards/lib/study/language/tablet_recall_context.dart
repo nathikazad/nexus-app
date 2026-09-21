@@ -22,6 +22,7 @@ class TabletRecallContext extends ConsumerStatefulWidget {
 
 class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
   List<LanguageCardContent> _parts = const [];
+  List<DerivedLanguageExample> _derived = const [];
   bool _loading = true;
   bool _failed = false;
 
@@ -33,9 +34,7 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
 
   Future<void> _load() async {
     final content = widget.card.content;
-    if (content is! LanguageCardContent ||
-        content.originalScript.trim().characters.length <= 1 ||
-        widget.card.linkedWordIds.isEmpty) {
+    if (content is! LanguageCardContent) {
       _loading = false;
       return;
     }
@@ -47,6 +46,9 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
       if (mounted) {
         setState(() {
           _parts = parts;
+          _derived = NativeDrawingSession.derivedExamples(widget.card, {
+            for (final card in library) card.id: card,
+          });
           _loading = false;
         });
       }
@@ -89,6 +91,21 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
                     audioKeyPrefix: 'recall-examples:${widget.card.id}',
                     showHeading: false,
                   ),
+                if (_derived.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text('DERIVED EXAMPLES', style: monoLabel),
+                  for (final entry in _derived) ...[
+                    const SizedBox(height: 8),
+                    Text('Via ${entry.via.join(', ')}'),
+                    LanguageExamples(
+                      examples: [entry.example],
+                      audioRepository: audio,
+                      audioKeyPrefix:
+                          'recall-derived:${widget.card.id}:${entry.example.cardId}:${entry.example.text}',
+                      showHeading: false,
+                    ),
+                  ],
+                ],
               ],
             ),
           ),

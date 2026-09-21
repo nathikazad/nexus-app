@@ -7,6 +7,47 @@ import 'package:nx_cards/browser/browser.dart';
 class NativeDrawingSession {
   static const channel = MethodChannel('nx_cards/drawing-session');
 
+  /// Exactly two saved Examples edges; never recurse or infer text matches.
+  static List<DerivedLanguageExample> derivedExamples(
+    StudyCard card,
+    Map<int, StudyCard> library,
+  ) {
+    final content = card.content;
+    if (content is! LanguageCardContent) return const [];
+    final excludedIds = {card.id, ...content.examples.map((e) => e.cardId)};
+    final excludedText = {
+      content.originalScript.trim(),
+      ...content.examples.map((e) => e.text.trim()),
+    };
+    final results = <DerivedLanguageExample>[];
+    for (final direct in content.examples) {
+      final parent = library[direct.cardId]?.content;
+      if (parent is! LanguageCardContent) continue;
+      for (final example in parent.examples) {
+        if ((example.cardId != null && excludedIds.contains(example.cardId)) ||
+            excludedText.contains(example.text.trim())) {
+          continue;
+        }
+        final existing = results
+            .where(
+              (entry) =>
+                  (example.cardId != null &&
+                      entry.example.cardId == example.cardId) ||
+                  entry.example.text.trim() == example.text.trim(),
+            )
+            .firstOrNull;
+        if (existing != null) {
+          if (!existing.via.contains(direct.text)) {
+            existing.via.add(direct.text);
+          }
+        } else {
+          results.add(DerivedLanguageExample(example, [direct.text]));
+        }
+      }
+    }
+    return results;
+  }
+
   /// Follow saved Contains links only, including phrase -> word -> character.
   static List<LanguageCardContent> characterParts(
     StudyCard card,
@@ -46,6 +87,7 @@ class NativeDrawingSession {
   static Map<String, Object?> practiceCard(
     StudyCard card, {
     List<LanguageCardContent> characters = const [],
+    List<DerivedLanguageExample> derived = const [],
   }) {
     final content = card.content as LanguageCardContent;
     return {
@@ -63,9 +105,21 @@ class NativeDrawingSession {
             'audio': part.audioUrl?.trim().isNotEmpty == true,
           },
       ],
+      'derivedExamples': [
+        for (final entry in derived)
+          {
+            if (entry.example.cardId != null) 'cardId': entry.example.cardId,
+            'text': entry.example.text,
+            'transliteration': entry.example.transliteration,
+            'translation': entry.example.translation,
+            'audio': entry.example.audioUrl?.trim().isNotEmpty == true,
+            'via': entry.via.join(', '),
+          },
+      ],
       'examples': [
         for (final example in content.examples)
           {
+            if (example.cardId != null) 'cardId': example.cardId,
             'text': example.text,
             'transliteration': example.transliteration,
             'translation': example.translation,
@@ -78,10 +132,11 @@ class NativeDrawingSession {
   static Map<String, Object?> recallCard(
     StudyPrompt prompt, {
     List<LanguageCardContent> characters = const [],
+    List<DerivedLanguageExample> derived = const [],
   }) {
     final content = prompt.card.content as LanguageCardContent;
     return {
-      ...practiceCard(prompt.card, characters: characters),
+      ...practiceCard(prompt.card, characters: characters, derived: derived),
       'prompt': prompt.prompt,
       'answer': prompt.cue == StudyCue.fromLanguage
           ? content.originalScript
@@ -120,4 +175,10 @@ class NativeDrawingSession {
       channel.setMethodCallHandler(null);
     }
   }
+}
+
+class DerivedLanguageExample {
+  DerivedLanguageExample(this.example, this.via);
+  final LanguageExample example;
+  final List<String> via;
 }

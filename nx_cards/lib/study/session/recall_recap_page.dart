@@ -4,6 +4,7 @@ import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/browser/browser.dart';
+import 'package:nx_cards/browser/card_details_page.dart';
 import 'package:nx_cards/scheduling/review_progression_service.dart';
 
 enum RecallRecapAction { repeatIncorrect }
@@ -252,60 +253,66 @@ class _RecallWordRecapRow extends ConsumerWidget {
     final transliteration = content is LanguageCardContent
         ? content.transliteration
         : '';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      key: ValueKey('recap-open-card-${entry.card.id}'),
+      onTap: () => Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => CardDetailsPage(card: entry.card)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.card.front,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(entry.card.back, style: const TextStyle(fontSize: 15)),
+                  if (transliteration.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      transliteration,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: RecallColors.muted,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  entry.card.front,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .6,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(entry.card.back, style: const TextStyle(fontSize: 15)),
-                if (transliteration.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    transliteration,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: RecallColors.muted,
-                    ),
+                if (audio != null && audioUrl != null) ...[
+                  const SizedBox(height: 6),
+                  PronunciationButton(
+                    key: ValueKey('recap-audio-${entry.card.id}-$audioUrl'),
+                    audioUrl: audioUrl,
+                    repository: audio,
                   ),
                 ],
               ],
             ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontFamily: 'monospace',
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .6,
-                ),
-              ),
-              if (audio != null && audioUrl != null) ...[
-                const SizedBox(height: 6),
-                PronunciationButton(
-                  key: ValueKey('recap-audio-${entry.card.id}-$audioUrl'),
-                  audioUrl: audioUrl,
-                  repository: audio,
-                ),
-              ],
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

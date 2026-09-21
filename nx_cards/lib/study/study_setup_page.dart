@@ -505,6 +505,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final audio = ref.read(cardAudioRepositoryProvider);
     final latest = {for (final card in queue) card.id: card};
     final ratings = <int, CardRating>{};
+    final sessionCards = [...queue];
     final linkedLibrary = {
       for (final card in await library.listCards()) card.id: card,
     };
@@ -516,6 +517,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       for (final card in queue)
         NativeDrawingSession.characterParts(card, linkedLibrary),
     ];
+    final derived = [
+      for (final card in queue)
+        NativeDrawingSession.derivedExamples(card, linkedLibrary),
+    ];
     final handled = await NativeDrawingSession.open(
       title: widget.title,
       cards: recall
@@ -524,6 +529,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 NativeDrawingSession.recallCard(
                   prompts[i],
                   characters: characters[i],
+                  derived: derived[i],
                 ),
             ]
           : [
@@ -531,6 +537,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 NativeDrawingSession.practiceCard(
                   queue[i],
                   characters: characters[i],
+                  derived: derived[i],
                 ),
             ],
       recall: recall,
@@ -545,14 +552,71 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         }
         final args = Map<Object?, Object?>.from(call.arguments as Map);
         final index = args['index'] as int;
-        if (index < 0 || index >= queue.length) {
+        if (index < 0 || index >= sessionCards.length) {
           throw PlatformException(code: 'invalid_card');
         }
+        if (call.method == 'exampleCard') {
+          if (recall) {
+            throw PlatformException(code: 'navigation_disabled_in_recall');
+          }
+          final targetId = args['cardId'];
+          final parent = sessionCards[index].content as LanguageCardContent;
+          final permitted = {
+            ...parent.examples.map((e) => e.cardId),
+            ...derived[index].map((e) => e.example.cardId),
+          };
+          final target = targetId is int ? linkedLibrary[targetId] : null;
+          if (target == null ||
+              target.content is! LanguageCardContent ||
+              !permitted.contains(targetId)) {
+            throw PlatformException(
+              code: 'example_unavailable',
+              message: 'This example card is not available.',
+            );
+          }
+          final targetParts = NativeDrawingSession.characterParts(
+            target,
+            linkedLibrary,
+          );
+          final targetDerived = NativeDrawingSession.derivedExamples(
+            target,
+            linkedLibrary,
+          );
+          final slot = sessionCards.length;
+          sessionCards.add(target);
+          characters.add(targetParts);
+          derived.add(targetDerived);
+          return {
+            'slot': slot,
+            ...NativeDrawingSession.practiceCard(
+              target,
+              characters: targetParts,
+              derived: targetDerived,
+            ),
+          };
+        }
         if (call.method == 'audio') {
-          final content = queue[index].content as LanguageCardContent;
+          final content = sessionCards[index].content as LanguageCardContent;
           final exampleIndex = args['exampleIndex'];
           final characterIndex = args['characterIndex'];
+          final derivedIndex = args['derivedIndex'];
+          if ([
+                exampleIndex,
+                characterIndex,
+                derivedIndex,
+              ].where((v) => v != null).length >
+              1) {
+            throw PlatformException(code: 'invalid_audio_target');
+          }
           var audioUrl = content.audioUrl;
+          if (derivedIndex != null) {
+            if (derivedIndex is! int ||
+                derivedIndex < 0 ||
+                derivedIndex >= derived[index].length) {
+              throw PlatformException(code: 'invalid_derived_example');
+            }
+            audioUrl = derived[index][derivedIndex].example.audioUrl;
+          }
           if (exampleIndex != null) {
             final examples = content.examples;
             if (exampleIndex is! int ||
