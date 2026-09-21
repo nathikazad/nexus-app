@@ -50,3 +50,21 @@ Drawing, 40 selected cards, 750 cards in the local library:
 The user reported about 20 seconds visually. The markers do not include physical panel refresh. Queue preparation accounts for about 86% of the measured tap-to-UI interval; ink initialization is small. This baseline did not split drawing selection from body loading.
 
 The next build overlaps up to eight local card reads, preserves ordering, and deduplicates identical cards across recall cues. Direct example parents use the same bounded reader. `selection_ready` now also splits drawing selection from loading. `card_read` reports database `query_ms` and content read/decode `body_ms`; concurrent durations overlap and must not be summed. Speedup must be verified with a new device run, not inferred from concurrency alone.
+
+## Measured follow-up: build 20260944
+
+The user repeated the 40-card drawing launch and reported it was faster. Same device and 750-card library; shuffled card membership and OS cache/background activity may differ between runs.
+
+| Stage | New duration |
+| --- | ---: |
+| Selection | 2 ms |
+| Queue hydration, eight overlapping reads | 427 ms |
+| Native availability | 6 ms |
+| Library summary load/index | 430 ms |
+| Example-parent hydration | 578 ms |
+| Derivation | 2 ms |
+| Native ink initialization | 87 ms |
+| Activity creation through first UI post | 920 ms |
+| Tap through first UI post | 2,445 ms |
+
+Observed end-to-end reduction: 83.2% (14,576 to 2,445 ms), approximately 6x faster in these two runs. Selected-card loading was the dominant baseline stage and dropped sharply. These are single-run observations, not a controlled benchmark or guaranteed speedup. Recall uses the same bounded hydration helper but has not yet been separately timed on-device. Physical e-ink refresh remains outside the markers.
