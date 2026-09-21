@@ -4,6 +4,93 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_documents/nx_documents.dart';
 
 void main() {
+  testWidgets('selection toolbar survives a refreshed document', (
+    tester,
+  ) async {
+    Widget reader(DocumentContent content) => MaterialApp(
+      home: Scaffold(
+        body: DocumentReader(content: content, onChanged: (_) async {}),
+      ),
+    );
+    await tester.pumpWidget(reader(_content()));
+    await tester.pumpAndSettle();
+    final original = tester
+        .widget<AppFlowyEditor>(find.byType(AppFlowyEditor))
+        .editorState;
+    await tester.pumpWidget(reader(_highlightedContent()));
+    await tester.pumpAndSettle();
+    final editor = tester
+        .widget<AppFlowyEditor>(find.byType(AppFlowyEditor))
+        .editorState;
+    expect(identical(original, editor), isFalse);
+    await tester.longPress(find.byType(AppFlowyRichText));
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(
+      find.byKey(const ValueKey('reader-highlight-clear')),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets(
+    'tap existing highlight selects adjacent styled runs and opens actions',
+    (tester) async {
+      DocumentContent? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DocumentReader(
+              content: _highlightedContent(),
+              onChanged: (value) async => saved = value,
+              onUseSelection: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(AppFlowyRichText));
+      await tester.pump(const Duration(milliseconds: 150));
+      final editor = tester
+          .widget<AppFlowyEditor>(find.byType(AppFlowyEditor))
+          .editorState;
+      expect(
+        editor.selection,
+        Selection.single(path: [0], startOffset: 0, endOffset: 9),
+      );
+      expect(
+        find.byKey(const ValueKey('reader-use-selection')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('reader-highlight-clear')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('reader-highlight-$nxReaderHighlightPink')),
+      );
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(saved, isNotNull);
+      expect(
+        editor.document.nodeAtPath([0])!.delta!.toPlainText(),
+        'Body text',
+      );
+      expect(
+        editor.document
+            .nodeAtPath([0])!
+            .delta!
+            .whereType<TextInsert>()
+            .every(
+              (run) =>
+                  run.attributes?[AppFlowyRichTextKeys.backgroundColor] ==
+                  nxReaderHighlightPink,
+            ),
+        isTrue,
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 300));
+    },
+  );
   testWidgets(
     'scroll indicator is opt-in, follows position, and hides for short notes',
     (tester) async {
@@ -325,6 +412,37 @@ DocumentContent _content() {
     updatedAt: DateTime.utc(2026),
   );
 }
+
+DocumentContent _highlightedContent() => _content().copyWith(
+  jsonDocument: {
+    'format': 'appflowy_document',
+    'document': {
+      'type': 'page',
+      'children': [
+        {
+          'type': 'paragraph',
+          'data': {
+            'delta': [
+              {
+                'insert': 'Body ',
+                'attributes': {
+                  AppFlowyRichTextKeys.backgroundColor: nxReaderHighlightYellow,
+                },
+              },
+              {
+                'insert': 'text',
+                'attributes': {
+                  AppFlowyRichTextKeys.backgroundColor: nxReaderHighlightYellow,
+                  'bold': true,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  },
+);
 
 DocumentContent _tableContent() {
   return DocumentContent(

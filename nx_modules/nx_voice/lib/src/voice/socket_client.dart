@@ -65,9 +65,16 @@ class NxVoiceSocketClient {
     if (url == null) return false;
 
     try {
-      final headers = <String, String>{
+      final suppliedHeaders = <String, String>{
         ...?await _authHeaders?.call(forceRefresh),
         ...?_headers,
+      };
+      // HTTP header names are case-insensitive. Normalize before passing them
+      // to dart:io, which otherwise combines differently cased copies into a
+      // comma-separated value (for example a domain id becomes "1, 1").
+      final headers = <String, String>{
+        for (final entry in suppliedHeaders.entries)
+          entry.key.toLowerCase(): entry.value,
       };
       if (generation != _generation || _url == null) return false;
       final channel = IOWebSocketChannel.connect(

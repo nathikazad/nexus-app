@@ -14,6 +14,12 @@ const nxReaderHighlightYellow = '0x4cffeb3b';
 const nxReaderHighlightGreen = '0x4c4caf50';
 const nxReaderHighlightPink = '0x4ce91e63';
 
+void _highlightTrace(String message) {
+  if (const bool.fromEnvironment('NX_HIGHLIGHT_DIAGNOSTICS')) {
+    debugPrint('[reader-highlight] $message');
+  }
+}
+
 typedef HeadingLinkActionResolver =
     ({IconData icon, String tooltip})? Function(String href);
 typedef HeadingAction = ({
@@ -84,6 +90,7 @@ class _DocumentReaderState extends State<DocumentReader> {
     final fingerprint = _fingerprint(widget.content);
     if (oldWidget.content.identity != widget.content.identity ||
         fingerprint != _contentFingerprint) {
+      _highlightTrace('replacing editor after content update');
       final position = oldWidget.content.identity == widget.content.identity
           ? _lastPosition
           : null;
@@ -189,6 +196,7 @@ class _DocumentReaderState extends State<DocumentReader> {
   }
 
   Future<void> _saveHighlight() async {
+    _highlightTrace('save started');
     final jsonDocument = <String, dynamic>{
       ...widget.content.jsonDocument,
       'format': 'appflowy_document',
@@ -196,7 +204,13 @@ class _DocumentReaderState extends State<DocumentReader> {
     };
     final content = widget.content.copyWith(jsonDocument: jsonDocument);
     _contentFingerprint = _fingerprint(content);
-    await widget.onChanged(content);
+    try {
+      await widget.onChanged(content);
+      _highlightTrace('save completed');
+    } catch (error) {
+      _highlightTrace('save failed: ${error.runtimeType}');
+      rethrow;
+    }
   }
 
   @override
@@ -262,6 +276,9 @@ class _DocumentReaderState extends State<DocumentReader> {
       footer: const SizedBox(height: 24),
     );
     return ReaderHighlightToolbar(
+      // Editor services cache their state and listeners. A refreshed document
+      // must replace the toolbar and selection services together.
+      key: ObjectKey(_editorState),
       editorState: _editorState,
       editorScrollController: _scrollController,
       onUseSelection: widget.onUseSelection,
@@ -338,6 +355,20 @@ class _DocumentReaderState extends State<DocumentReader> {
     TextSpan before,
     TextSpan after,
   ) {
+    final highlight = text.attributes?[AppFlowyRichTextKeys.backgroundColor];
+    if (highlight is String && highlight.isNotEmpty) {
+      final recognizer = _linkRecognizers.putIfAbsent(
+        'highlight:${node.id}:$index',
+        TapGestureRecognizer.new,
+      );
+      recognizer.onTap = () => _selectHighlight(node, index, highlight);
+      return TextSpan(
+        text: text.text,
+        style: before.style,
+        mouseCursor: SystemMouseCursors.click,
+        recognizer: recognizer,
+      );
+    }
     final href = text.attributes?[AppFlowyRichTextKeys.href] as String?;
     if (href == null || href.trim().isEmpty) return before;
     if (node.type == HeadingBlockKeys.type &&
@@ -357,6 +388,36 @@ class _DocumentReaderState extends State<DocumentReader> {
       recognizer: _linkRecognizers.putIfAbsent(
         '${node.id}:$index:$href',
         () => TapGestureRecognizer()..onTap = () => unawaited(_openLink(href)),
+      ),
+    );
+  }
+
+  void _selectHighlight(Node node, int offset, String color) {
+    final runs = node.delta?.whereType<TextInsert>().toList();
+    if (runs == null || !mounted) return;
+    var position = 0;
+    var start = 0;
+    var end = 0;
+    var containsTap = false;
+    for (final run in runs) {
+      final next = position + run.text.length;
+      if (run.attributes?[AppFlowyRichTextKeys.backgroundColor] == color) {
+        if (end != position) start = position;
+        end = next;
+        containsTap |= offset >= position && offset < next;
+      } else {
+        if (containsTap) break;
+        start = next;
+        end = next;
+      }
+      position = next;
+    }
+    if (!containsTap || start == end) return;
+    unawaited(
+      _editorState.updateSelectionWithReason(
+        Selection.single(path: node.path, startOffset: start, endOffset: end),
+        reason: SelectionUpdateReason.uiEvent,
+        customSelectionType: SelectionType.inline,
       ),
     );
   }
@@ -541,6 +602,9 @@ class _ReaderHighlightToolbarState extends State<ReaderHighlightToolbar> {
 
   void _onSelectionChanged() {
     final selection = widget.editorState.selection;
+    _highlightTrace(
+      'selection=$selection type=${widget.editorState.selectionType}',
+    );
     if (selection == null ||
         selection.isCollapsed ||
         widget.editorState.selectionType == SelectionType.block ||
@@ -560,6 +624,7 @@ class _ReaderHighlightToolbarState extends State<ReaderHighlightToolbar> {
     final selection = _selection;
     if (selection == null || !mounted) return;
     final rects = widget.editorState.selectionRects();
+    _highlightTrace('show toolbar rects=${rects.length}');
     if (rects.isEmpty) return;
     final rect = rects.reduce((a, b) => a.top <= b.top ? a : b);
     final width = MediaQuery.sizeOf(context).width;
@@ -588,6 +653,7 @@ class _ReaderHighlightToolbarState extends State<ReaderHighlightToolbar> {
   }
 
   void _hide() {
+    _highlightTrace('hide toolbar visible=${_overlayEntry != null}');
     _showTimer?.cancel();
     _overlayEntry?.remove();
     _overlayEntry = null;
@@ -685,20 +751,31 @@ class _HighlightToolbarSurface extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       preferBelow: false,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _apply(colorHex),
-        child: SizedBox(
-          key: key,
-          width: 36,
-          height: 36,
-          child: Center(child: child),
+      child: Listener(
+        onPointerDown: (event) => _highlightTrace(
+          'color pointer down kind=${event.kind} color=$colorHex',
+        ),
+        onPointerUp: (_) => _highlightTrace('color pointer up'),
+        onPointerCancel: (_) => _highlightTrace('color pointer cancelled'),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => _apply(colorHex),
+          onTapCancel: () => _highlightTrace('color tap cancelled'),
+          child: SizedBox(
+            key: key,
+            width: 36,
+            height: 36,
+            child: Center(child: child),
+          ),
         ),
       ),
     );
   }
 
   void _apply(String? colorHex) {
+    _highlightTrace(
+      'color tap recognized color=$colorHex selection=$selection',
+    );
     unawaited(_applyHighlight(editorState, selection, colorHex));
     onClose();
   }
@@ -716,12 +793,17 @@ Future<void> _applyHighlight(
   String? colorHex,
 ) async {
   final wasEditable = editorState.editable;
+  _highlightTrace('format started editable=$wasEditable');
   editorState.editable = true;
   try {
     await editorState.formatDelta(selection, <String, dynamic>{
       AppFlowyRichTextKeys.backgroundColor: colorHex,
     }, withUpdateSelection: true);
+    _highlightTrace('format completed');
     await editorState.updateSelectionWithReason(null);
+  } catch (error) {
+    _highlightTrace('format failed: ${error.runtimeType}');
+    rethrow;
   } finally {
     editorState.editable = wasEditable;
   }
