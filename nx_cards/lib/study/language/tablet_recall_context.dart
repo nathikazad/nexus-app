@@ -40,15 +40,19 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
     }
     try {
       final library = await ref.read(cardLibraryProvider).listCards();
+      final linked = {for (final card in library) card.id: card};
+      await NativeDrawingSession.hydrateExampleParents(
+        [widget.card],
+        linked,
+        (card) => hydrateStudyCard(ref, card),
+      );
       final parts = NativeDrawingSession.characterParts(widget.card, {
         for (final card in library) card.id: card,
       });
       if (mounted) {
         setState(() {
           _parts = parts;
-          _derived = NativeDrawingSession.derivedExamples(widget.card, {
-            for (final card in library) card.id: card,
-          });
+          _derived = NativeDrawingSession.derivedExamples(widget.card, linked);
           _loading = false;
         });
       }

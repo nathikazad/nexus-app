@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
 import 'package:nx_cards/account/account_session.dart';
 import 'package:nx_cards/scheduling/scheduling.dart';
@@ -468,7 +469,28 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     }
   }
 
+  Stopwatch? _startupClock;
+  int _startupLast = 0;
+  String _startupId = '';
+  void _beginStartup(String mode) {
+    _startupId = '${DateTime.now().millisecondsSinceEpoch}-$mode';
+    _startupClock = Stopwatch()..start();
+    _startupLast = 0;
+    _startupStep('tap');
+  }
+
+  void _startupStep(String stage) {
+    final elapsed = _startupClock?.elapsedMilliseconds ?? 0;
+    final message =
+        'NxCardsStartup id=$_startupId stage=$stage epoch_ms=${DateTime.now().millisecondsSinceEpoch} delta_ms=${elapsed - _startupLast} total_ms=$elapsed';
+    developer.log(message, name: 'NxCardsStartup');
+    // Keep diagnostic timings visible in release-device logcat too.
+    debugPrint(message);
+    _startupLast = elapsed;
+  }
+
   Future<void> _start() async {
+    _beginStartup('recall');
     final prompts = await _latestSelectedPrompts();
     if (!mounted || prompts == null) return;
     if (_recallPresentation == RecallPresentation.write &&
@@ -498,6 +520,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     List<StudyPrompt>? prompts,
   }) async {
     if (!await NativeDrawingSession.isAvailable() || !mounted) return false;
+    _startupStep('native_available');
     final recall = prompts != null;
     final queue = cards ?? prompts!.map((p) => p.card).toList();
     final sessionKey = ref.read(activeCardsSessionProvider).value?.account.key;
@@ -509,6 +532,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final linkedLibrary = {
       for (final card in await library.listCards()) card.id: card,
     };
+    _startupStep('library_loaded count=${linkedLibrary.length}');
+    await NativeDrawingSession.hydrateExampleParents(
+      queue,
+      linkedLibrary,
+      (card) => hydrateStudyCard(ref, card),
+    );
+    _startupStep('example_parents_hydrated');
     if (!mounted ||
         sessionKey != ref.read(activeCardsSessionProvider).value?.account.key) {
       return true;
@@ -521,6 +551,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       for (final card in queue)
         NativeDrawingSession.derivedExamples(card, linkedLibrary),
     ];
+    _startupStep('context_derived');
     final handled = await NativeDrawingSession.open(
       title: widget.title,
       cards: recall
@@ -717,6 +748,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     setState(() => _starting = true);
     try {
       final dashboard = await ref.read(cardsDashboardProvider.future);
+      _startupStep('dashboard_ready');
       final cardsById = <int, StudyCard>{
         for (final card in dashboard.cards) card.id: card,
       };
@@ -761,6 +793,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _order == StudyOrder.shuffle) {
         selected.shuffle(Random.secure());
       }
+      _startupStep('selection_ready');
       final hydrated = <StudyPrompt>[];
       for (final prompt in selected.take(min(_count, selected.length))) {
         hydrated.add(
@@ -771,6 +804,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           ),
         );
       }
+      _startupStep('queue_hydrated count=${hydrated.length}');
       return hydrated;
     } catch (error) {
       if (mounted) {
@@ -821,9 +855,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   Future<void> _openDrawPractice() async {
     if (_starting) return;
+    _beginStartup('drawing');
     setState(() => _starting = true);
     try {
       final dashboard = await ref.read(cardsDashboardProvider.future);
+      _startupStep('dashboard_ready');
       final eligibleIds = _studyCards.map((card) => card.id).toSet();
       final cards = dashboard.cards
           .where(
@@ -850,6 +886,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       for (final card in selected) {
         hydrated.add(await hydrateStudyCard(ref, card));
       }
+      _startupStep('queue_hydrated count=${hydrated.length}');
       if (!mounted) return;
       if (await _openNativeDrawing(cards: hydrated)) {
         await _refreshSetup();

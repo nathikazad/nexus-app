@@ -7,6 +7,30 @@ import 'package:nx_cards/browser/browser.dart';
 class NativeDrawingSession {
   static const channel = MethodChannel('nx_cards/drawing-session');
 
+  /// Dashboard cards omit example bodies on native offline storage.
+  /// Hydrate only direct parents, once each, without walking deeper levels.
+  static Future<void> hydrateExampleParents(
+    List<StudyCard> roots,
+    Map<int, StudyCard> library,
+    Future<StudyCard> Function(StudyCard) hydrate,
+  ) async {
+    for (final root in roots) {
+      library[root.id] = root;
+    }
+    final ids = <int>{
+      for (final root in roots)
+        if (root.content case final LanguageCardContent content)
+          for (final example in content.examples)
+            if (example.cardId != null) example.cardId!,
+    };
+    for (final id in ids) {
+      final parent = library[id];
+      if (parent != null && parent.isSummary) {
+        library[id] = await hydrate(parent);
+      }
+    }
+  }
+
   /// Exactly two saved Examples edges; never recurse or infer text matches.
   static List<DerivedLanguageExample> derivedExamples(
     StudyCard card,
@@ -162,9 +186,15 @@ class NativeDrawingSession {
     required bool recall,
     required Future<Object?> Function(MethodCall) onAction,
   }) async {
+    debugPrint(
+      'NxCardsStartup stage=payload_ready epoch_ms=${DateTime.now().millisecondsSinceEpoch}',
+    );
     if (!await isAvailable()) return false;
     channel.setMethodCallHandler(onAction);
     try {
+      debugPrint(
+        'NxCardsStartup stage=channel_send epoch_ms=${DateTime.now().millisecondsSinceEpoch} cards=${cards.length}',
+      );
       await channel.invokeMethod<void>('open', {
         'title': title,
         'recall': recall,

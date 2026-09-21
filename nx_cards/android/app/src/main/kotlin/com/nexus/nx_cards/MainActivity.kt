@@ -17,6 +17,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "open" -> {
                     if (pending != null) { result.error("busy", "Drawing is already open", null); return@setMethodCallHandler }
                     try {
+                        android.util.Log.i("NxCardsStartup", "stage=channel_received epoch_ms=${System.currentTimeMillis()}")
                         NativeDrawingBridge.input = call.arguments as Map<*, *>
                         NativeDrawingBridge.channel = channel
                         pending = result

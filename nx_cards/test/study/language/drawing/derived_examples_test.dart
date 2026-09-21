@@ -24,6 +24,31 @@ StudyCard card(int id, String text, List<LanguageExample> examples) =>
     );
 void main() {
   test(
+    'offline summaries hydrate direct parents once without loading grandchildren',
+    () async {
+      final root = card(1, '知', [example(2, '知道')]);
+      final parent = card(2, '知道', [example(3, '我不知道。')]);
+      final library = {
+        2: card(2, '知道', []).copyWith(isSummary: true),
+        3: card(3, '我不知道。', []).copyWith(isSummary: true),
+      };
+      final reads = <int>[];
+      await NativeDrawingSession.hydrateExampleParents([root, root], library, (
+        summary,
+      ) async {
+        reads.add(summary.id);
+        return parent;
+      });
+      expect(reads, [2]);
+      expect(
+        NativeDrawingSession.derivedExamples(root, library).single.example.text,
+        '我不知道。',
+      );
+      expect(library[3]!.isSummary, isTrue);
+    },
+  );
+
+  test(
     'one extra level deduplicates, labels parents and excludes cycles/direct examples',
     () {
       final root = card(1, '学', [

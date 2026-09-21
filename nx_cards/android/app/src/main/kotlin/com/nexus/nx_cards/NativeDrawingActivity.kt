@@ -56,6 +56,9 @@ class NativeDrawingActivity : Activity() {
     private fun value(key: String) = card[key] as? String ?: ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val startup = android.os.SystemClock.elapsedRealtime()
+        fun mark(stage: String) = Log.i("NxCardsStartup", "stage=$stage native_ms=${android.os.SystemClock.elapsedRealtime() - startup} epoch_ms=${System.currentTimeMillis()}")
+        mark("activity_create")
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val input = NativeDrawingBridge.input
@@ -87,7 +90,9 @@ class NativeDrawingActivity : Activity() {
             root.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f))
             controls = LinearLayout(this).apply { gravity = Gravity.END }
             frame.addView(controls, LinearLayout.LayoutParams(-1, dp(48)))
+            mark("before_ink_init")
             ink = InkPanelHost(this, ::report)
+            mark("ink_initialized")
             frame.addView(ink!!.getView(), LinearLayout.LayoutParams(-1, 0, 1f))
             // Tablet context is shared by practice and revealed recall.
             if (resources.configuration.smallestScreenWidthDp >= 600) {
@@ -124,7 +129,10 @@ class NativeDrawingActivity : Activity() {
                 root.addView(columns, LinearLayout.LayoutParams(-1, 0, 1.2f))
             }
             setContentView(root)
+            mark("layout_built")
             updateCard()
+            mark("first_card_bound")
+            root.post { mark("first_ui_post") }
             Log.i("NxCardsNative", "Fully native ${if (recall) "recall" else "practice"} activity opened")
         } catch (e: Throwable) {
             setResult(RESULT_CANCELED, Intent().putExtra("error", e.toString())); finish()
