@@ -212,11 +212,12 @@ class NativeDrawingActivity : Activity() {
                     setPadding(0, 0, 0, dp(5))
                 }, LinearLayout.LayoutParams(-1, -2))
             }
-            row.addView(textColumn, LinearLayout.LayoutParams(0, -2, 1f))
+            // Keep a non-clickable gap between card navigation and audio.
+            row.addView(textColumn, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(16) })
             if (!recall && example["cardId"] is Number) {
-                row.contentDescription = "Open example card: ${example["text"]}"
-                row.isFocusable = true
-                row.setOnClickListener { if (!busy && !recall) openExample((example["cardId"] as Number).toInt()) }
+                textColumn.contentDescription = "Open example card: ${example["text"]}"
+                textColumn.isFocusable = true
+                textColumn.setOnClickListener { if (!busy && !recall) openExample((example["cardId"] as Number).toInt()) }
             }
             if (example["audio"] == true) row.addView(ImageButton(this).apply {
                 contentDescription = "Play example: ${example["text"]}"

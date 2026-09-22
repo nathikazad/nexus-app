@@ -248,7 +248,25 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                           return <Widget>[
                             for (final word in words)
                               ListTile(
-                                title: Text(word.back),
+                                title: Row(
+                                  children: [
+                                    Flexible(child: Text(word.back)),
+                                    if (word.content
+                                        case final LanguageCardContent content
+                                        when content.audioUrl?.isNotEmpty ==
+                                                true &&
+                                            audioRepository != null) ...[
+                                      const SizedBox(width: 8),
+                                      PronunciationButton(
+                                        key: ValueKey(
+                                          'contains-audio-${word.id}',
+                                        ),
+                                        audioUrl: content.audioUrl!,
+                                        repository: audioRepository,
+                                      ),
+                                    ],
+                                  ],
+                                ),
                                 subtitle: Text(
                                   '${word.content is LanguageCardContent ? (word.content as LanguageCardContent).transliteration : ''} — ${word.front}',
                                 ),
