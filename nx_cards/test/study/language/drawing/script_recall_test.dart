@@ -143,6 +143,7 @@ Future<void> _pumpRecall(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        cardWorkspaceProvider.overrideWithValue(null),
         cardAudioRepositoryProvider.overrideWithValue(
           cue == StudyCue.fromLanguage ? _FakeAudioRepository() : null,
         ),

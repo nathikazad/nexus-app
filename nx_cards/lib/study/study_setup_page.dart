@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/lazy_study_queue.dart';
 import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'dart:developer' as developer;
@@ -42,6 +43,7 @@ enum RecallTiming { allMatching, dueNow }
 
 class StudySetupPage extends ConsumerStatefulWidget {
   const StudySetupPage({
+    this.studyScope,
     super.key,
     required this.title,
     required this.prompts,
@@ -52,6 +54,7 @@ class StudySetupPage extends ConsumerStatefulWidget {
     this.sourceKind = StudySourceKind.language,
   });
 
+  final StudyScope? studyScope;
   final String title;
   final List<StudyPrompt> prompts;
   final List<StudyCard> studyCards;
@@ -519,6 +522,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => StudySessionPage(
+          studyScope: widget.studyScope,
           title: widget.title,
           prompts: prompts,
           interaction: _recallPresentation == RecallPresentation.write
@@ -744,6 +748,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       final action = await Navigator.of(context).push<Object?>(
         MaterialPageRoute<Object?>(
           builder: (recapContext) => RecallRecapPage(
+            studyScope: widget.studyScope,
             onRepeatIncorrect: (changes) {
               for (final change in changes) {
                 final card = latest[change.card.id];
@@ -787,8 +792,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     if (!mounted || prompts == null) return;
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) =>
-            LanguageFastRecallPage(title: widget.title, prompts: prompts),
+        builder: (_) => LanguageFastRecallPage(
+          title: widget.title,
+          prompts: prompts,
+          studyScope: widget.studyScope,
+        ),
       ),
     );
     await _refreshSetup();
@@ -977,6 +985,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => VoiceStudySessionPage(
+          studyScope: widget.studyScope,
           title: widget.title,
           prompts: prompts,
           languages: _isBookStudy

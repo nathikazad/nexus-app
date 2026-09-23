@@ -137,11 +137,11 @@ void main() {
     );
 
     expect(card, isNotNull);
-    expect(card!.modelTypeName, wordCardModelType);
+    expect(card!.modelTypeName, languageCardModelType);
     expect(card.learningStatus, LearningStatus.learning);
     expect(card.tags['Language'], <String>['Malayalam']);
-    expect(card.tags['Part of Speech'], <String>['Noun']);
-    expect(card.studyCategory, 'Noun');
+    expect(card.tags['Category'], <String>['Noun']);
+    expect(card.categories, contains('Noun'));
     final content = card.content as LanguageCardContent;
     expect(content.examples, hasLength(1));
     expect(content.examples.single.text, 'അവന് നല്ല കഴിവുണ്ട്.');

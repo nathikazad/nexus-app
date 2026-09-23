@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/session/study_session_page.dart';
@@ -6,12 +7,17 @@ import 'package:nx_cards/study/study_setup_page.dart';
 Future<void> openStudy(
   BuildContext context,
   String title,
-  List<StudyPrompt> prompts,
-) {
+  List<StudyPrompt> prompts, {
+  StudyScope? studyScope,
+}) {
   return Navigator.push<void>(
     context,
     MaterialPageRoute(
-      builder: (_) => StudySessionPage(title: title, prompts: prompts),
+      builder: (_) => StudySessionPage(
+        title: title,
+        prompts: prompts,
+        studyScope: studyScope,
+      ),
     ),
   );
 }
@@ -20,6 +26,7 @@ typedef StudyButtonBuilder = Widget Function(VoidCallback? onPressed);
 
 class StudyLauncher extends StatelessWidget {
   const StudyLauncher({
+    this.studyScope,
     super.key,
     required this.title,
     required this.prompts,
@@ -30,6 +37,7 @@ class StudyLauncher extends StatelessWidget {
     this.sourceKind = StudySourceKind.language,
   });
 
+  final StudyScope? studyScope;
   final String title;
   final List<StudyPrompt> prompts;
   final List<StudyCard> studyCards;
@@ -45,12 +53,15 @@ class StudyLauncher extends StatelessWidget {
     if (sourceKind == StudySourceKind.language &&
         (languagePair == null || !hasLanguageCards)) {
       if (prompts.isEmpty) return builder(null);
-      return builder(() => openStudy(context, title, prompts));
+      return builder(
+        () => openStudy(context, title, prompts, studyScope: studyScope),
+      );
     }
     return builder(
       () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => StudySetupPage(
+            studyScope: studyScope,
             title: title,
             prompts: prompts,
             studyCards: studyCards,

@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -28,6 +29,7 @@ class RecallRecapEntry {
 
 class RecallRecapPage extends ConsumerStatefulWidget {
   const RecallRecapPage({
+    this.studyScope,
     super.key,
     required this.reviewedCount,
     required this.totalCount,
@@ -36,6 +38,7 @@ class RecallRecapPage extends ConsumerStatefulWidget {
     this.onRepeatIncorrect,
   });
 
+  final StudyScope? studyScope;
   final int reviewedCount;
   final int totalCount;
   final int missCount;
@@ -63,6 +66,7 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
         widget.entries
             .where((entry) => entry.rating != null)
             .map((entry) => entry.card),
+        scope: widget.studyScope,
       );
       if (mounted) setState(() => _progression = result);
     } catch (error) {

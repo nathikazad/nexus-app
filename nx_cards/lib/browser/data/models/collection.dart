@@ -66,11 +66,10 @@ class CardsDashboard {
       .where(
         (card) =>
             (studyCategory == null ||
-                card.belongsToStudyCategory(studyCategory)) &&
+                card.categories.contains(studyCategory)) &&
             (language == null || languageFor(card) == language) &&
             (bookId == null || card.sourceBookId == bookId) &&
-            !card.isPhraseCard &&
-            (card.studyCategories.isEmpty || card.isRecallEligible),
+            (!card.isLanguageCard || card.isRecallEligible),
       )
       .expand((card) => card.prompts);
 

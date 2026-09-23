@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,12 +18,14 @@ import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 
 class StudySessionPage extends ConsumerStatefulWidget {
   const StudySessionPage({
+    this.studyScope,
     super.key,
     required this.title,
     required this.prompts,
     this.interaction = RecallInteraction.standard,
   });
 
+  final StudyScope? studyScope;
   final String title;
   final List<StudyPrompt> prompts;
   final RecallInteraction interaction;
@@ -137,6 +140,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
     if (_prompts.isEmpty) return const _EmptyStudySessionPage();
     if (_ended || _index >= _prompts.length) {
       return RecallRecapPage(
+        studyScope: widget.studyScope,
         onRepeatIncorrect: _repeatIncorrect,
         reviewedCount: _index,
         totalCount: _prompts.length,

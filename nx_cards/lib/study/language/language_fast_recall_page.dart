@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'dart:async';
 
@@ -13,11 +14,13 @@ import 'package:nx_cards/study/session/recall_recap_page.dart';
 
 class LanguageFastRecallPage extends ConsumerStatefulWidget {
   const LanguageFastRecallPage({
+    this.studyScope,
     super.key,
     required this.title,
     required this.prompts,
   });
 
+  final StudyScope? studyScope;
   final String title;
   final List<StudyPrompt> prompts;
 
@@ -143,6 +146,7 @@ class _LanguageFastRecallPageState
           .where((rating) => rating == CardRating.again)
           .length;
       return RecallRecapPage(
+        studyScope: widget.studyScope,
         onRepeatIncorrect: _repeatIncorrect,
         reviewedCount: _ratings.length,
         totalCount: _prompts.length,

@@ -22,7 +22,9 @@ final class DriftCardsMapper {
       notes: Value(card.notes),
       modelType:
           card.modelTypeName ??
-          (content is LanguageCardContent ? wordCardModelType : cardModelType),
+          (content is LanguageCardContent
+              ? languageCardModelType
+              : cardModelType),
       front: card.front,
       back: card.back,
       transliteration: Value(

@@ -69,7 +69,7 @@ final class KgqlCardsSyncTransport
   }) => _mutate(
     SetModelRequest(
       modelType: content is LanguageCardContent
-          ? wordCardModelType
+          ? languageCardModelType
           : cardModelType,
       name: content.front,
       attributes: <SetModelAttribute>[
@@ -134,8 +134,9 @@ final class KgqlCardsSyncTransport
           final card = studyCardFromModel(
             Model.fromJson(Map<String, dynamic>.from(entry['payload'] as Map)),
           );
-          if (card == null || card.id != entry['id'])
+          if (card == null || card.id != entry['id']) {
             throw StateError('Invalid card payload');
+          }
           cards.add(HashedCard(card, entry['hash'] as String));
         }
         final remoteIds = entries.map((e) => e['id']).toSet();

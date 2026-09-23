@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +50,7 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
         ? data.cards
         : data.cardsForLanguage(language!);
     final groups = languageGroups(sourceCards);
+    final collections = languageGroups(sourceCards, tagSystem: 'Collection');
     return RefreshIndicator(
       onRefresh: ref.read(cardsLibrarySyncProvider),
       child: ListView(
@@ -60,6 +62,14 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Categories',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   AdaptiveCardGrid(
                     children: [
                       _LanguageCategoryCard(
@@ -80,6 +90,28 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                         ),
                     ],
                   ),
+                  if (collections.isNotEmpty) ...[
+                    const SizedBox(height: 28),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Collections',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    AdaptiveCardGrid(
+                      children: [
+                        for (final group in collections)
+                          _LanguageCategoryCard(
+                            category: group.name,
+                            tagSystem: 'Collection',
+                            data: data,
+                            language: language,
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -227,7 +259,9 @@ class _LanguageCategoryCard extends StatelessWidget {
                             ),
                           ),
                           child: Icon(
-                            categoryIcon(category),
+                            tagSystem == 'Collection'
+                                ? Icons.collections_bookmark_outlined
+                                : categoryIcon(category),
                             size: 20,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
@@ -430,6 +464,11 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             ),
                           ),
                           StudyLauncher(
+                            studyScope: StudyScope(
+                              language: language,
+                              tagSystem: widget.tagSystem ?? 'Category',
+                              tag: widget.allCards ? null : category,
+                            ),
                             title: language == null
                                 ? category
                                 : '$language · $category',

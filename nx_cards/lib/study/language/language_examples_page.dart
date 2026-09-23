@@ -41,8 +41,7 @@ class LanguageExamplesPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
               children: [
                 Text(
-                  (card.language ?? card.studyCategory ?? 'Language')
-                      .toUpperCase(),
+                  (card.language ?? 'Language').toUpperCase(),
                   style: monoLabel,
                 ),
                 const SizedBox(height: 16),

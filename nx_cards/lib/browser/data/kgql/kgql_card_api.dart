@@ -43,20 +43,7 @@ Future<List<StudyCard>> fetchKgqlCards(GraphQLClient client) async {
     ),
     fetchKgqlModels(
       client,
-      // KGQL projects tag systems from the filter type. Query lexical families
-      // at their concrete roots so Word Category is not lost by filtering at
-      // the LanguageFlashcard ancestor.
-      filter: const {'model_type': wordCardModelType},
-      struct: languageCardStruct,
-    ),
-    fetchKgqlModels(
-      client,
-      filter: const {'model_type': phraseCardModelType},
-      struct: languageCardStruct,
-    ),
-    fetchKgqlModels(
-      client,
-      filter: const {'model_type': scriptCardModelType},
+      filter: const {'model_type': languageCardModelType},
       struct: languageCardStruct,
     ),
   ]);
@@ -143,7 +130,7 @@ class KgqlCardApi implements CardLibrary {
       _client,
       SetModelRequest(
         modelType: content is LanguageCardContent
-            ? wordCardModelType
+            ? languageCardModelType
             : cardModelType,
         name: content.front,
         attributes: [

@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -37,6 +38,7 @@ ReviewProgressionPlan planReviewProgression({
   required Iterable<StudyCard> reviewedCards,
   required List<StudyCard> allCards,
   required ReviewProgressionSettings settings,
+  StudyScope? scope,
 }) {
   if (!settings.automaticProgressionEnabled) {
     return const ReviewProgressionPlan([]);
@@ -48,11 +50,9 @@ ReviewProgressionPlan planReviewProgression({
   final projectedStatus = <int, LearningStatus>{
     for (final card in allCards) card.id: card.learningStatus,
   };
-  final promotedByCohort = <String, int>{};
+  var promotedInScope = 0;
 
   for (final card in reviewedById.values) {
-    final cohort = card.progressionCohort;
-    if (cohort == null) continue;
     final reviews = <CardReview>[
       for (final cue in StudyCue.values) ...card.reviewHistoryFor(cue),
     ]..sort((a, b) => a.reviewedAt.compareTo(b.reviewedAt));
@@ -74,11 +74,7 @@ ReviewProgressionPlan planReviewProgression({
       );
       projectedStatus[card.id] = LearningStatus.learnt;
       if (card.learningStatus == LearningStatus.learning) {
-        promotedByCohort.update(
-          cohort,
-          (count) => count + 1,
-          ifAbsent: () => 1,
-        );
+        if (scope?.contains(card) == true) promotedInScope++;
       }
     } else if (percentage <= settings.moveToCurrentPercentage &&
         card.learningStatus != LearningStatus.learning) {
@@ -93,33 +89,35 @@ ReviewProgressionPlan planReviewProgression({
     }
   }
 
-  if (settings.autoReplacePromotedCards) {
-    for (final entry in promotedByCohort.entries) {
-      final candidates = allCards.where(
-        (card) =>
-            card.progressionCohort == entry.key &&
-            projectedStatus[card.id] == LearningStatus.notStarted,
+  if (settings.autoReplacePromotedCards && scope != null) {
+    final candidates = allCards.where(
+      (card) =>
+          scope.contains(card) &&
+          !card.suspended &&
+          projectedStatus[card.id] == LearningStatus.notStarted,
+    );
+    for (final card in candidates.take(promotedInScope)) {
+      changes.add(
+        ReviewProgressionChange(
+          card: card,
+          status: LearningStatus.learning,
+          isReplacement: true,
+        ),
       );
-      for (final card in candidates.take(entry.value)) {
-        changes.add(
-          ReviewProgressionChange(
-            card: card,
-            status: LearningStatus.learning,
-            isReplacement: true,
-          ),
-        );
-        projectedStatus[card.id] = LearningStatus.learning;
-      }
+      projectedStatus[card.id] = LearningStatus.learning;
     }
   }
   return ReviewProgressionPlan(List.unmodifiable(changes));
 }
 
 typedef RunReviewProgression =
-    Future<ReviewProgressionPlan> Function(Iterable<StudyCard> reviewedCards);
+    Future<ReviewProgressionPlan> Function(
+      Iterable<StudyCard> reviewedCards, {
+      StudyScope? scope,
+    });
 
 final reviewProgressionRunnerProvider = Provider<RunReviewProgression>((ref) {
-  return (reviewedCards) async {
+  return (reviewedCards, {scope}) async {
     final reviewed = reviewedCards.toList(growable: false);
     if (reviewed.isEmpty) return const ReviewProgressionPlan([]);
     final settings = await ref.read(reviewProgressionSettingsProvider.future);
@@ -134,6 +132,7 @@ final reviewProgressionRunnerProvider = Provider<RunReviewProgression>((ref) {
       reviewedCards: reviewed,
       allCards: allCards,
       settings: settings,
+      scope: scope,
     );
     final repository = ref.read(cardLibraryProvider);
     for (final change in plan.changes) {

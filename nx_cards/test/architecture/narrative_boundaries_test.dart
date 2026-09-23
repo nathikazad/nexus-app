@@ -151,6 +151,8 @@ void main() {
     const expectedRootFiles = <String>{
       'study.dart',
       'study_queue.dart',
+      'hydrate_study_queue.dart',
+      'lazy_study_queue.dart',
       'study_setup_page.dart',
     };
     final actualRootDartFiles = Directory('lib/study')

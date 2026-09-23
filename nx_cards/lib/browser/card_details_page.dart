@@ -1052,7 +1052,7 @@ String _cueLabel(StudyCue cue, StudyCard card) => switch (cue) {
 };
 
 String _cardSource(StudyCard card) =>
-    card.sourceBookName ?? card.language ?? card.studyCategory ?? 'Flashcard';
+    card.sourceBookName ?? card.language ?? 'Flashcard';
 
 String _knowledgeStatus(CardSchedule schedule, DateTime now) {
   final due = schedule.dueAt;

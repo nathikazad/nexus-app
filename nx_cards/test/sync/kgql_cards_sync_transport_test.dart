@@ -80,7 +80,7 @@ void main() {
       expect(captured!.variables['itemIds'], [11]);
       final card = bundle.cards.single.card;
       expect(card.sourceBookId, 50);
-      expect(card.tags['Word Category'], ['Noun']);
+      expect(card.tags['Category'], ['Noun']);
       final example = (card.content as LanguageCardContent).examples.single;
       expect(example.cardId, 12);
       expect(example.text, '生日');

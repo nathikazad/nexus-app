@@ -53,8 +53,17 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+              cardsCollectionProvider.overrideWith(
+                (ref, source) =>
+                    Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+              ),
+              cardsSourcesProvider.overrideWith(
+                (ref) => Stream.fromFuture(
+                  ref
+                      .watch(cardsDashboardProvider.future)
+                      .then(summarizeLibrary),
+                ),
+              ),
               cardsDashboardProvider.overrideWith((_) => Stream.value(data)),
               cardAudioRepositoryProvider.overrideWithValue(null),
             ],
@@ -69,7 +78,7 @@ void main() {
         for (final (name, value) in [
           ('total', '4'),
           ('learning', '4'),
-          ('due', '3'),
+          ('due', '4'),
         ]) {
           expect(
             find.descendant(
@@ -130,8 +139,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+          cardsCollectionProvider.overrideWith(
+            (ref, source) =>
+                Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+          ),
+          cardsSourcesProvider.overrideWith(
+            (ref) => Stream.fromFuture(
+              ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+            ),
+          ),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
         ],
         child: const MaterialApp(home: BrowserPage()),
@@ -153,7 +169,9 @@ void main() {
     expect(find.byType(VerticalDivider), findsNothing);
     final nounTitle = tester.getCenter(find.text('Noun'));
     expect(
-      tester.getCenter(find.byKey(const ValueKey('language-category-noun-total'))).dy,
+      tester
+          .getCenter(find.byKey(const ValueKey('language-category-noun-total')))
+          .dy,
       greaterThan(nounTitle.dy),
     );
     final nounLearnt = find.byKey(
@@ -164,7 +182,7 @@ void main() {
     );
     expect(find.descendant(of: nounLearnt, matching: find.text('1')), findsOne);
     expect(
-      find.descendant(of: nounLearning, matching: find.text('0')),
+      find.descendant(of: nounLearning, matching: find.text('1')),
       findsOne,
     );
     expect(
@@ -230,8 +248,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+          cardsCollectionProvider.overrideWith(
+            (ref, source) =>
+                Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+          ),
+          cardsSourcesProvider.overrideWith(
+            (ref) => Stream.fromFuture(
+              ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+            ),
+          ),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
         ],
         child: const MaterialApp(home: BrowserPage()),
@@ -297,8 +322,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+          cardsCollectionProvider.overrideWith(
+            (ref, source) =>
+                Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+          ),
+          cardsSourcesProvider.overrideWith(
+            (ref) => Stream.fromFuture(
+              ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+            ),
+          ),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
         ],
@@ -342,8 +374,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+          cardsCollectionProvider.overrideWith(
+            (ref, source) =>
+                Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+          ),
+          cardsSourcesProvider.overrideWith(
+            (ref) => Stream.fromFuture(
+              ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+            ),
+          ),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardLibraryProvider.overrideWithValue(repository),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
@@ -407,8 +446,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+          cardsCollectionProvider.overrideWith(
+            (ref, source) =>
+                Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+          ),
+          cardsSourcesProvider.overrideWith(
+            (ref) => Stream.fromFuture(
+              ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+            ),
+          ),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
             (_) => Stream.value(CardsDashboard(cards: cards)),
@@ -510,8 +556,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+          cardsCollectionProvider.overrideWith(
+            (ref, source) =>
+                Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+          ),
+          cardsSourcesProvider.overrideWith(
+            (ref) => Stream.fromFuture(
+              ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+            ),
+          ),
           cardsDashboardProvider.overrideWith(
             (_) => Stream.value(CardsDashboard(cards: cards)),
           ),

@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -18,7 +19,9 @@ class BookPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(cardsCollectionProvider((language: null, bookId: bookId)));
+    final dashboard = ref.watch(
+      cardsCollectionProvider((language: null, bookId: bookId)),
+    );
     final historyWindow =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
     return Scaffold(
@@ -69,6 +72,7 @@ class BookPage extends ConsumerWidget {
                             ),
                           ),
                           StudyLauncher(
+                            studyScope: StudyScope(bookId: bookId),
                             title: bookName,
                             preferenceKey: 'book:$bookId',
                             prompts: [

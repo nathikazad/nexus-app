@@ -12,16 +12,20 @@ class StudyCard {
     required this.suspended,
     this.learningStatus = LearningStatus.notStarted,
     Map<String, List<String>> tags = const <String, List<String>>{},
-    this.modelTypeName,
+    String? modelTypeName,
     this.sourceBookId,
     this.sourceBookName,
     Set<int> linkedWordIds = const <int>{},
     this.updatedAt,
     this.isSummary = false,
-  }) : schedules = Map<StudyCue, CardSchedule>.unmodifiable(schedules),
+  }) : modelTypeName =
+           const {'Word', 'Verb', 'Phrase', 'Script'}.contains(modelTypeName)
+           ? 'LanguageFlashcard'
+           : modelTypeName,
+       schedules = Map<StudyCue, CardSchedule>.unmodifiable(schedules),
        linkedWordIds = Set<int>.unmodifiable(linkedWordIds),
        tags = Map<String, List<String>>.unmodifiable({
-         for (final entry in tags.entries)
+         for (final entry in migrateLanguageTags(tags, modelTypeName).entries)
            entry.key: List<String>.unmodifiable(entry.value),
        }),
        reviewHistory = Map<StudyCue, List<CardReview>>.unmodifiable({
@@ -37,9 +41,12 @@ class StudyCard {
   String get front => content.front;
   String get back => content.back;
   bool get isLanguageCard => content is LanguageCardContent;
-  bool get isWordCard => modelTypeName == 'Word' || modelTypeName == 'Verb';
-  bool get isPhraseCard => modelTypeName == 'Phrase';
-  bool get isScriptCard => modelTypeName == 'Script';
+  bool get isPhraseCard => categories.contains('Phrase');
+  bool get isScriptCard => categories.contains('Script');
+  bool get isWordCard =>
+      isLanguageCard &&
+      !isPhraseCard &&
+      categories.any((value) => value != 'Script');
   String? get language => tags['Language']?.firstOrNull;
   final Map<StudyCue, CardSchedule> schedules;
   final Map<StudyCue, List<CardReview>> reviewHistory;
@@ -47,40 +54,12 @@ class StudyCard {
   final LearningStatus learningStatus;
   bool get isRecallEligible => learningStatus.isRecallEligible;
   final Map<String, List<String>> tags;
-  List<String> get wordCategories => <String>{
-    for (final category in tags['Word Category'] ?? const <String>[])
-      if (category.trim().isNotEmpty) category.trim(),
-    for (final category in tags['Part of Speech'] ?? const <String>[])
-      if (category.trim().isNotEmpty) category.trim(),
+  List<String> get categories => _tagValues('Category');
+  List<String> get collections => _tagValues('Collection');
+  List<String> _tagValues(String system) => <String>{
+    for (final value in tags[system] ?? const <String>[])
+      if (value.trim().isNotEmpty) value.trim(),
   }.toList(growable: false);
-  String? get wordCategory => wordCategories.firstOrNull;
-  List<String> get _primaryStudyCategories => isScriptCard
-      ? const <String>['Script']
-      : isPhraseCard
-      ? const <String>['Phrase']
-      : modelTypeName == 'Verb'
-      ? const <String>['Verb']
-      : modelTypeName == 'Word'
-      ? wordCategories
-      : const <String>[];
-  // Additional study groupings reuse the same card without changing its
-  // grammatical category or progression cohort.
-  List<String> get studyCategories => <String>{
-    ..._primaryStudyCategories,
-    for (final category in tags['Study Category'] ?? const <String>[])
-      if (category.trim().isNotEmpty) category.trim(),
-  }.toList(growable: false);
-  String? get studyCategory => studyCategories.firstOrNull;
-  bool belongsToStudyCategory(String category) =>
-      studyCategories.contains(category);
-  String? get progressionCohort {
-    final category = studyCategory;
-    if (category != null) {
-      return language == null ? null : 'language:$language:$category';
-    }
-    final bookId = sourceBookId;
-    return bookId == null ? null : 'book:$bookId';
-  }
 
   final String? modelTypeName;
   final int? sourceBookId;
@@ -156,4 +135,31 @@ class StudyCard {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+}
+
+/// Decode pre-migration offline snapshots once into the canonical tag shape.
+/// Browsing and scheduling never infer categories from the resulting type.
+Map<String, List<String>> migrateLanguageTags(
+  Map<String, List<String>> tags,
+  String? legacyType,
+) {
+  final categories = <String>{
+    ...tags['Category'] ?? const [],
+    ...tags['Word Category'] ?? const [],
+    ...tags['Part of Speech'] ?? const [],
+    ...tags['Study Category'] ?? const [],
+    if (const {'Verb', 'Phrase', 'Script'}.contains(legacyType)) legacyType!,
+  };
+  if (legacyType == 'Word' && categories.isEmpty) categories.add('Word');
+  return {
+    for (final entry in tags.entries)
+      if (!const {
+        'Word Category',
+        'Part of Speech',
+        'Study Category',
+        'Category',
+      }.contains(entry.key))
+        entry.key: entry.value,
+    if (categories.isNotEmpty) 'Category': categories.toList(),
+  };
 }

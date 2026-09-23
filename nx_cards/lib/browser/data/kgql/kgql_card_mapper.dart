@@ -16,10 +16,7 @@ StudyCard? studyCardFromModel(
   final back = cardDetails['back']?.toString().trim() ?? '';
   final languageDetails = _jsonMap(model.attributes?[attrLanguageDetails]);
   final modelTypeName = model.modelType?.name;
-  final relatedExamples = _languageExamplesFromRelations(
-    model,
-    relatedModels,
-  );
+  final relatedExamples = _languageExamplesFromRelations(model, relatedModels);
   return StudyCard(
     id: model.id,
     notes: model.description,
@@ -64,20 +61,39 @@ bool _isContains(Model model, Relation relation) {
   if (relation.relationName == wordPhrasesRelation) {
     if (relation.relation != null) return relation.relation == 'child';
     // Compatibility with snapshots made before the relationship was widened.
-    return model.modelType?.name == phraseCardModelType;
+    return (migrateLanguageTags(
+              model.tags ?? const {},
+              model.modelType?.name,
+            )['Category'] ??
+            const [])
+        .contains('Phrase');
   }
   return relation.relationName == verbPhraseConjugationRelation &&
-      model.modelType?.name == phraseCardModelType;
+      (migrateLanguageTags(
+                model.tags ?? const {},
+                model.modelType?.name,
+              )['Category'] ??
+              const [])
+          .contains('Phrase');
 }
 
 bool _isExample(Model model, Relation relation) {
   if (relation.relationName == wordPhrasesRelation) {
     if (relation.relation != null) return relation.relation == 'parent';
-    return model.modelType?.name == wordCardModelType ||
-        model.modelType?.name == verbCardModelType;
+    return !(migrateLanguageTags(
+              model.tags ?? const {},
+              model.modelType?.name,
+            )['Category'] ??
+            const [])
+        .contains('Phrase');
   }
   return relation.relationName == verbPhraseConjugationRelation &&
-      model.modelType?.name == verbCardModelType;
+      (migrateLanguageTags(
+                model.tags ?? const {},
+                model.modelType?.name,
+              )['Category'] ??
+              const [])
+          .contains('Verb');
 }
 
 List<LanguageExample> _languageExamplesFromRelations(
@@ -123,7 +139,7 @@ Map<String, Object?> languageDetailsJson(LanguageCardContent content) =>
     <String, Object?>{
       'transliteration': content.transliteration,
       'audio_url': content.audioUrl,
-      // Examples are derived from Word/Phrase relations. Never write that
+      // Examples are derived from Contains relations. Never write that
       // projection back into the language_details aggregate.
       'examples': const <Object?>[],
     };

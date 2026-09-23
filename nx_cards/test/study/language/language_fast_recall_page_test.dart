@@ -23,7 +23,7 @@ void main() {
       ProviderScope(
         overrides: [
           reviewProgressionRunnerProvider.overrideWithValue(
-            (_) async => const ReviewProgressionPlan([]),
+            (_, {scope}) async => const ReviewProgressionPlan([]),
           ),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardLibraryProvider.overrideWithValue(repository),

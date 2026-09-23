@@ -95,11 +95,15 @@ void main() {
       'Phrase',
       'Family Conversations 1',
       'Husband Conversations 1',
-      'Travel',
     ]) {
       expect(find.text(name), findsOneWidget);
     }
     expect(find.text('Other language only'), findsNothing);
+    expect(find.text('Travel'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('Categories')).dy,
+      lessThan(tester.getTopLeft(find.text('Collections')).dy),
+    );
     expect(find.text('Tamil'), findsOneWidget); // Page title, no language tile.
     expect(find.byIcon(Icons.tune_outlined), findsOneWidget);
     final family = find.ancestor(
@@ -109,7 +113,7 @@ void main() {
     expect(
       find.descendant(
         of: family,
-        matching: find.byIcon(Icons.text_fields_outlined),
+        matching: find.byIcon(Icons.collections_bookmark_outlined),
       ),
       findsOneWidget,
     );
@@ -153,7 +157,7 @@ void main() {
         },
       ),
     ]);
-    await tester.tap(find.text('Travel (Collection)'));
+    await tester.tap(find.text('Travel'));
     await tester.pumpAndSettle();
     expect(find.text('2 cards · 1 learning'), findsOneWidget);
     expect(find.text('item 1'), findsOneWidget);

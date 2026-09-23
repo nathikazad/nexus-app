@@ -28,13 +28,13 @@ void main() {
       final languages = repository.listLanguages();
       gate.complete();
       await Future.wait([cards, languages]);
-      expect(requests, 4);
+      expect(requests, 2);
       await repository.listCards();
-      expect(requests, 8);
+      expect(requests, 4);
     },
   );
 
-  test('creates language content as a Word', () async {
+  test('creates one LanguageFlashcard type', () async {
     Request? captured;
     final repository = KgqlCardApi(
       _client((request) {
@@ -60,7 +60,7 @@ void main() {
     expect(id, 42);
     final input = captured!.variables['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
-    expect(data['model_type'], wordCardModelType);
+    expect(data['model_type'], languageCardModelType);
     expect(data['name'], 'talent');
     expect(data, isNot(contains('description')));
     final attributes = data['attributes'] as List<dynamic>;
@@ -149,7 +149,7 @@ void main() {
               'model_type': {'id': 67, 'name': wordCardModelType},
               'tags': <String, dynamic>{
                 'Language': <String>['Malayalam'],
-                if (requestedType == wordCardModelType)
+                if (requestedType == languageCardModelType)
                   'Word Category': <String>['Noun'],
               },
             },
@@ -170,12 +170,10 @@ void main() {
     expect(cards.single.scheduleFor(StudyCue.fromLanguage).enabled, isTrue);
     expect(cards.single.scheduleFor(StudyCue.toLanguage).enabled, isTrue);
     expect(cards.single.learningStatus, LearningStatus.learning);
-    expect(cards.single.tags['Word Category'], ['Noun']);
+    expect(cards.single.tags['Category'], ['Noun']);
     expect(requestedTypes.toSet(), {
       cardModelType,
-      wordCardModelType,
-      phraseCardModelType,
-      scriptCardModelType,
+      languageCardModelType,
     });
   });
 }

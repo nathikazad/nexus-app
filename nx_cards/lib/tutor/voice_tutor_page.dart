@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/study_scope.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -12,12 +13,14 @@ import 'package:nx_live_agent/nx_live_agent.dart';
 
 class VoiceStudySessionPage extends ConsumerStatefulWidget {
   const VoiceStudySessionPage({
+    this.studyScope,
     super.key,
     required this.title,
     required this.prompts,
     this.languages,
   });
 
+  final StudyScope? studyScope;
   final String title;
   final List<StudyPrompt> prompts;
   final VoiceStudyLanguages? languages;
@@ -69,6 +72,7 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
     try {
       final result = await ref.read(reviewProgressionRunnerProvider)(
         controller.reviewedCards,
+        scope: widget.studyScope,
       );
       if (mounted) setState(() => _progression = result);
     } catch (error) {
