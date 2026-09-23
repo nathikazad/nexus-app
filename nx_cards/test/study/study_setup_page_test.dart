@@ -56,17 +56,20 @@ StudyCard sample(
 Future<void> showSetup(
   WidgetTester tester, {
   StudyCue cue = StudyCue.fromLanguage,
+  List<StudyCard>? studyCards,
 }) async {
   SharedPreferences.setMockInitialValues({});
   await tester.binding.setSurfaceSize(const Size(900, 1400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
-  final cards = [
-    sample(1, 0),
-    sample(2, 1, due: false),
-    sample(3, 8),
-    sample(4, 10, due: false),
-    sample(5, 0, active: false),
-  ];
+  final cards =
+      studyCards ??
+      [
+        sample(1, 0),
+        sample(2, 1, due: false),
+        sample(3, 8),
+        sample(4, 10, due: false),
+        sample(5, 0, active: false),
+      ];
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -118,11 +121,78 @@ void main() {
         find.text('4 available'),
         findsOneWidget,
       ); // all four are untried in reverse
-      expect(find.textContaining('Chinese → English'), findsOneWidget);
+      expect(find.textContaining('Chinese → English'), findsNothing);
       expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
       expect(find.widgetWithText(ChoiceChip, 'Chinese'), findsNothing);
     },
   );
+  testWidgets('count survives mode changes and clamps only to availability', (
+    tester,
+  ) async {
+    await showSetup(tester);
+    Slider slider() =>
+        tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
+    slider().onChanged!(2);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recall').first);
+    await tester.pumpAndSettle();
+    expect(slider().value, 2);
+    expect(find.text('Direction'), findsNothing);
+    slider().onChanged!(3);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.pumpAndSettle();
+    expect(slider().value, 2);
+    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.pumpAndSettle();
+    expect(slider().value, 2);
+  });
+  testWidgets('larger counts persist and survive an empty filter', (
+    tester,
+  ) async {
+    await showSetup(
+      tester,
+      studyCards: [for (var id = 1; id <= 25; id++) sample(id, 0)],
+    );
+    Slider slider() =>
+        tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
+    slider().onChanged!(17);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recall').first);
+    await tester.pumpAndSettle();
+    expect(slider().value, 17);
+    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.pumpAndSettle();
+    expect(find.text('No cards match these filters'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.pumpAndSettle();
+    expect(slider().value, 17);
+    // Recreate the setup page with its saved preferences still in place.
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+          cardsDashboardProvider.overrideWith(
+            (ref) => Stream.value(
+              CardsDashboard(
+                cards: [for (var id = 1; id <= 25; id++) sample(id, 0)],
+              ),
+            ),
+          ),
+          languageDirectionProvider(
+            'Chinese',
+          ).overrideWith((ref) => StudyCue.fromLanguage),
+        ],
+        child: app,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(slider().value, 17);
+  });
   testWidgets(
     'multi-select excludes Upcoming without removing Current or Past',
     (tester) async {

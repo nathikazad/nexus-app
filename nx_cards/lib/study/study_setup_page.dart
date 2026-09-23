@@ -97,7 +97,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   int _retainedMaxPercentage = 100;
   RangeValues _bookRecallRange = const RangeValues(0, 100);
   StudyOrder _order = StudyOrder.normal;
-  int _count = 1;
+  int _count = 10;
   bool _starting = false;
   int _preferenceRevision = 0;
 
@@ -107,7 +107,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   @override
   void initState() {
     super.initState();
-    _resetCount();
+    _clampCount();
     unawaited(_restorePreferences());
   }
 
@@ -162,11 +162,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             bookRecallMaximum.clamp(0, 100).toDouble(),
           );
         }
-        final available = _availableCount;
         final savedCount = saved['count'];
-        _count = savedCount is int
-            ? savedCount.clamp(1, max(1, available))
-            : min(10, max(1, available));
+        _count = savedCount is int ? max(1, savedCount) : 10;
+        _clampCount();
       });
     } on Object {
       // Ignore malformed local preferences and retain the safe defaults.
@@ -334,7 +332,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       } else {
         _learningStatuses.add(status);
       }
-      _resetCount();
+      _clampCount();
     });
     _rememberPreferences();
   }
@@ -342,7 +340,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   void _selectRetainedMaxPercentage(double percentage) {
     setState(() {
       _retainedMaxPercentage = percentage.round();
-      _resetCount();
+      _clampCount();
     });
     _rememberPreferences();
   }
@@ -350,20 +348,20 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   void _selectBookRecallRange(RangeValues range) {
     setState(() {
       _bookRecallRange = range;
-      _resetCount();
+      _clampCount();
     });
     _rememberPreferences();
   }
 
-  void _resetCount() {
+  void _clampCount() {
     final available = _availableCount;
-    _count = min(10, max(1, available));
+    if (available > 0) _count = _count.clamp(1, available);
   }
 
   void _selectMode(StudyMode mode) {
     setState(() {
       _mode = mode;
-      _resetCount();
+      _clampCount();
     });
     _rememberPreferences();
   }
@@ -371,7 +369,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   void _selectStudyPresentation(StudyPresentation presentation) {
     setState(() {
       _studyPresentation = presentation;
-      _resetCount();
+      _clampCount();
     });
     _rememberPreferences();
   }
@@ -391,7 +389,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     try {
       await ref.read(cardsDashboardProvider.future);
       if (!mounted) return;
-      setState(() => _count = _count.clamp(1, max(1, _availableCount)));
+      setState(_clampCount);
       _rememberPreferences();
     } catch (error) {
       if (mounted) {
@@ -1161,18 +1159,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     ],
                     _SetupCard(
                       number: '02',
-                      title: 'Direction',
-                      child: _cueChoices(),
-                    ),
-                    const SizedBox(height: 14),
-                    _SetupCard(
-                      number: '03',
                       title: _selectionTitle,
                       child: _recallFilterChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '04',
+                      number: '03',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
                     ),
@@ -1196,18 +1188,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                   ] else ...[
                     _SetupCard(
                       number: '01',
-                      title: 'Direction',
-                      child: _cueChoices(),
-                    ),
-                    const SizedBox(height: 14),
-                    _SetupCard(
-                      number: '02',
                       title: _selectionTitle,
                       child: _recallFilterChoices(),
                     ),
                     const SizedBox(height: 14),
                     _SetupCard(
-                      number: '03',
+                      number: '02',
                       title: 'How many cards?',
                       child: _countControl(maxCount),
                     ),
@@ -1231,12 +1217,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       ),
     );
   }
-
-  Widget _cueChoices() => Text(
-    _cue == StudyCue.toLanguage
-        ? '${widget.toLanguage} → English · recall meaning and pronunciation'
-        : 'English → ${widget.toLanguage} · recall script and pronunciation',
-  );
 
   Widget _learningStatusChoices() => Wrap(
     spacing: 8,
@@ -1316,7 +1296,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   Widget _countControl(int maxCount) => maxCount == 0
       ? const Text(
-          'Choose what should be prompted first',
+          'No cards match these filters',
           style: TextStyle(color: RecallColors.faint),
         )
       : Column(
@@ -1324,7 +1304,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             Row(
               children: [
                 Text(
-                  '$_count',
+                  '${_count.clamp(1, maxCount)}',
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
@@ -1338,6 +1318,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               ],
             ),
             Slider(
+              key: const ValueKey('card-count'),
               value: _count.clamp(1, maxCount).toDouble(),
               min: 1,
               max: maxCount.toDouble(),
