@@ -26,8 +26,10 @@ List<LanguageGroup> languageGroups(Iterable<StudyCard> cards) {
       for (final value in entry.value) {
         final name = value.trim();
         if (name.isEmpty) continue;
-        // These tags already back the existing word-category groups.
-        if ((entry.key == 'Word Category' || entry.key == 'Part of Speech') &&
+        // These tags already back the existing study-category groups.
+        if ((entry.key == 'Word Category' ||
+                entry.key == 'Part of Speech' ||
+                entry.key == 'Study Category') &&
             categories.contains(name)) {
           continue;
         }

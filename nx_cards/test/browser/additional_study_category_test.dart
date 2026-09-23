@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/browser.dart';
+import 'package:nx_cards/browser/language/language_groups.dart';
 
 void main() {
   for (final type in ['Word', 'Verb']) {
@@ -27,6 +28,12 @@ void main() {
         );
         final primary = type == 'Word' ? 'Noun' : 'Verb';
         expect(card.studyCategories, [primary, 'Script']);
+        final scriptGroups = languageGroups([
+          card,
+        ]).where((group) => group.name == 'Script').toList();
+        expect(scriptGroups, hasLength(1));
+        expect(scriptGroups.single.tagSystem, isNull);
+        expect(scriptGroups.single.contains(card), isTrue);
         expect(card.progressionCohort, 'language:Chinese:$primary');
         expect(card.belongsToStudyCategory('Script'), isTrue);
         expect(card.scheduleFor(StudyCue.fromLanguage), same(schedule));
