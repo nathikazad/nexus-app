@@ -1248,13 +1248,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         divisions: 10,
         onChanged: _selectRetainedMaxPercentage,
       ),
-      Text(
-        'Based on the last $_reviewHistoryWindow answers in this direction.',
-      ),
-      if (_usesRecallFilters)
-        const Text(
-          'Upcoming and Current are available now. Past cards appear when due, with weaker cards first.',
-        ),
     ],
   );
 
@@ -1286,10 +1279,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           '${_bookRecallRange.end.round()}%',
         ),
         onChanged: _selectBookRecallRange,
-      ),
-      Text(
-        'Successes across the last $_reviewHistoryWindow review slots',
-        style: const TextStyle(fontSize: 12, color: RecallColors.muted),
       ),
     ],
   );
