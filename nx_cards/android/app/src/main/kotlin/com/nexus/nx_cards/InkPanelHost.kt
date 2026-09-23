@@ -50,6 +50,7 @@ internal class InkPanelHost(context: Context, private val report: (String) -> Un
     }
     override fun getView(): View = host
     override fun clear(complete: () -> Unit) { panel?.clear(complete) ?: complete() }
+    override fun refresh(complete: () -> Unit) { panel?.refresh(complete) ?: complete() }
     override fun undo() { panel?.undo() }
     override fun eraseButton(held: Boolean) { panel?.eraseButton(held) }
     override fun setResumed(value: Boolean) { resumed = value; panel?.setResumed(value) }

@@ -97,11 +97,11 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
                 if (!stopped) {
                     capture()
                     if (command == "clear") strokes.clear()
-                    else if (strokes.isNotEmpty()) strokes.removeAt(strokes.lastIndex)
+                    else if (command == "undo" && strokes.isNotEmpty()) strokes.removeAt(strokes.lastIndex)
                     render()
                 }
                 complete?.invoke()
-            } catch (e: Throwable) { fail(e) }
+            } catch (e: Throwable) { fail(e); complete?.invoke() }
             finally { busy = false; if (!stopped) setResumed(resumed) }
         }, 100)
     }
@@ -158,6 +158,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
             setPen()
         }.onFailure { fail(it) }
     }
+    override fun refresh(complete: () -> Unit) = edit("refresh", complete)
     override fun undo() = edit("undo")
     private fun fail(error: Throwable) {
         Log.e("NxCardsInk", "Native ink unavailable", error)

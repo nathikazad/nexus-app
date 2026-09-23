@@ -5,6 +5,7 @@ import android.view.View
 interface DrawingInkPanel {
     fun getView(): View
     fun clear(complete: () -> Unit)
+    fun refresh(complete: () -> Unit) { getView().invalidate(); complete() }
     fun undo()
     fun setResumed(value: Boolean) {}
     fun eraseButton(held: Boolean) {}

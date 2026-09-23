@@ -19,6 +19,7 @@ internal class StandardInkPanel(context: Context, restored: List<InkStroke> = em
     }
     override fun getView(): View = this
     override fun clear(complete: () -> Unit) { drawing.clear(); complete() }
+    override fun refresh(complete: () -> Unit) { drawing.invalidate(); complete() }
     override fun undo() = drawing.undo()
     private class Drawing(context: Context, private var restored: List<InkStroke>) : View(context) {
         private data class Stroke(val path: Path, val erasing: Boolean)

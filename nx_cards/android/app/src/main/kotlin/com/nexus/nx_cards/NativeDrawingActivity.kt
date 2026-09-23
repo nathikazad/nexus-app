@@ -156,6 +156,7 @@ class NativeDrawingActivity : Activity() {
         contextColumns?.visibility = if (showContext) View.VISIBLE else View.INVISIBLE
         if (showContext) updateExamples()
         controls.removeAllViews()
+        control("Refresh screen", "refresh") { refreshScreen() }
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
         control("Undo", "undo") { ink?.undo() }
         control("Erase", "erase") { ink?.clear {} }
@@ -169,6 +170,39 @@ class NativeDrawingActivity : Activity() {
             control("No", "no") { rate(false) }
             control("Yes", "yes") { rate(true) }
         }
+    }
+    private fun refreshDisplay(manual: Boolean = false, complete: () -> Unit) {
+        if (isFinishing || isDestroyed) return
+        val root = window.decorView
+        root.invalidate()
+        // Post after Android has rendered the updated card before refreshing
+        // the panel; do not change card state, reveal state, or review history.
+        root.postOnAnimation {
+            root.post {
+                if (!isFinishing && !isDestroyed) {
+                    val refreshed = runCatching {
+                        if (android.os.Build.VERSION.SDK_INT >= 28) {
+                            org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("Lxrz/framework/manager/XrzEinkManager;")
+                        }
+                        val type = Class.forName("xrz.framework.manager.XrzEinkManager")
+                        val manager = type.getConstructor().newInstance()
+                        // GC16, identical to this firmware's Activity refresh receiver.
+                        type.getMethod("forceGlobalRefresh", Int::class.javaPrimitiveType).invoke(manager, 4)
+                    }
+                    complete()
+                    if (refreshed.isSuccess) Log.i("NxCardsInk", "Full screen GC16 refresh requested; manual=$manual index=$index")
+                    else {
+                        Log.w("NxCardsInk", "Firmware full refresh unavailable", refreshed.exceptionOrNull())
+                        if (manual) report("Redrawn; full-screen refresh unavailable on this device")
+                    }
+                }
+            }
+        }
+    }
+    private fun refreshScreen() {
+        setBusy(true)
+        val redraw = { refreshDisplay(manual = true) { setBusy(false) } }
+        ink?.refresh(redraw) ?: redraw()
     }
     private fun updateExamples() {
         val list = examplesList ?: return
@@ -210,15 +244,36 @@ class NativeDrawingActivity : Activity() {
                     text = value
                     gravity = Gravity.START
                     setPadding(0, 0, 0, dp(5))
-                }, LinearLayout.LayoutParams(-1, -2))
+                    if (key == "text" && !recall && example["cardId"] is Number) {
+                        contentDescription = "Open example card: $value"
+                        isFocusable = true
+                        setOnClickListener { if (!busy && !recall) openExample((example["cardId"] as Number).toInt()) }
+                        var pressedOnText = false
+                        fun hitsText(event: MotionEvent): Boolean {
+                            val lines = layout ?: return false
+                            val x = event.x - totalPaddingLeft + scrollX
+                            val y = event.y - totalPaddingTop + scrollY
+                            if (y < 0 || y >= lines.height) return false
+                            val line = lines.getLineForVertical(y.toInt())
+                            return x >= lines.getLineLeft(line) && x <= lines.getLineRight(line)
+                        }
+                        setOnTouchListener { _, event ->
+                            when (event.actionMasked) {
+                                MotionEvent.ACTION_DOWN -> pressedOnText = hitsText(event)
+                                MotionEvent.ACTION_MOVE -> if (!hitsText(event)) pressedOnText = false
+                                MotionEvent.ACTION_UP -> {
+                                    if (pressedOnText && hitsText(event)) performClick()
+                                    pressedOnText = false
+                                }
+                                MotionEvent.ACTION_CANCEL -> pressedOnText = false
+                            }
+                            true
+                        }
+                    }
+                }, LinearLayout.LayoutParams(-2, -2))
             }
             // Keep a non-clickable gap between card navigation and audio.
             row.addView(textColumn, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(16) })
-            if (!recall && example["cardId"] is Number) {
-                textColumn.contentDescription = "Open example card: ${example["text"]}"
-                textColumn.isFocusable = true
-                textColumn.setOnClickListener { if (!busy && !recall) openExample((example["cardId"] as Number).toInt()) }
-            }
             if (example["audio"] == true) row.addView(ImageButton(this).apply {
                 contentDescription = "Play example: ${example["text"]}"
                 tooltipText = "Play example"
@@ -370,8 +425,8 @@ class NativeDrawingActivity : Activity() {
             if (error != null) { setBusy(false); report(error); return@requestCard }
             val next = {
                 if (!isFinishing && !isDestroyed) {
-                    index = targetIndex; revealed = false; updateCard(); setBusy(false)
-                    prefetch()
+                    index = targetIndex; revealed = false; updateCard()
+                    refreshDisplay { setBusy(false); prefetch() }
                 }
             }
             ink?.clear(next) ?: next()
