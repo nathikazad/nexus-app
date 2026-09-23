@@ -343,7 +343,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('CURRENT  0%'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
     expect(find.text('DUE'), findsNothing);
     expect(find.byKey(const ValueKey('word-schedule-due')), findsNothing);
     expect(find.text('Current  1'), findsOneWidget);
@@ -469,9 +469,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('CURRENT  0%'), findsNWidgets(2));
-    expect(find.text('CURRENT  10%'), findsOneWidget);
-    expect(find.text('CURRENT  40%'), findsOneWidget);
+    expect(find.text('0%'), findsNWidgets(2));
+    expect(find.text('10%'), findsOneWidget);
+    expect(find.text('40%'), findsOneWidget);
     final order = [
       'word 1',
       'word 2',
@@ -482,7 +482,7 @@ void main() {
     await tester.tap(find.text('Upcoming  1'));
     await tester.pumpAndSettle();
     expect(find.text('word 4'), findsOneWidget);
-    expect(find.text('UPCOMING'), findsOneWidget);
+    expect(find.text('UPCOMING'), findsNothing);
   });
 
   testWidgets('future phrases prioritize links to past words', (tester) async {

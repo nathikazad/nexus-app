@@ -263,7 +263,8 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                                 ),
                               ),
                               if (widget.showScheduleStatus &&
-                                  scheduleStatus != null) ...[
+                                  scheduleStatus != null &&
+                                  scheduleStatus.label != 'Upcoming') ...[
                                 const SizedBox(width: 9),
                                 _ScheduleStatePill(status: scheduleStatus),
                               ],
@@ -407,9 +408,9 @@ class _ScheduleStatePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        status.label == 'Upcoming'
-            ? 'UPCOMING'
-            : '${status.label.toUpperCase()}  ${status.recallPercentage}%',
+        status.label == 'Suspended'
+            ? 'SUSPENDED'
+            : '${status.recallPercentage}%',
         style: TextStyle(
           color: foreground,
           fontFamily: 'monospace',
