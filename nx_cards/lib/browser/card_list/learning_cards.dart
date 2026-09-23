@@ -17,6 +17,7 @@ class LearningCardsTab extends ConsumerWidget {
     required this.cards,
     required this.emptyText,
     required this.dashboard,
+    this.priorityScores = const {},
     this.showScheduleStatus = false,
     this.showLearningStatus = false,
     this.previousStatus,
@@ -26,6 +27,7 @@ class LearningCardsTab extends ConsumerWidget {
   });
 
   final List<StudyCard> cards;
+  final Map<int, double> priorityScores;
   final String emptyText;
   final CardsDashboard dashboard;
   final bool showScheduleStatus;
@@ -71,6 +73,7 @@ class LearningCardsTab extends ConsumerWidget {
                               '${card.learningStatus.storageValue}:${card.id}',
                             ),
                             card: card,
+                            priorityScore: priorityScores[card.id],
                             showScheduleStatus: showScheduleStatus,
                             showLearningStatus: showLearningStatus,
                             previousStatus: previousStatus,
@@ -92,6 +95,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
   const _LearningStatusRow({
     super.key,
     required this.card,
+    this.priorityScore,
     required this.showScheduleStatus,
     required this.showLearningStatus,
     this.previousStatus,
@@ -101,6 +105,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
   });
 
   final StudyCard card;
+  final double? priorityScore;
   final bool showScheduleStatus;
   final bool showLearningStatus;
   final LearningStatus? previousStatus;
@@ -262,6 +267,23 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                                   ),
                                 ),
                               ),
+                              if (widget.priorityScore case final score?) ...[
+                                const SizedBox(width: 9),
+                                Tooltip(
+                                  message: 'Priority score out of 100',
+                                  child: Text(
+                                    score.toStringAsFixed(1),
+                                    key: ValueKey(
+                                      'future-score-${widget.card.id}',
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: RecallColors.muted,
+                                    ),
+                                  ),
+                                ),
+                              ],
                               if (widget.showScheduleStatus &&
                                   scheduleStatus != null &&
                                   scheduleStatus.label != 'Upcoming') ...[

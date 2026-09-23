@@ -285,7 +285,7 @@ void main() {
 
     await tester.tap(find.text('Study'));
     await tester.pumpAndSettle();
-    expect(find.text('Study'), findsWidgets);
+    expect(find.text('Practice'), findsWidgets);
     expect(find.text('Recall'), findsOneWidget);
     expect(find.text('AI'), findsOneWidget);
     expect(find.text('Recall percentage'), findsOneWidget);
@@ -485,70 +485,81 @@ void main() {
     expect(find.text('UPCOMING'), findsNothing);
   });
 
-  testWidgets('future phrases prioritize links to past words', (tester) async {
-    const initial = CardSchedule.initial(enabled: true);
-    final cards = <StudyCard>[
-      _word(id: 1, learningStatus: LearningStatus.learnt, schedule: initial),
-      _word(id: 2, learningStatus: LearningStatus.learnt, schedule: initial),
-      _word(id: 3, learningStatus: LearningStatus.learning, schedule: initial),
-      _word(
-        id: 101,
-        learningStatus: LearningStatus.notStarted,
-        schedule: initial,
-        category: 'Phrase',
-        modelTypeName: 'Phrase',
-        linkedWordIds: const <int>{3},
-      ),
-      _word(
-        id: 102,
-        learningStatus: LearningStatus.notStarted,
-        schedule: initial,
-        category: 'Phrase',
-        modelTypeName: 'Phrase',
-        linkedWordIds: const <int>{1, 2, 3},
-      ),
-      _word(
-        id: 103,
-        learningStatus: LearningStatus.notStarted,
-        schedule: initial,
-        category: 'Phrase',
-        modelTypeName: 'Phrase',
-        linkedWordIds: const <int>{1},
-      ),
-    ];
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          cardsCollectionProvider.overrideWith(
-            (ref, source) =>
-                Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
-          ),
-          cardsSourcesProvider.overrideWith(
-            (ref) => Stream.fromFuture(
-              ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
-            ),
-          ),
-          cardsDashboardProvider.overrideWith(
-            (_) => Stream.value(CardsDashboard(cards: cards)),
-          ),
-        ],
-        child: const MaterialApp(
-          home: LanguageCategoryPage(category: 'Phrase'),
+  testWidgets(
+    'Future shows priority scores and ranks phrases by approved formula',
+    (tester) async {
+      const initial = CardSchedule.initial(enabled: true);
+      final cards = <StudyCard>[
+        _word(id: 1, learningStatus: LearningStatus.learnt, schedule: initial),
+        _word(id: 2, learningStatus: LearningStatus.learnt, schedule: initial),
+        _word(
+          id: 3,
+          learningStatus: LearningStatus.learning,
+          schedule: initial,
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Future  3'));
-    await tester.pumpAndSettle();
+        _word(
+          id: 101,
+          learningStatus: LearningStatus.notStarted,
+          schedule: initial,
+          category: 'Phrase',
+          modelTypeName: 'Phrase',
+          linkedWordIds: const <int>{3},
+        ),
+        _word(
+          id: 102,
+          learningStatus: LearningStatus.notStarted,
+          schedule: initial,
+          category: 'Phrase',
+          modelTypeName: 'Phrase',
+          linkedWordIds: const <int>{1, 2, 3},
+        ),
+        _word(
+          id: 103,
+          learningStatus: LearningStatus.notStarted,
+          schedule: initial,
+          category: 'Phrase',
+          modelTypeName: 'Phrase',
+          linkedWordIds: const <int>{1},
+        ),
+      ];
 
-    final phraseOrder = <String>[
-      'word 102',
-      'word 103',
-      'word 101',
-    ].map((label) => tester.getCenter(find.text(label)).dy).toList();
-    expect(phraseOrder, orderedEquals(<double>[...phraseOrder]..sort()));
-  });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardsCollectionProvider.overrideWith(
+              (ref, source) =>
+                  Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+            ),
+            cardsSourcesProvider.overrideWith(
+              (ref) => Stream.fromFuture(
+                ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+              ),
+            ),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(CardsDashboard(cards: cards)),
+            ),
+          ],
+          child: const MaterialApp(
+            home: LanguageCategoryPage(category: 'Phrase'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Future  3'));
+      await tester.pumpAndSettle();
+
+      for (final id in [101, 102, 103]) {
+        expect(find.byKey(ValueKey('future-score-$id')), findsOneWidget);
+      }
+      expect(find.byKey(const ValueKey('future-score-1')), findsNothing);
+      final phraseOrder = <String>[
+        'word 103',
+        'word 102',
+        'word 101',
+      ].map((label) => tester.getCenter(find.text(label)).dy).toList();
+      expect(phraseOrder, orderedEquals(<double>[...phraseOrder]..sort()));
+    },
+  );
 }
 
 final class _RecordingCardLibrary implements CardLibrary {

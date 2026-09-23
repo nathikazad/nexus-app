@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/future_card_rank.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
@@ -439,34 +440,15 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
             historyWindow: historyWindow,
             cue: cue,
           );
-          final notStarted = sortWordsByScheduleState(
-            cards.where((card) => !card.active),
-            now,
-            historyWindow: historyWindow,
+          final futureScores = futureCardScores(
+            data.cards,
             cue: cue,
+            historyWindow: historyWindow,
           );
-          if (cards.isNotEmpty && cards.every((card) => card.isPhraseCard)) {
-            final pastWordIds = <int>{
-              for (final card in data.cards)
-                if (card.isWordCard &&
-                    learningStage(card, cue, window: historyWindow) ==
-                        LearningStage.past)
-                  card.id,
-            };
-            final existingOrder = <int, int>{
-              for (final (index, card) in notStarted.indexed) card.id: index,
-            };
-            int pastLinkCount(StudyCard card) =>
-                card.linkedWordIds.intersection(pastWordIds).length;
-            notStarted.sort((left, right) {
-              final byPastLinks = pastLinkCount(
-                right,
-              ).compareTo(pastLinkCount(left));
-              return byPastLinks != 0
-                  ? byPastLinks
-                  : existingOrder[left.id]!.compareTo(existingOrder[right.id]!);
-            });
-          }
+          final notStarted = sortFutureCards(
+            cards.where((card) => !card.active),
+            futureScores,
+          );
           final queue = [
             for (final card in cards.where((c) => c.active)) ...card.prompts,
           ];
@@ -618,6 +600,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                           ),
                           LearningCardsTab(
                             cards: notStarted,
+                            priorityScores: futureScores,
                             emptyText: category == 'Script'
                                 ? 'Every letter has been started.'
                                 : widget.allCards || widget.tagSystem != null
