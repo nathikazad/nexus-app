@@ -64,18 +64,14 @@ class _SettingsForm extends ConsumerStatefulWidget {
 }
 
 class _SettingsFormState extends ConsumerState<_SettingsForm> {
-  late bool _automaticProgression = widget.initial.automaticProgressionEnabled;
   late AppAppearance _appearance = widget.initialAppearance;
   late int _historyWindow = widget.initial.historyWindow;
-  late int _pastPercentage = widget.initial.moveToPastPercentage;
-  late int _currentPercentage = widget.initial.moveToCurrentPercentage;
-  late bool _autoReplace = widget.initial.autoReplacePromotedCards;
   bool _saving = false;
   bool _syncing = false;
   String? _syncMessage;
   bool _syncFailed = false;
 
-  bool get _valid => _currentPercentage < _pastPercentage;
+  bool get _valid => _historyWindow >= 1 && _historyWindow <= 10;
 
   Future<void> _selectAppearance(AppAppearance appearance) async {
     setState(() => _appearance = appearance);
@@ -85,17 +81,17 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   Future<void> _save() async {
     if (!_valid || _saving) return;
     setState(() => _saving = true);
-    final settings = ReviewProgressionSettings(
-      automaticProgressionEnabled: _automaticProgression,
-      historyWindow: _historyWindow,
-      moveToPastPercentage: _pastPercentage,
-      moveToCurrentPercentage: _currentPercentage,
-      autoReplacePromotedCards: _autoReplace,
-    );
+    final settings = ReviewProgressionSettings(historyWindow: _historyWindow);
     try {
       await ref.read(reviewProgressionSettingsStoreProvider).save(settings);
       ref.invalidate(reviewProgressionSettingsProvider);
       if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save settings: $error')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -203,7 +199,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               ),
               const SizedBox(height: 7),
               const Text(
-                'Control how cards move between Current, Past, and Future.',
+                'Saved to your account. Active cards with no attempts are Upcoming. Below 80% is Current; 80% or more is Past. Missing answers count toward the window.',
                 style: TextStyle(color: RecallColors.muted, height: 1.4),
               ),
               const SizedBox(height: 18),
@@ -213,7 +209,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                   decoration: const InputDecoration(
                     labelText: 'Recent answers to consider',
                   ),
-                  items: const [3, 5, 7, 10]
+                  items: const [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
                       .map(
                         (value) => DropdownMenuItem(
                           value: value,
@@ -228,69 +224,6 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                   },
                 ),
               ),
-              const SizedBox(height: 12),
-              _SettingsCard(
-                child: SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Automatic progression'),
-                  subtitle: const Text(
-                    'Update learning lists after graded sessions.',
-                    style: TextStyle(color: RecallColors.muted, fontSize: 12),
-                  ),
-                  value: _automaticProgression,
-                  onChanged: (value) =>
-                      setState(() => _automaticProgression = value),
-                ),
-              ),
-              if (_automaticProgression) ...[
-                const SizedBox(height: 12),
-                _SettingsCard(
-                  child: Column(
-                    children: [
-                      _PercentageSetting(
-                        title: 'Move to Past',
-                        detail: 'when recall is at least',
-                        value: _pastPercentage,
-                        color: RecallColors.emerald,
-                        onChanged: (value) =>
-                            setState(() => _pastPercentage = value),
-                      ),
-                      const Divider(height: 30),
-                      _PercentageSetting(
-                        title: 'Move to Current',
-                        detail: 'when recall is at or below',
-                        value: _currentPercentage,
-                        color: RecallColors.orange,
-                        onChanged: (value) =>
-                            setState(() => _currentPercentage = value),
-                      ),
-                      if (!_valid) ...[
-                        const SizedBox(height: 8),
-                        const Text(
-                          'The Current threshold must be lower than the Past threshold.',
-                          style: TextStyle(
-                            color: RecallColors.rose,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _SettingsCard(
-                  child: SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Keep Current list filled'),
-                    subtitle: const Text(
-                      'For every word moved from Current to Past, add the next Future word in the same category.',
-                      style: TextStyle(color: RecallColors.muted, fontSize: 12),
-                    ),
-                    value: _autoReplace,
-                    onChanged: (value) => setState(() => _autoReplace = value),
-                  ),
-                ),
-              ],
               const SizedBox(height: 22),
               const Divider(),
               const SizedBox(height: 18),
@@ -351,63 +284,6 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             ],
           ),
         ),
-      ),
-    ],
-  );
-}
-
-class _PercentageSetting extends StatelessWidget {
-  const _PercentageSetting({
-    required this.title,
-    required this.detail,
-    required this.value,
-    required this.color,
-    required this.onChanged,
-  });
-
-  final String title;
-  final String detail;
-  final int value;
-  final Color color;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  detail,
-                  style: const TextStyle(
-                    color: RecallColors.muted,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '$value%',
-            style: TextStyle(color: color, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-      Slider(
-        value: value.toDouble(),
-        min: 0,
-        max: 100,
-        divisions: 20,
-        activeColor: color,
-        onChanged: (next) => onChanged(next.round()),
       ),
     ],
   );

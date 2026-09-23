@@ -159,7 +159,7 @@ void main() {
     ]);
     await tester.tap(find.text('Travel'));
     await tester.pumpAndSettle();
-    expect(find.text('2 cards · 1 learning'), findsOneWidget);
+    expect(find.text('2 cards · 0 learning'), findsOneWidget);
     expect(find.text('item 1'), findsOneWidget);
     expect(find.text('item 3'), findsNothing);
     expect(find.text('item 4'), findsNothing);
@@ -194,7 +194,7 @@ void main() {
       ]);
       await tester.tap(find.text('Husband Conversations 1'));
       await tester.pumpAndSettle();
-      expect(find.text('1 cards · 1 learning'), findsOneWidget);
+      expect(find.text('1 cards · 0 learning'), findsOneWidget);
       expect(
         tester
             .widget<StudyLauncher>(find.byType(StudyLauncher))

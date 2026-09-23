@@ -1,6 +1,8 @@
+import 'package:nx_cards/scheduling/language_direction.dart';
+import 'package:nx_cards/scheduling/learning_stage.dart';
+import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -31,7 +33,6 @@ class CardDetailsPage extends ConsumerStatefulWidget {
 class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
   StudyCard? _loadedCard;
   CardContent? _editedContent;
-  StudyCue? _selectedCue;
   bool _showNotes = false;
   bool _savingStatus = false;
   LearningStatus? _updatedStatus;
@@ -75,18 +76,13 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
   }
 
   List<StudyCue> get _reviewedCues => [
-    for (final cue in StudyCue.values)
+    for (final cue in StudyCue.activeDirections)
       if ((_loadedCard ?? widget.card).reviewHistoryFor(cue).isNotEmpty) cue,
   ];
 
-  StudyCue? get _visibleCue {
-    final cues = _reviewedCues;
-    if (cues.isEmpty) return null;
-    if (_selectedCue case final selected? when cues.contains(selected)) {
-      return selected;
-    }
-    return cues.first;
-  }
+  StudyCue get _visibleCue => ref.read(
+    languageDirectionProvider((_loadedCard ?? widget.card).language),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -170,18 +166,18 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                   segments: const [
                     ButtonSegment(
                       value: LearningStatus.learning,
-                      label: Text('Current'),
-                    ),
-                    ButtonSegment(
-                      value: LearningStatus.learnt,
-                      label: Text('Past'),
+                      label: Text('Active'),
                     ),
                     ButtonSegment(
                       value: LearningStatus.notStarted,
-                      label: Text('Future'),
+                      label: Text('Inactive'),
                     ),
                   ],
-                  selected: {card.learningStatus},
+                  selected: {
+                    card.active
+                        ? LearningStatus.learning
+                        : LearningStatus.notStarted,
+                  },
                   showSelectedIcon: false,
                   onSelectionChanged: _savingStatus
                       ? null
@@ -325,19 +321,9 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                   ),
                   const SizedBox(height: 20),
                   if (visibleTab == CardDetailsTab.stats) ...[
-                    if (reviewedCues.length == 1)
-                      _DirectionHeading(
-                        label: _cueLabel(reviewedCues.single, card),
-                      )
-                    else
-                      _DirectionSelector(
-                        cues: reviewedCues,
-                        selected: visibleCue!,
-                        labelFor: (cue) => _cueLabel(cue, card),
-                        onSelected: (cue) => setState(() => _selectedCue = cue),
-                      ),
+                    _DirectionHeading(label: _cueLabel(visibleCue, card)),
                     const SizedBox(height: 16),
-                    _RecallSummary(card: card, cue: visibleCue!),
+                    _RecallSummary(card: card, cue: visibleCue),
                     const SizedBox(height: 24),
                     _ReviewHistory(reviews: card.reviewHistoryFor(visibleCue)),
                   ] else if (languageContent != null)
@@ -447,46 +433,14 @@ class _DirectionHeading extends StatelessWidget {
   );
 }
 
-class _DirectionSelector extends StatelessWidget {
-  const _DirectionSelector({
-    required this.cues,
-    required this.selected,
-    required this.labelFor,
-    required this.onSelected,
-  });
-
-  final List<StudyCue> cues;
-  final StudyCue selected;
-  final String Function(StudyCue cue) labelFor;
-  final ValueChanged<StudyCue> onSelected;
-
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: SegmentedButton<StudyCue>(
-      style: const ButtonStyle(
-        padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
-      ),
-      key: const ValueKey('review-direction-selector'),
-      segments: [
-        for (final cue in cues)
-          ButtonSegment(value: cue, label: Text(labelFor(cue), maxLines: 1)),
-      ],
-      selected: {selected},
-      showSelectedIcon: false,
-      onSelectionChanged: (selection) => onSelected(selection.single),
-    ),
-  );
-}
-
-class _RecallSummary extends StatelessWidget {
+class _RecallSummary extends ConsumerWidget {
   const _RecallSummary({required this.card, required this.cue});
 
   final StudyCard card;
   final StudyCue cue;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final schedule = card.scheduleFor(cue);
     final reviews = card.reviewHistoryFor(cue);
     final now = DateTime.now().toUtc();
@@ -496,24 +450,20 @@ class _RecallSummary extends StatelessWidget {
         ? 0
         : (successes / reviews.length * 100).round();
     final streak = _successStreak(reviews);
-    final isLearning =
-        schedule.schedulingState == 'learning' ||
-        schedule.schedulingState == 'relearning';
-    final recall = isLearning ? null : _estimatedRecall(schedule, card.id, now);
+    final window =
+        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
+    final stage = learningStage(card, cue, window: window);
+    final recalled = recalledAnswers(card, cue, window);
     final due = schedule.dueAt;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _KnowledgeBanner(
-          status: _knowledgeStatus(schedule, now),
-          progress: isLearning ? _learningProgress(schedule) : null,
-          metricValue: isLearning
-              ? '$successes/${reviews.length}'
-              : recall == null
-              ? null
-              : '${(recall * 100).round()}%',
-          metricLabel: isLearning ? 'recalled' : 'estimated recall',
+          status: stage.label,
+          progress: null,
+          metricValue: '${(recalled * 100 / window).round()}%',
+          metricLabel: '$recalled of last $window recalled',
           due: due,
           now: now,
         ),
@@ -538,7 +488,9 @@ class _RecallSummary extends StatelessWidget {
                   width: width,
                   child: _StatTile(
                     label: 'Next due',
-                    value: _relativeDue(due, now),
+                    value: stage == LearningStage.past
+                        ? _relativeDue(due, now)
+                        : 'Available now',
                   ),
                 ),
                 SizedBox(
@@ -1054,48 +1006,6 @@ String _cueLabel(StudyCue cue, StudyCard card) => switch (cue) {
 String _cardSource(StudyCard card) =>
     card.sourceBookName ?? card.language ?? 'Flashcard';
 
-String _knowledgeStatus(CardSchedule schedule, DateTime now) {
-  final due = schedule.dueAt;
-  if (schedule.lastReviewedAt == null) return 'New';
-  if (schedule.schedulingState == 'learning') return 'Learning';
-  if (schedule.schedulingState == 'relearning') return 'Relearning';
-  if (due != null && !due.isAfter(now)) return 'Due now';
-  return 'Retained';
-}
-
-String _learningProgress(CardSchedule schedule) {
-  final step = (schedule.learningStep ?? 0) + 1;
-  if (schedule.schedulingState == 'relearning') {
-    return 'Relearning step $step of 1';
-  }
-  return 'Learning step $step of 2';
-}
-
-double? _estimatedRecall(CardSchedule schedule, int cardId, DateTime now) {
-  final lastReview = schedule.lastReviewedAt;
-  final stability = schedule.stability;
-  if (lastReview == null || stability == null || stability <= 0) return null;
-  final scheduler = fsrs.Scheduler(desiredRetention: .9, enableFuzzing: false);
-  final fsrsCard = fsrs.Card(
-    cardId: cardId,
-    state: fsrs.State.review,
-    stability: stability,
-    difficulty: schedule.difficulty,
-    due: schedule.dueAt,
-    lastReview: lastReview.toUtc(),
-  );
-  return scheduler.getCardRetrievability(fsrsCard, currentDateTime: now);
-}
-
-int _successStreak(List<CardReview> reviews) {
-  var streak = 0;
-  for (final review in reviews.reversed) {
-    if (review.rating < 3) break;
-    streak++;
-  }
-  return streak;
-}
-
 String _relativeDate(DateTime? value, DateTime now) {
   if (value == null) return 'Never';
   final elapsed = now.difference(value.toUtc());
@@ -1163,3 +1073,12 @@ String _calendarDate(DateTime value) {
 String _monthDay(DateTime value) =>
     '${value.month.toString().padLeft(2, '0')}/'
     '${value.day.toString().padLeft(2, '0')}';
+
+int _successStreak(List<CardReview> reviews) {
+  var streak = 0;
+  for (final review in reviews.reversed) {
+    if (review.rating < 3) break;
+    streak++;
+  }
+  return streak;
+}

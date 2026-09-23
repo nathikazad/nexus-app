@@ -1,3 +1,5 @@
+import 'package:nx_cards/scheduling/learning_stage.dart';
+import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +26,10 @@ class LanguagePage extends ConsumerWidget {
       cardsCollectionProvider((language: language, bookId: null)),
     );
     return Scaffold(
-      appBar: AppBar(title: Text(language)),
+      appBar: AppBar(
+        title: Text(language),
+        actions: [LanguageDirectionButton(language: language)],
+      ),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => BrowserLoadError(
@@ -122,7 +127,7 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
   }
 }
 
-class _LanguageCategoryCard extends StatelessWidget {
+class _LanguageCategoryCard extends ConsumerWidget {
   const _LanguageCategoryCard({
     required this.category,
     required this.data,
@@ -140,7 +145,7 @@ class _LanguageCategoryCard extends StatelessWidget {
   final String? language;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cards = data.cards
         .where(
           (card) =>
@@ -152,16 +157,24 @@ class _LanguageCategoryCard extends StatelessWidget {
               (language == null || data.languageFor(card) == language),
         )
         .toList(growable: false);
-    final current = cards
-        .where((card) => card.learningStatus == LearningStatus.learning)
+    final cue = ref.watch(languageDirectionProvider(language));
+    final window =
+        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
+    int count(LearningStage stage) => cards
+        .where((card) => learningStage(card, cue, window: window) == stage)
         .length;
-    final learnt = cards
-        .where((card) => card.learningStatus == LearningStatus.learnt)
+    final current = count(LearningStage.current);
+    final upcoming = count(LearningStage.upcoming);
+    final learnt = count(LearningStage.past);
+    final remaining = count(LearningStage.future);
+    final due = cards
+        .where(
+          (card) =>
+              learningStage(card, cue, window: window) == LearningStage.past &&
+              !card.suspended &&
+              card.scheduleFor(cue).isDueAt(DateTime.now()),
+        )
         .length;
-    final remaining = cards
-        .where((card) => card.learningStatus == LearningStatus.notStarted)
-        .length;
-    final due = CardsDashboard(cards: cards).dueCount(DateTime.now());
     final labelStyle = TextStyle(
       fontSize: 10,
       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -186,10 +199,11 @@ class _LanguageCategoryCard extends StatelessWidget {
 
     final metrics = <(int, String)>[
       (cards.length, 'Total'),
-      if (!allCards) (learnt, 'Learnt'),
-      (current, 'Learning'),
+      (upcoming, 'Upcoming'),
+      (current, 'Current'),
+      (learnt, 'Past'),
       (due, 'Due'),
-      if (!allCards) (remaining, 'Remaining'),
+      (remaining, 'Future'),
     ];
     final widths = metrics.map((entry) {
       final labelWidth = textWidth(entry.$2, labelStyle);
@@ -369,7 +383,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
       cardsCollectionProvider((language: language, bookId: null)),
     );
     final historyWindow =
-        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
+        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
+    final cue = ref.watch(languageDirectionProvider(language));
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -397,30 +412,45 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
               )
               .toList(growable: false);
           final now = DateTime.now().toUtc();
+          final upcoming = cards
+              .where(
+                (card) =>
+                    learningStage(card, cue, window: historyWindow) ==
+                    LearningStage.upcoming,
+              )
+              .toList();
           final learning = sortWordsByScheduleState(
             cards.where(
-              (card) => card.learningStatus == LearningStatus.learning,
+              (card) =>
+                  learningStage(card, cue, window: historyWindow) ==
+                  LearningStage.current,
             ),
             now,
             historyWindow: historyWindow,
+            cue: cue,
           );
           final learnt = sortWordsByScheduleState(
-            cards.where((card) => card.learningStatus == LearningStatus.learnt),
-            now,
-            historyWindow: historyWindow,
-          );
-          final notStarted = sortWordsByScheduleState(
             cards.where(
-              (card) => card.learningStatus == LearningStatus.notStarted,
+              (card) =>
+                  learningStage(card, cue, window: historyWindow) ==
+                  LearningStage.past,
             ),
             now,
             historyWindow: historyWindow,
+            cue: cue,
+          );
+          final notStarted = sortWordsByScheduleState(
+            cards.where((card) => !card.active),
+            now,
+            historyWindow: historyWindow,
+            cue: cue,
           );
           if (cards.isNotEmpty && cards.every((card) => card.isPhraseCard)) {
             final pastWordIds = <int>{
               for (final card in data.cards)
                 if (card.isWordCard &&
-                    card.learningStatus == LearningStatus.learnt)
+                    learningStage(card, cue, window: historyWindow) ==
+                        LearningStage.past)
                   card.id,
             };
             final existingOrder = <int, int>{
@@ -437,13 +467,12 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                   : existingOrder[left.id]!.compareTo(existingOrder[right.id]!);
             });
           }
-          final queue = CardsDashboard(cards: cards).studyQueue(
-            DateTime.now(),
-            newCardLimit:
-                (learning.length + learnt.length) * StudyCue.values.length,
-          );
+          final queue = [
+            for (final card in cards.where((c) => c.active)) ...card.prompts,
+          ];
           return DefaultTabController(
-            length: LearningStatus.values.length,
+            length: LearningStage.values.length,
+            initialIndex: learning.isNotEmpty ? 1 : 0,
             child: Column(
               children: [
                 Padding(
@@ -476,7 +505,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 ? 'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}'
                                 : 'language-tag:${Uri.encodeComponent(language ?? 'all')}:${Uri.encodeComponent(widget.tagSystem!)}:${Uri.encodeComponent(category)}',
                             prompts: queue,
-                            studyCards: [...learning, ...learnt],
+                            studyCards: [...upcoming, ...learning, ...learnt],
                             languagePair: language == null
                                 ? languagesForCards(data, cards)
                                 : LanguagePair('Front', language!),
@@ -516,11 +545,11 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             children: [
                               Expanded(
                                 child: TabBar(
-                                  isScrollable: false,
+                                  isScrollable: true,
                                   labelPadding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                   ),
-                                  tabAlignment: TabAlignment.fill,
+                                  tabAlignment: TabAlignment.start,
                                   labelStyle: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -530,6 +559,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                     fontWeight: FontWeight.w400,
                                   ),
                                   tabs: [
+                                    Tab(text: 'Upcoming  ${upcoming.length}'),
                                     Tab(text: 'Current  ${learning.length}'),
                                     Tab(text: 'Past  ${learnt.length}'),
                                     Tab(text: 'Future  ${notStarted.length}'),
@@ -553,6 +583,15 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                       TabBarView(
                         children: [
                           LearningCardsTab(
+                            cards: upcoming,
+                            emptyText:
+                                'Activate Future cards to practice them here.',
+                            dashboard: data,
+                            previousStatus: LearningStatus.notStarted,
+                            previousActionLabel: '−',
+                            showScheduleStatus: true,
+                          ),
+                          LearningCardsTab(
                             cards: learning,
                             showScheduleStatus: true,
                             emptyText: category == 'Script'
@@ -562,18 +601,18 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 : 'No words are currently being learned.',
                             previousStatus: LearningStatus.notStarted,
                             previousActionLabel: '←',
-                            nextStatus: LearningStatus.learnt,
-                            actionLabel: '✓',
+
                             dashboard: data,
                           ),
                           LearningCardsTab(
                             cards: learnt,
+                            showScheduleStatus: true,
                             emptyText: category == 'Script'
-                                ? 'No letters have been marked learnt yet.'
+                                ? 'No letters have reached 80% yet.'
                                 : widget.allCards || widget.tagSystem != null
-                                ? 'No cards have been marked learnt yet.'
-                                : 'No words have been marked learnt yet.',
-                            previousStatus: LearningStatus.learning,
+                                ? 'No cards have reached 80% yet.'
+                                : 'No words have reached 80% yet.',
+                            previousStatus: LearningStatus.notStarted,
                             previousActionLabel: '←',
                             dashboard: data,
                           ),

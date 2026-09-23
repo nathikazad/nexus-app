@@ -28,7 +28,9 @@ const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
-const attrLearningStatus = 'learning_status';
+const attrLearningStatus =
+    'learning_status'; // Legacy cache/import compatibility.
+const attrActive = 'active';
 
 const cardDetailsJsonSchema = <String, dynamic>{
   'type': 'object',

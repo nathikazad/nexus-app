@@ -83,6 +83,7 @@ typedef CardsFullSync = Future<int> Function();
 
 final cardsLibrarySyncProvider = Provider<CardsLibrarySync>((ref) {
   return () async {
+    ref.invalidate(reviewProgressionSettingsProvider);
     final workspace = ref.read(cardWorkspaceProvider);
     if (workspace == null) throw StateError('Cards are not ready yet.');
     if (ref.read(cardsOfflineEnabledProvider)) {
@@ -96,6 +97,7 @@ final cardsLibrarySyncProvider = Provider<CardsLibrarySync>((ref) {
 
 final cardsFullSyncProvider = Provider<CardsFullSync>((ref) {
   return () async {
+    ref.invalidate(reviewProgressionSettingsProvider);
     final workspace = ref.read(cardWorkspaceProvider);
     if (workspace == null) throw StateError('Cards are not ready yet.');
     await workspace.syncLibrary();
@@ -116,6 +118,7 @@ final cardsDataSessionProvider = Provider<AppDataSession?>((ref) {
     definition: AppDataDefinition(
       name: 'cards',
       refreshVisible: () async {
+        ref.invalidate(reviewProgressionSettingsProvider);
         if (reader == null) return;
         await reader.read('initial');
         for (final source in ref.read(_visibleCollectionsProvider).toList()) {
@@ -186,11 +189,15 @@ Future<StudyCard> hydrateStudyCard(WidgetRef ref, StudyCard card) async {
 }
 
 final cardsSourcesProvider = StreamProvider<List<LibrarySource>>((ref) async* {
+  final window =
+      ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
   final reader = ref.watch(appReadsProvider('cards'));
   final workspace = ref.watch(cardWorkspaceProvider);
   if (ref.watch(cardsOfflineEnabledProvider) && workspace != null) {
     final cached = await workspace.watchDashboard().first;
-    if (cached.cards.isNotEmpty) yield summarizeLibrary(cached);
+    if (cached.cards.isNotEmpty) {
+      yield summarizeLibrary(cached, historyWindow: window);
+    }
   }
   if (reader != null) {
     try {
@@ -205,7 +212,9 @@ final cardsSourcesProvider = StreamProvider<List<LibrarySource>>((ref) async* {
     }
   }
   if (workspace != null) {
-    yield* workspace.watchDashboard().map(summarizeLibrary);
+    yield* workspace.watchDashboard().map(
+      (data) => summarizeLibrary(data, historyWindow: window),
+    );
   }
 });
 

@@ -1,4 +1,4 @@
-import 'card.dart';
+import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'collection.dart';
 import 'study.dart';
 import 'study_card.dart';
@@ -24,15 +24,23 @@ final class LibrarySource {
   );
 }
 
-List<LibrarySource> summarizeLibrary(CardsDashboard data) {
+List<LibrarySource> summarizeLibrary(
+  CardsDashboard data, {
+  int historyWindow = 10,
+}) {
   final now = DateTime.now();
   final books = <int, String>{
     for (final card in data.cards)
       if (card.sourceBookId != null)
         card.sourceBookId!: card.sourceBookName ?? 'Book',
   };
-  int current(List<StudyCard> cards) =>
-      cards.where((c) => c.learningStatus == LearningStatus.learning).length;
+  int current(List<StudyCard> cards) => cards
+      .where(
+        (c) =>
+            learningStage(c, StudyCue.fromLanguage, window: historyWindow) ==
+            LearningStage.current,
+      )
+      .length;
   return [
     for (final language in data.languages)
       LibrarySource(
@@ -41,7 +49,12 @@ List<LibrarySource> summarizeLibrary(CardsDashboard data) {
         name: language,
         total: data.cardsForLanguage(language).length,
         current: current(data.cardsForLanguage(language)),
-        due: data.dueCount(now, language: language, cue: StudyCue.fromLanguage),
+        due: data.dueCount(
+          now,
+          language: language,
+          cue: StudyCue.fromLanguage,
+          historyWindow: historyWindow,
+        ),
       ),
     for (final book in books.entries)
       LibrarySource(

@@ -38,9 +38,11 @@ StudyCard? studyCardFromModel(
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
-    learningStatus: LearningStatus.fromStorage(
-      model.attributes?[attrLearningStatus],
-    ),
+    learningStatus: model.attributes?[attrActive] is bool
+        ? (model.attrBool(attrActive)!
+              ? LearningStatus.learning
+              : LearningStatus.notStarted)
+        : LearningStatus.fromStorage(model.attributes?[attrLearningStatus]),
     tags: model.tags ?? const <String, List<String>>{},
     modelTypeName: modelTypeName,
     sourceBookId: book?.id,
@@ -182,7 +184,9 @@ Map<String, dynamic> emptyScheduleJson({required bool languageCard}) =>
         for (final cue in StudyCue.values)
           cue.storageKey: _scheduleNodeJson(
             CardSchedule.initial(
-              enabled: cue == StudyCue.fromLanguage || languageCard,
+              enabled:
+                  cue == StudyCue.fromLanguage ||
+                  (languageCard && cue == StudyCue.toLanguage),
             ),
           ),
       },

@@ -11,3 +11,20 @@ study.dart / study_queue.dart
 ```
 
 Study delegates review timing to `scheduling/` and voice delivery to `tutor/`.
+
+Language direction is chosen on `LanguagePage` and shared by its lists and
+sessions. Only English → language and language → English are selectable; both
+include pronunciation. Study is ungraded. Recall writes one attempt and updates
+FSRS for that direction.
+
+`learning_stage.dart` derives Upcoming/Current/Past from activation and the
+account's recent-answer window (default 10, threshold 80%). Future means inactive.
+Do not manually persist Current/Past or activate replacement cards after recall.
+The legacy `LearningStatus` API/SQLite column only carries activation compatibility
+for existing offline snapshots. Network writes use the boolean `active` attribute.
+
+Upcoming/Current recall can start immediately. Past recall filters by due time
+and prioritizes lower recent scores. Settings are stored in
+`users.preferences.nx_cards.history_window` and refreshed with library sync;
+saving requires connectivity. Server migration and verification are documented
+in `servers/nexus/apps/nx_cards/maintenance/learning-workflow.md`.

@@ -52,7 +52,8 @@ class StudyCard {
   final Map<StudyCue, List<CardReview>> reviewHistory;
   final bool suspended;
   final LearningStatus learningStatus;
-  bool get isRecallEligible => learningStatus.isRecallEligible;
+  bool get active => learningStatus.isRecallEligible;
+  bool get isRecallEligible => active;
   final Map<String, List<String>> tags;
   List<String> get categories => _tagValues('Category');
   List<String> get collections => _tagValues('Collection');
@@ -78,7 +79,7 @@ class StudyCard {
 
   Iterable<StudyPrompt> get prompts sync* {
     if (suspended) return;
-    for (final cue in StudyCue.values) {
+    for (final cue in StudyCue.activeDirections) {
       if (scheduleFor(cue).enabled) {
         yield StudyPrompt(card: this, cue: cue);
       }
@@ -87,7 +88,7 @@ class StudyCard {
 
   DateTime? get nextDueAt {
     final dueDates = <DateTime>[
-      for (final cue in StudyCue.values)
+      for (final cue in StudyCue.activeDirections)
         if (scheduleFor(cue).enabled && scheduleFor(cue).dueAt != null)
           scheduleFor(cue).dueAt!,
     ]..sort();

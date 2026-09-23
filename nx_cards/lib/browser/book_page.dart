@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +24,7 @@ class BookPage extends ConsumerWidget {
       cardsCollectionProvider((language: null, bookId: bookId)),
     );
     final historyWindow =
-        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
+        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
     return Scaffold(
       appBar: AppBar(title: Text(bookName)),
       body: dashboard.when(
@@ -34,28 +35,52 @@ class BookPage extends ConsumerWidget {
         ),
         data: (data) {
           final cards = data.cardsForBook(bookId);
+          final upcoming = cards
+              .where(
+                (c) =>
+                    learningStage(
+                      c,
+                      StudyCue.fromLanguage,
+                      window: historyWindow,
+                    ) ==
+                    LearningStage.upcoming,
+              )
+              .toList();
           final now = DateTime.now().toUtc();
           final learning = sortCardsByScheduleState(
             cards.where(
-              (card) => card.learningStatus == LearningStatus.learning,
+              (card) =>
+                  learningStage(
+                    card,
+                    StudyCue.fromLanguage,
+                    window: historyWindow,
+                  ) ==
+                  LearningStage.current,
             ),
             now,
             historyWindow: historyWindow,
           );
           final learnt = sortCardsByScheduleState(
-            cards.where((card) => card.learningStatus == LearningStatus.learnt),
-            now,
-            historyWindow: historyWindow,
-          );
-          final notStarted = sortCardsByScheduleState(
             cards.where(
-              (card) => card.learningStatus == LearningStatus.notStarted,
+              (card) =>
+                  learningStage(
+                    card,
+                    StudyCue.fromLanguage,
+                    window: historyWindow,
+                  ) ==
+                  LearningStage.past,
             ),
             now,
             historyWindow: historyWindow,
           );
+          final notStarted = sortCardsByScheduleState(
+            cards.where((card) => !card.active),
+            now,
+            historyWindow: historyWindow,
+          );
           return DefaultTabController(
-            length: LearningStatus.values.length,
+            length: LearningStage.values.length,
+            initialIndex: learning.isNotEmpty ? 1 : 0,
             child: Column(
               children: [
                 Padding(
@@ -101,6 +126,7 @@ class BookPage extends ConsumerWidget {
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       tabs: [
+                        Tab(text: 'Upcoming  ${upcoming.length}'),
                         Tab(text: 'Current  ${learning.length}'),
                         Tab(text: 'Past  ${learnt.length}'),
                         Tab(text: 'Future  ${notStarted.length}'),
@@ -112,19 +138,24 @@ class BookPage extends ConsumerWidget {
                   child: TabBarView(
                     children: [
                       LearningCardsTab(
+                        cards: upcoming,
+                        emptyText: 'Activate Future cards to practice.',
+                        dashboard: data,
+                        previousStatus: LearningStatus.notStarted,
+                        previousActionLabel: '−',
+                      ),
+                      LearningCardsTab(
                         cards: learning,
                         showScheduleStatus: true,
                         emptyText: 'No cards are currently being learned.',
                         previousStatus: LearningStatus.notStarted,
                         previousActionLabel: '←',
-                        nextStatus: LearningStatus.learnt,
-                        actionLabel: '✓',
                         dashboard: data,
                       ),
                       LearningCardsTab(
                         cards: learnt,
                         emptyText: 'No cards have been moved to Past yet.',
-                        previousStatus: LearningStatus.learning,
+                        previousStatus: LearningStatus.notStarted,
                         previousActionLabel: '←',
                         dashboard: data,
                       ),

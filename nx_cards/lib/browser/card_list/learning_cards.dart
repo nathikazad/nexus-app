@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -190,9 +191,10 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final scheduleStatus = cardScheduleStatus(
       widget.card,
       DateTime.now().toUtc(),
+      cue: ref.watch(languageDirectionProvider(widget.card.language)),
       historyWindow:
           ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
-          5,
+          10,
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(13),
@@ -269,11 +271,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                           ),
                           if (widget.showLearningStatus)
                             Text(
-                              switch (widget.card.learningStatus) {
-                                LearningStatus.learning => 'Current',
-                                LearningStatus.learnt => 'Past',
-                                LearningStatus.notStarted => 'Future',
-                              },
+                              scheduleStatus?.label ?? '',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Theme.of(
@@ -395,10 +393,10 @@ class _ScheduleStatePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = switch (status.label) {
-      'Learning' => (const Color(0xfffff7ed), RecallColors.orange),
-      'Relearning' => (const Color(0xfffff1f2), RecallColors.rose),
-      'Retained' => (const Color(0xffecfdf5), RecallColors.emerald),
-      'New' => (const Color(0xfff0f9ff), RecallColors.sky),
+      'Current' => (const Color(0xfffff7ed), RecallColors.orange),
+      'Future' => (const Color(0xfffff1f2), RecallColors.rose),
+      'Past' => (const Color(0xffecfdf5), RecallColors.emerald),
+      'Upcoming' => (const Color(0xfff0f9ff), RecallColors.sky),
       _ => (RecallColors.soft, RecallColors.muted),
     };
     return Container(
@@ -409,8 +407,8 @@ class _ScheduleStatePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        status.label == 'New'
-            ? 'NEW'
+        status.label == 'Upcoming'
+            ? 'UPCOMING'
             : '${status.label.toUpperCase()}  ${status.recallPercentage}%',
         style: TextStyle(
           color: foreground,

@@ -16,7 +16,27 @@ StudyCard card(int id, LearningStatus status, {String category = 'Noun'}) =>
         transliteration: 'zhī hòu',
       ),
       schedules: const {},
-      reviewHistory: const {},
+      reviewHistory: {
+        StudyCue.fromLanguage: [
+          for (
+            var i = 0;
+            i <
+                (status == LearningStatus.learnt
+                    ? 8
+                    : status == LearningStatus.learning
+                    ? 1
+                    : 0);
+            i++
+          )
+            CardReview(
+              id: '$id-$i',
+              reviewedAt: DateTime.utc(2026, 1, i + 1),
+              rating: 3,
+              elapsedSeconds: 0,
+              scheduledSeconds: 0,
+            ),
+        ],
+      },
       suspended: false,
       learningStatus: status,
       modelTypeName: 'Word',
@@ -61,8 +81,15 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-          cardsCollectionProvider.overrideWith((ref, source) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future))),
-          cardsSourcesProvider.overrideWith((ref) => Stream.fromFuture(ref.watch(cardsDashboardProvider.future).then(summarizeLibrary))),
+            cardsCollectionProvider.overrideWith(
+              (ref, source) =>
+                  Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
+            ),
+            cardsSourcesProvider.overrideWith(
+              (ref) => Stream.fromFuture(
+                ref.watch(cardsDashboardProvider.future).then(summarizeLibrary),
+              ),
+            ),
             cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
           ],
           child: const MaterialApp(
@@ -71,6 +98,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Future  18'));
       await tester.tap(find.text('Future  18'));
       await tester.pumpAndSettle();
       final originalScroll = tester.state<ScrollableState>(
@@ -117,7 +145,7 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(tester.widget<TabBar>(find.byType(TabBar)).controller, isNull);
       final context = tester.element(find.byType(TabBar));
-      expect(DefaultTabController.of(context).index, 2);
+      expect(DefaultTabController.of(context).index, 3);
       expect(originalScroll.position.pixels, offset);
       expect(tester.takeException(), isNull);
     },

@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/browser/data/models/card.dart';
 import 'package:nx_cards/browser/data/models/study.dart';
 import 'package:nx_cards/browser/data/models/study_card.dart';
@@ -79,11 +80,15 @@ class CardsDashboard {
     String? language,
     int? bookId,
     StudyCue? cue,
+    int historyWindow = 10,
   }) =>
       _prompts(studyCategory: studyCategory, language: language, bookId: bookId)
           .where(
             (prompt) =>
-                (cue == null || prompt.cue == cue) && prompt.isDueAt(now),
+                (cue == null || prompt.cue == cue) &&
+                learningStage(prompt.card, prompt.cue, window: historyWindow) ==
+                    LearningStage.past &&
+                prompt.isDueAt(now),
           )
           .map((prompt) => prompt.cardId)
           .toSet()

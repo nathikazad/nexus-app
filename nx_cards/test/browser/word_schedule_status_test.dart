@@ -24,8 +24,8 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Learning');
-    expect(status?.isDue, isTrue);
+    expect(status?.label, 'Upcoming');
+    expect(status?.isDue, isFalse);
   });
 
   test('ignores due state from other directions', () {
@@ -45,7 +45,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Retained');
+    expect(status?.label, 'Upcoming');
     expect(status?.isDue, isFalse);
   });
 
@@ -58,11 +58,11 @@ void main() {
 
     final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.label, 'New');
+    expect(status?.label, 'Upcoming');
     expect(status?.isDue, isFalse);
   });
 
-  test('recall percentage uses only the five most recent reviews', () {
+  test('recall percentage uses the configured ten-answer window', () {
     final card = _card(
       schedules: {
         StudyCue.fromLanguage: _schedule(
@@ -75,7 +75,7 @@ void main() {
 
     final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.recallPercentage, 40);
+    expect(status?.recallPercentage, 30);
   });
 
   test('recall percentage honors the configured history window', () {
@@ -114,7 +114,7 @@ void main() {
       },
     );
 
-    expect(frontToBackRecallPercentage(oneOfTwo), 20);
+    expect(frontToBackRecallPercentage(oneOfTwo), 10);
     expect(frontToBackRecallPercentage(neverReviewed), 0);
   });
 }

@@ -77,8 +77,8 @@ void main() {
         );
         for (final (name, value) in [
           ('total', '4'),
-          ('learning', '4'),
-          ('due', '4'),
+          ('upcoming', '4'),
+          ('due', '0'),
         ]) {
           expect(
             find.descendant(
@@ -90,7 +90,7 @@ void main() {
         }
         await tester.tap(find.text('All'));
         await tester.pumpAndSettle();
-        expect(find.text('4 cards · 4 learning'), findsOneWidget);
+        expect(find.text('4 cards · 0 learning'), findsOneWidget);
         for (var id = 1; id <= 4; id++) {
           expect(find.text('item $id'), findsOneWidget);
         }
@@ -175,22 +175,22 @@ void main() {
       greaterThan(nounTitle.dy),
     );
     final nounLearnt = find.byKey(
-      const ValueKey('language-category-noun-learnt'),
+      const ValueKey('language-category-noun-past'),
     );
     final nounLearning = find.byKey(
-      const ValueKey('language-category-noun-learning'),
+      const ValueKey('language-category-noun-current'),
     );
     expect(find.descendant(of: nounLearnt, matching: find.text('1')), findsOne);
     expect(
-      find.descendant(of: nounLearning, matching: find.text('1')),
+      find.descendant(of: nounLearning, matching: find.text('0')),
       findsOne,
     );
     expect(
       tester.getCenter(nounLearnt).dx,
-      lessThan(tester.getCenter(nounLearning).dx),
+      greaterThan(tester.getCenter(nounLearning).dx),
     );
     expect(
-      find.byKey(const ValueKey('language-category-noun-remaining')),
+      find.byKey(const ValueKey('language-category-noun-future')),
       findsOneWidget,
     );
     expect(
@@ -200,7 +200,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('language-category-noun-due')),
-        matching: find.text('1'),
+        matching: find.text('0'),
       ),
       findsOneWidget,
     );
@@ -211,13 +211,13 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('language-category-noun-learnt')),
+      find.byKey(const ValueKey('language-category-noun-past')),
       findsOneWidget,
     );
     await tester.binding.setSurfaceSize(const Size(1100, 844));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('language-category-noun-remaining')),
+      find.byKey(const ValueKey('language-category-noun-future')),
       findsOneWidget,
     );
     expect(find.byType(AppBar), findsOneWidget);
@@ -272,6 +272,10 @@ void main() {
     expect(find.text('Current  0'), findsOneWidget);
     expect(find.text('Past  0'), findsOneWidget);
     expect(find.text('Future  1'), findsOneWidget);
+    await tester.ensureVisible(find.text('Future  1'));
+    await tester.tap(find.text('Future  1'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Future  1'));
     await tester.tap(find.text('Future  1'));
     await tester.pumpAndSettle();
     expect(find.text('Why validate demand?'), findsOneWidget);
@@ -339,9 +343,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('LEARNING  0%'), findsOneWidget);
-    expect(find.text('DUE'), findsOneWidget);
-    expect(find.byKey(const ValueKey('word-schedule-due')), findsOneWidget);
+    expect(find.text('CURRENT  0%'), findsOneWidget);
+    expect(find.text('DUE'), findsNothing);
+    expect(find.byKey(const ValueKey('word-schedule-due')), findsNothing);
     expect(find.text('Current  1'), findsOneWidget);
     expect(find.text('Past  1'), findsOneWidget);
     expect(find.text('Future  1'), findsOneWidget);
@@ -406,7 +410,7 @@ void main() {
       const Offset(100, 0),
     );
     await tester.pumpAndSettle();
-    expect(repository.changes.last, (3, LearningStatus.learning));
+    expect(repository.changes.last, (3, LearningStatus.notStarted));
   });
 
   testWidgets('shows subtle state pills beside fronts and sorts by state', (
@@ -465,60 +469,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('LEARNING  0%'), findsOneWidget);
-    expect(find.text('RELEARNING  0%'), findsOneWidget);
-    expect(find.text('RETAINED  20%'), findsOneWidget);
-    expect(find.text('RETAINED  80%'), findsOneWidget);
-    expect(find.text('REVIEW'), findsNothing);
-    expect(find.text('NEW'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey<String>('word-state-new')),
-      findsOneWidget,
-    );
-    expect(
-      (tester
-                  .widget<Container>(
-                    find.byKey(const ValueKey<String>('word-state-learning')),
-                  )
-                  .decoration
-              as BoxDecoration)
-          .color,
-      const Color(0xfffff7ed),
-    );
-    expect(
-      (tester
-                  .widget<Container>(
-                    find.byKey(const ValueKey<String>('word-state-relearning')),
-                  )
-                  .decoration
-              as BoxDecoration)
-          .color,
-      const Color(0xfffff1f2),
-    );
-    expect(
-      (tester
-                  .widget<Container>(
-                    find
-                        .byKey(const ValueKey<String>('word-state-retained'))
-                        .first,
-                  )
-                  .decoration
-              as BoxDecoration)
-          .color,
-      const Color(0xffecfdf5),
-    );
-    expect(
-      tester.getCenter(find.text('word 1')).dx,
-      lessThan(tester.getCenter(find.text('LEARNING  0%')).dx),
-    );
-    final stateOrder = [
+    expect(find.text('CURRENT  0%'), findsNWidgets(2));
+    expect(find.text('CURRENT  10%'), findsOneWidget);
+    expect(find.text('CURRENT  40%'), findsOneWidget);
+    final order = [
       'word 1',
       'word 2',
       'word 5',
       'word 3',
-      'word 4',
     ].map((label) => tester.getCenter(find.text(label)).dy).toList();
-    expect(stateOrder, orderedEquals([...stateOrder]..sort()));
+    expect(order, orderedEquals([...order]..sort()));
+    await tester.tap(find.text('Upcoming  1'));
+    await tester.pumpAndSettle();
+    expect(find.text('word 4'), findsOneWidget);
+    expect(find.text('UPCOMING'), findsOneWidget);
   });
 
   testWidgets('future phrases prioritize links to past words', (tester) async {
@@ -606,7 +570,7 @@ StudyCard _word({
   CardSchedule? toLanguageSchedule,
   String category = 'Noun',
   String? modelTypeName,
-  List<int> recallRatings = const <int>[],
+  List<int>? recallRatings,
   Set<int> linkedWordIds = const <int>{},
 }) => StudyCard(
   id: id,
@@ -622,13 +586,26 @@ StudyCard _word({
     StudyCue.transliteration: const CardSchedule.initial(enabled: true),
   },
   reviewHistory: <StudyCue, List<CardReview>>{
-    if (recallRatings.isNotEmpty)
+    if (!schedule.isNew || learningStatus == LearningStatus.learnt)
       StudyCue.fromLanguage: [
-        for (var index = 0; index < recallRatings.length; index++)
+        for (
+          var index = 0;
+          index <
+              (recallRatings ??
+                      (learningStatus == LearningStatus.learnt
+                          ? List.filled(8, 3)
+                          : [1]))
+                  .length;
+          index++
+        )
           CardReview(
             id: 'review-$id-$index',
             reviewedAt: DateTime.utc(2026, 8, index + 1),
-            rating: recallRatings[index],
+            rating:
+                (recallRatings ??
+                (learningStatus == LearningStatus.learnt
+                    ? List.filled(8, 3)
+                    : [1]))[index],
             elapsedSeconds: 86400,
             scheduledSeconds: 86400,
           ),

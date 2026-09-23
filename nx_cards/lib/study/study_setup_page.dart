@@ -1,3 +1,5 @@
+import 'package:nx_cards/scheduling/learning_stage.dart';
+import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/lazy_study_queue.dart';
 import 'package:nx_cards/study/hydrate_study_queue.dart';
@@ -71,8 +73,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   StudyMode _mode = StudyMode.study;
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
   RecallPresentation _recallPresentation = RecallPresentation.standard;
-  StudyCue? _cue = StudyCue.fromLanguage;
-  bool _combinedPrompt = false;
+  StudyCue? get _cue => _isBookStudy
+      ? StudyCue.fromLanguage
+      : ref.read(
+          languageDirectionProvider(
+            widget.studyScope?.language ?? widget.toLanguage,
+          ),
+        );
+  final bool _combinedPrompt = false;
 
   List<StudyCard> get _studyCards {
     final latest = ref.read(cardsDashboardProvider).value?.cards;
@@ -81,11 +89,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return latest.where((card) => ids.contains(card.id)).toList();
   }
 
-  final Set<LearningStatus> _learningStatuses = <LearningStatus>{
-    LearningStatus.learning,
+  final Set<LearningStage> _learningStatuses = <LearningStage>{
+    LearningStage.upcoming,
+    LearningStage.current,
+    LearningStage.past,
   };
-  final Set<RecallCardState> _recallStates = RecallCardState.values.toSet();
-  RecallTiming _recallTiming = RecallTiming.allMatching;
   int _retainedMaxPercentage = 100;
   RangeValues _bookRecallRange = const RangeValues(0, 100);
   StudyOrder _order = StudyOrder.normal;
@@ -94,7 +102,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   int _preferenceRevision = 0;
 
   String get _storedPreferenceKey =>
-      'study_setup.v1.${widget.preferenceKey ?? widget.title}';
+      'study_setup.v2.${widget.preferenceKey ?? widget.title}';
 
   @override
   void initState() {
@@ -120,27 +128,16 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         RecallPresentation.values,
         saved['recallPresentation'],
       );
-      final cue = _enumByName(StudyCue.values, saved['cue']);
       final order = _enumByName(StudyOrder.values, saved['order']);
-      final recallStates = saved['recallStates'] is List
-          ? (saved['recallStates'] as List)
-                .map((value) => _enumByName(RecallCardState.values, value))
-                .whereType<RecallCardState>()
-                .toSet()
-          : const <RecallCardState>{};
-      final recallTiming = _enumByName(
-        RecallTiming.values,
-        saved['recallTiming'],
-      );
       final retainedMaxPercentage = saved['retainedMaxPercentage'];
       final bookRecallMinimum = saved['bookRecallMinimum'];
       final bookRecallMaximum = saved['bookRecallMaximum'];
       final statuses = saved['learningStatuses'] is List
           ? (saved['learningStatuses'] as List)
-                .map((value) => _enumByName(LearningStatus.values, value))
-                .whereType<LearningStatus>()
+                .map((value) => _enumByName(LearningStage.values, value))
+                .whereType<LearningStage>()
                 .toSet()
-          : const <LearningStatus>{};
+          : const <LearningStage>{};
       setState(() {
         if (mode != null) _mode = mode;
         if (studyPresentation != null) {
@@ -149,21 +146,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         if (recallPresentation != null) {
           _recallPresentation = recallPresentation;
         }
-        if (cue != null) _cue = cue;
-        _combinedPrompt =
-            saved['combinedPrompt'] == true && _cue == StudyCue.fromLanguage;
+
         if (order != null) _order = order;
         if (statuses.isNotEmpty) {
           _learningStatuses
             ..clear()
             ..addAll(statuses);
         }
-        if (recallStates.isNotEmpty) {
-          _recallStates
-            ..clear()
-            ..addAll(recallStates);
-        }
-        if (recallTiming != null) _recallTiming = recallTiming;
         if (retainedMaxPercentage is int) {
           _retainedMaxPercentage = retainedMaxPercentage.clamp(0, 100);
         }
@@ -202,8 +191,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'learningStatuses': [
           for (final status in _learningStatuses) status.name,
         ],
-        'recallStates': [for (final state in _recallStates) state.name],
-        'recallTiming': _recallTiming.name,
         'retainedMaxPercentage': _retainedMaxPercentage,
         'bookRecallMinimum': _bookRecallRange.start.round(),
         'bookRecallMaximum': _bookRecallRange.end.round(),
@@ -227,27 +214,23 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     if (cue == null) return const <StudyPrompt>[];
     if (_usesRecallFilters) {
       return _recallBaseCandidates
-          .where(
-            (prompt) =>
-                _recallTiming == RecallTiming.allMatching ||
-                _isDueForRecall(prompt.card),
-          )
+          .where((prompt) => _isDueForRecall(prompt.card))
           .toList(growable: false);
     }
-    return widget.prompts
-        .where(
-          (prompt) =>
-              prompt.cue == cue &&
-              _learningStatuses.contains(prompt.card.learningStatus),
-        )
-        .toList();
+    return _recallBaseCandidates;
   }
 
   List<StudyPrompt> get _recallBaseCandidates {
     final cue = _cue;
     if (cue == null) return const <StudyPrompt>[];
+    final sorted = sortCardsByScheduleState(
+      _studyCards,
+      DateTime.now(),
+      historyWindow: _reviewHistoryWindow,
+      cue: cue,
+    );
     return <StudyPrompt>[
-      for (final card in _studyCards)
+      for (final card in sorted)
         if (!card.suspended &&
             card.scheduleFor(cue).enabled &&
             _matchesRecallBaseFilters(card))
@@ -258,36 +241,26 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   bool _matchesRecallBaseFilters(StudyCard card) {
     final cue = _cue;
     if (cue == null) return false;
-    final state = _recallState(card, cue);
-    return _learningStatuses.contains(card.learningStatus) &&
-        _recallStates.contains(state) &&
-        (state != RecallCardState.retained ||
-            cueRecallPercentage(
-                  card,
-                  cue,
-                  historyWindow: _reviewHistoryWindow,
-                ) <=
-                _retainedMaxPercentage);
+    return card.active &&
+        _learningStatuses.contains(
+          learningStage(card, cue, window: _reviewHistoryWindow),
+        ) &&
+        cueRecallPercentage(card, cue, historyWindow: _reviewHistoryWindow) <=
+            _retainedMaxPercentage;
   }
 
   bool _matchesRecallFilters(StudyCard card) =>
       _matchesRecallBaseFilters(card) &&
-      (_recallTiming == RecallTiming.allMatching || _isDueForRecall(card));
+      (!_usesRecallFilters || _isDueForRecall(card));
 
-  bool _isDueForRecall(StudyCard card) {
-    final cue = _cue;
-    return cue != null && card.scheduleFor(cue).isDueAt(DateTime.now().toUtc());
-  }
-
-  RecallCardState _recallState(StudyCard card, StudyCue cue) {
-    final schedule = card.scheduleFor(cue);
-    if (schedule.lastReviewedAt == null) return RecallCardState.newCard;
-    return switch (schedule.schedulingState) {
-      'learning' => RecallCardState.learning,
-      'relearning' => RecallCardState.relearning,
-      _ => RecallCardState.retained,
-    };
-  }
+  bool _isDueForRecall(StudyCard card) =>
+      _cue != null &&
+      availableForRecall(
+        card,
+        _cue!,
+        DateTime.now().toUtc(),
+        window: _reviewHistoryWindow,
+      );
 
   List<StudyCard> get _drawCandidates => _studyCards
       .where(
@@ -310,6 +283,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   List<StudyPrompt> get _bookCandidates => <StudyPrompt>[
     for (final card in _studyCards)
       if (!card.suspended &&
+          card.active &&
+          (!_usesRecallFilters ||
+              availableForRecall(
+                card,
+                StudyCue.fromLanguage,
+                DateTime.now(),
+                window: _reviewHistoryWindow,
+              )) &&
           card.scheduleFor(StudyCue.fromLanguage).enabled &&
           _matchesBookRecallRange(card))
         StudyPrompt(card: card, cue: StudyCue.fromLanguage),
@@ -335,7 +316,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _mode == StudyMode.recall || _mode == StudyMode.ai;
 
   int get _reviewHistoryWindow =>
-      ref.read(reviewProgressionSettingsProvider).value?.historyWindow ?? 5;
+      ref.read(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
 
   bool get _supportsDrawing =>
       !_isBookStudy &&
@@ -346,66 +327,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
-  String _cueLabel(StudyCue cue) => switch (cue) {
-    StudyCue.fromLanguage =>
-      widget.fromLanguage == 'Front' ? 'English' : widget.fromLanguage,
-    StudyCue.toLanguage => widget.toLanguage,
-    StudyCue.transliteration => 'Transliteration',
-  };
-
-  void _selectCue(StudyCue cue) {
-    setState(() {
-      _cue = cue;
-      _combinedPrompt = false;
-      _resetCount();
-    });
-    _rememberPreferences();
-  }
-
-  void _toggleLearningStatus(LearningStatus status) {
+  void _toggleLearningStatus(LearningStage status) {
     setState(() {
       if (_learningStatuses.contains(status)) {
         if (_learningStatuses.length > 1) _learningStatuses.remove(status);
       } else {
         _learningStatuses.add(status);
       }
-      _resetCount();
-    });
-    _rememberPreferences();
-  }
-
-  bool get _allRecallStatesSelected =>
-      _recallStates.length == RecallCardState.values.length;
-
-  void _toggleRecallState(RecallCardState state) {
-    setState(() {
-      if (_allRecallStatesSelected) {
-        _recallStates
-          ..clear()
-          ..add(state);
-      } else if (_recallStates.contains(state)) {
-        if (_recallStates.length > 1) _recallStates.remove(state);
-      } else {
-        _recallStates.add(state);
-      }
-      _resetCount();
-    });
-    _rememberPreferences();
-  }
-
-  void _selectAllRecallStates() {
-    setState(() {
-      _recallStates
-        ..clear()
-        ..addAll(RecallCardState.values);
-      _resetCount();
-    });
-    _rememberPreferences();
-  }
-
-  void _selectRecallTiming(RecallTiming timing) {
-    setState(() {
-      _recallTiming = timing;
       _resetCount();
     });
     _rememberPreferences();
@@ -854,6 +782,20 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _order == StudyOrder.shuffle) {
         selected.shuffle(Random.secure());
       }
+      if (_usesRecallFilters && !_isBookStudy) {
+        selected.sort((a, b) {
+          final sa = learningStage(a.card, a.cue, window: _reviewHistoryWindow);
+          final sb = learningStage(b.card, b.cue, window: _reviewHistoryWindow);
+          final byStage = sa.index.compareTo(sb.index);
+          if (byStage != 0) return byStage;
+          if (sa != LearningStage.past) return 0;
+          return recalledAnswers(
+            a.card,
+            a.cue,
+            _reviewHistoryWindow,
+          ).compareTo(recalledAnswers(b.card, b.cue, _reviewHistoryWindow));
+        });
+      }
       _startupStep('selection_ready');
       final chosen = selected.take(min(_count, selected.length)).toList();
       final bodies = deferBodies
@@ -1219,7 +1161,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     ],
                     _SetupCard(
                       number: '02',
-                      title: 'What should be in front?',
+                      title: 'Direction',
                       child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
@@ -1254,7 +1196,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                   ] else ...[
                     _SetupCard(
                       number: '01',
-                      title: 'What should be in front?',
+                      title: 'Direction',
                       child: _cueChoices(),
                     ),
                     const SizedBox(height: 14),
@@ -1290,140 +1232,49 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     );
   }
 
-  Widget _cueChoices() => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      for (final cue in StudyCue.values)
-        ChoiceChip(
-          label: Text(_cueLabel(cue)),
-          selected: _cue == cue && !_combinedPrompt,
-          onSelected: (_) => _selectCue(cue),
-        ),
-      ChoiceChip(
-        label: const Text('Eng. + Transli.'),
-        selected: _combinedPrompt,
-        onSelected: (_) {
-          setState(() {
-            _cue = StudyCue.fromLanguage;
-            _combinedPrompt = true;
-            _resetCount();
-          });
-          _rememberPreferences();
-        },
-      ),
-    ],
+  Widget _cueChoices() => Text(
+    _cue == StudyCue.toLanguage
+        ? '${widget.toLanguage} → English · recall meaning and pronunciation'
+        : 'English → ${widget.toLanguage} · recall script and pronunciation',
   );
 
   Widget _learningStatusChoices() => Wrap(
     spacing: 8,
     runSpacing: 8,
     children: [
-      FilterChip(
-        label: const Text('Current'),
-        selected: _learningStatuses.contains(LearningStatus.learning),
-        onSelected: (_) => _toggleLearningStatus(LearningStatus.learning),
-      ),
-      FilterChip(
-        label: const Text('Past'),
-        selected: _learningStatuses.contains(LearningStatus.learnt),
-        onSelected: (_) => _toggleLearningStatus(LearningStatus.learnt),
-      ),
+      for (final stage in [
+        LearningStage.upcoming,
+        LearningStage.current,
+        LearningStage.past,
+      ])
+        FilterChip(
+          label: Text(stage.label),
+          selected: _learningStatuses.contains(stage),
+          onSelected: (_) => _toggleLearningStatus(stage),
+        ),
     ],
   );
 
   Widget _recallFilterChoices() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text('TIME', style: monoLabel),
-      const SizedBox(height: 8),
       _learningStatusChoices(),
       const SizedBox(height: 16),
-      Text('MEMORY STATE', style: monoLabel),
-      const SizedBox(height: 8),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          FilterChip(
-            label: const Text('All'),
-            selected: _allRecallStatesSelected,
-            onSelected: (_) => _selectAllRecallStates(),
-          ),
-          for (final state in RecallCardState.values)
-            FilterChip(
-              label: Text(switch (state) {
-                RecallCardState.learning => 'Learning',
-                RecallCardState.relearning => 'Relearning',
-                RecallCardState.retained => 'Retained',
-                RecallCardState.newCard => 'New',
-              }),
-              selected:
-                  !_allRecallStatesSelected && _recallStates.contains(state),
-              onSelected: (_) => _toggleRecallState(state),
-            ),
-        ],
+      Text('Recall score: 0–$_retainedMaxPercentage%'),
+      Slider(
+        value: _retainedMaxPercentage.toDouble(),
+        min: 0,
+        max: 100,
+        divisions: 10,
+        onChanged: _selectRetainedMaxPercentage,
       ),
-      if (_recallStates.contains(RecallCardState.retained)) ...[
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text('RETAINED RECALL', style: monoLabel),
-            const Spacer(),
-            Text(
-              '0–$_retainedMaxPercentage%',
-              key: const ValueKey('retained-recall-range'),
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        Slider(
-          key: const ValueKey('retained-recall-slider'),
-          value: _retainedMaxPercentage.toDouble(),
-          min: 0,
-          max: 100,
-          divisions: 10,
-          label: '0–$_retainedMaxPercentage%',
-          onChanged: _selectRetainedMaxPercentage,
-        ),
-        Text(
-          'Based on the last $_reviewHistoryWindow front-to-back reviews',
-          style: const TextStyle(fontSize: 12, color: RecallColors.muted),
-        ),
-      ],
-      const SizedBox(height: 16),
-      Text('REVIEW TIMING', style: monoLabel),
-      const SizedBox(height: 8),
-      SegmentedButton<RecallTiming>(
-        style: const ButtonStyle(
-          padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
-        ),
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(
-            value: RecallTiming.allMatching,
-            label: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text('All', maxLines: 1),
-            ),
-          ),
-          ButtonSegment(
-            value: RecallTiming.dueNow,
-            label: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text('Due', maxLines: 1),
-            ),
-          ),
-        ],
-        selected: {_recallTiming},
-        onSelectionChanged: (selection) =>
-            _selectRecallTiming(selection.single),
-      ),
-      const SizedBox(height: 8),
       Text(
-        _recallTimingSummary(),
-        style: const TextStyle(fontSize: 12, color: RecallColors.muted),
+        'Based on the last $_reviewHistoryWindow answers in this direction.',
       ),
+      if (_usesRecallFilters)
+        const Text(
+          'Upcoming and Current are available now. Past cards appear when due, with weaker cards first.',
+        ),
     ],
   );
 
@@ -1462,14 +1313,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       ),
     ],
   );
-
-  String _recallTimingSummary() {
-    final matching = _recallBaseCandidates.length;
-    final due = _recallBaseCandidates
-        .where((prompt) => _isDueForRecall(prompt.card))
-        .length;
-    return '$due out of $matching cards are due now';
-  }
 
   Widget _countControl(int maxCount) => maxCount == 0
       ? const Text(

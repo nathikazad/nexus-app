@@ -90,9 +90,8 @@ void main() {
           tester.widget(find.byKey(const ValueKey('card-learning-status')));
       expect(selector().selected, {LearningStatus.notStarted});
       for (final entry in {
-        'Current': LearningStatus.learning,
-        'Past': LearningStatus.learnt,
-        'Future': LearningStatus.notStarted,
+        'Active': LearningStatus.learning,
+        'Inactive': LearningStatus.notStarted,
       }.entries) {
         await tester.tap(find.text(entry.key));
         await tester.pumpAndSettle();
@@ -101,7 +100,7 @@ void main() {
         expect(library.savedCard?.id, 20);
       }
       library.pending = Completer<void>();
-      await tester.tap(find.text('Current'));
+      await tester.tap(find.text('Active'));
       await tester.pump();
       expect(selector().onSelectionChanged, isNull);
       expect(selector().selected, {LearningStatus.notStarted});
@@ -275,20 +274,13 @@ void main() {
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
     expect(
       find.byKey(const ValueKey('review-direction-selector')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('Front → Malayalam'), findsOneWidget);
-    expect(find.text('Malayalam → Front'), findsOneWidget);
-    expect(find.text('Transliteration → English'), findsNothing);
     expect(find.text('1 yes · 1 no'), findsOneWidget);
-
-    await tester.tap(find.text('Malayalam → Front'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('1 yes · 0 no'), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -900));
     await tester.pumpAndSettle();
-    expect(find.text('1 review'), findsOneWidget);
+    expect(find.text('2 reviews'), findsOneWidget);
     expect(find.byKey(const ValueKey('review-history-graph')), findsOneWidget);
   });
 
@@ -374,10 +366,10 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, -700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Learning'), findsOneWidget);
-    expect(find.text('Learning step 2 of 2'), findsOneWidget);
-    expect(find.text('0/4'), findsOneWidget);
-    expect(find.text('recalled'), findsOneWidget);
+    expect(find.text('Future'), findsOneWidget);
+    expect(find.text('Learning step 2 of 2'), findsNothing);
+    expect(find.text('0%'), findsOneWidget);
+    expect(find.text('0 of last 10 recalled'), findsOneWidget);
     expect(find.text('estimated recall'), findsNothing);
   });
 }

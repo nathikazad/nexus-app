@@ -10,6 +10,9 @@ enum StudyCue {
   const StudyCue(this.storageKey);
 
   final String storageKey;
+
+  /// Transliteration remains decodable for archived history only.
+  static const activeDirections = [fromLanguage, toLanguage];
 }
 
 class StudyPrompt {
