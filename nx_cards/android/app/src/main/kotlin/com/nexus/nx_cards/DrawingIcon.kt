@@ -21,10 +21,6 @@ internal class DrawingIcon(private val name: String) : Drawable() {
             canvas.drawPath(path, paint)
         }
         when (name) {
-            "refresh" -> {
-                canvas.drawArc(RectF(4f, 4f, 20f, 20f), 45f, 300f, false, paint)
-                line(16f, 3f, 21f, 7f, 16f, 9f)
-            }
             "undo" -> {
                 line(8f, 4f, 3f, 9f, 8f, 14f)
                 canvas.drawPath(Path().apply { moveTo(3f,9f); lineTo(14f,9f); cubicTo(23f,9f,23f,20f,14f,20f) }, paint)

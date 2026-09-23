@@ -341,7 +341,12 @@ class NativeDrawingActivity : Activity() {
             alpha = if (enabled) 1f else .35f
             contentDescription = label
             tooltipText = label
-            setImageDrawable(DrawingIcon(icon))
+            if (icon == "refresh") {
+                setImageResource(android.R.drawable.ic_popup_sync)
+                setColorFilter(Color.BLACK)
+            } else {
+                setImageDrawable(DrawingIcon(icon))
+            }
             setPadding(dp(12), dp(12), dp(12), dp(12))
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener { if (!busy) action() }
