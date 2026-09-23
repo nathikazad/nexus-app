@@ -56,18 +56,21 @@ def generate(app,tmp):
  # Adaptive Android layers are 108dp; keep artwork inside the 66dp safe circle.
  res=app/'android/app/src/main/res'
  if res.exists():
+  manifest=res.parent/'AndroidManifest.xml'
+  application=ET.parse(manifest).getroot().find('application')
+  launcher=application.attrib['{http://schemas.android.com/apk/res/android}icon']
+  assert re.fullmatch(r'@mipmap/[a-z0-9_]+',launcher),manifest
+  launcher_name=launcher.split('/',1)[1]
   alpha=mark.getchannel('A');pixels=alpha.load()
   radius=max(((x-512)**2+(y-512)**2)**.5 for y in range(1024) for x in range(1024) if pixels[x,y]>16)
   scale=min(1,300/radius);side=round(1024*scale)
   foreground=Image.new('RGBA',(1024,1024));foreground.alpha_composite(mark.resize((side,side),Image.Resampling.LANCZOS),((1024-side)//2,)*2)
   for density,factor in DENSITIES.items():
-   save(rounded(icon),res/f'mipmap-{density}/ic_launcher.png',round(48*factor))
+   save(rounded(icon),res/f'mipmap-{density}/{launcher_name}.png',round(48*factor))
    save(foreground,res/f'drawable-{density}/ic_launcher_foreground.png',round(108*factor))
   write(res/'values/icon_colors.xml',f'<?xml version="1.0" encoding="utf-8"?>\n<resources><color name="ic_launcher_background">{background}</color></resources>\n')
   adaptive='<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@drawable/ic_launcher_foreground"/>\n</adaptive-icon>\n'
-  write(res/'mipmap-anydpi-v26/ic_launcher.xml',adaptive)
-  manifest=res.parent/'AndroidManifest.xml'
-  assert 'android:icon="@mipmap/ic_launcher"' in manifest.read_text(),manifest
+  write(res/f'mipmap-anydpi-v26/{launcher_name}.xml',adaptive)
  # Web uses ordinary, maskable, Apple touch, and browser tab variants.
  web=app/'web'
  if web.exists():
