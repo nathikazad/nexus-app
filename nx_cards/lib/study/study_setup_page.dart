@@ -2,6 +2,7 @@ import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/lazy_study_queue.dart';
+import 'package:nx_cards/study/recall_priority.dart';
 import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
@@ -209,11 +210,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     if (_isBookStudy) return _bookCandidates;
     final cue = _cue;
     if (cue == null) return const <StudyPrompt>[];
-    if (_usesRecallFilters) {
-      return _recallBaseCandidates
-          .where((prompt) => _isDueForRecall(prompt.card))
-          .toList(growable: false);
-    }
     return _recallBaseCandidates;
   }
 
@@ -246,25 +242,22 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             _retainedMaxPercentage;
   }
 
-  bool _matchesRecallFilters(StudyCard card) =>
-      _matchesRecallBaseFilters(card) &&
-      (!_usesRecallFilters || _isDueForRecall(card));
-
-  bool _isDueForRecall(StudyCard card) =>
-      _cue != null &&
-      availableForRecall(
-        card,
-        _cue!,
-        DateTime.now().toUtc(),
-        window: _reviewHistoryWindow,
-      );
+  int get _pastDueCount {
+    final now = DateTime.now().toUtc();
+    return _recallBaseCandidates
+        .where(
+          (prompt) =>
+              isPastDue(prompt, now, historyWindow: _reviewHistoryWindow),
+        )
+        .length;
+  }
 
   List<StudyCard> get _drawCandidates => _studyCards
       .where(
         (card) =>
             card.content is LanguageCardContent &&
             !card.suspended &&
-            _matchesRecallFilters(card),
+            _matchesRecallBaseFilters(card),
       )
       .toList(growable: false);
 
@@ -273,7 +266,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         (card) =>
             card.content is LanguageCardContent &&
             !card.suspended &&
-            _matchesRecallFilters(card),
+            _matchesRecallBaseFilters(card),
       )
       .toList(growable: false);
 
@@ -746,7 +739,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                           (!_isBookStudy ||
                               _matchesBookRecallRange(latestCard)) &&
                           (!_usesRecallFilters ||
-                              _matchesRecallFilters(latestCard)) &&
+                              _matchesRecallBaseFilters(latestCard)) &&
                           latestCard.scheduleFor(queued.cue).enabled)
                     StudyPrompt(card: latestCard, cue: queued.cue),
               ]
@@ -780,18 +773,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         selected.shuffle(Random.secure());
       }
       if (_usesRecallFilters && !_isBookStudy) {
-        selected.sort((a, b) {
-          final sa = learningStage(a.card, a.cue, window: _reviewHistoryWindow);
-          final sb = learningStage(b.card, b.cue, window: _reviewHistoryWindow);
-          final byStage = sa.index.compareTo(sb.index);
-          if (byStage != 0) return byStage;
-          if (sa != LearningStage.past) return 0;
-          return recalledAnswers(
-            a.card,
-            a.cue,
-            _reviewHistoryWindow,
-          ).compareTo(recalledAnswers(b.card, b.cue, _reviewHistoryWindow));
-        });
+        prioritizeRecallPrompts(
+          selected,
+          DateTime.now().toUtc(),
+          historyWindow: _reviewHistoryWindow,
+        );
       }
       _startupStep('selection_ready');
       final chosen = selected.take(min(_count, selected.length)).toList();
@@ -872,7 +858,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 eligibleIds.contains(card.id) &&
                 card.content is LanguageCardContent &&
                 !card.suspended &&
-                _matchesRecallFilters(card),
+                _matchesRecallBaseFilters(card),
           )
           .toList(growable: true);
       cards.shuffle(Random.secure());
@@ -1247,6 +1233,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         divisions: 10,
         onChanged: _selectRetainedMaxPercentage,
       ),
+      if (_usesRecallFilters && _learningStatuses.contains(LearningStage.past))
+        Text('Past cards due: $_pastDueCount'),
     ],
   );
 

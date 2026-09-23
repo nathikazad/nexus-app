@@ -23,8 +23,11 @@ Do not manually persist Current/Past or activate replacement cards after recall.
 The legacy `LearningStatus` API/SQLite column only carries activation compatibility
 for existing offline snapshots. Network writes use the boolean `active` attribute.
 
-Upcoming/Current recall can start immediately. Past recall filters by due time
-and prioritizes lower recent scores. Settings are stored in
+Language recall includes all cards matching the selected stages and score range,
+just like Practice. When Past is selected, recall setup shows its due count.
+Due Past cards are queued first (weaker scores first), then the remaining matching
+cards fill the requested session size. Future-due Past cards remain selectable.
+Settings are stored in
 `users.preferences.nx_cards.history_window` and refreshed with library sync;
 saving requires connectivity. Server migration and verification are documented
 in `servers/nexus/apps/nx_cards/maintenance/learning-workflow.md`.

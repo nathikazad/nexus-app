@@ -97,7 +97,7 @@ Future<void> showSetup(
 }
 
 void main() {
-  testWidgets('defaults to Current and Past; recall omits not-due Past', (
+  testWidgets('defaults to Current and Past; recall includes not-due Past', (
     tester,
   ) async {
     await showSetup(tester);
@@ -110,13 +110,33 @@ void main() {
     );
     await tester.tap(find.text('Recall').first);
     await tester.pumpAndSettle();
-    expect(find.text('2 available'), findsOneWidget);
+    expect(find.text('3 available'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Upcoming'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
     expect(find.text('Relearning'), findsNothing);
     expect(find.text('Retained'), findsNothing);
   });
+  testWidgets(
+    'Past due count follows selected filters and is hidden without Past',
+    (tester) async {
+      await showSetup(tester);
+      expect(find.textContaining('Past cards due'), findsNothing);
+      await tester.tap(find.text('Recall').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Past cards due: 1'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilterChip, 'Past'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Past cards due'), findsNothing);
+      await tester.tap(find.widgetWithText(FilterChip, 'Past'));
+      await tester.pumpAndSettle();
+      final scoreSlider = tester.widgetList<Slider>(find.byType(Slider)).first;
+      scoreSlider.onChanged!(70);
+      await tester.pumpAndSettle();
+      expect(find.text('Past cards due: 0'), findsOneWidget);
+      expect(find.text('1 available'), findsOneWidget);
+    },
+  );
   testWidgets(
     'direction comes from language page; no third cue or local selector',
     (tester) async {
@@ -149,14 +169,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(slider().value, 2);
     expect(find.text('Direction'), findsNothing);
-    slider().onChanged!(3);
+    slider().onChanged!(4);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
     await tester.pumpAndSettle();
-    expect(slider().value, 2);
+    expect(slider().value, 3);
     await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
     await tester.pumpAndSettle();
-    expect(slider().value, 2);
+    expect(slider().value, 3);
   });
   testWidgets('larger counts persist and survive an empty filter', (
     tester,
@@ -215,6 +235,6 @@ void main() {
     expect(find.text('4 available'), findsOneWidget);
     await tester.tap(find.text('Recall').first);
     await tester.pumpAndSettle();
-    expect(find.text('3 available'), findsOneWidget);
+    expect(find.text('4 available'), findsOneWidget);
   });
 }
