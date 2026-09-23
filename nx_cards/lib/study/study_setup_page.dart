@@ -976,7 +976,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         value: StudyMode.study,
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text('Study', maxLines: 1),
+                          child: Text('Practice', maxLines: 1),
                         ),
                       ),
                       ButtonSegment(
