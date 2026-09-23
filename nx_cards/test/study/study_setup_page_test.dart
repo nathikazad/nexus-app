@@ -97,14 +97,20 @@ Future<void> showSetup(
 }
 
 void main() {
-  testWidgets('study has four active cards; recall omits only not-due Past', (
+  testWidgets('defaults to Current and Past; recall omits not-due Past', (
     tester,
   ) async {
     await showSetup(tester);
-    expect(find.text('4 available'), findsOneWidget);
+    expect(find.text('3 available'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, 'Upcoming'))
+          .selected,
+      isFalse,
+    );
     await tester.tap(find.text('Recall').first);
     await tester.pumpAndSettle();
-    expect(find.text('3 available'), findsOneWidget);
+    expect(find.text('2 available'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Upcoming'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
@@ -116,6 +122,9 @@ void main() {
     (tester) async {
       await showSetup(tester, cue: StudyCue.toLanguage);
       await tester.tap(find.text('Recall').first);
+      await tester.pumpAndSettle();
+      expect(find.text('No cards match these filters'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
       await tester.pumpAndSettle();
       expect(
         find.text('4 available'),
@@ -130,6 +139,8 @@ void main() {
     tester,
   ) async {
     await showSetup(tester);
+    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.pumpAndSettle();
     Slider slider() =>
         tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
     slider().onChanged!(2);
@@ -154,6 +165,8 @@ void main() {
       tester,
       studyCards: [for (var id = 1; id <= 25; id++) sample(id, 0)],
     );
+    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.pumpAndSettle();
     Slider slider() =>
         tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
     slider().onChanged!(17);
@@ -193,16 +206,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(slider().value, 17);
   });
-  testWidgets(
-    'multi-select excludes Upcoming without removing Current or Past',
-    (tester) async {
-      await showSetup(tester);
-      await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
-      await tester.pumpAndSettle();
-      expect(find.text('3 available'), findsOneWidget);
-      await tester.tap(find.text('Recall').first);
-      await tester.pumpAndSettle();
-      expect(find.text('2 available'), findsOneWidget);
-    },
-  );
+  testWidgets('multi-select adds Upcoming without removing Current or Past', (
+    tester,
+  ) async {
+    await showSetup(tester);
+    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.pumpAndSettle();
+    expect(find.text('4 available'), findsOneWidget);
+    await tester.tap(find.text('Recall').first);
+    await tester.pumpAndSettle();
+    expect(find.text('3 available'), findsOneWidget);
+  });
 }

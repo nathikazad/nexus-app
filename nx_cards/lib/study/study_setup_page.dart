@@ -90,7 +90,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   }
 
   final Set<LearningStage> _learningStatuses = <LearningStage>{
-    LearningStage.upcoming,
     LearningStage.current,
     LearningStage.past,
   };
