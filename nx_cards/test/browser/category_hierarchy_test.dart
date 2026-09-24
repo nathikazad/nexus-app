@@ -41,6 +41,98 @@ StudyCard card(
 );
 
 void main() {
+  testWidgets(
+    'category rows remain one column and counts fit in priority order',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final data = CardsDashboard(
+        cards: [
+          card(
+            1,
+            [
+              ['Word', 'Noun'],
+            ],
+            collections: ['A collection with a long title'],
+          ),
+          card(2, [
+            ['Phrase'],
+          ]),
+        ],
+      );
+      Future<void> show(double width, double scale) async {
+        await tester.binding.setSurfaceSize(Size(width, 1000));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              cardsCollectionProvider.overrideWith(
+                (ref, source) => Stream.value(data),
+              ),
+            ],
+            child: MaterialApp(
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.linear(scale)),
+                child: child!,
+              ),
+              home: const LanguagePage(language: 'Spanish'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      const priority = [
+        'total',
+        'current',
+        'due',
+        'upcoming',
+        'past',
+        'future',
+      ];
+      int visible() {
+        var count = 0;
+        for (final label in priority) {
+          if (find
+              .byKey(ValueKey('language-category-word-$label'))
+              .evaluate()
+              .isNotEmpty) {
+            expect(
+              priority[count],
+              label,
+            ); // Never skip a higher priority count.
+            count++;
+          }
+        }
+        return count;
+      }
+
+      await show(1500, 1);
+      expect(visible(), 6);
+      expect(
+        tester.getTopLeft(find.text('Words')).dx,
+        tester.getTopLeft(find.text('Phrases')).dx,
+      );
+      expect(
+        tester.getTopLeft(find.text('Phrases')).dy,
+        greaterThan(tester.getBottomLeft(find.text('Words')).dy),
+      );
+      expect(find.byIcon(Icons.chevron_right), findsNothing);
+      await show(390, 1);
+      final phoneCount = visible();
+      expect(phoneCount, inInclusiveRange(1, 3));
+      await show(280, 1);
+      expect(visible(), inInclusiveRange(1, phoneCount));
+      await show(390, 2);
+      expect(visible(), inInclusiveRange(1, phoneCount));
+      expect(
+        find.byKey(const ValueKey('expand-category-Word')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test('paths preserve distinct branches, descendants and phrase ranking', () {
     final noun = card(1, [
       ['Word', 'Noun'],

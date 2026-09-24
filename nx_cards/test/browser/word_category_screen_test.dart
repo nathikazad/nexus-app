@@ -167,8 +167,10 @@ void main() {
       tester
           .getCenter(find.byKey(const ValueKey('language-category-noun-total')))
           .dy,
-      greaterThan(nounTitle.dy),
+      closeTo(nounTitle.dy, 1),
     );
+    await tester.binding.setSurfaceSize(const Size(1100, 844));
+    await tester.pumpAndSettle();
     final nounLearnt = find.byKey(
       const ValueKey('language-category-noun-past'),
     );
@@ -207,7 +209,7 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('language-category-noun-past')),
-      findsOneWidget,
+      findsNothing,
     );
     await tester.binding.setSurfaceSize(const Size(1100, 844));
     await tester.pumpAndSettle();

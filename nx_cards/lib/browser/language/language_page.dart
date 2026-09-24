@@ -2,7 +2,6 @@ import 'package:nx_cards/scheduling/future_card_rank.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
-import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -91,7 +90,8 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  AdaptiveCardGrid(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       for (final group in groups)
                         _LanguageCategoryCard(
@@ -120,7 +120,8 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    AdaptiveCardGrid(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         for (final group in collections)
                           _LanguageCategoryCard(
@@ -236,10 +237,10 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
 
     final metrics = <(int, String)>[
       (cards.length, 'Total'),
-      (upcoming, 'Upcoming'),
       (current, 'Current'),
-      (learnt, 'Past'),
       (due, 'Due'),
+      (upcoming, 'Upcoming'),
+      (learnt, 'Past'),
       (remaining, 'Future'),
     ];
     final widths = metrics.map((entry) {
@@ -279,14 +280,48 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final metricWidgets = [
-                for (var i = 0; i < metrics.length; i++)
+              final title = disambiguate
+                  ? '$category (${tagSystem ?? 'Type'})'
+                  : category == 'Word'
+                  ? 'Words'
+                  : category == 'Phrase'
+                  ? 'Phrases'
+                  : category;
+              const titleStyle = TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              );
+              final controlsWidth = children.isEmpty ? 0.0 : 48.0;
+              final titleBudget =
+                  (constraints.maxWidth -
+                          controlsWidth -
+                          49 -
+                          12 -
+                          widths.first)
+                      .clamp(32.0, 180.0);
+              final titleWidth = textWidth(
+                title,
+                titleStyle,
+              ).clamp(32.0, titleBudget);
+              final identityWidth = titleWidth + controlsWidth + 49;
+              // Add counts in priority order only while their measured text fits.
+              // Keep a readable title and all navigation controls at every width.
+              final budget = constraints.maxWidth - identityWidth - 12;
+              var statsWidth = 0.0;
+              var visibleCount = 0;
+              for (final width in widths) {
+                final nextWidth =
+                    statsWidth + (visibleCount == 0 ? 0 : 8) + width;
+                if (nextWidth > budget) break;
+                statsWidth = nextWidth;
+                visibleCount++;
+              }
+              final metricWidgets = <Widget>[
+                for (var i = 0; i < visibleCount; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
                   metric(metrics[i].$1, metrics[i].$2, widths[i]),
+                ],
               ];
-              final statsWidth =
-                  widths.fold<double>(0, (a, b) => a + b) +
-                  (metrics.length - 1) * 8;
-              final inline = constraints.maxWidth >= 160 + statsWidth;
               final identity = Row(
                 children: [
                   Expanded(
@@ -317,13 +352,7 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
                         const SizedBox(width: 11),
                         Expanded(
                           child: Text(
-                            disambiguate
-                                ? '$category (${tagSystem ?? 'Type'})'
-                                : category == 'Word'
-                                ? 'Words'
-                                : category == 'Phrase'
-                                ? 'Phrases'
-                                : category,
+                            title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -346,34 +375,18 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
                         expanded ? Icons.expand_less : Icons.expand_more,
                       ),
                     ),
-                  const Icon(Icons.chevron_right, size: 20),
                 ],
               );
-              final stats = Wrap(
-                spacing: 8,
-                runSpacing: 12,
-                children: metricWidgets,
-              );
-              if (!inline) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [identity, const SizedBox(height: 16), stats],
-                );
-              }
               return Row(
                 children: [
                   Expanded(child: identity),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    height: 44,
-                    child: VerticalDivider(
-                      key: ValueKey('language-category-divider-$category'),
-                      width: 1,
-                      thickness: 1,
+                  if (visibleCount > 0) ...[
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: statsWidth,
+                      child: Row(children: metricWidgets),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(width: statsWidth, child: stats),
+                  ],
                 ],
               );
             },
