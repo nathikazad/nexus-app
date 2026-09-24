@@ -324,44 +324,33 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
               ];
               final identity = Row(
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outlineVariant,
-                            ),
-                          ),
-                          child: Icon(
-                            tagSystem == 'Collection'
-                                ? Icons.collections_bookmark_outlined
-                                : categoryIcon(category),
-                            size: 20,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(width: 11),
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                    child: Icon(
+                      tagSystem == 'Collection'
+                          ? Icons.collections_bookmark_outlined
+                          : categoryIcon(category),
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  Flexible(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
                     ),
                   ),
                   if (children.isNotEmpty)
@@ -728,6 +717,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
 }
 
 IconData categoryIcon(String category) => switch (category.toLowerCase()) {
+  'word' => Icons.text_fields,
+  'phrase' => Icons.chat_bubble_outline,
   'noun' => Icons.inventory_2_outlined,
   'verb' => Icons.directions_run_outlined,
   'adjective' => Icons.tune_outlined,
