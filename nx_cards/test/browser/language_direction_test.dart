@@ -6,12 +6,26 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/language/language_page.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
 import '../study/study_setup_page_test.dart' show sample;
+import 'category_hierarchy_test.dart' as hierarchy;
 
 void main() {
   testWidgets('one direction controls category totals and the opened list', (
     tester,
   ) async {
-    final dashboard = CardsDashboard(cards: [sample(1, 8)]);
+    final dashboard = CardsDashboard(
+      cards: [
+        hierarchy
+            .card(1, [
+              ['Word'],
+            ], language: 'Chinese')
+            .copyWith(
+              content: sample(1, 8).content,
+              schedules: sample(1, 8).schedules,
+              reviewHistory: sample(1, 8).reviewHistory,
+              learningStatus: LearningStatus.learning,
+            ),
+      ],
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -27,7 +41,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     Finder metric(String name, String count) => find.descendant(
-      of: find.byKey(ValueKey('language-category-all-$name')),
+      of: find.byKey(ValueKey('language-category-word-$name')),
       matching: find.text(count),
     );
     expect(metric('past', '1'), findsOneWidget);
@@ -38,7 +52,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(metric('past', '0'), findsOneWidget);
     expect(metric('upcoming', '1'), findsOneWidget);
-    await tester.tap(find.text('All'));
+    await tester.tap(find.byTooltip('All cards'));
     await tester.pumpAndSettle();
     expect(find.text('Upcoming  1'), findsOneWidget);
     expect(find.text('Past  0'), findsOneWidget);

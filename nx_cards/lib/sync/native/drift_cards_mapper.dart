@@ -39,7 +39,10 @@ final class DriftCardsMapper {
         ),
       ),
       linkedWordIdsJson: Value(jsonEncode(card.linkedWordIds.toList()..sort())),
-      tagsJson: jsonEncode(card.tags),
+      tagsJson: jsonEncode({
+        'tags': card.tags,
+        'category_paths': card.categoryPaths,
+      }),
       learningStatus: Value(card.learningStatus.storageValue),
       dueAt: Value(card.nextDueAt),
       scheduleJson: jsonEncode(scheduleJson(card)),
@@ -78,6 +81,7 @@ final class DriftCardsMapper {
       suspended: row.suspended,
       learningStatus: LearningStatus.fromStorage(row.learningStatus),
       tags: _tagsMap(row.tagsJson),
+      categoryPaths: _categoryPaths(row.tagsJson),
       modelTypeName: row.modelType,
       sourceBookId: row.sourceBookId,
       sourceBookName: row.sourceBookName,
@@ -132,7 +136,10 @@ Map<String, dynamic> _jsonMap(String raw) {
 }
 
 Map<String, List<String>> _tagsMap(String raw) {
-  final value = jsonDecode(raw);
+  final decoded = jsonDecode(raw);
+  final value = decoded is Map && decoded['tags'] is Map
+      ? decoded['tags']
+      : decoded;
   if (value is! Map) return const <String, List<String>>{};
   return <String, List<String>>{
     for (final entry in value.entries)
@@ -155,4 +162,13 @@ int? _int(Object? value) {
 double? _double(Object? value) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '');
+}
+
+List<List<String>>? _categoryPaths(String raw) {
+  final value = jsonDecode(raw);
+  if (value is! Map || value['category_paths'] is! List) return null;
+  return [
+    for (final path in value['category_paths'] as List)
+      if (path is List) path.map((v) => v.toString()).toList(),
+  ];
 }

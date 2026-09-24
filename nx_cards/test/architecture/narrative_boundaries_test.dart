@@ -153,6 +153,7 @@ void main() {
       'study_queue.dart',
       'hydrate_study_queue.dart',
       'lazy_study_queue.dart',
+      'recall_priority.dart',
       'study_setup_page.dart',
     };
     final actualRootDartFiles = Directory('lib/study')

@@ -66,8 +66,7 @@ class CardsDashboard {
   }) => cards
       .where(
         (card) =>
-            (studyCategory == null ||
-                card.categories.contains(studyCategory)) &&
+            (studyCategory == null || card.hasCategory(studyCategory)) &&
             (language == null || languageFor(card) == language) &&
             (bookId == null || card.sourceBookId == bookId) &&
             (!card.isLanguageCard || card.isRecallEligible),

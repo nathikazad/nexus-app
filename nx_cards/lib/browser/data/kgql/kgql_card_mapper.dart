@@ -44,6 +44,7 @@ StudyCard? studyCardFromModel(
               : LearningStatus.notStarted)
         : LearningStatus.fromStorage(model.attributes?[attrLearningStatus]),
     tags: model.tags ?? const <String, List<String>>{},
+    categoryPaths: model.tagPaths?['Category'],
     modelTypeName: modelTypeName,
     sourceBookId: book?.id,
     sourceBookName: book?.name,

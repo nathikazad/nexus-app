@@ -24,6 +24,9 @@ class Model {
   /// Tag assignments when `tags: true` is in struct — system name → assigned node names.
   final Map<String, List<String>>? tags;
 
+  /// Root-to-leaf paths for each explicitly assigned tag.
+  final Map<String, List<List<String>>>? tagPaths;
+
   /// Embedded type metadata when `struct` includes a `model_type: { ... }` object (get_kgql_models).
   final ModelType? modelType;
 
@@ -39,6 +42,7 @@ class Model {
     this.relations,
     this.relationsList,
     this.tags,
+    this.tagPaths,
     this.modelType,
   });
 
@@ -89,6 +93,7 @@ class Model {
           'relations',
           'attributes',
           'tags',
+          'tag_paths',
           'model_type',
         ].contains(key)) {
           if (value is! List) {
@@ -170,6 +175,20 @@ class Model {
       relations: relations,
       relationsList: relationsList,
       tags: tags,
+      tagPaths: json['tag_paths'] is Map
+          ? (json['tag_paths'] as Map).map(
+              (key, value) => MapEntry(
+                key.toString(),
+                value is List
+                    ? [
+                        for (final path in value)
+                          if (path is List)
+                            path.map((v) => v.toString()).toList(),
+                      ]
+                    : <List<String>>[],
+              ),
+            )
+          : null,
       modelType: embeddedModelType,
     );
   }
@@ -190,6 +209,7 @@ class Model {
       if (relationsList != null)
         'relations': relationsList!.map((r) => r.toJson()).toList(),
       if (tags != null) 'tags': tags,
+      if (tagPaths != null) 'tag_paths': tagPaths,
       if (modelType != null) 'model_type': modelType!.toJson(),
     };
   }

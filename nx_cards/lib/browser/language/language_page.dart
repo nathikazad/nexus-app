@@ -29,7 +29,22 @@ class LanguagePage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(language),
-        actions: [LanguageDirectionButton(language: language)],
+        actions: [
+          IconButton(
+            tooltip: 'All cards',
+            icon: const Icon(Icons.view_list_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => LanguageCategoryPage(
+                  category: 'All',
+                  allCards: true,
+                  language: language,
+                ),
+              ),
+            ),
+          ),
+          LanguageDirectionButton(language: language),
+        ],
       ),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -78,15 +93,14 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                   const SizedBox(height: 12),
                   AdaptiveCardGrid(
                     children: [
-                      _LanguageCategoryCard(
-                        category: 'All',
-                        allCards: true,
-                        data: data,
-                        language: language,
-                      ),
                       for (final group in groups)
                         _LanguageCategoryCard(
+                          key: ValueKey((
+                            group.tagSystem,
+                            group.path?.join('/') ?? group.name,
+                          )),
                           category: group.name,
+                          categoryPath: group.path,
                           tagSystem: group.tagSystem,
                           disambiguate:
                               groups.where((g) => g.name == group.name).length >
@@ -110,7 +124,12 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                       children: [
                         for (final group in collections)
                           _LanguageCategoryCard(
+                            key: ValueKey((
+                              group.tagSystem,
+                              group.path?.join('/') ?? group.name,
+                            )),
                             category: group.name,
+                            categoryPath: group.path,
                             tagSystem: 'Collection',
                             data: data,
                             language: language,
@@ -128,36 +147,53 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
   }
 }
 
-class _LanguageCategoryCard extends ConsumerWidget {
+class _LanguageCategoryCard extends ConsumerStatefulWidget {
   const _LanguageCategoryCard({
+    super.key,
     required this.category,
     required this.data,
     this.language,
-    this.allCards = false,
     this.tagSystem,
+    this.categoryPath,
     this.disambiguate = false,
   });
 
   final String category;
-  final bool allCards;
   final String? tagSystem;
+  final List<String>? categoryPath;
   final bool disambiguate;
   final CardsDashboard data;
   final String? language;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LanguageCategoryCard> createState() =>
+      _LanguageCategoryCardState();
+}
+
+class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
+  bool expanded = false;
+  String get category => widget.category;
+  String? get tagSystem => widget.tagSystem;
+  bool get disambiguate => widget.disambiguate;
+  CardsDashboard get data => widget.data;
+  String? get language => widget.language;
+
+  @override
+  Widget build(BuildContext context) {
     final cards = data.cards
         .where(
           (card) =>
-              (allCards ||
-                  LanguageGroup(
-                    category,
-                    tagSystem: tagSystem,
-                  ).contains(card)) &&
+              (LanguageGroup(
+                category,
+                tagSystem: tagSystem,
+                path: widget.categoryPath,
+              ).contains(card)) &&
               (language == null || data.languageFor(card) == language),
         )
         .toList(growable: false);
+    final children = tagSystem == 'Collection'
+        ? <LanguageGroup>[]
+        : languageGroups(cards, parent: widget.categoryPath ?? [category]);
     final cue = ref.watch(languageDirectionProvider(language));
     final window =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
@@ -225,18 +261,15 @@ class _LanguageCategoryCard extends ConsumerWidget {
         ],
       ),
     );
-    return Card(
-      color: allCards
-          ? Theme.of(context).colorScheme.surfaceContainerHighest
-          : null,
+    final tile = Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => LanguageCategoryPage(
               category: category,
+              categoryPath: widget.categoryPath,
               language: language,
-              allCards: allCards,
               tagSystem: tagSystem,
               disambiguate: disambiguate,
             ),
@@ -286,20 +319,34 @@ class _LanguageCategoryCard extends ConsumerWidget {
                           child: Text(
                             disambiguate
                                 ? '$category (${tagSystem ?? 'Type'})'
+                                : category == 'Word'
+                                ? 'Words'
+                                : category == 'Phrase'
+                                ? 'Phrases'
                                 : category,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: allCards
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
+                  if (children.isNotEmpty)
+                    IconButton(
+                      key: ValueKey('expand-category-$category'),
+                      tooltip: expanded
+                          ? 'Hide subcategories'
+                          : 'Show subcategories',
+                      onPressed: () => setState(() => expanded = !expanded),
+                      icon: Icon(
+                        expanded ? Icons.expand_less : Icons.expand_more,
+                      ),
+                    ),
+                  const Icon(Icons.chevron_right, size: 20),
                 ],
               );
               final stats = Wrap(
@@ -334,6 +381,30 @@ class _LanguageCategoryCard extends ConsumerWidget {
         ),
       ),
     );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        tile,
+        if (expanded)
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Column(
+              children: [
+                for (final child in children)
+                  _LanguageCategoryCard(
+                    key: ValueKey(child.path?.join('/') ?? child.name),
+                    category: child.name,
+                    categoryPath: child.path,
+                    tagSystem: child.tagSystem,
+                    data: data,
+                    language: language,
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -344,12 +415,14 @@ class LanguageCategoryPage extends ConsumerStatefulWidget {
     this.language,
     this.allCards = false,
     this.tagSystem,
+    this.categoryPath,
     this.disambiguate = false,
   });
 
   final String category;
   final bool allCards;
   final String? tagSystem;
+  final List<String>? categoryPath;
   final bool disambiguate;
   final String? language;
 
@@ -408,6 +481,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                         LanguageGroup(
                           category,
                           tagSystem: widget.tagSystem,
+                          path: widget.categoryPath,
                         ).contains(card)) &&
                     (language == null || data.languageFor(card) == language),
               )
@@ -478,6 +552,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             studyScope: StudyScope(
                               language: language,
                               tagSystem: widget.tagSystem ?? 'Category',
+                              categoryPath: widget.categoryPath,
                               tag: widget.allCards ? null : category,
                             ),
                             title: language == null
@@ -485,7 +560,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 : '$language · $category',
                             preferenceKey: widget.tagSystem == null
                                 ? 'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}'
-                                : 'language-tag:${Uri.encodeComponent(language ?? 'all')}:${Uri.encodeComponent(widget.tagSystem!)}:${Uri.encodeComponent(category)}',
+                                : 'language-tag:${Uri.encodeComponent(language ?? 'all')}:${Uri.encodeComponent(widget.tagSystem!)}:${Uri.encodeComponent(widget.categoryPath?.join('/') ?? category)}',
                             prompts: queue,
                             studyCards: [...upcoming, ...learning, ...learnt],
                             languagePair: language == null

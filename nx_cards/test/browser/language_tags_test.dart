@@ -90,9 +90,11 @@ void main() {
         },
       ),
     ]);
+    await tester.tap(find.byKey(const ValueKey('expand-category-Word')));
+    await tester.pumpAndSettle();
     for (final name in [
       'Adjective',
-      'Phrase',
+      'Phrases',
       'Family Conversations 1',
       'Husband Conversations 1',
     ]) {
@@ -204,7 +206,7 @@ void main() {
       );
       await tester.pageBack();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Phrase'));
+      await tester.tap(find.text('Phrases'));
       await tester.pumpAndSettle();
       expect(
         tester

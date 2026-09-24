@@ -71,24 +71,16 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        expect(find.text('Words'), findsOneWidget);
+        expect(find.text('Noun'), findsNothing);
         expect(
-          tester.getTopLeft(find.text('All')).dy,
-          lessThan(tester.getTopLeft(find.text('Noun')).dy),
+          find.descendant(
+            of: find.byKey(const ValueKey('language-category-word-total')),
+            matching: find.text('2'),
+          ),
+          findsOneWidget,
         );
-        for (final (name, value) in [
-          ('total', '4'),
-          ('upcoming', '4'),
-          ('due', '0'),
-        ]) {
-          expect(
-            find.descendant(
-              of: find.byKey(ValueKey('language-category-all-$name')),
-              matching: find.text(value),
-            ),
-            findsOneWidget,
-          );
-        }
-        await tester.tap(find.text('All'));
+        await tester.tap(find.byTooltip('All cards'));
         await tester.pumpAndSettle();
         expect(find.text('4 cards · 0 learning'), findsOneWidget);
         for (var id = 1; id <= 4; id++) {
@@ -163,6 +155,9 @@ void main() {
     await tester.tap(find.text('Malayalam'));
     await tester.pumpAndSettle();
     expect(find.text('Script'), findsOneWidget);
+    expect(find.text('Noun'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('expand-category-Word')));
+    await tester.pumpAndSettle();
     expect(find.text('Noun'), findsOneWidget);
     expect(find.text('Adjective'), findsOneWidget);
     expect(find.text('Verb'), findsOneWidget);

@@ -12,6 +12,7 @@ class StudyCard {
     required this.suspended,
     this.learningStatus = LearningStatus.notStarted,
     Map<String, List<String>> tags = const <String, List<String>>{},
+    List<List<String>>? categoryPaths,
     String? modelTypeName,
     this.sourceBookId,
     this.sourceBookName,
@@ -22,6 +23,15 @@ class StudyCard {
            const {'Word', 'Verb', 'Phrase', 'Script'}.contains(modelTypeName)
            ? 'LanguageFlashcard'
            : modelTypeName,
+       categoryPaths = List<List<String>>.unmodifiable([
+         for (final path
+             in categoryPaths ??
+                 legacyCategoryPaths(
+                   migrateLanguageTags(tags, modelTypeName)['Category'] ??
+                       const [],
+                 ))
+           List<String>.unmodifiable(path),
+       ]),
        schedules = Map<StudyCue, CardSchedule>.unmodifiable(schedules),
        linkedWordIds = Set<int>.unmodifiable(linkedWordIds),
        tags = Map<String, List<String>>.unmodifiable({
@@ -41,12 +51,19 @@ class StudyCard {
   String get front => content.front;
   String get back => content.back;
   bool get isLanguageCard => content is LanguageCardContent;
-  bool get isPhraseCard => categories.contains('Phrase');
-  bool get isScriptCard => categories.contains('Script');
-  bool get isWordCard =>
-      isLanguageCard &&
-      !isPhraseCard &&
-      categories.any((value) => value != 'Script');
+  bool get isPhraseCard => hasCategory('Phrase');
+  bool get isScriptCard => hasCategory('Script');
+  bool get isWordCard => isLanguageCard && hasCategory('Word');
+  final List<List<String>> categoryPaths;
+  bool hasCategoryPath(List<String> prefix) => categoryPaths.any(
+    (path) =>
+        path.length >= prefix.length &&
+        Iterable<int>.generate(
+          prefix.length,
+        ).every((i) => path[i] == prefix[i]),
+  );
+  bool hasCategory(String name) =>
+      categoryPaths.any((path) => path.contains(name));
   String? get language => tags['Language']?.firstOrNull;
   final Map<StudyCue, CardSchedule> schedules;
   final Map<StudyCue, List<CardReview>> reviewHistory;
@@ -129,6 +146,7 @@ class StudyCard {
       suspended: suspended ?? this.suspended,
       learningStatus: learningStatus ?? this.learningStatus,
       tags: tags,
+      categoryPaths: categoryPaths,
       modelTypeName: modelTypeName,
       sourceBookId: sourceBookId,
       sourceBookName: sourceBookName,
@@ -164,3 +182,27 @@ Map<String, List<String>> migrateLanguageTags(
     if (categories.isNotEmpty) 'Category': categories.toList(),
   };
 }
+
+/// Compatibility for cached cards received before hierarchical tag paths.
+/// New server paths are authoritative, including user-created subcategories.
+List<List<String>> legacyCategoryPaths(Iterable<String> categories) => [
+  for (final name in categories)
+    if (const {
+      'Noun',
+      'Verb',
+      'Adjective',
+      'Adverb',
+      'Pronoun',
+      'Preposition',
+      'Postposition',
+      'Conjunction',
+      'Numeral',
+      'Classifier',
+      'Particle',
+      'Suffix',
+      'Other',
+    }.contains(name))
+      ['Word', name]
+    else
+      [name],
+];
