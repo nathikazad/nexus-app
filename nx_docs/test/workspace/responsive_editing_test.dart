@@ -349,6 +349,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Document details'));
     await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text('Details').first).dx,
+      lessThan(tester.getTopLeft(find.text('Contents')).dx),
+    );
+    expect(find.byType(Switch), findsWidgets);
     await tester.tap(find.text('Details').first);
     await tester.pumpAndSettle();
     expect(find.byType(Switch), findsWidgets);

@@ -13,10 +13,21 @@ class _DesktopInspector extends ConsumerStatefulWidget {
 }
 
 class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
-  _InspectorTab _tab = _InspectorTab.contents;
+  _InspectorTab? _selectedTab;
 
   @override
   Widget build(BuildContext context) {
+    final mobile = !isDesktopLayout(context);
+    final tab =
+        _selectedTab ??
+        (mobile ? _InspectorTab.details : _InspectorTab.contents);
+    final tabs = mobile
+        ? const [
+            _InspectorTab.details,
+            _InspectorTab.contents,
+            _InspectorTab.ai,
+          ]
+        : _InspectorTab.values;
     final id = widget.documentId;
     final document = id == null
         ? null
@@ -88,27 +99,18 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
             child: Row(
               children: <Widget>[
-                Expanded(
-                  child: _InspectorTabButton(
-                    label: 'Contents',
-                    active: _tab == _InspectorTab.contents,
-                    onTap: () => setState(() => _tab = _InspectorTab.contents),
+                for (final item in tabs)
+                  Expanded(
+                    child: _InspectorTabButton(
+                      label: switch (item) {
+                        _InspectorTab.contents => 'Contents',
+                        _InspectorTab.details => 'Details',
+                        _InspectorTab.ai => 'AI',
+                      },
+                      active: tab == item,
+                      onTap: () => setState(() => _selectedTab = item),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _InspectorTabButton(
-                    label: 'Details',
-                    active: _tab == _InspectorTab.details,
-                    onTap: () => setState(() => _tab = _InspectorTab.details),
-                  ),
-                ),
-                Expanded(
-                  child: _InspectorTabButton(
-                    label: 'AI',
-                    active: _tab == _InspectorTab.ai,
-                    onTap: () => setState(() => _tab = _InspectorTab.ai),
-                  ),
-                ),
               ],
             ),
           ),
@@ -116,14 +118,14 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
           Expanded(
             child: document == null
                 ? const SizedBox.shrink()
-                : _tab == _InspectorTab.ai
+                : tab == _InspectorTab.ai
                 ? NoteCompanion(
                     key: ValueKey<int>(document.id),
                     document: document,
                     embeddedChat: true,
                     voiceEnabled: false,
                   )
-                : _tab == _InspectorTab.details
+                : tab == _InspectorTab.details
                 ? ListView(
                     padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
                     children: <Widget>[
