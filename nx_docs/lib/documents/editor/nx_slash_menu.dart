@@ -4,6 +4,7 @@ part of 'nx_appflowy_blocks.dart';
 Future<void> appendNxDocumentElement(
   BuildContext context,
   EditorState editorState, {
+  bool atSelection = false,
   required Future<List<LinkedModel>> Function({
     required LinkableModelType modelType,
     required String query,
@@ -16,12 +17,19 @@ Future<void> appendNxDocumentElement(
 }) async {
   if (!editorState.editable || editorState.isDisposed) return;
   final picker = context.findAncestorStateOfType<_NxElementPickerScopeState>()!;
-  final anchor = (context.findRenderObject() as RenderBox?)?.localToGlobal(
-    Offset.zero,
-  );
+  // Mobile toolbar callbacks may supply a sliver's build context.
+  final renderObject = context.findRenderObject();
+  final anchor = renderObject is RenderBox
+      ? renderObject.localToGlobal(Offset.zero)
+      : null;
   keepEditorFocusNotifier.increase();
   try {
-    final path = [editorState.document.root.children.length];
+    final selection = editorState.selection;
+    final path = [
+      atSelection && selection != null
+          ? selection.end.path.first + 1
+          : editorState.document.root.children.length,
+    ];
     final transaction = editorState.transaction
       ..insertNode(path, paragraphNode(text: '/'))
       ..afterSelection = Selection.collapsed(Position(path: path, offset: 1));

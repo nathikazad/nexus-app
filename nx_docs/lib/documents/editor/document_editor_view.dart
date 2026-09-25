@@ -19,6 +19,7 @@ import 'package:nx_docs/documents/document_actions.dart';
 import 'package:nx_docs/documents/editor/document_text_scale.dart';
 import 'package:nx_docs/documents/editor/nx_appflowy_blocks.dart';
 import 'package:nx_docs/documents/editor/nx_color_toolbar.dart';
+import 'package:nx_docs/documents/editor/mobile_color_menu.dart';
 import 'package:nx_docs/documents/editor/nx_document_link.dart';
 import 'package:nx_docs/documents/editor/nx_highlight_notes.dart';
 import 'package:nx_documents/nx_documents.dart' as shared_documents;
@@ -28,6 +29,7 @@ part 'editor_canvas.dart';
 part 'editor_content_state.dart';
 part 'editor_navigation.dart';
 part 'editor_toolbar.dart';
+part 'mobile_editor_toolbar.dart';
 
 enum DocumentInteractionMode {
   readOnly,
@@ -241,7 +243,8 @@ class _DocumentLinkLaunchDispatcher {
   }
 }
 
-class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
+class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
+    with WidgetsBindingObserver {
   Timer? _titleSaveDebounce;
   late NxDocument _draftDocument;
   late String _titleText;
@@ -261,6 +264,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
         'document=${widget.document.id}',
       );
     }
+    WidgetsBinding.instance.addObserver(this);
     _draftDocument = widget.document;
     _titleText = widget.document.title;
     _editorMode = widget.interactionMode.isReader
@@ -321,7 +325,13 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
   }
 
   @override
+  void didChangeMetrics() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (kDebugMode) {
       debugPrint(
         '[nx_docs editor lifecycle] body-dispose '
@@ -408,10 +418,16 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
     final mutationController = ref.read(documentMutationControllerProvider);
     final documentTextScale = ref.watch(documentTextScaleProvider);
     final readMode = _editorMode == _DocumentEditorMode.read;
+    final compactKeyboard =
+        usesTouchEditingControls(context) &&
+        (View.of(context).viewInsets.bottom > 0 ||
+            MediaQuery.sizeOf(context).height < 500) &&
+        !_editingTitle;
     final showEditorHeader =
-        (widget.canNavigateBack && widget.onNavigateBack != null) ||
-        widget.interactionMode.canEditContent ||
-        _findBarPresentation != null;
+        !compactKeyboard &&
+        ((widget.canNavigateBack && widget.onNavigateBack != null) ||
+            widget.interactionMode.canEditContent ||
+            _findBarPresentation != null);
     return Focus(
       onKeyEvent: _handleShellKeyEvent,
       child: Column(
@@ -498,7 +514,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                               ],
                             ),
                           ),
-                        if (widget.showDocumentTitle)
+                        if (widget.showDocumentTitle && !compactKeyboard)
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final fittedTitleSize = _fittedTitleFontSize(
@@ -603,7 +619,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody> {
                               );
                             },
                           ),
-                        if (widget.showDocumentTitle)
+                        if (widget.showDocumentTitle && !compactKeyboard)
                           const SizedBox(height: 28),
                         Expanded(
                           child:

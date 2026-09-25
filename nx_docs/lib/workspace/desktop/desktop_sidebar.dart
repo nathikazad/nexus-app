@@ -154,26 +154,32 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
             child: Row(
               children: <Widget>[
-                _SidebarTabButton(
-                  label: 'Docs',
-                  active: workspace.sidebarTab == SidebarTab.documents,
-                  onTap: () => ref
-                      .read(desktopWorkspaceProvider.notifier)
-                      .setSidebarTab(SidebarTab.documents),
+                Expanded(
+                  child: _SidebarTabButton(
+                    label: 'Docs',
+                    active: workspace.sidebarTab == SidebarTab.documents,
+                    onTap: () => ref
+                        .read(desktopWorkspaceProvider.notifier)
+                        .setSidebarTab(SidebarTab.documents),
+                  ),
                 ),
-                _SidebarTabButton(
-                  label: 'Books',
-                  active: workspace.sidebarTab == SidebarTab.books,
-                  onTap: () => ref
-                      .read(desktopWorkspaceProvider.notifier)
-                      .setSidebarTab(SidebarTab.books),
+                Expanded(
+                  child: _SidebarTabButton(
+                    label: 'Books',
+                    active: workspace.sidebarTab == SidebarTab.books,
+                    onTap: () => ref
+                        .read(desktopWorkspaceProvider.notifier)
+                        .setSidebarTab(SidebarTab.books),
+                  ),
                 ),
-                _SidebarTabButton(
-                  label: 'Tags',
-                  active: workspace.sidebarTab == SidebarTab.tags,
-                  onTap: () => ref
-                      .read(desktopWorkspaceProvider.notifier)
-                      .setSidebarTab(SidebarTab.tags),
+                Expanded(
+                  child: _SidebarTabButton(
+                    label: 'Tags',
+                    active: workspace.sidebarTab == SidebarTab.tags,
+                    onTap: () => ref
+                        .read(desktopWorkspaceProvider.notifier)
+                        .setSidebarTab(SidebarTab.tags),
+                  ),
                 ),
               ],
             ),

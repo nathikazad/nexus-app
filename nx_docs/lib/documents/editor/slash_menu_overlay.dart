@@ -33,6 +33,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   final _focusNode = FocusNode(debugLabel: 'nx_slash_menu');
   late final List<SelectionMenuItem> _staticItems;
   late final SelectionMenuService _menuService;
+  final _searchController = TextEditingController();
   var _keyword = '';
   var _selectedIndex = 0;
   var _loadingLinkableModels = false;
@@ -56,7 +57,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
       item.onSelected = widget.onDismiss;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && !usesTouchEditingControls(context)) {
         _focusNode.requestFocus();
       }
     });
@@ -64,6 +65,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _focusNode.dispose();
     keepEditorFocusNotifier.decrease();
     super.dispose();
@@ -72,6 +74,68 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
   @override
   Widget build(BuildContext context) {
     final rows = _rows;
+    if (usesTouchEditingControls(context)) {
+      return Material(
+        color: AppColors.panel,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Insert block',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close insert',
+                      onPressed: widget.onDismiss,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search blocks or links',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: _searchFromKeyboard,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _loadingLinkableModels
+                    ? const Center(child: CircularProgressIndicator())
+                    : rows.isEmpty
+                    ? const Center(child: Text('No results'))
+                    : ListView.builder(
+                        itemCount: rows.length,
+                        itemBuilder: (context, index) => ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          child: rows[index].build(
+                            context,
+                            selected: false,
+                            editorState: widget.editorState,
+                            style: _menuService.style,
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Focus(
       focusNode: _focusNode,
       onKeyEvent: _onKeyEvent,
@@ -117,6 +181,27 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
         ),
       ),
     );
+  }
+
+  void _searchFromKeyboard(String value) {
+    final selection = _restoreInsertionSelection();
+    if (selection == null) return;
+    final node = widget.editorState.getNodeAtPath(selection.end.path);
+    if (node == null) return;
+    final start = selection.end.offset - _keyword.length;
+    if (start < 0) return;
+    final transaction = widget.editorState.transaction
+      ..deleteText(node, start, _keyword.length)
+      ..insertText(node, start, value)
+      ..afterSelection = Selection.collapsed(
+        Position(path: selection.end.path, offset: start + value.length),
+      );
+    widget.editorState.apply(transaction);
+    setState(() {
+      _keyword = value;
+      _selectedIndex = 0;
+    });
+    _maybeFetchLinkableModels();
   }
 
   List<_NxSlashRow> get _rows {
@@ -260,6 +345,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
       _keyword = command;
       _selectedIndex = 0;
     });
+    _searchController.text = _keyword;
     _maybeFetchLinkableModels();
   }
 

@@ -258,7 +258,15 @@ class _InspectorActionsState extends ConsumerState<_InspectorActions> {
       await ref
           .read(documentMutationControllerProvider)
           .deleteDocument(widget.document);
-      ref.read(desktopWorkspaceProvider.notifier).closeTab(widget.document.id);
+      if (!mounted) return;
+      if (isDesktopLayout(context)) {
+        ref
+            .read(desktopWorkspaceProvider.notifier)
+            .closeTab(widget.document.id);
+      } else {
+        ref.read(mobileWorkspaceProvider.notifier).back();
+        if (mounted) Navigator.of(context).pop();
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,

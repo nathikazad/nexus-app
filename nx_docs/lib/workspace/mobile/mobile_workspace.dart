@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_docs/account/account_providers.dart';
+import 'package:nx_docs/workspace/mobile/mobile_create_button.dart';
+import 'package:nx_docs/workspace/desktop/desktop_workspace.dart';
 import 'package:nx_docs/documents/document_providers.dart';
 import 'package:nx_docs/library/library_providers.dart';
 import 'package:nx_docs/app/theme.dart';
-import 'package:nx_docs/documents/document_data_providers.dart';
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/tags/tag_system.dart';
 import 'package:nx_docs/books/book_shelf.dart';
@@ -53,6 +54,7 @@ class _MobileSectionPage extends ConsumerWidget {
         preferredSize: const Size.fromHeight(56),
         child: _MobileTopChrome(
           title: 'Nx Docs',
+          leading: const MobileCreateButton(),
           trailingWidth: 76,
           trailing: Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -91,7 +93,7 @@ class _MobileSectionPage extends ConsumerWidget {
   }
 }
 
-class _MobilePageTransition extends StatefulWidget {
+class _MobilePageTransition extends StatelessWidget {
   const _MobilePageTransition({
     required this.pageKey,
     required this.direction,
@@ -103,93 +105,25 @@ class _MobilePageTransition extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_MobilePageTransition> createState() => _MobilePageTransitionState();
-}
-
-class _MobilePageTransitionState extends State<_MobilePageTransition>
-    with SingleTickerProviderStateMixin {
-  static const _duration = Duration(milliseconds: 240);
-
-  late final AnimationController _controller;
-  late Widget _currentChild;
-  Widget? _outgoingChild;
-  late Object _currentKey;
-  MobileNavigationDirection _direction = MobileNavigationDirection.neutral;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentKey = widget.pageKey;
-    _currentChild = widget.child;
-    _controller = AnimationController(vsync: this, duration: _duration)
-      ..value = 1
-      ..addStatusListener(_handleAnimationStatus);
-  }
-
-  @override
-  void didUpdateWidget(covariant _MobilePageTransition oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_currentKey == widget.pageKey) {
-      _currentChild = widget.child;
-      return;
-    }
-    _outgoingChild = _currentChild;
-    _currentChild = widget.child;
-    _currentKey = widget.pageKey;
-    _direction = widget.direction;
-    _controller.forward(from: 0);
-  }
-
-  void _handleAnimationStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed &&
-        _outgoingChild != null &&
-        mounted) {
-      setState(() => _outgoingChild = null);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final value = Curves.easeOutCubic.transform(_controller.value);
-        final direction = switch (_direction) {
-          MobileNavigationDirection.forward => 1.0,
-          MobileNavigationDirection.backward => -1.0,
-          MobileNavigationDirection.neutral => 0.0,
-        };
-        return Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            if (_outgoingChild != null)
-              IgnorePointer(
-                child: ExcludeSemantics(
-                  child: Opacity(
-                    opacity: 1 - (0.35 * value),
-                    child: FractionalTranslation(
-                      translation: Offset(-direction * 0.18 * value, 0),
-                      child: _outgoingChild!,
-                    ),
-                  ),
-                ),
-              ),
-            Opacity(
-              opacity: 0.65 + (0.35 * value),
-              child: FractionalTranslation(
-                translation: Offset(direction * 0.18 * (1 - value), 0),
-                child: _currentChild,
-              ),
-            ),
-          ],
-        );
-      },
+    final offset = direction == MobileNavigationDirection.backward ? -.08 : .08;
+    // AnimatedSwitcher keeps the outgoing editor mounted in place. Rebuilding
+    // it in a second slot would discard selection and pending typing saves.
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeOutCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: Offset(offset, 0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(key: ValueKey(pageKey), child: child),
     );
   }
 }
@@ -220,7 +154,7 @@ class _MobileTopChrome extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            SizedBox(width: 38, child: leading),
+            SizedBox(width: 48, child: leading),
             Expanded(
               child: Text(
                 title,
@@ -707,16 +641,17 @@ class _MobileEditor extends ConsumerWidget {
             icon: Icon(Icons.arrow_back, size: 20, color: AppColors.muted),
           ),
           trailing: IconButton(
-            onPressed: () =>
-                _showDocumentSheet(context, ref, documentId, document),
+            tooltip: 'Document details',
+            onPressed: () => showDocumentInspectorSheet(context, documentId),
             icon: Icon(Icons.more_horiz, size: 22, color: AppColors.muted),
           ),
         ),
       ),
       body: DocumentEditorView(
         documentId: documentId,
-        interactionMode: DocumentInteractionMode.highlightOnly,
-        showDocumentTitle: false,
+        interactionMode: DocumentInteractionMode.edit,
+        showDocumentTitle: true,
+        showCompanion: false,
         horizontalPadding: 16,
         contentTopPadding: 12,
         onOpenDocumentLink: (linkedDocumentId) => ref
@@ -730,105 +665,6 @@ class _MobileEditor extends ConsumerWidget {
                 onBack: () => ref.read(mobileWorkspaceProvider.notifier).back(),
                 onClear: () {},
               ),
-      ),
-    );
-  }
-
-  void _showDocumentSheet(
-    BuildContext context,
-    WidgetRef ref,
-    int documentId,
-    NxDocument? cachedDocument,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: AppColors.panel,
-      builder: (context) {
-        final document = cachedDocument;
-        final snaps =
-            ref.watch(documentSnapshotsProvider(documentId)).value ?? const [];
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-          children: <Widget>[
-            const Text(
-              'Details',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            if (document != null) ...<Widget>[
-              _SheetPair(label: 'Status', value: document.status),
-              _SheetPair(
-                label: 'Tags',
-                value: [...document.topics, ...document.areaTags].join(', '),
-              ),
-              _SheetPair(
-                label: 'Document',
-                value:
-                    '${document.wordCount} words · Version ${document.versionNumber}',
-              ),
-              const Divider(height: 28),
-              Text(
-                'Links',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final link in document.links)
-                _SheetPair(label: link.modelType, value: link.name),
-              const Divider(height: 28),
-              Text(
-                'History',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final snap in snaps)
-                _SheetPair(
-                  label: 'Version ${snap.versionNumber}',
-                  value: snap.changeSummary,
-                ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _SheetPair extends StatelessWidget {
-  const _SheetPair({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            width: 86,
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 12, color: AppColors.muted),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 12, color: AppColors.text),
-            ),
-          ),
-        ],
       ),
     );
   }

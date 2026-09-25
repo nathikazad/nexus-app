@@ -60,9 +60,18 @@ class _InspectorLinksEditor extends ConsumerWidget {
             _OtherLinkRow(
               link: link,
               onTap: _isDocumentLink(link)
-                  ? () => ref
-                        .read(desktopWorkspaceProvider.notifier)
-                        .openDocument(link.id)
+                  ? () {
+                      if (isDesktopLayout(context)) {
+                        ref
+                            .read(desktopWorkspaceProvider.notifier)
+                            .openDocument(link.id);
+                      } else {
+                        Navigator.of(context).pop();
+                        ref
+                            .read(mobileWorkspaceProvider.notifier)
+                            .openDocumentFromLink(link.id);
+                      }
+                    }
                   : null,
             ),
       ],

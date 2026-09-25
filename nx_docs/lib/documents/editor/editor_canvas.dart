@@ -47,7 +47,8 @@ class _NxAppFlowyEditor extends StatefulWidget {
   State<_NxAppFlowyEditor> createState() => _NxAppFlowyEditorState();
 }
 
-class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
+class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
+    with WidgetsBindingObserver {
   static const _scrollAnchorSaveDelay = Duration(milliseconds: 450);
   static const _scrollAnchorRestoreRetryDelay = Duration(milliseconds: 80);
   static const _maxScrollAnchorRestoreAttempts = 16;
@@ -82,6 +83,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   void initState() {
     super.initState();
     _createEditor();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
@@ -113,7 +115,26 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 
   @override
+  void didChangeMetrics() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _flushPendingSave();
+  }
+
+  void _flushPendingSave() {
+    if (_saveDebounce?.isActive ?? false) {
+      _saveDebounce?.cancel();
+      _saveCurrentDraft(DraftSavePolicy.immediate);
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _flushPendingSave();
     _saveDebounce?.cancel();
     _nextImmediateSaveTimer?.cancel();
     _clearActiveHeading(afterFrame: true);
@@ -132,7 +153,8 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     _editorState = EditorState(
       document: _documentFromDocument(widget.document),
     );
-    _editorState.editable = widget.interactionMode.canEditContent;
+    _editorState.editable =
+        widget.interactionMode.canEditContent && widget.editorMode.showsCaret;
     _scrollController = EditorScrollController(
       editorState: _editorState,
       shrinkWrap: false,
@@ -162,6 +184,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 
   void _disposeEditor() {
+    _flushPendingSave();
     _nextImmediateSaveTimer?.cancel();
     _nextImmediateSaveTimer = null;
     _scrollAnchorSaveDebounce?.cancel();
@@ -179,7 +202,6 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
     documentAudioBlockRequestNotifier.removeListener(_handleAudioBlockRequest);
     widget.onFindBarChanged(null);
     _transactionSubscription?.cancel();
-    _findSearchService?.findAndHighlight('');
     _findSearchService?.dispose();
     _findSearchService = null;
     _scrollController.dispose();
@@ -605,7 +627,8 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 
   void _handleEditorModeChanged() {
-    _editorState.editable = widget.interactionMode.canEditContent;
+    _editorState.editable =
+        widget.interactionMode.canEditContent && widget.editorMode.showsCaret;
     final onChanged = widget.onChanged;
     if (!widget.interactionMode.canPersistChanges || onChanged == null) return;
     final anchor = _currentScrollAnchor();
@@ -730,7 +753,6 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   }
 
   void _closeFindBar() {
-    _findSearchService?.findAndHighlight('');
     widget.onFindBarChanged(null);
     if (!mounted || !_showFindBar) return;
     setState(() => _showFindBar = false);
@@ -821,102 +843,99 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
   Widget build(BuildContext context) {
     final showsCaret = widget.editorMode.showsCaret;
     final disableReaderKeyboard =
-        widget.interactionMode.isReader && !isDesktopLayout(context);
+        !widget.editorMode.showsCaret && !isDesktopLayout(context);
     final editorStyle = _editorStyle(
       widget.editorMode,
       textScaleFactor: widget.textScaleFactor,
-      useMobileSelectionHandles: !isDesktopLayout(context),
+      useMobileSelectionHandles: usesTouchEditingControls(context),
     ).copyWith(cursorColor: showsCaret ? AppColors.text : Colors.transparent);
-    final editor = NxElementPickerScope(
-      key: ObjectKey(_editorState),
-      enabled: widget.interactionMode.canEditContent && widget.active,
-      child: AppFlowyEditor(
-        editable: widget.interactionMode.canEditContent,
-        disableKeyboardService: disableReaderKeyboard,
-        editorState: _editorState,
-        editorScrollController: _scrollController,
-        editorStyle: editorStyle,
-        blockComponentBuilders: nxBlockComponentBuilders(
-          // AppFlowy's editable table can reserve its stored height without
-          // painting imported cells on macOS. Keep the stable content renderer
-          // in both modes so switching to Edit cannot reintroduce a blank block.
-          useReadTable: true,
-          canvasDocumentId: widget.document.id.toString(),
-          // widget.document comes from the stored document session, not the
-          // live editor draft. Pending autosaves continue independently.
-          isCanvasIdentityPersisted: (id) =>
-              hasPersistedCanvasIdentity(widget.document.jsonDocument, id),
-          persistCanvasDocument:
-              !widget.interactionMode.canEditContent || widget.onChanged == null
-              ? null
-              : () async {
-                  if (!mounted) {
-                    throw StateError(
-                      'Document closed; canvas recovery has been kept.',
-                    );
-                  }
-                  _saveDebounce?.cancel();
-                  await widget.onChanged!(
-                    _currentDraftDocument(),
-                    DraftSavePolicy.deferred,
+    final editor = AppFlowyEditor(
+      editable: widget.interactionMode.canEditContent && showsCaret,
+      disableKeyboardService: disableReaderKeyboard,
+      editorState: _editorState,
+      editorScrollController: _scrollController,
+      editorStyle: editorStyle,
+      blockComponentBuilders: nxBlockComponentBuilders(
+        // AppFlowy's editable table can reserve its stored height without
+        // painting imported cells on macOS. Keep the stable content renderer
+        // in both modes so switching to Edit cannot reintroduce a blank block.
+        useReadTable: true,
+        canvasDocumentId: widget.document.id.toString(),
+        // widget.document comes from the stored document session, not the
+        // live editor draft. Pending autosaves continue independently.
+        isCanvasIdentityPersisted: (id) =>
+            hasPersistedCanvasIdentity(widget.document.jsonDocument, id),
+        persistCanvasDocument:
+            !widget.interactionMode.canEditContent || widget.onChanged == null
+            ? null
+            : () async {
+                if (!mounted) {
+                  throw StateError(
+                    'Document closed; canvas recovery has been kept.',
                   );
-                },
-          deleteDocumentImage: widget.deleteDocumentImage,
-          resolveDocumentImage: widget.resolveDocumentImage,
-          documentImageBaseUrl: widget.documentImageBaseUrl,
-        ),
-        characterShortcutEvents: widget.interactionMode.isReader
-            ? const <CharacterShortcutEvent>[]
-            : <CharacterShortcutEvent>[
-                ...standardCharacterShortcutEvents.where(
-                  (event) => event.key != 'show the slash menu',
-                ),
-                nxSlashCommand(
-                  searchLinkableModels: widget.searchLinkableModels,
-                  createLinkedDocument: widget.createLinkedDocument!,
-                  onLinkableModelSelected: widget.onLinkableModelSelected!,
-                  uploadDocumentImage: widget.uploadDocumentImage,
-                ),
-              ],
-        commandShortcutEvents: _commandShortcutEvents(),
-        footer: widget.interactionMode.canEditContent
-            ? Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 72),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Builder(
-                    builder: (buttonContext) => IconButton(
-                      key: const Key('document-end-add-element'),
-                      tooltip: 'Add element',
-                      icon: const Icon(Icons.add, size: 18),
-                      color: AppColors.faint,
-                      padding: const EdgeInsets.only(right: 4),
-                      constraints: const BoxConstraints.tightFor(
-                        width: 22,
-                        height: 32,
-                      ),
-                      style: IconButton.styleFrom(
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () => appendNxDocumentElement(
-                        buttonContext,
-                        _editorState,
-                        searchLinkableModels: widget.searchLinkableModels,
-                        createLinkedDocument: widget.createLinkedDocument!,
-                        onLinkableModelSelected:
-                            widget.onLinkableModelSelected!,
-                        uploadDocumentImage: widget.uploadDocumentImage,
-                      ),
+                }
+                _saveDebounce?.cancel();
+                await widget.onChanged!(
+                  _currentDraftDocument(),
+                  DraftSavePolicy.deferred,
+                );
+              },
+        deleteDocumentImage: widget.deleteDocumentImage,
+        resolveDocumentImage: widget.resolveDocumentImage,
+        documentImageBaseUrl: widget.documentImageBaseUrl,
+      ),
+      characterShortcutEvents: widget.interactionMode.isReader
+          ? const <CharacterShortcutEvent>[]
+          : <CharacterShortcutEvent>[
+              ...standardCharacterShortcutEvents.where(
+                (event) => event.key != 'show the slash menu',
+              ),
+              nxSlashCommand(
+                searchLinkableModels: widget.searchLinkableModels,
+                createLinkedDocument: widget.createLinkedDocument!,
+                onLinkableModelSelected: widget.onLinkableModelSelected!,
+                uploadDocumentImage: widget.uploadDocumentImage,
+              ),
+            ],
+      commandShortcutEvents: _commandShortcutEvents(),
+      footer: widget.interactionMode.canEditContent && showsCaret
+          ? Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 72),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Builder(
+                  builder: (buttonContext) => IconButton(
+                    key: const Key('document-end-add-element'),
+                    tooltip: 'Insert block',
+                    icon: const Icon(Icons.add, size: 18),
+                    color: AppColors.faint,
+                    padding: const EdgeInsets.only(right: 4),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 44,
+                      height: 44,
+                    ),
+                    style: IconButton.styleFrom(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () => appendNxDocumentElement(
+                      buttonContext,
+                      _editorState,
+                      searchLinkableModels: widget.searchLinkableModels,
+                      createLinkedDocument: widget.createLinkedDocument!,
+                      onLinkableModelSelected: widget.onLinkableModelSelected!,
+                      uploadDocumentImage: widget.uploadDocumentImage,
                     ),
                   ),
                 ),
-              )
-            : const SizedBox(height: 24),
-      ),
+              ),
+            )
+          : const SizedBox(height: 24),
     );
     final Widget editorSurface;
-    if (widget.interactionMode.isReader) {
+    if (widget.interactionMode.isReader || !showsCaret) {
       editorSurface = editor;
+    } else if (usesTouchEditingControls(context)) {
+      editorSurface = _mobileEditorSurface(editor);
     } else {
       editorSurface = FloatingToolbar(
         editorState: _editorState,
@@ -946,32 +965,10 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor> {
         child: editor,
       );
     }
-    if (isDesktopLayout(context) || !_documentCanScroll) {
-      return editorSurface;
-    }
-    return Stack(
-      children: [
-        Positioned.fill(child: editorSurface),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 8, 4, 8),
-              child: Align(
-                alignment: Alignment(1, _documentScrollProgress * 2 - 1),
-                child: Container(
-                  key: const ValueKey<String>('document-scroll-position-dot'),
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: AppColors.text.withValues(alpha: 0.38),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return NxElementPickerScope(
+      key: ObjectKey(_editorState),
+      enabled: widget.interactionMode.canEditContent && widget.active,
+      child: _withScrollIndicator(editorSurface),
     );
   }
 }

@@ -52,6 +52,42 @@ class _NxElementPickerScopeState extends State<NxElementPickerScope> {
         final menu = _menu;
         if (menu == null) return const SizedBox.shrink();
         final viewport = MediaQuery.of(context);
+        if (usesTouchEditingControls(context)) {
+          return Positioned.fill(
+            child: Material(
+              color: Colors.black26,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: close,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: viewport.viewInsets.bottom,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: math.min(
+                        380,
+                        math.max(
+                          120,
+                          viewport.size.height -
+                              viewport.viewInsets.bottom -
+                              viewport.padding.top -
+                              16,
+                        ),
+                      ),
+                      child: menu,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         final left = (_anchor.dx + 8).clamp(
           8.0,
           math.max(8.0, viewport.size.width - 348),

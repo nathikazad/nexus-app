@@ -281,19 +281,35 @@ class _ReadEditModeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? AppColors.onFloating : AppColors.muted;
-    return InkWell(
-      onTap: selected ? null : onPressed,
-      borderRadius: BorderRadius.circular(4),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.floating : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
+    if (usesTouchEditingControls(context)) {
+      return TextButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: TextButton.styleFrom(
+          minimumSize: const Size(72, 44),
+          foregroundColor: foreground,
+          backgroundColor: selected ? AppColors.floating : Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
         ),
-        child: Icon(icon, size: 16, color: foreground),
+      );
+    }
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: selected ? null : onPressed,
+        borderRadius: BorderRadius.circular(4),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.floating : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Icon(icon, size: 16, color: foreground),
+        ),
       ),
     );
   }

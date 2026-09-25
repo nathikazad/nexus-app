@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_docs/account/account_providers.dart';
+import 'package:nx_docs/workspace/layout.dart';
 import 'package:nx_docs/documents/document_providers.dart';
 import 'package:nx_docs/library/library_providers.dart';
 import 'package:nx_docs/app/theme.dart';
@@ -81,4 +82,26 @@ class DesktopWorkspace extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The same document actions are available in a sheet when side panels do not fit.
+Future<void> showDocumentInspectorSheet(BuildContext context, int documentId) {
+  FocusManager.instance.primaryFocus?.unfocus();
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    backgroundColor: AppColors.panel,
+    builder: (context) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .85,
+        child: _DesktopInspector(
+          documentId: documentId,
+          onClose: () => Navigator.of(context).pop(),
+        ),
+      ),
+    ),
+  );
 }

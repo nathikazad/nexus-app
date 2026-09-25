@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nx_docs/app/theme.dart';
+import 'package:nx_docs/workspace/layout.dart';
 import 'package:nx_canvas_core/drawing.dart';
 import 'package:nx_canvas_core/preview.dart';
 import 'package:nx_docs/documents/editor/nx_canvas_session.dart';

@@ -3,9 +3,10 @@ part of 'desktop_workspace.dart';
 enum _InspectorTab { contents, details, ai }
 
 class _DesktopInspector extends ConsumerStatefulWidget {
-  const _DesktopInspector({required this.documentId});
+  const _DesktopInspector({required this.documentId, this.onClose});
 
   final int? documentId;
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<_DesktopInspector> createState() => _DesktopInspectorState();
@@ -47,7 +48,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
             child: Row(
               children: <Widget>[
                 Text(
-                  'INSPECTOR',
+                  widget.onClose == null ? 'INSPECTOR' : 'DOCUMENT',
                   style: TextStyle(
                     fontSize: 11,
                     color: AppColors.faint,
@@ -56,18 +57,22 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                 ),
                 const Spacer(),
                 IconButton(
-                  tooltip: 'Collapse inspector',
+                  tooltip: widget.onClose == null
+                      ? 'Collapse inspector'
+                      : 'Close details',
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints.tightFor(
                     width: 28,
                     height: 28,
                   ),
-                  onPressed: () => ref
-                      .read(desktopWorkspaceProvider.notifier)
-                      .toggleInspector(),
+                  onPressed:
+                      widget.onClose ??
+                      () => ref
+                          .read(desktopWorkspaceProvider.notifier)
+                          .toggleInspector(),
                   icon: Icon(
-                    Icons.chevron_right,
+                    widget.onClose == null ? Icons.chevron_right : Icons.close,
                     size: 17,
                     color: AppColors.faint,
                   ),
@@ -180,7 +185,10 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                       ),
                     ],
                   )
-                : _InspectorContents(document: document),
+                : _InspectorContents(
+                    document: document,
+                    onNavigate: widget.onClose,
+                  ),
           ),
         ],
       ),
@@ -233,9 +241,10 @@ class _InspectorTabButton extends StatelessWidget {
 }
 
 class _InspectorContents extends StatefulWidget {
-  const _InspectorContents({required this.document});
+  const _InspectorContents({required this.document, this.onNavigate});
 
   final NxDocument document;
+  final VoidCallback? onNavigate;
 
   @override
   State<_InspectorContents> createState() => _InspectorContentsState();
@@ -297,10 +306,13 @@ class _InspectorContentsState extends State<_InspectorContents> {
                     key: _headingKeys[heading.blockIndex],
                     heading: heading,
                     active: heading.blockIndex == activeBlockIndex,
-                    onTap: () => requestDocumentHeadingScroll(
-                      documentId: widget.document.id,
-                      blockIndex: heading.blockIndex,
-                    ),
+                    onTap: () {
+                      widget.onNavigate?.call();
+                      requestDocumentHeadingScroll(
+                        documentId: widget.document.id,
+                        blockIndex: heading.blockIndex,
+                      );
+                    },
                   ),
             ],
           ),
