@@ -342,12 +342,14 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                         repository: audio,
                       ),
                     ],
-                    const SizedBox(width: 12),
-                    Icon(
-                      _canDrag ? Icons.drag_indicator : Icons.chevron_right,
-                      size: 17,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    if (_canDrag) ...[
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.drag_indicator,
+                        size: 17,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ],
                   ],
                 ),
               ),
