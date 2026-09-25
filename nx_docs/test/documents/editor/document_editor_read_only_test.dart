@@ -397,7 +397,7 @@ void main() {
     await tester.pump();
     expect(tester.testTextInput.isVisible, isTrue);
 
-    await tester.tap(find.byIcon(Icons.article_outlined));
+    await tester.tap(find.byTooltip('Read'));
     await tester.pumpAndSettle();
 
     expect(tester.testTextInput.isVisible, isFalse);
