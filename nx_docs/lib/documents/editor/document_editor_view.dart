@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:nx_docs/documents/editor/document_scroll_store.dart';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
+import 'package:appflowy_editor/src/editor/block_component/base_component/widget/ignore_parent_gesture.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -423,11 +424,105 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
         (View.of(context).viewInsets.bottom > 0 ||
             MediaQuery.sizeOf(context).height < 500) &&
         !_editingTitle;
+    final floatingModeToggle =
+        !isDesktopLayout(context) && widget.interactionMode.canEditContent;
     final showEditorHeader =
         !compactKeyboard &&
         ((widget.canNavigateBack && widget.onNavigateBack != null) ||
-            widget.interactionMode.canEditContent ||
+            (widget.interactionMode.canEditContent && !floatingModeToggle) ||
             _findBarPresentation != null);
+    final Widget? documentTitle = widget.showDocumentTitle && !compactKeyboard
+        ? LayoutBuilder(
+            builder: (context, constraints) {
+              final fittedTitleSize = _fittedTitleFontSize(
+                context: context,
+                text: _titleText,
+                maxWidth: constraints.maxWidth - 4,
+                baseSize: titleSize,
+              );
+              final titleStyle = TextStyle(
+                color: AppColors.text,
+                fontSize: titleSize,
+                fontWeight: FontWeight.w600,
+                height: 1.16,
+                letterSpacing: 0,
+              );
+              return SizedBox(
+                width: constraints.maxWidth,
+                height: titleSize * 1.26,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 90),
+                  child: _editingTitle && widget.interactionMode.canEditContent
+                      ? TextField(
+                          key: ValueKey<String>(
+                            'title-editor-${widget.document.id}',
+                          ),
+                          controller: _titleController,
+                          focusNode: _titleFocusNode,
+                          cursorColor: _editorMode.showsCaret
+                              ? AppColors.text
+                              : Colors.transparent,
+                          onChanged: _scheduleTitleSave,
+                          onSubmitted: (_) => _titleFocusNode.unfocus(),
+                          onTapOutside: (_) => _titleFocusNode.unfocus(),
+                          maxLines: 1,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          style: titleStyle.copyWith(fontSize: fittedTitleSize),
+                        )
+                      : MouseRegion(
+                          key: ValueKey<String>(
+                            'title-display-${widget.document.id}',
+                          ),
+                          cursor: widget.interactionMode.isReader
+                              ? MouseCursor.defer
+                              : SystemMouseCursors.text,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: widget.interactionMode.isReader
+                                ? null
+                                : () {
+                                    setState(() => _editingTitle = true);
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          if (!mounted) {
+                                            return;
+                                          }
+                                          _titleFocusNode.requestFocus();
+                                          _titleController.selection =
+                                              TextSelection.collapsed(
+                                                offset: _titleController
+                                                    .text
+                                                    .length,
+                                              );
+                                        });
+                                  },
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: AutoSizeText(
+                                _titleText.trim().isEmpty
+                                    ? 'Untitled document'
+                                    : _titleText.trim(),
+                                maxLines: 1,
+                                minFontSize: 8,
+                                stepGranularity: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: titleStyle,
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
+              );
+            },
+          )
+        : null;
     return Focus(
       onKeyEvent: _handleShellKeyEvent,
       child: Column(
@@ -457,312 +552,267 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
                     constraints: BoxConstraints(
                       maxWidth: readMode ? 720 : double.infinity,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        if (showEditorHeader)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: <Widget>[
-                                if (widget.canNavigateBack &&
-                                    widget.onNavigateBack != null)
-                                  TextButton.icon(
-                                    onPressed: widget.onNavigateBack,
-                                    icon: const Icon(
-                                      Icons.arrow_back,
-                                      size: 16,
-                                    ),
-                                    label: const Text('Back'),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: AppColors.muted,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 0,
-                                        vertical: 6,
-                                      ),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                  ),
-                                const Spacer(),
-                                if (widget.active)
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 120),
-                                    switchInCurve: Curves.easeOut,
-                                    switchOutCurve: Curves.easeIn,
-                                    child: _findBarPresentation == null
-                                        ? widget.interactionMode.isReader
-                                              ? const SizedBox.shrink()
-                                              : _ReadEditModeToggle(
-                                                  key: const ValueKey<String>(
-                                                    'mode-toggle',
-                                                  ),
-                                                  mode: _editorMode,
-                                                  onChanged: _setEditorMode,
-                                                )
-                                        : _EditorFindBar(
-                                            key: ValueKey<int>(
-                                              _findBarPresentation!.serial,
-                                            ),
-                                            searchService: _findBarPresentation!
-                                                .searchService,
-                                            onClose:
-                                                _findBarPresentation!.onClose,
-                                          ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        if (widget.showDocumentTitle && !compactKeyboard)
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final fittedTitleSize = _fittedTitleFontSize(
-                                context: context,
-                                text: _titleText,
-                                maxWidth: constraints.maxWidth - 4,
-                                baseSize: titleSize,
-                              );
-                              final titleStyle = TextStyle(
-                                color: AppColors.text,
-                                fontSize: titleSize,
-                                fontWeight: FontWeight.w600,
-                                height: 1.16,
-                                letterSpacing: 0,
-                              );
-                              return SizedBox(
-                                width: constraints.maxWidth,
-                                height: titleSize * 1.26,
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 90),
-                                  child:
-                                      _editingTitle &&
-                                          widget.interactionMode.canEditContent
-                                      ? TextField(
-                                          key: ValueKey<String>(
-                                            'title-editor-${widget.document.id}',
-                                          ),
-                                          controller: _titleController,
-                                          focusNode: _titleFocusNode,
-                                          cursorColor: _editorMode.showsCaret
-                                              ? AppColors.text
-                                              : Colors.transparent,
-                                          onChanged: _scheduleTitleSave,
-                                          onSubmitted: (_) =>
-                                              _titleFocusNode.unfocus(),
-                                          onTapOutside: (_) =>
-                                              _titleFocusNode.unfocus(),
-                                          maxLines: 1,
-                                          decoration: const InputDecoration(
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            filled: false,
-                                            isDense: true,
-                                            contentPadding: EdgeInsets.zero,
-                                          ),
-                                          style: titleStyle.copyWith(
-                                            fontSize: fittedTitleSize,
-                                          ),
-                                        )
-                                      : MouseRegion(
-                                          key: ValueKey<String>(
-                                            'title-display-${widget.document.id}',
-                                          ),
-                                          cursor:
-                                              widget.interactionMode.isReader
-                                              ? MouseCursor.defer
-                                              : SystemMouseCursors.text,
-                                          child: GestureDetector(
-                                            behavior: HitTestBehavior.opaque,
-                                            onTap:
-                                                widget.interactionMode.isReader
-                                                ? null
-                                                : () {
-                                                    setState(
-                                                      () =>
-                                                          _editingTitle = true,
-                                                    );
-                                                    WidgetsBinding.instance
-                                                        .addPostFrameCallback((
-                                                          _,
-                                                        ) {
-                                                          if (!mounted) return;
-                                                          _titleFocusNode
-                                                              .requestFocus();
-                                                          _titleController
-                                                                  .selection =
-                                                              TextSelection.collapsed(
-                                                                offset:
-                                                                    _titleController
-                                                                        .text
-                                                                        .length,
-                                                              );
-                                                        });
-                                                  },
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: AutoSizeText(
-                                                _titleText.trim().isEmpty
-                                                    ? 'Untitled document'
-                                                    : _titleText.trim(),
-                                                maxLines: 1,
-                                                minFontSize: 8,
-                                                stepGranularity: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: titleStyle,
-                                              ),
-                                            ),
-                                          ),
+                    child: Stack(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (showEditorHeader)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Row(
+                                  children: <Widget>[
+                                    if (widget.canNavigateBack &&
+                                        widget.onNavigateBack != null)
+                                      TextButton.icon(
+                                        onPressed: widget.onNavigateBack,
+                                        icon: const Icon(
+                                          Icons.arrow_back,
+                                          size: 16,
                                         ),
+                                        label: const Text('Back'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: AppColors.muted,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 0,
+                                            vertical: 6,
+                                          ),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                      ),
+                                    const Spacer(),
+                                    if (widget.active)
+                                      AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 120,
+                                        ),
+                                        switchInCurve: Curves.easeOut,
+                                        switchOutCurve: Curves.easeIn,
+                                        child: _findBarPresentation == null
+                                            ? widget.interactionMode.isReader
+                                                  ? const SizedBox.shrink()
+                                                  : _ReadEditModeToggle(
+                                                      key:
+                                                          const ValueKey<
+                                                            String
+                                                          >('mode-toggle'),
+                                                      mode: _editorMode,
+                                                      onChanged: _setEditorMode,
+                                                    )
+                                            : _EditorFindBar(
+                                                key: ValueKey<int>(
+                                                  _findBarPresentation!.serial,
+                                                ),
+                                                searchService:
+                                                    _findBarPresentation!
+                                                        .searchService,
+                                                onClose: _findBarPresentation!
+                                                    .onClose,
+                                              ),
+                                      ),
+                                  ],
                                 ),
-                              );
-                            },
-                          ),
-                        if (widget.showDocumentTitle && !compactKeyboard)
-                          const SizedBox(height: 28),
-                        Expanded(
-                          child:
-                              widget.interactionMode ==
-                                  DocumentInteractionMode.highlightOnly
-                              ? shared_documents.DocumentReader(
-                                  extraBlockBuilders: {
-                                    nxCanvasBlockType:
-                                        NxCanvasBlockComponentBuilder(),
-                                  },
-                                  content: shared_documents.DocumentContent(
-                                    identity: shared_documents.DocumentIdentity(
-                                      id: widget.document.id,
-                                      modelType:
-                                          widget.document.modelTypeName
-                                              .trim()
-                                              .isEmpty
-                                          ? 'Document'
-                                          : widget.document.modelTypeName,
-                                    ),
-                                    title: widget.document.title,
-                                    plainText: widget.document.document,
-                                    jsonDocument: widget.document.jsonDocument,
-                                    updatedAt: widget.document.updatedAt,
-                                  ),
-                                  textScaleFactor: documentTextScale,
-                                  imageUrlResolver:
-                                      imageAssetService?.resolveImageUrl,
-                                  onOpenLink: (href) async {
-                                    if (await _handleDocumentLinkLaunch(href)) {
-                                      return true;
-                                    }
-                                    return safeLaunchUrl(href);
-                                  },
-                                  onChanged: (content) async {
-                                    _draftDocument = _draftDocument.copyWith(
-                                      document: content.plainText,
-                                      jsonDocument: content.jsonDocument,
-                                    );
-                                    await mutationController.saveDraft(
-                                      _draftDocument,
-                                      policy: DraftSavePolicy.immediate,
-                                    );
-                                  },
-                                )
-                              : _NxAppFlowyEditor(
-                                  scrollStore: widget.scrollStore,
-                                  document: widget.document,
-                                  changeOrigin: widget.changeOrigin,
-                                  textScaleFactor: documentTextScale,
-                                  editorMode: _editorMode,
-                                  interactionMode: widget.interactionMode,
-                                  active: widget.active,
-                                  searchLinkableModels:
-                                      ({required modelType, required query}) {
-                                        final service = ref.read(
-                                          documentLinkServiceProvider,
-                                        );
-                                        if (service == null) {
-                                          return Future.value(
-                                            const <LinkedModel>[],
-                                          );
+                              ),
+                            if (documentTitle != null &&
+                                !floatingModeToggle) ...[
+                              documentTitle,
+                              const SizedBox(height: 28),
+                            ],
+                            Expanded(
+                              child:
+                                  widget.interactionMode ==
+                                      DocumentInteractionMode.highlightOnly
+                                  ? shared_documents.DocumentReader(
+                                      extraBlockBuilders: {
+                                        nxCanvasBlockType:
+                                            NxCanvasBlockComponentBuilder(),
+                                      },
+                                      content: shared_documents.DocumentContent(
+                                        identity:
+                                            shared_documents.DocumentIdentity(
+                                              id: widget.document.id,
+                                              modelType:
+                                                  widget.document.modelTypeName
+                                                      .trim()
+                                                      .isEmpty
+                                                  ? 'Document'
+                                                  : widget
+                                                        .document
+                                                        .modelTypeName,
+                                            ),
+                                        title: widget.document.title,
+                                        plainText: widget.document.document,
+                                        jsonDocument:
+                                            widget.document.jsonDocument,
+                                        updatedAt: widget.document.updatedAt,
+                                      ),
+                                      textScaleFactor: documentTextScale,
+                                      imageUrlResolver:
+                                          imageAssetService?.resolveImageUrl,
+                                      onOpenLink: (href) async {
+                                        if (await _handleDocumentLinkLaunch(
+                                          href,
+                                        )) {
+                                          return true;
                                         }
-                                        return service.search(
-                                          modelType: modelType,
-                                          query: query,
+                                        return safeLaunchUrl(href);
+                                      },
+                                      onChanged: (content) async {
+                                        _draftDocument = _draftDocument
+                                            .copyWith(
+                                              document: content.plainText,
+                                              jsonDocument:
+                                                  content.jsonDocument,
+                                            );
+                                        await mutationController.saveDraft(
+                                          _draftDocument,
+                                          policy: DraftSavePolicy.immediate,
                                         );
                                       },
-                                  onLinkableModelSelected:
-                                      !widget.interactionMode.canEditContent
-                                      ? null
-                                      : (modelType, model) async {
-                                          await ref
-                                              .read(
-                                                documentMutationControllerProvider,
-                                              )
-                                              .attachLinkedModel(
-                                                documentId: widget.document.id,
-                                                modelType: modelType,
-                                                modelId: model.id,
-                                                model: model,
+                                    )
+                                  : _NxAppFlowyEditor(
+                                      header:
+                                          floatingModeToggle &&
+                                              documentTitle != null
+                                          ? Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 28,
+                                              ),
+                                              child: documentTitle,
+                                            )
+                                          : null,
+                                      scrollStore: widget.scrollStore,
+                                      document: widget.document,
+                                      changeOrigin: widget.changeOrigin,
+                                      textScaleFactor: documentTextScale,
+                                      editorMode: _editorMode,
+                                      interactionMode: widget.interactionMode,
+                                      active: widget.active,
+                                      searchLinkableModels:
+                                          ({
+                                            required modelType,
+                                            required query,
+                                          }) {
+                                            final service = ref.read(
+                                              documentLinkServiceProvider,
+                                            );
+                                            if (service == null) {
+                                              return Future.value(
+                                                const <LinkedModel>[],
                                               );
-                                        },
-                                  createLinkedDocument:
-                                      !widget.interactionMode.canEditContent
-                                      ? null
-                                      : (title) async {
-                                          final document = await ref
-                                              .read(
-                                                documentMutationControllerProvider,
-                                              )
-                                              .createDocument(title: title);
-                                          return LinkedModel(
-                                            id: document.id,
-                                            name: document.title,
-                                            modelType: LinkableModelType
-                                                .document
-                                                .kgqlName,
-                                          );
-                                        },
-                                  uploadDocumentImage:
-                                      !widget.interactionMode.canEditContent ||
-                                          imageAssetService == null
-                                      ? null
-                                      : (source) {
-                                          return imageAssetService
-                                              .storeImageSource(
-                                                documentId: widget.document.id,
-                                                source: source,
+                                            }
+                                            return service.search(
+                                              modelType: modelType,
+                                              query: query,
+                                            );
+                                          },
+                                      onLinkableModelSelected:
+                                          !widget.interactionMode.canEditContent
+                                          ? null
+                                          : (modelType, model) async {
+                                              await ref
+                                                  .read(
+                                                    documentMutationControllerProvider,
+                                                  )
+                                                  .attachLinkedModel(
+                                                    documentId:
+                                                        widget.document.id,
+                                                    modelType: modelType,
+                                                    modelId: model.id,
+                                                    model: model,
+                                                  );
+                                            },
+                                      createLinkedDocument:
+                                          !widget.interactionMode.canEditContent
+                                          ? null
+                                          : (title) async {
+                                              final document = await ref
+                                                  .read(
+                                                    documentMutationControllerProvider,
+                                                  )
+                                                  .createDocument(title: title);
+                                              return LinkedModel(
+                                                id: document.id,
+                                                name: document.title,
+                                                modelType: LinkableModelType
+                                                    .document
+                                                    .kgqlName,
                                               );
-                                        },
-                                  deleteDocumentImage:
-                                      !widget.interactionMode.canEditContent ||
-                                          imageAssetService == null
-                                      ? null
-                                      : (url) async {
-                                          await imageAssetService
-                                              .deleteImageUrl(url);
-                                        },
-                                  resolveDocumentImage:
-                                      imageAssetService?.resolveImageUrl,
-                                  documentImageBaseUrl:
-                                      imageAssetService?.imageBaseUrl,
-                                  onFindBarChanged: _setFindBarPresentation,
-                                  onChanged:
-                                      !widget.interactionMode.canPersistChanges
-                                      ? null
-                                      : (updated, policy) async {
-                                          _draftDocument = _draftDocument
-                                              .copyWith(
-                                                document: updated.document,
-                                                jsonDocument:
-                                                    updated.jsonDocument,
-                                                wordCount: updated.wordCount,
-                                                excerpt: updated.excerpt,
-                                              );
-                                          await mutationController.saveDraft(
-                                            _draftDocument,
-                                            policy: policy,
-                                          );
-                                        },
-                                ),
+                                            },
+                                      uploadDocumentImage:
+                                          !widget
+                                                  .interactionMode
+                                                  .canEditContent ||
+                                              imageAssetService == null
+                                          ? null
+                                          : (source) {
+                                              return imageAssetService
+                                                  .storeImageSource(
+                                                    documentId:
+                                                        widget.document.id,
+                                                    source: source,
+                                                  );
+                                            },
+                                      deleteDocumentImage:
+                                          !widget
+                                                  .interactionMode
+                                                  .canEditContent ||
+                                              imageAssetService == null
+                                          ? null
+                                          : (url) async {
+                                              await imageAssetService
+                                                  .deleteImageUrl(url);
+                                            },
+                                      resolveDocumentImage:
+                                          imageAssetService?.resolveImageUrl,
+                                      documentImageBaseUrl:
+                                          imageAssetService?.imageBaseUrl,
+                                      onFindBarChanged: _setFindBarPresentation,
+                                      onChanged:
+                                          !widget
+                                              .interactionMode
+                                              .canPersistChanges
+                                          ? null
+                                          : (updated, policy) async {
+                                              _draftDocument = _draftDocument
+                                                  .copyWith(
+                                                    document: updated.document,
+                                                    jsonDocument:
+                                                        updated.jsonDocument,
+                                                    wordCount:
+                                                        updated.wordCount,
+                                                    excerpt: updated.excerpt,
+                                                  );
+                                              await mutationController
+                                                  .saveDraft(
+                                                    _draftDocument,
+                                                    policy: policy,
+                                                  );
+                                            },
+                                    ),
+                            ),
+                          ],
                         ),
+                        if (floatingModeToggle &&
+                            widget.active &&
+                            !compactKeyboard &&
+                            _findBarPresentation == null)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Material(
+                              key: const ValueKey('floating-mode-toggle'),
+                              elevation: 4,
+                              shadowColor: Colors.black26,
+                              borderRadius: BorderRadius.circular(16),
+                              child: _ReadEditModeToggle(
+                                mode: _editorMode,
+                                onChanged: _setEditorMode,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),

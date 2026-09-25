@@ -58,6 +58,45 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets(
+    'mobile document title scrolls while mode switch stays floating',
+    (tester) async {
+      await _pumpWorkspace(tester, 390);
+      await tester.tap(find.text('Draft: API design notes').first);
+      await tester.pumpAndSettle();
+      final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+      final transaction = editor.editorState.transaction;
+      transaction.insertNodes(
+        [1],
+        List.generate(
+          30,
+          (i) => paragraphNode(
+            text: 'Paragraph $i: room to keep writing and scrolling.',
+          ),
+        ),
+      );
+      await editor.editorState.apply(transaction);
+      await tester.pumpAndSettle();
+      final title = find.byKey(const ValueKey('title-display-1'));
+      final toggle = find.byKey(const ValueKey('floating-mode-toggle'));
+      expect(title.hitTestable(), findsOneWidget);
+      final togglePosition = tester.getTopLeft(toggle);
+      await tester.drag(find.byType(AppFlowyEditor), const Offset(0, -650));
+      await tester.pumpAndSettle();
+      expect(title.hitTestable(), findsNothing);
+      expect(tester.getTopLeft(toggle), togglePosition);
+      await tester.tap(find.byTooltip('Read'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor)).editable,
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
+
   for (final width in [320.0, 390.0, 744.0]) {
     testWidgets('create, rename, edit and reopen at width $width', (
       tester,
@@ -70,6 +109,11 @@ void main() {
       final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
       expect(editor.editable, isTrue);
       expect(find.text('Insert'), findsNothing);
+      expect(find.byKey(const ValueKey('title-display-100')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('floating-mode-toggle')),
+        findsOneWidget,
+      );
       await tester.tap(find.byKey(const ValueKey<String>('title-display-100')));
       await tester.pumpAndSettle();
       await tester.enterText(

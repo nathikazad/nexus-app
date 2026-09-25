@@ -18,8 +18,10 @@ class _NxAppFlowyEditor extends StatefulWidget {
     this.resolveDocumentImage,
     this.documentImageBaseUrl,
     this.active = true,
+    this.header,
   });
 
+  final Widget? header;
   final DocumentScrollStore? scrollStore;
   final NxDocument document;
   final DocumentChangeOrigin changeOrigin;
@@ -850,6 +852,27 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
       useMobileSelectionHandles: usesTouchEditingControls(context),
     ).copyWith(cursorColor: showsCaret ? AppColors.text : Colors.transparent);
     final editor = AppFlowyEditor(
+      // Keep the title in the first scroll item so document block indexes stay
+      // stable for heading navigation, saved positions, and audio playback.
+      blockWrapper: (context, {required node, required child}) {
+        final first = identical(
+          node,
+          _editorState.document.root.children.firstOrNull,
+        );
+        if (!first || isDesktopLayout(context)) return child;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.interactionMode.canEditContent &&
+                View.of(context).viewInsets.bottom == 0 &&
+                MediaQuery.sizeOf(context).height >= 500)
+              const SizedBox(height: 64),
+            if (widget.header != null)
+              IgnoreEditorSelectionGesture(child: widget.header!),
+            child,
+          ],
+        );
+      },
       editable: widget.interactionMode.canEditContent && showsCaret,
       disableKeyboardService: disableReaderKeyboard,
       editorState: _editorState,
