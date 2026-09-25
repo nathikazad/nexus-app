@@ -129,7 +129,7 @@ class BookPage extends ConsumerWidget {
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       tabs: [
-                        Tab(text: 'Preparing  ${upcoming.length}'),
+                        Tab(text: 'Practice  ${upcoming.length}'),
                         Tab(text: 'Current  ${learning.length}'),
                         Tab(text: 'Past  ${learnt.length}'),
                         Tab(text: 'Future  ${notStarted.length}'),
@@ -144,7 +144,7 @@ class BookPage extends ConsumerWidget {
                         cards: upcoming,
                         nextStatus: LearningStatus.active,
                         actionLabel: 'Activate',
-                        emptyText: 'Move Future cards to Prep to practice.',
+                        emptyText: 'Move Future cards here to practice.',
                         dashboard: data,
                       ),
                       LearningCardsTab(

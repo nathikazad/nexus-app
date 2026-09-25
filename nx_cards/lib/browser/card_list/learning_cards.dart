@@ -271,7 +271,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                               ],
                               if (widget.showScheduleStatus &&
                                   scheduleStatus != null &&
-                                  scheduleStatus.label != 'Preparing') ...[
+                                  scheduleStatus.label != 'Practice') ...[
                                 const SizedBox(width: 9),
                                 _ScheduleStatePill(status: scheduleStatus),
                               ],
@@ -406,7 +406,7 @@ class _ScheduleStatePill extends StatelessWidget {
       'Current' => (const Color(0xfffff7ed), RecallColors.orange),
       'Future' => (const Color(0xfffff1f2), RecallColors.rose),
       'Past' => (const Color(0xffecfdf5), RecallColors.emerald),
-      'Preparing' => (const Color(0xfff0f9ff), RecallColors.sky),
+      'Practice' => (const Color(0xfff0f9ff), RecallColors.sky),
       _ => (RecallColors.soft, RecallColors.muted),
     };
     return Container(

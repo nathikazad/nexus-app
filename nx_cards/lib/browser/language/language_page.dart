@@ -250,7 +250,7 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
       (cards.length, 'Total'),
       (current, 'Current'),
       (due, 'Due'),
-      (upcoming, 'Preparing'),
+      (upcoming, 'Practice'),
       (learnt, 'Past'),
       (remaining, 'Future'),
     ];
@@ -636,7 +636,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                     fontWeight: FontWeight.w400,
                                   ),
                                   tabs: [
-                                    Tab(text: 'Preparing  ${upcoming.length}'),
+                                    Tab(text: 'Practice  ${upcoming.length}'),
                                     Tab(text: 'Current  ${learning.length}'),
                                     Tab(text: 'Past  ${learnt.length}'),
                                     Tab(text: 'Future  ${notStarted.length}'),
@@ -664,7 +664,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             nextStatus: LearningStatus.active,
                             actionLabel: 'Activate',
                             emptyText:
-                                'Move Future cards to Prep to practice them here.',
+                                'Move Future cards here to practice.',
                             dashboard: data,
                             showScheduleStatus: true,
                           ),

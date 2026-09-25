@@ -7,7 +7,7 @@ enum LearningStage {
   future;
 
   String get label => switch (this) {
-    upcoming => 'Preparing',
+    upcoming => 'Practice',
     current => 'Current',
     past => 'Past',
     future => 'Future',

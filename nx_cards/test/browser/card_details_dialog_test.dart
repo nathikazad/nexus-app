@@ -90,7 +90,7 @@ void main() {
           tester.widget(find.byKey(const ValueKey('card-learning-status')));
       expect(selector().selected, {LearningStatus.inactive});
       for (final entry in {
-        'Prep': LearningStatus.prep,
+        'Practice': LearningStatus.prep,
         'Recall': LearningStatus.active,
         'Future': LearningStatus.inactive,
       }.entries) {
@@ -101,7 +101,7 @@ void main() {
         expect(library.savedCard?.id, 20);
       }
       library.pending = Completer<void>();
-      await tester.tap(find.text('Prep'));
+      await tester.tap(find.text('Practice'));
       await tester.pump();
       expect(selector().onSelectionChanged, isNull);
       expect(selector().selected, {LearningStatus.inactive});

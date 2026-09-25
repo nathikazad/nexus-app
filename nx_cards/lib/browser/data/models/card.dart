@@ -7,7 +7,7 @@ sealed class CardContent {
 
 enum LearningStatus {
   inactive('inactive', 'Future'),
-  prep('prep', 'Prep'),
+  prep('prep', 'Practice'),
   active('active', 'Recall');
 
   const LearningStatus(this.storageValue, this.label);
