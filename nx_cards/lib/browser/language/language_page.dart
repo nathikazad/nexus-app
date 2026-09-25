@@ -93,6 +93,13 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _LanguageCategoryCard(
+                        key: const ValueKey('language-all-cards'),
+                        category: 'All',
+                        allCards: true,
+                        data: data,
+                        language: language,
+                      ),
                       for (final group in groups)
                         _LanguageCategoryCard(
                           key: ValueKey((
@@ -157,8 +164,10 @@ class _LanguageCategoryCard extends ConsumerStatefulWidget {
     this.tagSystem,
     this.categoryPath,
     this.disambiguate = false,
+    this.allCards = false,
   });
 
+  final bool allCards;
   final String category;
   final String? tagSystem;
   final List<String>? categoryPath;
@@ -173,6 +182,7 @@ class _LanguageCategoryCard extends ConsumerStatefulWidget {
 
 class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
   bool expanded = false;
+  bool get allCards => widget.allCards;
   String get category => widget.category;
   String? get tagSystem => widget.tagSystem;
   bool get disambiguate => widget.disambiguate;
@@ -184,15 +194,16 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
     final cards = data.cards
         .where(
           (card) =>
-              (LanguageGroup(
-                category,
-                tagSystem: tagSystem,
-                path: widget.categoryPath,
-              ).contains(card)) &&
+              (allCards ||
+                  LanguageGroup(
+                    category,
+                    tagSystem: tagSystem,
+                    path: widget.categoryPath,
+                  ).contains(card)) &&
               (language == null || data.languageFor(card) == language),
         )
         .toList(growable: false);
-    final children = tagSystem == 'Collection'
+    final children = allCards || tagSystem == 'Collection'
         ? <LanguageGroup>[]
         : languageGroups(cards, parent: widget.categoryPath ?? [category]);
     final cue = ref.watch(languageDirectionProvider(language));
@@ -263,12 +274,16 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
       ),
     );
     final tile = Card(
+      color: allCards
+          ? Theme.of(context).colorScheme.surfaceContainerHighest
+          : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => LanguageCategoryPage(
               category: category,
+              allCards: allCards,
               categoryPath: widget.categoryPath,
               language: language,
               tagSystem: tagSystem,

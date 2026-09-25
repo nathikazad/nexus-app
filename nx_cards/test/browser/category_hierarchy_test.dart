@@ -263,6 +263,30 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('All'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('All')).dy,
+        lessThan(tester.getTopLeft(find.text('Words')).dy),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('language-category-all-total')),
+          matching: find.text('2'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('expand-category-All')), findsNothing);
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<LanguageCategoryPage>(find.byType(LanguageCategoryPage))
+            .allCards,
+        isTrue,
+      );
+      expect(find.text('Future  2'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       expect(find.text('Words'), findsOneWidget);
       expect(find.text('Phrases'), findsOneWidget);
       expect(find.text('Script'), findsNothing);
