@@ -79,7 +79,12 @@ final class DriftCardsMapper {
         for (final cue in StudyCue.values) cue: _historyForCue(history, cue),
       },
       suspended: row.suspended,
-      learningStatus: LearningStatus.fromStorage(row.learningStatus),
+      learningStatus: LearningStatus.fromStorage(
+        row.learningStatus,
+        hasRecallHistory: StudyCue.activeDirections.any(
+          (cue) => _historyForCue(history, cue).isNotEmpty,
+        ),
+      ),
       tags: _tagsMap(row.tagsJson),
       categoryPaths: _categoryPaths(row.tagsJson),
       modelTypeName: row.modelType,

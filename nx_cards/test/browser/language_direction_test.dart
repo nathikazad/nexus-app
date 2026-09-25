@@ -22,7 +22,7 @@ void main() {
               content: sample(1, 8).content,
               schedules: sample(1, 8).schedules,
               reviewHistory: sample(1, 8).reviewHistory,
-              learningStatus: LearningStatus.learning,
+              learningStatus: LearningStatus.active,
             ),
       ],
     );
@@ -51,11 +51,13 @@ void main() {
     await tester.tap(find.text('Chinese → English'));
     await tester.pumpAndSettle();
     expect(metric('past', '0'), findsOneWidget);
-    expect(metric('upcoming', '1'), findsOneWidget);
+    expect(metric('current', '1'), findsOneWidget);
     await tester.tap(find.byTooltip('All cards'));
     await tester.pumpAndSettle();
-    expect(find.text('Upcoming  1'), findsOneWidget);
+    expect(find.text('Current  1'), findsOneWidget);
     expect(find.text('Past  0'), findsOneWidget);
+    await tester.tap(find.text('Current  1'));
+    await tester.pumpAndSettle();
     expect(find.text('word 1'), findsOneWidget);
   });
 }

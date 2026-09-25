@@ -45,7 +45,10 @@ final class KgqlCardsSyncTransport
               key: attrLanguageDetails,
               value: languageDetailsJson(languageContent),
             ),
-          SetModelAttribute(key: attrActive, value: card.active),
+          SetModelAttribute(
+            key: attrLearningState,
+            value: card.learningStatus.storageValue,
+          ),
         ],
       ),
       clientUpdatedAt,
@@ -75,7 +78,10 @@ final class KgqlCardsSyncTransport
           value: cardDetailsJson(content),
         ),
         SetModelAttribute(key: attrSuspended, value: false),
-        SetModelAttribute(key: attrActive, value: false),
+        SetModelAttribute(
+          key: attrLearningState,
+          value: LearningStatus.inactive.storageValue,
+        ),
         SetModelAttribute(
           key: attrSchedule,
           value: emptyScheduleJson(

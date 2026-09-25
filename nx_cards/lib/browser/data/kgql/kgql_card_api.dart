@@ -13,6 +13,7 @@ const baseCardStruct = <String, dynamic>{
   attrDueAt: true,
   attrLearningStatus: true,
   attrActive: true,
+  attrLearningState: true,
   attrSuspended: true,
   attrSchedule: true,
   attrReviewHistory: true,
@@ -140,7 +141,10 @@ class KgqlCardApi implements CardLibrary {
             value: cardDetailsJson(content),
           ),
           SetModelAttribute(key: attrSuspended, value: false),
-          SetModelAttribute(key: attrActive, value: false),
+          SetModelAttribute(
+            key: attrLearningState,
+            value: LearningStatus.inactive.storageValue,
+          ),
           SetModelAttribute(
             key: attrSchedule,
             value: emptyScheduleJson(
@@ -239,7 +243,7 @@ class KgqlCardApi implements CardLibrary {
       SetModelRequest(
         id: card.id,
         attributes: [
-          SetModelAttribute(key: attrActive, value: status.isRecallEligible),
+          SetModelAttribute(key: attrLearningState, value: status.storageValue),
         ],
       ),
       auditSourceKind: 'nx_cards',

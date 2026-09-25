@@ -10,7 +10,7 @@ StudyCard card(List<int> ratings, {bool active = true}) => StudyCard(
     transliteration: 'xué',
   ),
   suspended: false,
-  learningStatus: active ? LearningStatus.learning : LearningStatus.notStarted,
+  learningStatus: active ? LearningStatus.active : LearningStatus.inactive,
   schedules: {
     for (final cue in StudyCue.values)
       cue: const CardSchedule.initial(enabled: true),
@@ -34,7 +34,7 @@ void main() {
     () {
       expect(
         learningStage(card([]), StudyCue.fromLanguage),
-        LearningStage.upcoming,
+        LearningStage.current,
       );
       expect(
         learningStage(card([1]), StudyCue.fromLanguage),
@@ -42,7 +42,7 @@ void main() {
       );
       expect(
         learningStage(card([3]), StudyCue.toLanguage),
-        LearningStage.upcoming,
+        LearningStage.current,
       );
       expect(
         learningStage(
@@ -53,6 +53,16 @@ void main() {
       );
     },
   );
+  test('Prep remains Upcoming even with past history', () {
+    final prep = card(
+      List.filled(10, 3),
+    ).copyWith(learningStatus: LearningStatus.prep);
+    expect(learningStage(prep, StudyCue.fromLanguage), LearningStage.upcoming);
+    expect(
+      availableForRecall(prep, StudyCue.fromLanguage, DateTime.now()),
+      isFalse,
+    );
+  });
   test('full window denominator, exact 80%, and rolling replacement', () {
     expect(
       learningStage(card([3, 3]), StudyCue.fromLanguage),

@@ -20,12 +20,11 @@ class ReviewProgressionPlan {
 
   final List<ReviewProgressionChange> changes;
 
-  int get movedToPast =>
-      changes.where((change) => change.status == LearningStatus.learnt).length;
+  int get movedToPast => 0;
   int get movedToCurrent => changes
       .where(
         (change) =>
-            change.status == LearningStatus.learning && !change.isReplacement,
+            change.status == LearningStatus.active && !change.isReplacement,
       )
       .length;
   int get replacements =>

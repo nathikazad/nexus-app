@@ -66,9 +66,9 @@ void main() {
     final attributes = data['attributes'] as List<dynamic>;
     expect(
       attributes.cast<Map<String, dynamic>>().singleWhere(
-        (row) => row['key'] == attrActive,
+        (row) => row['key'] == attrLearningState,
       )['value'],
-      false,
+      'inactive',
     );
     final cardDetails =
         attributes.singleWhere(
@@ -169,7 +169,7 @@ void main() {
     expect(content.examples.single.translation, 'He has good talent.');
     expect(cards.single.scheduleFor(StudyCue.fromLanguage).enabled, isTrue);
     expect(cards.single.scheduleFor(StudyCue.toLanguage).enabled, isTrue);
-    expect(cards.single.learningStatus, LearningStatus.learning);
+    expect(cards.single.learningStatus, LearningStatus.prep);
     expect(cards.single.tags['Category'], ['Noun']);
     expect(requestedTypes.toSet(), {cardModelType, languageCardModelType});
   });

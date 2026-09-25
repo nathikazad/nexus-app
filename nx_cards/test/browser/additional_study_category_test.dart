@@ -17,7 +17,7 @@ void main() {
         schedules: {StudyCue.fromLanguage: schedule},
         reviewHistory: const {},
         suspended: false,
-        learningStatus: LearningStatus.learning,
+        learningStatus: LearningStatus.active,
         tags: {
           'Language': ['Chinese'],
           'Word Category': [if (type == 'Word') 'Noun'],

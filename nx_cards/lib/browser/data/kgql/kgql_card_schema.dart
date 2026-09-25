@@ -30,7 +30,8 @@ const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
 const attrLearningStatus =
     'learning_status'; // Legacy cache/import compatibility.
-const attrActive = 'active';
+const attrActive = 'active'; // Legacy read compatibility only.
+const attrLearningState = 'learning_state';
 
 const cardDetailsJsonSchema = <String, dynamic>{
   'type': 'object',

@@ -86,28 +86,29 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      SwitchListTile selector() =>
+      SegmentedButton<LearningStatus> selector() =>
           tester.widget(find.byKey(const ValueKey('card-learning-status')));
-      expect(selector().value, false);
+      expect(selector().selected, {LearningStatus.inactive});
       for (final entry in {
-        'Active': LearningStatus.learning,
-        'Inactive': LearningStatus.notStarted,
+        'Prep': LearningStatus.prep,
+        'Active': LearningStatus.active,
+        'Inactive': LearningStatus.inactive,
       }.entries) {
-        await tester.tap(find.byKey(const ValueKey('card-learning-status')));
+        await tester.tap(find.text(entry.key));
         await tester.pumpAndSettle();
-        expect(selector().value, entry.value.isRecallEligible);
+        expect(selector().selected, {entry.value});
         expect(library.savedStatus, entry.value);
         expect(library.savedCard?.id, 20);
       }
       library.pending = Completer<void>();
-      await tester.tap(find.byKey(const ValueKey('card-learning-status')));
+      await tester.tap(find.text('Prep'));
       await tester.pump();
-      expect(selector().onChanged, isNull);
-      expect(selector().value, false);
+      expect(selector().onSelectionChanged, isNull);
+      expect(selector().selected, {LearningStatus.inactive});
       library.pending!.completeError(StateError('Save failed'));
       await tester.pumpAndSettle();
-      expect(selector().value, false);
-      expect(selector().onChanged, isNotNull);
+      expect(selector().selected, {LearningStatus.inactive});
+      expect(selector().onSelectionChanged, isNotNull);
       expect(find.textContaining('Could not move card'), findsOneWidget);
     },
   );

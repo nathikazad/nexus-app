@@ -14,6 +14,7 @@ StudyCard sample(
   int successes, {
   bool active = true,
   bool due = true,
+  bool prep = false,
 }) => StudyCard(
   id: id,
   content: LanguageCardContent(
@@ -22,7 +23,11 @@ StudyCard sample(
     transliteration: 'zi',
   ),
   suspended: false,
-  learningStatus: active ? LearningStatus.learning : LearningStatus.notStarted,
+  learningStatus: prep
+      ? LearningStatus.prep
+      : active
+      ? LearningStatus.active
+      : LearningStatus.inactive,
   tags: const {
     'Language': ['Chinese'],
   },
@@ -57,6 +62,7 @@ Future<void> showSetup(
   WidgetTester tester, {
   StudyCue cue = StudyCue.fromLanguage,
   List<StudyCard>? studyCards,
+  StudySetupFlow flow = StudySetupFlow.recall,
 }) async {
   SharedPreferences.setMockInitialValues({});
   await tester.binding.setSurfaceSize(const Size(900, 1400));
@@ -64,7 +70,7 @@ Future<void> showSetup(
   final cards =
       studyCards ??
       [
-        sample(1, 0),
+        sample(1, 0, prep: true),
         sample(2, 1, due: false),
         sample(3, 8),
         sample(4, 10, due: false),
@@ -84,6 +90,7 @@ Future<void> showSetup(
       child: MaterialApp(
         home: StudySetupPage(
           title: 'Chinese',
+          flow: flow,
           studyScope: const StudyScope(language: 'Chinese'),
           prompts: [],
           studyCards: cards,
@@ -97,110 +104,97 @@ Future<void> showSetup(
 }
 
 void main() {
-  testWidgets('defaults to Current and Past; recall includes not-due Past', (
+  testWidgets('Recall offers Current and Past including not-due Past', (
     tester,
   ) async {
     await showSetup(tester);
     expect(find.text('3 available'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilterChip>(find.widgetWithText(FilterChip, 'Upcoming'))
-          .selected,
-      isFalse,
-    );
-    await tester.tap(find.text('Recall').first);
-    await tester.pumpAndSettle();
-    expect(find.text('3 available'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'Upcoming'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Upcoming'), findsNothing);
     expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
-    expect(find.text('Relearning'), findsNothing);
-    expect(find.text('Retained'), findsNothing);
+    expect(find.text('Recall format'), findsOneWidget);
+    expect(find.text('Start recall'), findsOneWidget);
+    expect(find.text('Practice'), findsNothing);
   });
-  testWidgets(
-    'Past due count follows selected filters and is hidden without Past',
-    (tester) async {
-      await showSetup(tester);
-      expect(find.textContaining('Past cards due'), findsNothing);
-      await tester.tap(find.text('Recall').first);
-      await tester.pumpAndSettle();
-      expect(find.text('Past cards due: 1'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilterChip, 'Past'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Past cards due'), findsNothing);
-      await tester.tap(find.widgetWithText(FilterChip, 'Past'));
-      await tester.pumpAndSettle();
-      final scoreSlider = tester.widgetList<Slider>(find.byType(Slider)).first;
-      scoreSlider.onChanged!(70);
-      await tester.pumpAndSettle();
-      expect(find.text('Past cards due: 0'), findsOneWidget);
-      expect(find.text('1 available'), findsOneWidget);
-    },
-  );
-  testWidgets(
-    'direction comes from language page; no third cue or local selector',
-    (tester) async {
-      await showSetup(tester, cue: StudyCue.toLanguage);
-      await tester.tap(find.text('Recall').first);
-      await tester.pumpAndSettle();
-      expect(find.text('No cards match these filters'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('4 available'),
-        findsOneWidget,
-      ); // all four are untried in reverse
-      expect(find.textContaining('Chinese → English'), findsNothing);
-      expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
-      expect(find.widgetWithText(ChoiceChip, 'Chinese'), findsNothing);
-    },
-  );
-  testWidgets('count survives mode changes and clamps only to availability', (
+  testWidgets('Practice only offers format and count, and only Prep cards', (
+    tester,
+  ) async {
+    await showSetup(tester, flow: StudySetupFlow.practice);
+    expect(find.text('Study format'), findsOneWidget);
+    expect(find.text('Study sheet'), findsOneWidget);
+    expect(find.text('Draw'), findsOneWidget);
+    expect(find.text('1 available'), findsOneWidget);
+    expect(find.text('Which cards'), findsNothing);
+    expect(find.text('Recall score'), findsNothing);
+    expect(find.textContaining('Past cards due'), findsNothing);
+    expect(find.byType(FilterChip), findsNothing);
+    expect(find.text('AI'), findsNothing);
+  });
+  testWidgets('Past due only appears in Recall with Past selected', (
     tester,
   ) async {
     await showSetup(tester);
-    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    expect(find.text('Past cards due: 1'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilterChip, 'Past'));
     await tester.pumpAndSettle();
-    Slider slider() =>
-        tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
-    slider().onChanged!(2);
+    expect(find.textContaining('Past cards due'), findsNothing);
+    await tester.tap(find.widgetWithText(FilterChip, 'Past'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Recall').first);
+    tester.widgetList<Slider>(find.byType(Slider)).first.onChanged!(70);
     await tester.pumpAndSettle();
-    expect(slider().value, 2);
-    expect(find.text('Direction'), findsNothing);
-    slider().onChanged!(4);
+    expect(find.text('Past cards due: 0'), findsOneWidget);
+    expect(find.text('1 available'), findsOneWidget);
+    await tester.tap(find.text('AI').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
-    await tester.pumpAndSettle();
-    expect(slider().value, 3);
-    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
-    await tester.pumpAndSettle();
-    expect(slider().value, 3);
+    expect(find.textContaining('Past cards due'), findsNothing);
+    expect(find.text('Recall format'), findsNothing);
+    expect(find.text('Start AI tutor'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Upcoming'), findsNothing);
   });
-  testWidgets('larger counts persist and survive an empty filter', (
+  testWidgets('untried reverse direction of Active cards is Current', (
+    tester,
+  ) async {
+    await showSetup(tester, cue: StudyCue.toLanguage);
+    expect(find.text('3 available'), findsOneWidget);
+    expect(find.textContaining('Chinese → English'), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
+  });
+  testWidgets(
+    'count persists across Recall and AI, clamps to nearest available',
+    (tester) async {
+      await showSetup(tester);
+      Slider slider() =>
+          tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
+      slider().onChanged!(2);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('AI').first);
+      await tester.pumpAndSettle();
+      expect(slider().value, 2);
+      await tester.tap(find.widgetWithText(FilterChip, 'Past'));
+      await tester.pumpAndSettle();
+      expect(slider().value, 1);
+      await tester.tap(find.widgetWithText(FilterChip, 'Past'));
+      await tester.pumpAndSettle();
+      expect(slider().value, 1);
+    },
+  );
+  testWidgets('larger count survives an empty selection and reopening', (
     tester,
   ) async {
     await showSetup(
       tester,
       studyCards: [for (var id = 1; id <= 25; id++) sample(id, 0)],
     );
-    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
-    await tester.pumpAndSettle();
     Slider slider() =>
         tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
     slider().onChanged!(17);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Recall').first);
-    await tester.pumpAndSettle();
-    expect(slider().value, 17);
-    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Current'));
     await tester.pumpAndSettle();
     expect(find.text('No cards match these filters'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Current'));
     await tester.pumpAndSettle();
     expect(slider().value, 17);
-    // Recreate the setup page with its saved preferences still in place.
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(
@@ -225,16 +219,5 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(slider().value, 17);
-  });
-  testWidgets('multi-select adds Upcoming without removing Current or Past', (
-    tester,
-  ) async {
-    await showSetup(tester);
-    await tester.tap(find.widgetWithText(FilterChip, 'Upcoming'));
-    await tester.pumpAndSettle();
-    expect(find.text('4 available'), findsOneWidget);
-    await tester.tap(find.text('Recall').first);
-    await tester.pumpAndSettle();
-    expect(find.text('4 available'), findsOneWidget);
   });
 }

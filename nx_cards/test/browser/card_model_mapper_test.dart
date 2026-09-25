@@ -138,7 +138,7 @@ void main() {
 
     expect(card, isNotNull);
     expect(card!.modelTypeName, languageCardModelType);
-    expect(card.learningStatus, LearningStatus.learning);
+    expect(card.learningStatus, LearningStatus.prep);
     expect(card.tags['Language'], <String>['Malayalam']);
     expect(card.tags['Category'], <String>['Noun']);
     expect(card.categories, contains('Noun'));

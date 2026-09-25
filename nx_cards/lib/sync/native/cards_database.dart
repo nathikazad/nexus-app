@@ -40,7 +40,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   Future<void> createHashSchema() => customStatement('''
     CREATE TABLE IF NOT EXISTS card_sync_hashes (
@@ -126,6 +126,18 @@ class CardsDatabase extends _$CardsDatabase {
           localStudyCards,
           localStudyCards.linkedWordIdsJson,
         );
+      }
+      if (from < 13) {
+        await customStatement(r"""
+          UPDATE local_study_cards SET learning_status = CASE
+            WHEN learning_status IN ('inactive','prep','active') THEN learning_status
+            WHEN learning_status IN ('learning','learnt') THEN CASE WHEN EXISTS (
+              SELECT 1 FROM json_each(CASE WHEN json_valid(review_history_json)
+                THEN json_extract(review_history_json, '$.items') ELSE '[]' END)
+              WHERE json_extract(value, '$.cue') IN ('from_language','to_language')
+            ) THEN 'active' ELSE 'prep' END
+            ELSE 'inactive' END
+        """);
       }
     },
   );

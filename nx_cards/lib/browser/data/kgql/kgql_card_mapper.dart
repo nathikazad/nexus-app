@@ -38,11 +38,15 @@ StudyCard? studyCardFromModel(
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
-    learningStatus: model.attributes?[attrActive] is bool
-        ? (model.attrBool(attrActive)!
-              ? LearningStatus.learning
-              : LearningStatus.notStarted)
-        : LearningStatus.fromStorage(model.attributes?[attrLearningStatus]),
+    learningStatus: LearningStatus.fromStorage(
+      model.attributes?[attrLearningState] ??
+          (model.attributes?[attrActive] is bool
+              ? (model.attrBool(attrActive)! ? 'learning' : 'not_started')
+              : model.attributes?[attrLearningStatus]),
+      hasRecallHistory: StudyCue.activeDirections.any(
+        (cue) => history[cue]?.isNotEmpty == true,
+      ),
+    ),
     tags: model.tags ?? const <String, List<String>>{},
     categoryPaths: model.tagPaths?['Category'],
     modelTypeName: modelTypeName,

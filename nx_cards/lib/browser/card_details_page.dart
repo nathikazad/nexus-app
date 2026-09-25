@@ -161,19 +161,16 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                 const SizedBox(height: 16),
                 _CardContent(card: card, languageContent: languageContent),
                 const SizedBox(height: 16),
-                SwitchListTile.adaptive(
+                SegmentedButton<LearningStatus>(
                   key: const ValueKey('card-learning-status'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(card.active ? 'Active' : 'Inactive'),
-                  value: card.active,
-                  onChanged: _savingStatus
+                  segments: [
+                    for (final status in LearningStatus.values)
+                      ButtonSegment(value: status, label: Text(status.label)),
+                  ],
+                  selected: {card.learningStatus},
+                  onSelectionChanged: _savingStatus
                       ? null
-                      : (active) => _changeStatus(
-                          card,
-                          active
-                              ? LearningStatus.learning
-                              : LearningStatus.notStarted,
-                        ),
+                      : (values) => _changeStatus(card, values.single),
                 ),
                 if (audioUrl?.isNotEmpty == true &&
                     audioRepository != null) ...[

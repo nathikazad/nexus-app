@@ -27,6 +27,7 @@ typedef StudyButtonBuilder = Widget Function(VoidCallback? onPressed);
 class StudyLauncher extends StatelessWidget {
   const StudyLauncher({
     this.studyScope,
+    this.followLearningTab = false,
     super.key,
     required this.title,
     required this.prompts,
@@ -37,6 +38,7 @@ class StudyLauncher extends StatelessWidget {
     this.sourceKind = StudySourceKind.language,
   });
 
+  final bool followLearningTab;
   final StudyScope? studyScope;
   final String title;
   final List<StudyPrompt> prompts;
@@ -48,20 +50,44 @@ class StudyLauncher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!followLearningTab) return _build(context, StudySetupFlow.recall);
+    final tabs = DefaultTabController.of(context);
+    return AnimatedBuilder(
+      animation: tabs,
+      builder: (context, _) {
+        if (tabs.index == 3) return const SizedBox.shrink();
+        return _build(
+          context,
+          tabs.index == 0 ? StudySetupFlow.practice : StudySetupFlow.recall,
+        );
+      },
+    );
+  }
+
+  Widget _build(BuildContext context, StudySetupFlow flow) {
+    Widget button(VoidCallback? onPressed) => followLearningTab
+        ? FilledButton(
+            onPressed: onPressed,
+            child: Text(
+              flow == StudySetupFlow.practice ? 'Practice' : 'Recall',
+            ),
+          )
+        : builder(onPressed);
     final hasLanguageCards = studyCards.any((card) => card.isLanguageCard);
-    if (prompts.isEmpty && studyCards.isEmpty) return builder(null);
+    if (prompts.isEmpty && studyCards.isEmpty) return button(null);
     if (sourceKind == StudySourceKind.language &&
         (languagePair == null || !hasLanguageCards)) {
-      if (prompts.isEmpty) return builder(null);
-      return builder(
+      if (prompts.isEmpty) return button(null);
+      return button(
         () => openStudy(context, title, prompts, studyScope: studyScope),
       );
     }
-    return builder(
+    return button(
       () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => StudySetupPage(
             studyScope: studyScope,
+            flow: flow,
             title: title,
             prompts: prompts,
             studyCards: studyCards,

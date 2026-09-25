@@ -147,3 +147,19 @@ For a direct local Flutter run, pass
 
 After login, the app detects missing model types or required attributes and
 presents an explicit setup action. Ordinary startup does not mutate schemas.
+
+## Learning workflow and session setup
+
+Cards store `inactive`, `prep`, or `active`, shared across recall directions.
+Future swipes into Prep (Upcoming), then Upcoming swipes into Active. Current
+and Past derive from the active card's per-direction recent recall score; an
+untried active card is Current. Use the card detail selector to move backwards.
+
+Upcoming opens a standalone Practice setup with Study sheet/Draw and a count.
+Current/Past open Recall with Recall and AI tabs; both select Current/Past,
+recall score and count. Only Recall shows the due-Past count. Future has no
+session action. Practice and Recall retain separate setup preferences.
+
+SQLite version 13 migrates legacy statuses without discarding history or pending
+writes. The server rollout and migration are documented in
+`../servers/nexus/apps/nx_cards/learning-workflow.md` relative to the mobile repo.

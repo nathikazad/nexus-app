@@ -318,5 +318,5 @@ StudyCard _card({int id = 1}) => StudyCard(
     ],
   },
   suspended: false,
-  learningStatus: LearningStatus.learning,
+  learningStatus: LearningStatus.active,
 );

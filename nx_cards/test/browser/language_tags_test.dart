@@ -12,7 +12,7 @@ StudyCard card(
   String language = 'Tamil',
   String type = 'Word',
   Map<String, List<String>> tags = const {},
-  LearningStatus status = LearningStatus.learning,
+  LearningStatus status = LearningStatus.prep,
 }) => StudyCard(
   id: id,
   modelTypeName: type,
@@ -137,7 +137,7 @@ void main() {
         tags: {
           'Collection': ['Travel'],
         },
-        status: LearningStatus.notStarted,
+        status: LearningStatus.inactive,
       ),
       card(
         3,
@@ -167,7 +167,7 @@ void main() {
     expect(find.text('item 4'), findsNothing);
     final launcher = tester.widget<StudyLauncher>(find.byType(StudyLauncher));
     expect(launcher.studyCards.map((c) => c.id), [1]);
-    expect(launcher.prompts.map((p) => p.cardId).toSet(), {1});
+    expect(launcher.prompts, isEmpty);
     await tester.tap(find.text('Future  1'));
     await tester.pumpAndSettle();
     expect(find.text('item 2'), findsOneWidget);

@@ -35,7 +35,7 @@ void main() {
           },
           reviewHistory: const {},
           suspended: false,
-          learningStatus: LearningStatus.learning,
+          learningStatus: LearningStatus.active,
           tags: {
             'Language': [lang],
             'Word Category': categories,
@@ -82,7 +82,7 @@ void main() {
         );
         await tester.tap(find.byTooltip('All cards'));
         await tester.pumpAndSettle();
-        expect(find.text('4 cards · 0 learning'), findsOneWidget);
+        expect(find.text('4 cards · 4 learning'), findsOneWidget);
         for (var id = 1; id <= 4; id++) {
           expect(find.text('item $id'), findsOneWidget);
         }
@@ -102,12 +102,13 @@ void main() {
         _word(
           id: 1,
           category: 'Script',
-          learningStatus: LearningStatus.learning,
+          learningStatus: LearningStatus.prep,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _word(
           id: 2,
-          learningStatus: LearningStatus.learnt,
+          learningStatus: LearningStatus.active,
+          recallRatings: List.filled(8, 3),
           schedule: const CardSchedule.initial(enabled: true),
           toLanguageSchedule: _schedule(
             DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
@@ -116,13 +117,13 @@ void main() {
         _word(
           id: 3,
           category: 'Adjective',
-          learningStatus: LearningStatus.learning,
+          learningStatus: LearningStatus.prep,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _word(
           id: 4,
           modelTypeName: 'Verb',
-          learningStatus: LearningStatus.learning,
+          learningStatus: LearningStatus.prep,
           schedule: const CardSchedule.initial(enabled: true),
         ),
       ],
@@ -235,7 +236,7 @@ void main() {
       cards: [
         _word(
           id: 1,
-          learningStatus: LearningStatus.learning,
+          learningStatus: LearningStatus.prep,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _bookCard(2),
@@ -280,22 +281,8 @@ void main() {
     expect(find.byKey(const ValueKey<String>('word-state-new')), findsNothing);
     expect(find.text('1 cards · 0 current'), findsOneWidget);
 
-    await tester.tap(find.text('Study'));
-    await tester.pumpAndSettle();
-    expect(find.text('Practice'), findsWidgets);
-    expect(find.text('Recall'), findsOneWidget);
-    expect(find.text('AI'), findsOneWidget);
-    expect(find.text('Recall percentage'), findsOneWidget);
-    expect(find.text('How many cards?'), findsOneWidget);
-    expect(find.text('What should be in front?'), findsNothing);
-    await tester.tap(find.text('Recall'));
-    await tester.pumpAndSettle();
-    expect(find.text('Start recall'), findsOneWidget);
-    expect(find.text('Recall percentage'), findsOneWidget);
-    await tester.tap(find.text('AI'));
-    await tester.pumpAndSettle();
-    expect(find.text('Start AI tutor'), findsOneWidget);
-    expect(find.text('Recall percentage'), findsOneWidget);
+    expect(find.text('Practice'), findsNothing);
+    expect(find.text('Recall'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -305,17 +292,18 @@ void main() {
     final now = DateTime.now().toUtc();
     final current = _word(
       id: 1,
-      learningStatus: LearningStatus.learning,
+      learningStatus: LearningStatus.active,
       schedule: _schedule(now.subtract(const Duration(minutes: 2))),
     );
     final available = _word(
       id: 2,
-      learningStatus: LearningStatus.notStarted,
+      learningStatus: LearningStatus.inactive,
       schedule: _schedule(now.subtract(const Duration(minutes: 2))),
     );
     final learnt = _word(
       id: 3,
-      learningStatus: LearningStatus.learnt,
+      learningStatus: LearningStatus.active,
+      recallRatings: List.filled(8, 3),
       schedule: _schedule(now.subtract(const Duration(minutes: 2))),
     );
     final dashboard = CardsDashboard(cards: [current, available, learnt]);
@@ -355,17 +343,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('only Future cards can be swiped to activate', (tester) async {
+  testWidgets('Future swipes to Prep and Upcoming swipes to Active', (
+    tester,
+  ) async {
     final repository = _RecordingCardLibrary();
     final now = DateTime.now().toUtc();
     final learning = _word(
       id: 1,
-      learningStatus: LearningStatus.learning,
+      learningStatus: LearningStatus.active,
       schedule: _schedule(now),
     );
     final learnt = _word(
       id: 3,
-      learningStatus: LearningStatus.learnt,
+      learningStatus: LearningStatus.active,
+      recallRatings: List.filled(8, 3),
       schedule: _schedule(now),
     );
     final dashboard = CardsDashboard(
@@ -374,12 +365,12 @@ void main() {
         learnt,
         _word(
           id: 4,
-          learningStatus: LearningStatus.learning,
+          learningStatus: LearningStatus.prep,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _word(
           id: 5,
-          learningStatus: LearningStatus.notStarted,
+          learningStatus: LearningStatus.inactive,
           schedule: const CardSchedule.initial(enabled: true),
         ),
       ],
@@ -406,8 +397,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.widgetWithText(FilledButton, 'Recall'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Practice'), findsNothing);
     await tester.drag(
-      find.byKey(const ValueKey('learning:1')),
+      find.byKey(const ValueKey('active:1')),
       const Offset(100, 0),
     );
     await tester.pumpAndSettle();
@@ -416,27 +409,34 @@ void main() {
     await tester.tap(find.text('Past  1'));
     await tester.pumpAndSettle();
     await tester.drag(
-      find.byKey(const ValueKey('learnt:3')),
+      find.byKey(const ValueKey('active:3')),
       const Offset(100, 0),
     );
     await tester.pumpAndSettle();
     expect(repository.changes, isEmpty);
     await tester.tap(find.text('Upcoming  1'));
     await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilledButton, 'Practice'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Recall'), findsNothing);
     await tester.drag(
-      find.byKey(const ValueKey('learning:4')),
-      const Offset(100, 0),
-    );
-    await tester.pumpAndSettle();
-    expect(repository.changes, isEmpty);
-    await tester.tap(find.text('Future  1'));
-    await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const ValueKey('not_started:5')),
+      find.byKey(const ValueKey('prep:4')),
       const Offset(-100, 0),
     );
     await tester.pumpAndSettle();
-    expect(repository.changes, [(5, LearningStatus.learning)]);
+    expect(repository.changes, [(4, LearningStatus.active)]);
+    await tester.tap(find.text('Future  1'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilledButton, 'Practice'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Recall'), findsNothing);
+    await tester.drag(
+      find.byKey(const ValueKey('inactive:5')),
+      const Offset(-100, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.changes, [
+      (4, LearningStatus.active),
+      (5, LearningStatus.prep),
+    ]);
   });
 
   testWidgets('shows subtle state pills beside fronts and sorts by state', (
@@ -446,29 +446,29 @@ void main() {
     final cards = [
       _word(
         id: 4,
-        learningStatus: LearningStatus.learning,
+        learningStatus: LearningStatus.prep,
         schedule: _stateSchedule(now, state: 'learning', isNew: true),
       ),
       _word(
         id: 3,
-        learningStatus: LearningStatus.learning,
+        learningStatus: LearningStatus.active,
         schedule: _stateSchedule(now, state: 'review'),
         recallRatings: const [3, 3, 3, 3],
       ),
       _word(
         id: 5,
-        learningStatus: LearningStatus.learning,
+        learningStatus: LearningStatus.active,
         schedule: _stateSchedule(now, state: 'review'),
         recallRatings: const [1, 1, 1, 3],
       ),
       _word(
         id: 2,
-        learningStatus: LearningStatus.learning,
+        learningStatus: LearningStatus.active,
         schedule: _stateSchedule(now, state: 'relearning'),
       ),
       _word(
         id: 1,
-        learningStatus: LearningStatus.learning,
+        learningStatus: LearningStatus.active,
         schedule: _stateSchedule(now, state: 'learning'),
       ),
     ];
@@ -516,16 +516,22 @@ void main() {
     (tester) async {
       const initial = CardSchedule.initial(enabled: true);
       final cards = <StudyCard>[
-        _word(id: 1, learningStatus: LearningStatus.learnt, schedule: initial),
-        _word(id: 2, learningStatus: LearningStatus.learnt, schedule: initial),
         _word(
-          id: 3,
-          learningStatus: LearningStatus.learning,
+          id: 1,
+          learningStatus: LearningStatus.active,
+          recallRatings: List.filled(8, 3),
           schedule: initial,
         ),
         _word(
+          id: 2,
+          learningStatus: LearningStatus.active,
+          recallRatings: List.filled(8, 3),
+          schedule: initial,
+        ),
+        _word(id: 3, learningStatus: LearningStatus.active, schedule: initial),
+        _word(
           id: 101,
-          learningStatus: LearningStatus.notStarted,
+          learningStatus: LearningStatus.inactive,
           schedule: initial,
           category: 'Phrase',
           modelTypeName: 'Phrase',
@@ -533,7 +539,7 @@ void main() {
         ),
         _word(
           id: 102,
-          learningStatus: LearningStatus.notStarted,
+          learningStatus: LearningStatus.inactive,
           schedule: initial,
           category: 'Phrase',
           modelTypeName: 'Phrase',
@@ -541,7 +547,7 @@ void main() {
         ),
         _word(
           id: 103,
-          learningStatus: LearningStatus.notStarted,
+          learningStatus: LearningStatus.inactive,
           schedule: initial,
           category: 'Phrase',
           modelTypeName: 'Phrase',
@@ -623,26 +629,13 @@ StudyCard _word({
     StudyCue.transliteration: const CardSchedule.initial(enabled: true),
   },
   reviewHistory: <StudyCue, List<CardReview>>{
-    if (!schedule.isNew || learningStatus == LearningStatus.learnt)
+    if (!schedule.isNew || recallRatings != null)
       StudyCue.fromLanguage: [
-        for (
-          var index = 0;
-          index <
-              (recallRatings ??
-                      (learningStatus == LearningStatus.learnt
-                          ? List.filled(8, 3)
-                          : [1]))
-                  .length;
-          index++
-        )
+        for (var index = 0; index < (recallRatings ?? [1]).length; index++)
           CardReview(
             id: 'review-$id-$index',
             reviewedAt: DateTime.utc(2026, 8, index + 1),
-            rating:
-                (recallRatings ??
-                (learningStatus == LearningStatus.learnt
-                    ? List.filled(8, 3)
-                    : [1]))[index],
+            rating: (recallRatings ?? [1])[index],
             elapsedSeconds: 86400,
             scheduledSeconds: 86400,
           ),

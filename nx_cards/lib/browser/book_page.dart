@@ -74,7 +74,9 @@ class BookPage extends ConsumerWidget {
             historyWindow: historyWindow,
           );
           final notStarted = sortCardsByScheduleState(
-            cards.where((card) => !card.active),
+            cards.where(
+              (card) => card.learningStatus == LearningStatus.inactive,
+            ),
             now,
             historyWindow: historyWindow,
           );
@@ -97,6 +99,7 @@ class BookPage extends ConsumerWidget {
                             ),
                           ),
                           StudyLauncher(
+                            followLearningTab: true,
                             studyScope: StudyScope(bookId: bookId),
                             title: bookName,
                             preferenceKey: 'book:$bookId',
@@ -139,7 +142,9 @@ class BookPage extends ConsumerWidget {
                     children: [
                       LearningCardsTab(
                         cards: upcoming,
-                        emptyText: 'Activate Future cards to practice.',
+                        nextStatus: LearningStatus.active,
+                        actionLabel: 'Activate',
+                        emptyText: 'Move Future cards to Prep to practice.',
                         dashboard: data,
                       ),
                       LearningCardsTab(
@@ -156,7 +161,7 @@ class BookPage extends ConsumerWidget {
                       LearningCardsTab(
                         cards: notStarted,
                         emptyText: 'Every card has been started.',
-                        nextStatus: LearningStatus.learning,
+                        nextStatus: LearningStatus.prep,
                         actionLabel: '+',
                         dashboard: data,
                       ),

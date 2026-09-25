@@ -537,7 +537,9 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
             historyWindow: historyWindow,
           );
           final notStarted = sortFutureCards(
-            cards.where((card) => !card.active),
+            cards.where(
+              (card) => card.learningStatus == LearningStatus.inactive,
+            ),
             futureScores,
           );
           final queue = [
@@ -566,6 +568,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             ),
                           ),
                           StudyLauncher(
+                            followLearningTab: true,
                             studyScope: StudyScope(
                               language: language,
                               tagSystem: widget.tagSystem ?? 'Category',
@@ -658,8 +661,10 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                         children: [
                           LearningCardsTab(
                             cards: upcoming,
+                            nextStatus: LearningStatus.active,
+                            actionLabel: 'Activate',
                             emptyText:
-                                'Activate Future cards to practice them here.',
+                                'Move Future cards to Prep to practice them here.',
                             dashboard: data,
                             showScheduleStatus: true,
                           ),
@@ -692,7 +697,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 : widget.allCards || widget.tagSystem != null
                                 ? 'Every card has been started.'
                                 : 'Every word has been started.',
-                            nextStatus: LearningStatus.learning,
+                            nextStatus: LearningStatus.prep,
                             actionLabel: '+',
                             dashboard: data,
                           ),

@@ -6,20 +6,24 @@ sealed class CardContent {
 }
 
 enum LearningStatus {
-  notStarted('not_started'),
-  learning('learning'),
-  learnt('learnt');
+  inactive('inactive', 'Inactive'),
+  prep('prep', 'Prep'),
+  active('active', 'Active');
 
-  const LearningStatus(this.storageValue);
-
+  const LearningStatus(this.storageValue, this.label);
   final String storageValue;
+  final String label;
+  bool get isRecallEligible => this == LearningStatus.active;
 
-  bool get isRecallEligible => this != LearningStatus.notStarted;
-
-  static LearningStatus fromStorage(Object? value) => switch (value) {
-    'learning' => LearningStatus.learning,
-    'learnt' => LearningStatus.learnt,
-    _ => LearningStatus.notStarted,
+  static LearningStatus fromStorage(
+    Object? value, {
+    bool hasRecallHistory = false,
+  }) => switch (value) {
+    'active' => LearningStatus.active,
+    'prep' => LearningStatus.prep,
+    'learning' ||
+    'learnt' => hasRecallHistory ? LearningStatus.active : LearningStatus.prep,
+    _ => LearningStatus.inactive,
   };
 }
 
