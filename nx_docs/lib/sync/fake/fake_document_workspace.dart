@@ -34,8 +34,14 @@ final class FakeDocumentWorkspace implements DocumentWorkspace {
   }
 
   CatalogState _catalog(CatalogQuery query) {
-    var documents = _documents.values.toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    var documents =
+        _documents.values
+            .where(
+              (document) =>
+                  query.kind == CatalogKind.books || !document.isBookContent,
+            )
+            .toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     documents = switch (query.kind) {
       CatalogKind.all => documents,
       CatalogKind.recent => documents.take(query.limit ?? 20).toList(),

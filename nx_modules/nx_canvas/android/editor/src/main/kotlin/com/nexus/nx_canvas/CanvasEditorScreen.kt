@@ -55,7 +55,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private var resumed=false
     private var closing=false
     private var dialogOpen=false
-    private var buttonErasing=false
+    private var hardwareTool:NativeTool?=null
     private lateinit var saveStatus:TextView
     private var destroyed=false
     private val traceId = activity.intent.getStringExtra("traceId") ?: UUID.randomUUID().toString()
@@ -248,7 +248,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         if((next==tool && overview==null) || !ready || busy || closing)return
         val wasNative=nativeTool()
         perform("switch_tool") {
-            dismissOverview();tool=next;buttonErasing=false;engine.dispatch(CanvasCommand.ClearSelection)
+            dismissOverview();tool=next;hardwareTool=null;engine.dispatch(CanvasCommand.ClearSelection)
             if(wasNative && nativeTool()) {
                 // Keep the vendor framebuffer and record list intact. A pen
                 // change does not require a full-screen foreground refresh.
@@ -318,7 +318,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         flag(false)
         if(nativeTool()) {
             editing.visibility=View.GONE;ink!!.visibility=View.VISIBLE
-            setNativePen(if(buttonErasing)NativeTool.REGION else tool)
+            setNativePen(hardwareTool ?: tool)
             // Stock SimplePen paint stays pure black: changing it slowed this tablet.
             renderForeground()
         } else {
@@ -333,20 +333,19 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         input.setPen(selected,if(selected==NativeTool.PEN)penWidth*model.view.scale*density else 24*density)
     }
     /** Only tool transitions touch the vendor API; live ink stays stock. */
-    private fun eraseButton(held:Boolean) {
-        if(!ready || busy || closing || dialogOpen || !nativeTool() || overlayTouch || held==buttonErasing)return
+    private fun hardwareEraser(next:NativeTool?) {
+        if(!ready || busy || closing || dialogOpen || !nativeTool() || overlayTouch || next==hardwareTool)return
         runCatching {
-            buttonErasing=held
-            setNativePen(if(held)NativeTool.REGION else tool)
-            Log.i("NxNativeEditor","Stylus region erase: $held")
+            hardwareTool=next
+            setNativePen(next ?: tool)
+            Log.i("NxNativeEditor","Stylus tool override: $next")
         }.onFailure{report(it)}
     }
     private fun stylusButtons(event:MotionEvent) {
         if(event.pointerCount==0)return
         val type=event.getToolType(0)
         if(type==MotionEvent.TOOL_TYPE_STYLUS || type==MotionEvent.TOOL_TYPE_ERASER) {
-            eraseButton(type==MotionEvent.TOOL_TYPE_ERASER || event.buttonState and
-                (MotionEvent.BUTTON_STYLUS_PRIMARY or MotionEvent.BUTTON_STYLUS_SECONDARY)!=0)
+            hardwareEraser(stylusToolOverride(type, event.buttonState))
         }
     }
     fun dispatchTouchEvent(event:MotionEvent, dispatch: () -> Boolean):Boolean {
@@ -397,7 +396,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         dialogOpen=true
         val widths=doubleArrayOf(1.5,3.0,6.0,10.0)
         AlertDialog.Builder(this).setTitle("Pen thickness").setSingleChoiceItems(widths.map{"$it pt"}.toTypedArray(),widths.indexOfFirst{it==penWidth}){dialog,index->
-            penWidth=widths[index];runCatching{if(nativeTool())setNativePen(if(buttonErasing)NativeTool.REGION else tool);updateControls()}.onFailure{report(it)};dialog.dismiss()
+            penWidth=widths[index];runCatching{if(nativeTool())setNativePen(hardwareTool ?: tool);updateControls()}.onFailure{report(it)};dialog.dismiss()
         }.setNegativeButton("Cancel",null).create().apply{setOnDismissListener{dialogOpen=false;resumeInk()};show()}
     }
     private fun dismissOverview() { overview?.let{body.removeView(it)};overview=null }

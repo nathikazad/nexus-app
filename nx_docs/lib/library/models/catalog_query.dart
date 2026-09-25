@@ -6,7 +6,6 @@ const libraryCatalogQueries = <CatalogQuery>[
   CatalogQuery.all(),
   CatalogQuery.recent(),
   CatalogQuery.pinned(),
-  CatalogQuery.books(),
 ];
 
 final class CatalogQuery {

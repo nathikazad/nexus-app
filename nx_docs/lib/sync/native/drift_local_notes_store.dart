@@ -169,7 +169,9 @@ class DriftLocalNotesStore implements LocalNotesStore, QueuedDocumentReader {
   Stream<List<DocumentSummary>> watchCatalog(CatalogQuery query) {
     if (!query.persistsMembership) {
       final variables = <Variable>[Variable(accountKey)];
-      var predicate = 'account_key = ? AND deleted_locally = 0';
+      var predicate =
+          "account_key = ? AND deleted_locally = 0 AND "
+          "COALESCE(json_extract(document_json, '\$.model_type_name'), '') NOT IN ('Book', 'Book Chapter')";
       final search = query.searchText.trim().toLowerCase();
       if (search.isNotEmpty) {
         predicate +=
@@ -220,6 +222,13 @@ class DriftLocalNotesStore implements LocalNotesStore, QueuedDocumentReader {
             OrderingTerm.desc(summaries.remoteUpdatedAt),
             OrderingTerm.desc(summaries.remoteId),
           ]);
+    if (query.kind != CatalogKind.books) {
+      select.where(
+        const CustomExpression<bool>(
+          "COALESCE(json_extract(document_summaries.document_json, '\$.model_type_name'), '') NOT IN ('Book', 'Book Chapter')",
+        ),
+      );
+    }
     if (query.limit != null) select.limit(query.limit!);
     return select.watch().map(
       (rows) => <DocumentSummary>[

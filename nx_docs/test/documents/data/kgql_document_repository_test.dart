@@ -12,52 +12,23 @@ void main() {
   });
 
   test(
-    'recent lists request a server limit and omit document bodies',
+    'document catalog omits books and chapters before limiting results',
     () async {
       final client = _MockGraphQLClient();
       when(() => client.query(any())).thenAnswer((invocation) async {
         final options = invocation.positionalArguments.single as QueryOptions;
         final filter = options.variables['filter'] as Map;
-        expect(filter['limit'], 20);
-        expect(filter['order_by'], {'key': 'updated_at', 'direction': 'DESC'});
+        expect(filter['model_type'], 'Document');
+        expect(filter.containsKey('limit'), isFalse);
         final struct = options.variables['struct'] as Map;
         expect(struct.containsKey('document'), isFalse);
         expect(struct.containsKey('json_document'), isFalse);
-        return _result({'getKgqlModels': <Object?>[]});
-      });
-      final repository = KgqlDocumentRepository(
-        client: client,
-        loadDocumentSchema: _unusedSchema,
-        loadDocumentSnapSchema: _unusedSchema,
-      );
-      expect(await repository.listRecent(), isEmpty);
-      verify(() => client.query(any())).called(2);
-    },
-  );
-
-  test(
-    'general document listings are completed by a separate Book query',
-    () async {
-      final client = _MockGraphQLClient();
-      when(() => client.query(any())).thenAnswer((invocation) async {
-        final options = invocation.positionalArguments.single as QueryOptions;
-        final filter = options.variables['filter']! as Map<String, dynamic>;
-        final isBookQuery = filter['model_type'] == 'Book';
-        return _result(<String, Object?>{
-          'getKgqlModels': isBookQuery
-              ? <Object?>[
-                  _model(
-                    id: 2,
-                    name: 'Complete Book',
-                    modelType: 'Book',
-                    readingState: 'reading',
-                    rank: 4,
-                  ),
-                ]
-              : <Object?>[
-                  _model(id: 1, name: 'Document', modelType: 'Document'),
-                  _model(id: 2, name: 'Incomplete Book', modelType: 'Book'),
-                ],
+        return _result({
+          'getKgqlModels': [
+            _model(id: 2, name: 'Book', modelType: 'Book'),
+            _model(id: 3, name: 'Chapter', modelType: 'Book Chapter'),
+            _model(id: 1, name: 'My document', modelType: 'Document'),
+          ],
         });
       });
       final repository = KgqlDocumentRepository(
@@ -65,15 +36,10 @@ void main() {
         loadDocumentSchema: _unusedSchema,
         loadDocumentSnapSchema: _unusedSchema,
       );
-
-      final rows = await repository.listAll();
-
-      expect(rows, hasLength(2));
-      final book = rows.singleWhere((row) => row.isBook);
-      expect(book.title, 'Complete Book');
-      expect(book.readingState, 'reading');
-      expect(book.bookRank, 4);
-      verify(() => client.query(any())).called(2);
+      expect((await repository.listAll()).map((d) => d.id), [1]);
+      expect((await repository.listRecent(limit: 1)).map((d) => d.id), [1]);
+      expect((await repository.listPinned(limit: 1)).map((d) => d.id), [1]);
+      verify(() => client.query(any())).called(3);
     },
   );
 }

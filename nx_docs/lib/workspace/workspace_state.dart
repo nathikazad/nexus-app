@@ -104,7 +104,7 @@ class DesktopWorkspaceState {
   }
 }
 
-enum SidebarTab { documents, books, tags }
+enum SidebarTab { documents, tags }
 
 class DesktopWorkspaceNotifier extends Notifier<DesktopWorkspaceState> {
   static const int _maxMountedEditorsPerTab = 5;

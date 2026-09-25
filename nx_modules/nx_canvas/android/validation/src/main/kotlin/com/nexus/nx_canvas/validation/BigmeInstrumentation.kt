@@ -5,6 +5,9 @@ import android.app.Instrumentation
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.view.MotionEvent
+import android.view.InputDevice
+import android.os.SystemClock
 import com.nexus.nx_canvas.*
 
 /** Isolated hardware regression: its own library, never a user's Docs document. */
@@ -45,9 +48,23 @@ class BigmeInstrumentation : Instrumentation() {
             runOnMainSync { (field(screen, "redoButton") as Button).performClick() }
             waitUntil("redo") { saved()?.snapshot?.strokes?.size == 2 && field(adapter, "admitted") == true }
             val secondId = saved()!!.snapshot.strokes.last().id
-            // Firmware rubber callbacks must import an erase operation, not a white stroke.
-            stroke(1, listOf(110.0 to 110.0, 110.0 to 140.0, 110.0 to 180.0))
+            // Bigme can deliver the rear-tip identity through Android hover while
+            // the cooked firmware callback still reports pen. Test both channels.
+            fun hover(tool: Int) {
+                val properties = MotionEvent.PointerProperties().apply { id = 0; toolType = tool }
+                val coordinates = MotionEvent.PointerCoords().apply { x = 110f; y = 110f; pressure = 0f }
+                val now = SystemClock.uptimeMillis()
+                val event = MotionEvent.obtain(now, now, MotionEvent.ACTION_HOVER_MOVE, 1,
+                    arrayOf(properties), arrayOf(coordinates), 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_STYLUS, 0)
+                runOnMainSync { activity!!.dispatchGenericMotionEvent(event) }
+                event.recycle()
+            }
+            hover(MotionEvent.TOOL_TYPE_ERASER)
+            check(field(screen, "hardwareTool") == NativeTool.RUB) { "Rear tip must rub erase, not region erase" }
+            stroke(0, listOf(110.0 to 110.0, 110.0 to 140.0, 110.0 to 180.0))
             waitUntil("eraser reconciliation") { saved()?.snapshot?.strokes?.none { it.id == first.strokes.single().id } == true && field(adapter, "admitted") == true }
+            hover(MotionEvent.TOOL_TYPE_STYLUS)
+            check(field(screen, "hardwareTool") == null) { "Pen tip did not restore selected tool" }
             val switchTool = screen.javaClass.getDeclaredMethod("switchTool", NativeTool::class.java).apply { isAccessible = true }
             runOnMainSync { switchTool.invoke(screen, NativeTool.REGION) }
             waitUntil("region tool") { field(adapter, "admitted") == true && field(screen, "tool") == NativeTool.REGION }
@@ -70,7 +87,7 @@ class BigmeInstrumentation : Instrumentation() {
             var snapshot: InkSnapshot? = null
             runOnMainSync { snapshot = engine.snapshot().drawing }
             check(snapshot!!.strokes == afterErase.strokes) { "Reopen changed ink" }
-            output.putString("stream", "PASS: Bigme firmware connection, native surface, pen-up autosave, undo/redo, rubber and region erasers, board navigation, durable close and reopen. Synthetic callbacks; physical pen latency still needs hands-on validation.\n")
+            output.putString("stream", "PASS: Bigme firmware connection, native surface, pen-up autosave, undo/redo, rear-tip rub erase, pen-tip restoration and region erase, board navigation, durable close and reopen. Synthetic callbacks; physical pen latency still needs hands-on validation.\n")
             finish(Activity.RESULT_OK, output)
         } catch (error: Throwable) {
             output.putString("stream", error.stackTraceToString()); finish(Activity.RESULT_CANCELED, output)

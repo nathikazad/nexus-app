@@ -20,6 +20,21 @@ import 'package:nx_docs/workspace/workspace_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('wide layout has no Books tab and creates documents directly', (
+    tester,
+  ) async {
+    await _pumpWorkspace(tester, 1440);
+    expect(find.text('Books'), findsNothing);
+    expect(find.text('Book'), findsNothing);
+    await tester.tap(find.byTooltip('New document'));
+    await tester.pumpAndSettle();
+    expect(find.text('New book'), findsNothing);
+    expect(find.byKey(const ValueKey('title-display-100')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('unified search retains text and combines with tag filters', (
     tester,
   ) async {
@@ -102,9 +117,7 @@ void main() {
       tester,
     ) async {
       final repo = await _pumpWorkspace(tester, width);
-      await tester.tap(find.byTooltip('New document or book'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('New document'));
+      await tester.tap(find.byTooltip('New document'));
       await tester.pumpAndSettle();
       final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
       expect(editor.editable, isTrue);
@@ -160,9 +173,7 @@ void main() {
     tester,
   ) async {
     await _pumpWorkspace(tester, 390);
-    await tester.tap(find.byTooltip('New document or book'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('New document'));
+    await tester.tap(find.byTooltip('New document'));
     await tester.pumpAndSettle();
     final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
     editor.editorState.selection = Selection.collapsed(
@@ -206,9 +217,7 @@ void main() {
       AppColors.isDark = dark;
       addTearDown(() => AppColors.isDark = previousDark);
       await _pumpWorkspace(tester, 390);
-      await tester.tap(find.byTooltip('New document or book'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('New document'));
+      await tester.tap(find.byTooltip('New document'));
       await tester.pumpAndSettle();
       final state = tester
           .widget<AppFlowyEditor>(find.byType(AppFlowyEditor))

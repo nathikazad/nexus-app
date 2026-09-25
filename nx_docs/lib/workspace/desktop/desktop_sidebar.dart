@@ -68,12 +68,7 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
     final pinned = workspace.sidebarTab == SidebarTab.documents
         ? ref.watch(offlinePinnedDocumentsProvider)
         : const AsyncData<List<NxDocument>>([]);
-    final books = workspace.sidebarTab == SidebarTab.books
-        ? ref.watch(offlineBooksProvider)
-        : const AsyncData<List<NxDocument>>([]);
-    final tagSystems =
-        workspace.sidebarTab == SidebarTab.tags ||
-            workspace.sidebarTab == SidebarTab.books
+    final tagSystems = workspace.sidebarTab == SidebarTab.tags
         ? ref.watch(offlineTagSystemsProvider)
         : const AsyncData<List<TagSystem>>([]);
     final liveQuery = _liveSearchText;
@@ -165,15 +160,6 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                 ),
                 Expanded(
                   child: _SidebarTabButton(
-                    label: 'Books',
-                    active: workspace.sidebarTab == SidebarTab.books,
-                    onTap: () => ref
-                        .read(desktopWorkspaceProvider.notifier)
-                        .setSidebarTab(SidebarTab.books),
-                  ),
-                ),
-                Expanded(
-                  child: _SidebarTabButton(
                     label: 'Tags',
                     active: workspace.sidebarTab == SidebarTab.tags,
                     onTap: () => ref
@@ -192,11 +178,6 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                 pinned: pinned,
                 liveQuery: liveQuery,
                 liveResults: liveDocuments,
-              ),
-              SidebarTab.books => _SidebarBooks(
-                books: books,
-                tagSystems: tagSystems,
-                liveQuery: liveQuery,
               ),
               SidebarTab.tags => _SidebarTags(tagSystems: tagSystems),
             },
@@ -237,226 +218,36 @@ class _NewDocumentMenuButton extends ConsumerStatefulWidget {
 
 class _NewDocumentMenuButtonState
     extends ConsumerState<_NewDocumentMenuButton> {
-  final _buttonKey = GlobalKey();
-  OverlayEntry? _entry;
-  var _busy = false;
+  bool _busy = false;
 
-  @override
-  void dispose() {
-    _hideMenu();
-    super.dispose();
-  }
-
-  void _toggleMenu() {
-    if (_entry == null) {
-      _showMenu();
-    } else {
-      _hideMenu();
-    }
-  }
-
-  void _showMenu() {
-    final buttonBox =
-        _buttonKey.currentContext?.findRenderObject() as RenderBox?;
-    final overlay = Overlay.of(context, rootOverlay: true);
-    if (buttonBox == null) return;
-
-    final buttonOffset = buttonBox.localToGlobal(Offset.zero);
-    final screenSize = MediaQuery.sizeOf(context);
-    const width = 164.0;
-    const margin = 8.0;
-    final left = buttonOffset.dx.clamp(
-      margin,
-      screenSize.width - width - margin,
-    );
-    final top = (buttonOffset.dy + buttonBox.size.height + 7).clamp(
-      margin,
-      screenSize.height - 94,
-    );
-
-    _entry = OverlayEntry(
-      builder: (_) {
-        return Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _hideMenu,
-              ),
-            ),
-            Positioned(
-              left: left,
-              top: top,
-              width: width,
-              child: _NewDocumentMenuSurface(
-                busy: _busy,
-                onCreateDocument: () =>
-                    unawaited(_createDocument(DocumentKind.document)),
-                onCreateBook: () =>
-                    unawaited(_createDocument(DocumentKind.book)),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-    overlay.insert(_entry!);
-  }
-
-  void _hideMenu() {
-    _entry?.remove();
-    _entry = null;
-  }
-
-  Future<void> _createDocument(DocumentKind kind) async {
+  Future<void> _createDocument() async {
     if (_busy) return;
     setState(() => _busy = true);
-    _entry?.markNeedsBuild();
     try {
-      _hideMenu();
       final document = await ref
           .read(documentMutationControllerProvider)
-          .createDocument(kind: kind);
+          .createDocument();
+      if (!mounted) return;
       ref.read(desktopWorkspaceProvider.notifier).openDocument(document.id);
-    } finally {
+    } catch (_) {
       if (mounted) {
-        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not create the document. Please try again.'),
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'New',
-      preferBelow: false,
-      child: Material(
-        key: _buttonKey,
-        color: AppColors.panel,
-        borderRadius: BorderRadius.circular(4),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(4),
-          onTap: _busy ? null : _toggleMenu,
-          child: Container(
-            width: 26,
-            height: 24,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.line),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Icon(Icons.add, size: 16, color: AppColors.muted),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NewDocumentMenuSurface extends StatelessWidget {
-  const _NewDocumentMenuSurface({
-    required this.busy,
-    required this.onCreateDocument,
-    required this.onCreateBook,
-  });
-
-  final bool busy;
-  final VoidCallback onCreateDocument;
-  final VoidCallback onCreateBook;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.panel,
-          border: Border.all(color: AppColors.line),
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: const <BoxShadow>[
-            BoxShadow(
-              color: Color(0x1a000000),
-              blurRadius: 16,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _NewDocumentMenuRow(
-                icon: Icons.description_outlined,
-                label: 'Document',
-                enabled: !busy,
-                onTap: onCreateDocument,
-              ),
-              _NewDocumentMenuRow(
-                icon: Icons.menu_book_outlined,
-                label: 'Book',
-                enabled: !busy,
-                onTap: onCreateBook,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NewDocumentMenuRow extends StatelessWidget {
-  const _NewDocumentMenuRow({
-    required this.icon,
-    required this.label,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          child: SizedBox(
-            height: 32,
-            child: Row(
-              children: <Widget>[
-                Container(
-                  width: 24,
-                  height: 24,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.subtle,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Icon(icon, size: 15, color: AppColors.muted),
-                ),
-                const SizedBox(width: 9),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: enabled ? AppColors.text : AppColors.faint,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _IconSquareButton(
+    icon: Icons.add,
+    tooltip: 'New document',
+    onPressed: _busy ? null : () => unawaited(_createDocument()),
+  );
 }
 
 class _CollapsedSidebar extends ConsumerWidget {
@@ -586,7 +377,7 @@ class _IconSquareButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final String? tooltip;
 
   @override

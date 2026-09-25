@@ -506,6 +506,7 @@ final class DocumentSummary {
   final int? bookRank;
 
   bool get isBook => modelTypeName == 'Book';
+  bool get isBookContent => isBook || modelTypeName == 'Book Chapter';
 
   /// Converts a catalog row into the existing presentation model without
   /// inventing a document body. Opening the row must still go through a
@@ -596,6 +597,7 @@ class NxDocument {
       jsonDocument.containsKey('document');
 
   bool get isBook => modelTypeName == 'Book';
+  bool get isBookContent => isBook || modelTypeName == 'Book Chapter';
 
   Map<String, List<String>> get publishTagsBySystem {
     return <String, List<String>>{

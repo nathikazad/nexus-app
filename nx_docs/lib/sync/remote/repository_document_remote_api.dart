@@ -33,7 +33,13 @@ final class RepositoryDocumentRemoteApi implements DocumentRemoteApi {
       CatalogKind.search => repository.search(query.searchText),
       CatalogKind.tag => repository.listByTag(query.tagFilter!),
     };
-    return documents.map(DocumentSummary.fromDocument).toList(growable: false);
+    return documents
+        .where(
+          (document) =>
+              query.kind == CatalogKind.books || !document.isBookContent,
+        )
+        .map(DocumentSummary.fromDocument)
+        .toList(growable: false);
   }
 
   @override

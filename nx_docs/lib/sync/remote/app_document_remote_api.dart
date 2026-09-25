@@ -4,7 +4,7 @@ import 'package:nx_docs/documents/data/kgql/document_mapper.dart';
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/library/models/catalog_query.dart';
 import 'package:nx_docs/sync/sync_models.dart';
-import 'document_remote_api.dart';
+import 'package:nx_docs/sync/remote/document_remote_api.dart';
 
 /// Screen reads share the backend app adapter; writes and offline reconciliation
 /// remain on the mutation/sync contracts.
@@ -37,23 +37,36 @@ final class AppDocumentRemoteApi implements DocumentRemoteApi {
 
   @override
   Future<List<DocumentSummary>> fetchCatalog(CatalogQuery query) async {
-    final rows = await reads.items(
-      limit: query.limit,
-      query: {
+    if (query.limit != null && query.limit! <= 0) return [];
+    final documents = <DocumentSummary>[];
+    String? cursor;
+    do {
+      final page = await reads.read('items', {
         'kind': query.kind.name,
+        'limit': '50',
+        if (cursor != null) 'cursor': cursor,
         if (query.searchText.isNotEmpty) 'search': query.searchText,
         if (query.tagFilter != null) 'tag_system': query.tagFilter!.system,
         if (query.tagFilter != null) 'tag': query.tagFilter!.node,
-      },
-    );
-    return [
-      for (final raw in rows)
-        DocumentSummary.fromDocument(
-          documentSummaryFromModel(
-            Model.fromJson(Map<String, dynamic>.from(raw as Map)),
-          ),
-        ),
-    ];
+      });
+      for (final raw in page['items'] as List) {
+        final document = documentSummaryFromModel(
+          Model.fromJson(Map<String, dynamic>.from(raw as Map)),
+        );
+        if (query.kind == CatalogKind.books || !document.isBookContent) {
+          documents.add(DocumentSummary.fromDocument(document));
+        }
+      }
+      final next = page['next_cursor'] as String?;
+      if (next != null && next == cursor) {
+        throw StateError('Page did not advance');
+      }
+      cursor = next;
+    } while (cursor != null &&
+        (query.limit == null || documents.length < query.limit!));
+    return query.limit == null
+        ? documents
+        : documents.take(query.limit!).toList();
   }
 
   @override

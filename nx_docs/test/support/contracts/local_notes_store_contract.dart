@@ -248,7 +248,7 @@ void runLocalNotesStoreContract({
         (await store.readCatalog(
           const CatalogQuery.all(),
         )).map((row) => row.id),
-        unorderedEquals(<int>[1, 2]),
+        unorderedEquals(<int>[1]),
       );
       expect(
         (await store.readCatalog(

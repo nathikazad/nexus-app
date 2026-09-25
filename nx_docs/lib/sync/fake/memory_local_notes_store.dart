@@ -58,7 +58,9 @@ class MemoryLocalNotesStore implements LocalNotesStore {
       return <DocumentSummary>[
         for (final id in ids)
           if (!_deletedSummaryIds.contains(id))
-            if (_summaries[id] case final summary?) summary,
+            if (_summaries[id] case final summary?)
+              if (query.kind == CatalogKind.books || !summary.isBookContent)
+                summary,
       ];
     });
   }
@@ -74,7 +76,9 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     return Future<List<DocumentSummary>>.value(<DocumentSummary>[
       for (final id in ids)
         if (!_deletedSummaryIds.contains(id))
-          if (_summaries[id] case final summary?) summary,
+          if (_summaries[id] case final summary?)
+            if (query.kind == CatalogKind.books || !summary.isBookContent)
+              summary,
     ]);
   }
 
@@ -441,6 +445,7 @@ class MemoryLocalNotesStore implements LocalNotesStore {
     final search = query.searchText.trim().toLowerCase();
     return rows
         .where((summary) {
+          if (summary.isBookContent) return false;
           if (search.isNotEmpty &&
               !<String>[
                 summary.title,

@@ -152,7 +152,7 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<List<NxDocument>> listByTag(DocumentTagFilter filter) async {
-    final models = await _fetchDocumentsAndBooks({
+    final models = await _fetchLibraryDocuments({
       'model_type': kDocumentModelTypeName,
       'tag_filters': [
         {
@@ -167,7 +167,7 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<List<NxDocument>> listPinned({int limit = 20}) async {
-    final models = await _fetchDocumentsAndBooks({
+    final models = await _fetchLibraryDocuments({
       'model_type': kDocumentModelTypeName,
       'filters': [
         {'key': kDocumentAttrPinned, 'op': '=', 'value': true},
@@ -207,9 +207,12 @@ class KgqlDocumentRepository implements DocumentRepository {
     final normalized = query.trim().toLowerCase();
     return [
       for (final model in models)
-        if (normalized.isEmpty ||
-            model.name.toLowerCase().contains(normalized) ||
-            (model.description ?? '').toLowerCase().contains(normalized))
+        if ((modelType != LinkableModelType.document ||
+                (model.modelType?.name != 'Book' &&
+                    model.modelType?.name != 'Book Chapter')) &&
+            (normalized.isEmpty ||
+                model.name.toLowerCase().contains(normalized) ||
+                (model.description ?? '').toLowerCase().contains(normalized)))
           LinkedModel(
             id: model.id,
             name: model.name,
@@ -265,10 +268,9 @@ class KgqlDocumentRepository implements DocumentRepository {
   @override
   Future<List<NxDocument>> listRecent({int limit = 20}) async {
     if (limit <= 0) return [];
-    final models = await _fetchDocumentsAndBooks({
+    final models = await _fetchLibraryDocuments({
       'model_type': kDocumentModelTypeName,
       'order_by': {'key': 'updated_at', 'direction': 'DESC'},
-      'limit': limit,
     });
     return _sortedDocumentSummaries(models).take(limit).toList();
   }
@@ -373,35 +375,27 @@ class KgqlDocumentRepository implements DocumentRepository {
       _fetchAllSummaries().whenComplete(() => _allSummariesInFlight = null);
 
   Future<List<NxDocument>> _fetchAllSummaries() async {
-    final models = await _fetchDocumentsAndBooks({
+    final models = await _fetchLibraryDocuments({
       'model_type': kDocumentModelTypeName,
     });
     return _sortedDocumentSummaries(models);
   }
 
-  Future<List<Model>> _fetchDocumentsAndBooks(
+  Future<List<Model>> _fetchLibraryDocuments(
     Map<String, dynamic> documentFilter,
   ) async {
-    final results = await Future.wait(<Future<List<Model>>>[
-      fetchKgqlModels(
-        _client,
-        filter: documentFilter,
-        struct: documentSummaryFetchStruct(),
-      ),
-      fetchKgqlModels(
-        _client,
-        filter: <String, dynamic>{
-          ...documentFilter,
-          'model_type': kBookModelTypeName,
-        },
-        struct: documentSummaryFetchStruct(),
-      ),
-    ]);
-    final modelsById = <int, Model>{
-      for (final model in results.first) model.id: model,
-      for (final book in results.last) book.id: book,
-    };
-    return modelsById.values.toList(growable: false);
+    final models = await fetchKgqlModels(
+      _client,
+      filter: documentFilter,
+      struct: documentSummaryFetchStruct(),
+    );
+    return models
+        .where(
+          (model) =>
+              model.modelType?.name != 'Book' &&
+              model.modelType?.name != 'Book Chapter',
+        )
+        .toList(growable: false);
   }
 
   Future<List<NxDocument>> _listAllSummaries() => _listAll();

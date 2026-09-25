@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:drift/native.dart';
+import 'package:nx_docs/library/models/catalog_query.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_docs/sync/native/local_notes_store.dart';
 import 'package:nx_docs/sync/native/drift_local_notes_store.dart';
@@ -21,6 +22,63 @@ void main() {
       disposeStore: (LocalNotesStore store) {
         return (store as DriftLocalNotesStore).database.close();
       },
+    );
+  });
+
+  test('cached books and chapters stay out of all document catalogs', () async {
+    final database = NotesDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final store = DriftLocalNotesStore(
+      database: database,
+      accountKey: 'prod:user-1',
+    );
+    final rows =
+        [
+              offlineTestDocument(
+                id: 2,
+                title: 'Shared book',
+                pinned: true,
+                updatedAt: DateTime.utc(2026, 3),
+              ).copyWith(modelTypeName: 'Book'),
+              offlineTestDocument(
+                id: 3,
+                title: 'Shared chapter',
+                pinned: true,
+                updatedAt: DateTime.utc(2026, 2),
+              ).copyWith(modelTypeName: 'Book Chapter'),
+              offlineTestDocument(
+                id: 1,
+                title: 'Shared document',
+                pinned: true,
+              ),
+            ]
+            .map(
+              (d) => DocumentSummary.fromDocument(
+                d.copyWith(
+                  tagsBySystem: {
+                    'Topic': ['Ideas'],
+                  },
+                ),
+              ),
+            )
+            .toList();
+    for (final query in [
+      const CatalogQuery.all(),
+      const CatalogQuery.recent(limit: 1),
+      const CatalogQuery.pinned(limit: 1),
+    ]) {
+      await store.replaceCatalog(query, rows);
+      expect((await store.readCatalog(query)).map((d) => d.id), [1]);
+    }
+    for (final query in [
+      const CatalogQuery.search('Shared'),
+      const CatalogQuery.tag(DocumentTagFilter(system: 'Topic', node: 'Ideas')),
+    ]) {
+      expect((await store.readCatalog(query)).map((d) => d.id), [1]);
+    }
+    expect(
+      await database.select(database.documentSummaries).get(),
+      hasLength(3),
     );
   });
 

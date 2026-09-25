@@ -13,14 +13,12 @@ import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/tags/tag_system.dart';
 import 'package:nx_docs/documents/document_actions.dart';
 import 'package:nx_docs/companion/note_companion.dart';
-import 'package:nx_docs/books/book_shelf.dart';
 import 'package:nx_docs/documents/editor/document_editor_view.dart';
 import 'package:nx_docs/settings/settings_button.dart';
 import 'package:nx_docs/workspace/workspace_state.dart';
 
 part 'desktop_sidebar.dart';
 part 'sidebar_documents.dart';
-part 'sidebar_books.dart';
 part 'sidebar_sections.dart';
 part 'desktop_editor_workspace.dart';
 part 'desktop_inspector.dart';

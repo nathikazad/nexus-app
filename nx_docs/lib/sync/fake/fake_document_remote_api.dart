@@ -64,8 +64,14 @@ final class FakeDocumentRemoteApi
     catalogFetchCount += 1;
     await catalogBarrier;
     _throwIfConfigured();
-    var rows = _documents.values.toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    var rows =
+        _documents.values
+            .where(
+              (document) =>
+                  query.kind == CatalogKind.books || !document.isBookContent,
+            )
+            .toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     rows = switch (query.kind) {
       CatalogKind.all => rows,
       CatalogKind.recent => rows.take(query.limit ?? 20).toList(),
