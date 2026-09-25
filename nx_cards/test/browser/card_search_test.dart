@@ -20,7 +20,7 @@ StudyCard card(int id, LearningStatus status, {String category = 'Noun'}) =>
         StudyCue.fromLanguage: [
           for (
             var i = 0;
-            i < (status == LearningStatus.active ? (id == 1 ? 1 : 8) : 0);
+            i < (status == LearningStatus.recall ? (id == 1 ? 1 : 8) : 0);
             i++
           )
             CardReview(
@@ -45,7 +45,7 @@ void main() {
   test(
     'matches Chinese, English and pinyin with or without tones and spaces',
     () {
-      final word = card(1, LearningStatus.active);
+      final word = card(1, LearningStatus.recall);
       for (final query in [
         '之后',
         'AFTER',
@@ -67,10 +67,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final dashboard = CardsDashboard(
         cards: [
-          card(1, LearningStatus.active),
-          card(2, LearningStatus.active),
-          for (var i = 3; i <= 20; i++) card(i, LearningStatus.inactive),
-          card(99, LearningStatus.active, category: 'Adjective'),
+          card(1, LearningStatus.recall),
+          card(2, LearningStatus.recall),
+          for (var i = 3; i <= 20; i++) card(i, LearningStatus.future),
+          card(99, LearningStatus.recall, category: 'Adjective'),
         ],
       );
       await tester.pumpWidget(

@@ -28,10 +28,12 @@ int recalledAnswers(StudyCard card, StudyCue cue, int window) {
 }
 
 LearningStage learningStage(StudyCard card, StudyCue cue, {int window = 10}) {
-  if (card.learningStatus == LearningStatus.inactive) {
+  if (card.learningStatus == LearningStatus.future) {
     return LearningStage.future;
   }
-  if (card.learningStatus == LearningStatus.prep) return LearningStage.upcoming;
+  if (card.learningStatus == LearningStatus.practice) {
+    return LearningStage.upcoming;
+  }
   // Compare without rounding: 79.6% must never graduate to Past.
   return recalledAnswers(card, cue, window) * 100 >= window * 80
       ? LearningStage.past

@@ -24,10 +24,10 @@ StudyCard sample(
   ),
   suspended: false,
   learningStatus: prep
-      ? LearningStatus.prep
+      ? LearningStatus.practice
       : active
-      ? LearningStatus.active
-      : LearningStatus.inactive,
+      ? LearningStatus.recall
+      : LearningStatus.future,
   tags: const {
     'Language': ['Chinese'],
   },

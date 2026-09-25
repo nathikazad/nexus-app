@@ -187,7 +187,7 @@ StudyCard _scriptCard() => StudyCard(
     StudyCue.toLanguage: <CardReview>[],
   },
   suspended: false,
-  learningStatus: LearningStatus.active,
+  learningStatus: LearningStatus.recall,
   modelTypeName: 'Script',
 );
 

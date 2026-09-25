@@ -19,7 +19,7 @@ StudyCard item(
   ),
   schedules: const {},
   suspended: false,
-  learningStatus: active ? LearningStatus.active : LearningStatus.inactive,
+  learningStatus: active ? LearningStatus.recall : LearningStatus.future,
   tags: {
     'Language': [language],
     'Category': [category],

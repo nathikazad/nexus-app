@@ -32,10 +32,6 @@ class VoiceStudySessionPage extends ConsumerStatefulWidget {
 
 class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
   late final VoiceTutorController controller;
-  bool _progressionStarted = false;
-  ReviewProgressionPlan? _progression;
-  Object? _progressionError;
-
   @override
   void initState() {
     super.initState();
@@ -47,7 +43,6 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
       languages: widget.languages,
       onScheduleSaved: () => ref.read(cardsInvalidationProvider)(),
     );
-    controller.addListener(_handleControllerChange);
     unawaited(
       controller.start(StaticLiveAgentCredentialProvider(openAiApiKey)),
     );
@@ -55,29 +50,8 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
 
   @override
   void dispose() {
-    controller.removeListener(_handleControllerChange);
     controller.dispose();
     super.dispose();
-  }
-
-  void _handleControllerChange() {
-    if (controller.phase != VoiceStudyPhase.completed || _progressionStarted) {
-      return;
-    }
-    _progressionStarted = true;
-    unawaited(_applyProgression());
-  }
-
-  Future<void> _applyProgression() async {
-    try {
-      final result = await ref.read(reviewProgressionRunnerProvider)(
-        controller.reviewedCards,
-        scope: widget.studyScope,
-      );
-      if (mounted) setState(() => _progression = result);
-    } catch (error) {
-      if (mounted) setState(() => _progressionError = error);
-    }
   }
 
   @override
@@ -124,13 +98,7 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
                         ),
                       ),
                       if (controller.phase == VoiceStudyPhase.completed)
-                        Expanded(
-                          child: _SessionBody(
-                            controller: controller,
-                            progression: _progression,
-                            progressionError: _progressionError,
-                          ),
-                        )
+                        Expanded(child: _SessionBody(controller: controller))
                       else ...[
                         const Spacer(),
                         _SessionBody(controller: controller),
@@ -159,15 +127,9 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
 }
 
 class _SessionBody extends StatelessWidget {
-  const _SessionBody({
-    required this.controller,
-    this.progression,
-    this.progressionError,
-  });
+  const _SessionBody({required this.controller});
 
   final VoiceTutorController controller;
-  final ReviewProgressionPlan? progression;
-  final Object? progressionError;
 
   @override
   Widget build(BuildContext context) {
@@ -240,20 +202,6 @@ class _SessionBody extends StatelessWidget {
                 ),
               ],
             ),
-            if (progression case final result? when result.changed) ...[
-              const SizedBox(height: 16),
-              Text(
-                _progressionSummary(result),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: RecallColors.muted, fontSize: 12),
-              ),
-            ] else if (progressionError != null) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Learning lists could not be updated.',
-                style: TextStyle(color: RecallColors.rose, fontSize: 12),
-              ),
-            ],
             const SizedBox(height: 26),
             if (controller.recapEntries.isNotEmpty) ...[
               _WordRecap(entries: controller.recapEntries),
@@ -316,20 +264,6 @@ class _SessionBody extends StatelessWidget {
         ],
       ],
     );
-  }
-
-  String _progressionSummary(ReviewProgressionPlan result) {
-    final parts = <String>[];
-    if (result.movedToPast > 0) {
-      parts.add('${result.movedToPast} moved to Past');
-    }
-    if (result.movedToCurrent > 0) {
-      parts.add('${result.movedToCurrent} moved to Current');
-    }
-    if (result.replacements > 0) {
-      parts.add('${result.replacements} Future added to Current');
-    }
-    return parts.join(' · ');
   }
 }
 

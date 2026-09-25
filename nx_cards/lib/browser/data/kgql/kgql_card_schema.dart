@@ -28,9 +28,6 @@ const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
-const attrLearningStatus =
-    'learning_status'; // Legacy cache/import compatibility.
-const attrActive = 'active'; // Legacy read compatibility only.
 const attrLearningState = 'learning_state';
 
 const cardDetailsJsonSchema = <String, dynamic>{
@@ -364,12 +361,12 @@ SetModelTypeRequest buildCardSchemaRequest() {
       ),
       AttributeDefinition(key: attrDueAt, valueType: 'datetime'),
       AttributeDefinition(
-        key: attrLearningStatus,
+        key: attrLearningState,
         valueType: 'string',
         required: true,
         constraints: const {
-          'default': 'not_started',
-          'enum': ['not_started', 'learning', 'learnt'],
+          'default': 'future',
+          'enum': ['future', 'practice', 'recall'],
         },
       ),
       AttributeDefinition(

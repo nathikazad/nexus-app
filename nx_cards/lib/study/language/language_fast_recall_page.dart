@@ -40,13 +40,7 @@ class _LanguageFastRecallPageState
 
   late List<StudyPrompt> _prompts;
 
-  void _repeatIncorrect(List<ReviewProgressionChange> changes) {
-    for (final change in changes) {
-      final card = _latestCards[change.card.id];
-      if (card != null) {
-        _latestCards[card.id] = card.copyWith(learningStatus: change.status);
-      }
-    }
+  void _repeatIncorrect() {
     final missed = incorrectRecallPrompts(_prompts, {
       for (var i = 0; i < _prompts.length; i++)
         i: ?_ratings[_prompts[i].cardId],

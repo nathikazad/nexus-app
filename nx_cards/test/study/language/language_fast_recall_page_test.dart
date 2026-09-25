@@ -7,7 +7,6 @@ import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
-import 'package:nx_cards/scheduling/review_progression_service.dart';
 
 void main() {
   testWidgets('grades rows inline, reveals answers, and opens card details', (
@@ -22,9 +21,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          reviewProgressionRunnerProvider.overrideWithValue(
-            (_, {scope}) async => const ReviewProgressionPlan([]),
-          ),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardLibraryProvider.overrideWithValue(repository),
           cardsDashboardProvider.overrideWith((_) => Stream.value(dashboard)),
@@ -318,5 +314,5 @@ StudyCard _card({int id = 1}) => StudyCard(
     ],
   },
   suspended: false,
-  learningStatus: LearningStatus.active,
+  learningStatus: LearningStatus.recall,
 );

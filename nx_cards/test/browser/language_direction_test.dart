@@ -22,7 +22,7 @@ void main() {
               content: sample(1, 8).content,
               schedules: sample(1, 8).schedules,
               reviewHistory: sample(1, 8).reviewHistory,
-              learningStatus: LearningStatus.active,
+              learningStatus: LearningStatus.recall,
             ),
       ],
     );
@@ -45,7 +45,7 @@ void main() {
       matching: find.text(count),
     );
     expect(metric('past', '1'), findsOneWidget);
-    expect(metric('upcoming', '0'), findsOneWidget);
+    expect(metric('practice', '0'), findsOneWidget);
     await tester.tap(find.byTooltip('Recall direction: English → Chinese'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Chinese → English'));

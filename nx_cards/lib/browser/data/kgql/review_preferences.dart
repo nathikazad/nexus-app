@@ -5,19 +5,8 @@ import 'package:nx_db/nx_db.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewProgressionSettings {
-  const ReviewProgressionSettings({
-    this.historyWindow = 10,
-    // Legacy constructor arguments retained for archived session compatibility.
-    this.automaticProgressionEnabled = true,
-    this.moveToPastPercentage = 80,
-    this.moveToCurrentPercentage = 80,
-    this.autoReplacePromotedCards = false,
-  });
+  const ReviewProgressionSettings({this.historyWindow = 10});
   final int historyWindow;
-  final bool automaticProgressionEnabled;
-  final int moveToPastPercentage;
-  final int moveToCurrentPercentage;
-  final bool autoReplacePromotedCards;
   bool get isValid => historyWindow >= 1 && historyWindow <= 10;
   Map<String, Object> toJson() => {'history_window': historyWindow};
   factory ReviewProgressionSettings.fromJson(Map<String, Object?> json) {

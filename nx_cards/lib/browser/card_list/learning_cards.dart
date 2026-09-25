@@ -114,7 +114,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
   bool _working = false;
 
   bool get _canDrag =>
-      widget.card.learningStatus != LearningStatus.active &&
+      widget.card.learningStatus != LearningStatus.recall &&
       widget.nextStatus != null;
 
   void _drag(DragUpdateDetails details) {

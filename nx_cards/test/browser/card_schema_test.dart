@@ -62,7 +62,7 @@ void main() {
     expect(attributes, {
       attrCardDetails,
       attrDueAt,
-      attrLearningStatus,
+      attrLearningState,
       attrSuspended,
       attrSchedule,
       attrReviewHistory,
@@ -73,12 +73,12 @@ void main() {
       expect(definition['constraints']['json_schema'], isA<Map>());
     }
     final learningStatus = definitions.singleWhere(
-      (row) => row['key'] == attrLearningStatus,
+      (row) => row['key'] == attrLearningState,
     );
     expect(learningStatus['required'], isTrue);
     expect(learningStatus['constraints'], {
-      'default': 'not_started',
-      'enum': ['not_started', 'learning', 'learnt'],
+      'default': 'future',
+      'enum': ['future', 'practice', 'recall'],
     });
     expect(scheduleJsonSchema['required'], ['version', 'algorithm', 'cues']);
     expect(reviewHistoryJsonSchema['required'], ['version', 'items']);

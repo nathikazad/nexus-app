@@ -86,7 +86,7 @@ void main() {
         'total',
         'current',
         'due',
-        'upcoming',
+        'practice',
         'past',
         'future',
       ];

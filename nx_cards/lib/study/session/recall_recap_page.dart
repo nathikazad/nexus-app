@@ -6,7 +6,6 @@ import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
-import 'package:nx_cards/scheduling/review_progression_service.dart';
 
 enum RecallRecapAction { repeatIncorrect }
 
@@ -43,39 +42,13 @@ class RecallRecapPage extends ConsumerStatefulWidget {
   final int totalCount;
   final int missCount;
   final List<RecallRecapEntry> entries;
-  final ValueChanged<List<ReviewProgressionChange>>? onRepeatIncorrect;
+  final VoidCallback? onRepeatIncorrect;
 
   @override
   ConsumerState<RecallRecapPage> createState() => _RecallRecapPageState();
 }
 
 class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
-  ReviewProgressionPlan? _progression;
-  Object? _progressionError;
-  bool _progressionFinished = false;
-
-  @override
-  void initState() {
-    super.initState();
-    Future<void>.microtask(_applyProgression);
-  }
-
-  Future<void> _applyProgression() async {
-    try {
-      final result = await ref.read(reviewProgressionRunnerProvider)(
-        widget.entries
-            .where((entry) => entry.rating != null)
-            .map((entry) => entry.card),
-        scope: widget.studyScope,
-      );
-      if (mounted) setState(() => _progression = result);
-    } catch (error) {
-      if (mounted) setState(() => _progressionError = error);
-    } finally {
-      if (mounted) setState(() => _progressionFinished = true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
@@ -134,13 +107,10 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                               label: 'Retry',
                               tooltip: 'Repeat incorrect cards',
                               onPressed:
-                                  _progressionFinished &&
-                                      widget.entries.any(
-                                        (e) => e.rating == CardRating.again,
-                                      )
-                                  ? () => widget.onRepeatIncorrect?.call(
-                                      _progression?.changes ?? const [],
-                                    )
+                                  widget.entries.any(
+                                    (e) => e.rating == CardRating.again,
+                                  )
+                                  ? widget.onRepeatIncorrect
                                   : null,
                             ),
                           ),
@@ -156,25 +126,6 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                       ),
                     ),
                   ),
-                  if (_progression case final progression?
-                      when progression.changed) ...[
-                    const SizedBox(height: 17),
-                    Text(
-                      _progressionSummary(progression),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: RecallColors.muted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ] else if (_progressionError != null) ...[
-                    const SizedBox(height: 17),
-                    const Text(
-                      'Learning lists could not be updated.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: RecallColors.rose, fontSize: 12),
-                    ),
-                  ],
                   const SizedBox(height: 28),
                   Text('WORDS', style: monoLabel),
                   const SizedBox(height: 9),
@@ -192,20 +143,6 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
       ),
     ),
   );
-
-  String _progressionSummary(ReviewProgressionPlan progression) {
-    final parts = <String>[];
-    if (progression.movedToPast > 0) {
-      parts.add('${progression.movedToPast} moved to Past');
-    }
-    if (progression.movedToCurrent > 0) {
-      parts.add('${progression.movedToCurrent} moved to Current');
-    }
-    if (progression.replacements > 0) {
-      parts.add('${progression.replacements} Future added to Current');
-    }
-    return parts.join(' · ');
-  }
 }
 
 class _RecallWordRecap extends StatelessWidget {

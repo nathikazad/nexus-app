@@ -6,24 +6,20 @@ sealed class CardContent {
 }
 
 enum LearningStatus {
-  inactive('inactive', 'Future'),
-  prep('prep', 'Practice'),
-  active('active', 'Recall');
+  future('future', 'Future'),
+  practice('practice', 'Practice'),
+  recall('recall', 'Recall');
 
   const LearningStatus(this.storageValue, this.label);
   final String storageValue;
   final String label;
-  bool get isRecallEligible => this == LearningStatus.active;
+  bool get isRecallEligible => this == LearningStatus.recall;
 
-  static LearningStatus fromStorage(
-    Object? value, {
-    bool hasRecallHistory = false,
-  }) => switch (value) {
-    'active' => LearningStatus.active,
-    'prep' => LearningStatus.prep,
-    'learning' ||
-    'learnt' => hasRecallHistory ? LearningStatus.active : LearningStatus.prep,
-    _ => LearningStatus.inactive,
+  static LearningStatus fromStorage(Object? value) => switch (value) {
+    'recall' => LearningStatus.recall,
+    'practice' => LearningStatus.practice,
+    'future' || null => LearningStatus.future,
+    _ => throw FormatException('Unknown learning state: $value'),
   };
 }
 

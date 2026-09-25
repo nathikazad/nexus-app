@@ -11,8 +11,6 @@ const baseCardStruct = <String, dynamic>{
   'description': true,
   'updated_at': true,
   attrDueAt: true,
-  attrLearningStatus: true,
-  attrActive: true,
   attrLearningState: true,
   attrSuspended: true,
   attrSchedule: true,
@@ -143,7 +141,7 @@ class KgqlCardApi implements CardLibrary {
           SetModelAttribute(key: attrSuspended, value: false),
           SetModelAttribute(
             key: attrLearningState,
-            value: LearningStatus.inactive.storageValue,
+            value: LearningStatus.future.storageValue,
           ),
           SetModelAttribute(
             key: attrSchedule,

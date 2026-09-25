@@ -10,7 +10,7 @@ class StudyCard {
     required Map<StudyCue, CardSchedule> schedules,
     required Map<StudyCue, List<CardReview>> reviewHistory,
     required this.suspended,
-    this.learningStatus = LearningStatus.inactive,
+    this.learningStatus = LearningStatus.future,
     Map<String, List<String>> tags = const <String, List<String>>{},
     List<List<String>>? categoryPaths,
     String? modelTypeName,

@@ -537,9 +537,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
             historyWindow: historyWindow,
           );
           final notStarted = sortFutureCards(
-            cards.where(
-              (card) => card.learningStatus == LearningStatus.inactive,
-            ),
+            cards.where((card) => card.learningStatus == LearningStatus.future),
             futureScores,
           );
           final queue = [
@@ -661,10 +659,9 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                         children: [
                           LearningCardsTab(
                             cards: upcoming,
-                            nextStatus: LearningStatus.active,
+                            nextStatus: LearningStatus.recall,
                             actionLabel: 'Activate',
-                            emptyText:
-                                'Move Future cards here to practice.',
+                            emptyText: 'Move Future cards here to practice.',
                             dashboard: data,
                             showScheduleStatus: true,
                           ),
@@ -697,7 +694,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 : widget.allCards || widget.tagSystem != null
                                 ? 'Every card has been started.'
                                 : 'Every word has been started.',
-                            nextStatus: LearningStatus.prep,
+                            nextStatus: LearningStatus.practice,
                             actionLabel: '+',
                             dashboard: data,
                           ),

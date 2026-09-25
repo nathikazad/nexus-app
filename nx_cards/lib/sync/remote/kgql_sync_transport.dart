@@ -80,7 +80,7 @@ final class KgqlCardsSyncTransport
         SetModelAttribute(key: attrSuspended, value: false),
         SetModelAttribute(
           key: attrLearningState,
-          value: LearningStatus.inactive.storageValue,
+          value: LearningStatus.future.storageValue,
         ),
         SetModelAttribute(
           key: attrSchedule,

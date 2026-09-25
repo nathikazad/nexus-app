@@ -144,7 +144,7 @@ StudyCard _card({
       ],
   },
   suspended: false,
-  learningStatus: LearningStatus.active,
+  learningStatus: LearningStatus.recall,
 );
 
 CardSchedule _schedule({required String state, required DateTime dueAt}) =>

@@ -59,84 +59,95 @@ final class OpenAiRealtimeTransport
     _maxConversationPairs = spec.maxConversationPairs;
     final inputEnabled =
         spec.turnDetectionMode == LiveAgentTurnDetectionMode.automatic;
-    await _configureAudioSession();
-    await _startAndroidForegroundService();
-
-    final peer = await createPeerConnection({'sdpSemantics': 'unified-plan'});
-    _peerConnection = peer;
-    peer.onConnectionState = (state) {
-      if (_closed) return;
-      switch (state) {
-        case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
-          _emit(const LiveAgentEvent(LiveAgentEventType.connected));
-        case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
-            RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-            RTCPeerConnectionState.RTCPeerConnectionStateClosed:
-          _emit(const LiveAgentEvent(LiveAgentEventType.disconnected));
-        default:
-          break;
+    try {
+      await _configureAudioSession();
+      // getUserMedia requests RECORD_AUDIO and resolves only after the user
+      // responds. Android requires that grant before a microphone FGS starts.
+      final stream = await _openMicrophone();
+      if (_closed) {
+        for (final track in stream.getTracks()) {
+          await track.stop();
+        }
+        await stream.dispose();
+        throw StateError('Voice startup was cancelled.');
       }
-    };
-    peer.onTrack = (event) {
-      if (event.track.kind == 'audio') {
-        event.track.enabled = true;
-        _remoteAudioTracks.add(event.track);
+      _localStream = stream;
+      await _startAndroidForegroundService();
+
+      final peer = await createPeerConnection({'sdpSemantics': 'unified-plan'});
+      _peerConnection = peer;
+      peer.onConnectionState = (state) {
+        if (_closed) return;
+        switch (state) {
+          case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+            _emit(const LiveAgentEvent(LiveAgentEventType.connected));
+          case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+              RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+              RTCPeerConnectionState.RTCPeerConnectionStateClosed:
+            _emit(const LiveAgentEvent(LiveAgentEventType.disconnected));
+          default:
+            break;
+        }
+      };
+      peer.onTrack = (event) {
+        if (event.track.kind == 'audio') {
+          event.track.enabled = true;
+          _remoteAudioTracks.add(event.track);
+        }
+      };
+
+      for (final track in stream.getAudioTracks()) {
+        track.enabled = inputEnabled;
+        await peer.addTrack(track, stream);
       }
-    };
 
-    final stream = await navigator.mediaDevices.getUserMedia({
-      'audio': {
-        'echoCancellation': true,
-        'noiseSuppression': true,
-        'autoGainControl': true,
-      },
-      'video': false,
-    });
-    _localStream = stream;
-    for (final track in stream.getAudioTracks()) {
-      track.enabled = inputEnabled;
-      await peer.addTrack(track, stream);
-    }
-
-    _dataChannelReady = Completer<void>();
-    final channel = await peer.createDataChannel(
-      'oai-events',
-      RTCDataChannelInit()..ordered = true,
-    );
-    _dataChannel = channel;
-    channel.onDataChannelState = (state) {
-      if (state == RTCDataChannelState.RTCDataChannelOpen &&
-          !(_dataChannelReady?.isCompleted ?? true)) {
-        _dataChannelReady!.complete();
-      }
-    };
-    channel.onMessage = (message) {
-      if (!message.isBinary) unawaited(_handleMessage(message.text));
-    };
-
-    final offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('https://api.openai.com/v1/realtime/calls'),
-    );
-    request.headers['Authorization'] = 'Bearer ${credential.trim()}';
-    request.fields['session'] = jsonEncode(
-      openAiRealtimeSession(spec: spec, tools: tools),
-    );
-    request.fields['sdp'] = offer.sdp ?? '';
-    final streamedResponse = await _http.send(request);
-    final response = await http.Response.fromStream(streamedResponse);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final detail = _openAiErrorDetail(response.body);
-      throw StateError(
-        'Could not start live agent (HTTP ${response.statusCode})$detail.',
+      _dataChannelReady = Completer<void>();
+      final channel = await peer.createDataChannel(
+        'oai-events',
+        RTCDataChannelInit()..ordered = true,
       );
+      _dataChannel = channel;
+      channel.onDataChannelState = (state) {
+        if (state == RTCDataChannelState.RTCDataChannelOpen &&
+            !(_dataChannelReady?.isCompleted ?? true)) {
+          _dataChannelReady!.complete();
+        }
+      };
+      channel.onMessage = (message) {
+        if (!message.isBinary) unawaited(_handleMessage(message.text));
+      };
+
+      final offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://api.openai.com/v1/realtime/calls'),
+      );
+      request.headers['Authorization'] = 'Bearer ${credential.trim()}';
+      request.fields['session'] = jsonEncode(
+        openAiRealtimeSession(spec: spec, tools: tools),
+      );
+      request.fields['sdp'] = offer.sdp ?? '';
+      final streamedResponse = await _http.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final detail = _openAiErrorDetail(response.body);
+        throw StateError(
+          'Could not start live agent (HTTP ${response.statusCode})$detail.',
+        );
+      }
+      await peer.setRemoteDescription(
+        RTCSessionDescription(response.body, 'answer'),
+      );
+      await _dataChannelReady!.future.timeout(const Duration(seconds: 15));
+    } catch (_) {
+      try {
+        await close();
+      } catch (_) {
+        // Preserve the startup error if native cleanup also fails.
+      }
+      rethrow;
     }
-    await peer.setRemoteDescription(
-      RTCSessionDescription(response.body, 'answer'),
-    );
-    await _dataChannelReady!.future.timeout(const Duration(seconds: 15));
   }
 
   @override
@@ -528,6 +539,37 @@ List<LiveAgentEvent> _toolCallsFromResponse(Object? rawResponse) {
     }
   }
   return result;
+}
+
+Future<MediaStream> _openMicrophone() async {
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      'audio': {
+        'echoCancellation': true,
+        'noiseSuppression': true,
+        'autoGainControl': true,
+      },
+      'video': false,
+    });
+  } catch (error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('permission') ||
+        message.contains('notallowed') ||
+        message.contains('denied')) {
+      throw const MicrophonePermissionException();
+    }
+    rethrow;
+  }
+}
+
+final class MicrophonePermissionException implements Exception {
+  const MicrophonePermissionException();
+
+  @override
+  String toString() =>
+      'Microphone access is required for the AI tutor. '
+      'Allow microphone access and try again. If no prompt appears, enable '
+      'Microphone in this app’s permissions in Settings.';
 }
 
 Future<void> _configureAudioSession() async {

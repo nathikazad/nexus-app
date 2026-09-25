@@ -118,6 +118,7 @@ final class DriftLocalCardsStore
   Future<void> migrateContent() => _migration ??= _migrate();
   Future<void> _migrate() async {
     if (files == null) return;
+    await _migrateStatusBodies();
     while (true) {
       final rows =
           await (database.select(database.localStudyCards)
@@ -143,6 +144,57 @@ final class DriftLocalCardsStore
             ))
             .write(next);
       }
+    }
+  }
+
+  // One-time schema-14 migration of immutable bodies and pending writes.
+  Future<void> _migrateStatusBodies() async {
+    final pending = await database
+        .customSelect(
+          'SELECT reference FROM card_status_body_migrations WHERE account_key=?',
+          variables: [Variable(_accountKey)],
+        )
+        .get();
+    for (final entry in pending) {
+      final oldRef = entry.read<String>('reference');
+      final body =
+          jsonDecode(await files!.read(oldRef)) as Map<String, dynamic>;
+      final old = body['learning_status'];
+      body['learning_status'] = switch (old) {
+        'inactive' || 'not_started' => 'future',
+        'prep' => 'practice',
+        'active' => 'recall',
+        'learning' || 'learnt' =>
+          ((jsonDecode(body['history'] as String) as Map)['items'] as List).any(
+                (r) => r['cue'] == 'from_language' || r['cue'] == 'to_language',
+              )
+              ? 'recall'
+              : 'practice',
+        _ => old,
+      };
+      final nextRef = await files!.write(
+        'cards',
+        'status-migration',
+        jsonEncode(body),
+      );
+      await database.transaction(() async {
+        await database.customStatement(
+          'UPDATE local_study_cards SET content_ref=? WHERE account_key=? AND content_ref=?',
+          [nextRef, _accountKey, oldRef],
+        );
+        await database.customStatement(
+          r"""UPDATE offline_outbox SET payload_json=json_set(payload_json,'$.body_ref',?) WHERE account_key=? AND json_extract(payload_json,'$.body_ref')=?""",
+          [nextRef, _accountKey, oldRef],
+        );
+        await database.customStatement(
+          'DELETE FROM card_sync_hashes WHERE account_key=? AND content_ref=?',
+          [_accountKey, oldRef],
+        );
+        await database.customStatement(
+          'DELETE FROM card_status_body_migrations WHERE account_key=? AND reference=?',
+          [_accountKey, oldRef],
+        );
+      });
     }
   }
 
@@ -182,6 +234,7 @@ final class DriftLocalCardsStore
 
   @override
   Future<StudyCard?> getCard(int cardId) async {
+    await migrateContent();
     final clock = Stopwatch()..start();
     final row = await _cardQuery(cardId).getSingleOrNull();
     final queryMs = clock.elapsedMilliseconds;
@@ -362,7 +415,10 @@ final class DriftLocalCardsStore
     required String workerId,
     required DateTime now,
     required Duration lease,
-  }) => _outbox.claimNext(workerId: workerId, now: now, lease: lease);
+  }) async {
+    await migrateContent();
+    return _outbox.claimNext(workerId: workerId, now: now, lease: lease);
+  }
 
   @override
   Future<void> complete(MutationReceipt receipt) {

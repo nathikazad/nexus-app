@@ -238,7 +238,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   bool _matchesRecallBaseFilters(StudyCard card) {
     if (_mode == StudyMode.study) {
-      return card.learningStatus == LearningStatus.prep;
+      return card.learningStatus == LearningStatus.practice;
     }
     final cue = _cue;
     if (cue == null) return false;
@@ -642,15 +642,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         MaterialPageRoute<Object?>(
           builder: (recapContext) => RecallRecapPage(
             studyScope: widget.studyScope,
-            onRepeatIncorrect: (changes) {
-              for (final change in changes) {
-                final card = latest[change.card.id];
-                if (card != null) {
-                  latest[card.id] = card.copyWith(
-                    learningStatus: change.status,
-                  );
-                }
-              }
+            onRepeatIncorrect: () {
               missed = incorrectRecallPrompts(prompts, ratings, latest);
               Navigator.pop(recapContext, RecallRecapAction.repeatIncorrect);
             },

@@ -62,7 +62,7 @@ void main() {
           'back': 'To avoid scaling an unproven model.',
         },
         attrSuspended: false,
-        attrLearningStatus: 'not_started',
+        attrLearningState: 'future',
       },
       relationsList: <Relation>[
         Relation(
@@ -115,7 +115,7 @@ void main() {
           'audio_url': null,
           'examples': <Object?>[],
         },
-        attrLearningStatus: 'learning',
+        attrLearningState: 'practice',
       },
       tags: const <String, List<String>>{
         'Language': <String>['Malayalam'],
@@ -138,7 +138,7 @@ void main() {
 
     expect(card, isNotNull);
     expect(card!.modelTypeName, languageCardModelType);
-    expect(card.learningStatus, LearningStatus.prep);
+    expect(card.learningStatus, LearningStatus.practice);
     expect(card.tags['Language'], <String>['Malayalam']);
     expect(card.tags['Category'], <String>['Noun']);
     expect(card.categories, contains('Noun'));

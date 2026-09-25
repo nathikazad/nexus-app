@@ -10,7 +10,7 @@ StudyCard card(List<int> ratings, {bool active = true}) => StudyCard(
     transliteration: 'xué',
   ),
   suspended: false,
-  learningStatus: active ? LearningStatus.active : LearningStatus.inactive,
+  learningStatus: active ? LearningStatus.recall : LearningStatus.future,
   schedules: {
     for (final cue in StudyCue.values)
       cue: const CardSchedule.initial(enabled: true),
@@ -56,7 +56,7 @@ void main() {
   test('Prep remains Upcoming even with past history', () {
     final prep = card(
       List.filled(10, 3),
-    ).copyWith(learningStatus: LearningStatus.prep);
+    ).copyWith(learningStatus: LearningStatus.practice);
     expect(learningStage(prep, StudyCue.fromLanguage), LearningStage.upcoming);
     expect(
       availableForRecall(prep, StudyCue.fromLanguage, DateTime.now()),

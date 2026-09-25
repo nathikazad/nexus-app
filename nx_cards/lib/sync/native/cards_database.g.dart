@@ -148,7 +148,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('not_started'),
+    defaultValue: const Constant('future'),
   );
   static const VerificationMeta _dueAtMeta = const VerificationMeta('dueAt');
   @override

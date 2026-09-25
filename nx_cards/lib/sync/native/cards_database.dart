@@ -19,7 +19,7 @@ class LocalStudyCards extends Table {
       text().withDefault(const Constant('[]'))();
   TextColumn get tagsJson => text()();
   TextColumn get learningStatus =>
-      text().withDefault(const Constant('not_started'))();
+      text().withDefault(const Constant('future'))();
   DateTimeColumn get dueAt => dateTime().nullable()();
   TextColumn get scheduleJson => text()();
   TextColumn get reviewHistoryJson => text()();
@@ -40,7 +40,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   Future<void> createHashSchema() => customStatement('''
     CREATE TABLE IF NOT EXISTS card_sync_hashes (
@@ -50,11 +50,19 @@ class CardsDatabase extends _$CardsDatabase {
     )
   ''');
 
+  Future<void> createStatusMigrationSchema() => customStatement('''
+    CREATE TABLE IF NOT EXISTS card_status_body_migrations (
+      account_key TEXT NOT NULL, reference TEXT NOT NULL,
+      PRIMARY KEY(account_key,reference)
+    )
+  ''');
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await createHashSchema();
+      await createStatusMigrationSchema();
       await DriftOutboxPersistence.createSchema(this);
     },
     onUpgrade: (migrator, from, to) async {
@@ -138,6 +146,22 @@ class CardsDatabase extends _$CardsDatabase {
             ) THEN 'active' ELSE 'prep' END
             ELSE 'inactive' END
         """);
+      }
+      if (from < 14) {
+        await createStatusMigrationSchema();
+        await customStatement(
+          "INSERT OR IGNORE INTO card_status_body_migrations SELECT account_key,content_ref FROM local_study_cards WHERE content_ref IS NOT NULL",
+        );
+        await customStatement(r"""
+          INSERT OR IGNORE INTO card_status_body_migrations
+          SELECT account_key,json_extract(payload_json,'$.body_ref') FROM offline_outbox
+          WHERE json_extract(payload_json,'$.body_ref') IS NOT NULL
+        """);
+        await customStatement(
+          "UPDATE local_study_cards SET learning_status = CASE learning_status "
+          "WHEN 'inactive' THEN 'future' WHEN 'prep' THEN 'practice' "
+          "WHEN 'active' THEN 'recall' ELSE learning_status END",
+        );
       }
     },
   );

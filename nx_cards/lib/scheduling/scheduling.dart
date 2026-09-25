@@ -8,7 +8,6 @@ import 'package:nx_cards/scheduling/clock.dart';
 export 'card_scheduler.dart';
 export 'clock.dart';
 export 'review_progression.dart';
-export 'review_progression_service.dart';
 
 final clockProvider = Provider<Clock>((ref) => const SystemClock());
 

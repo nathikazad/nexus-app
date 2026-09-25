@@ -149,7 +149,7 @@ void main() {
       attributes.cast<Map<String, dynamic>>().singleWhere(
         (value) => value['key'] == 'learning_state',
       )['value'],
-      'inactive',
+      'future',
     );
     expect(result.status, CardMutationStatus.applied);
     expect(result.status, CardMutationStatus.applied);

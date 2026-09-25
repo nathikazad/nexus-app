@@ -88,11 +88,11 @@ void main() {
       await tester.pumpAndSettle();
       SegmentedButton<LearningStatus> selector() =>
           tester.widget(find.byKey(const ValueKey('card-learning-status')));
-      expect(selector().selected, {LearningStatus.inactive});
+      expect(selector().selected, {LearningStatus.future});
       for (final entry in {
-        'Practice': LearningStatus.prep,
-        'Recall': LearningStatus.active,
-        'Future': LearningStatus.inactive,
+        'Practice': LearningStatus.practice,
+        'Recall': LearningStatus.recall,
+        'Future': LearningStatus.future,
       }.entries) {
         await tester.tap(find.text(entry.key));
         await tester.pumpAndSettle();
@@ -104,10 +104,10 @@ void main() {
       await tester.tap(find.text('Practice'));
       await tester.pump();
       expect(selector().onSelectionChanged, isNull);
-      expect(selector().selected, {LearningStatus.inactive});
+      expect(selector().selected, {LearningStatus.future});
       library.pending!.completeError(StateError('Save failed'));
       await tester.pumpAndSettle();
-      expect(selector().selected, {LearningStatus.inactive});
+      expect(selector().selected, {LearningStatus.future});
       expect(selector().onSelectionChanged, isNotNull);
       expect(find.textContaining('Could not move card'), findsOneWidget);
     },

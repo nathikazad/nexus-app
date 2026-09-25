@@ -12,7 +12,7 @@ StudyCard card(
   String language = 'Tamil',
   String type = 'Word',
   Map<String, List<String>> tags = const {},
-  LearningStatus status = LearningStatus.prep,
+  LearningStatus status = LearningStatus.practice,
 }) => StudyCard(
   id: id,
   modelTypeName: type,
@@ -137,7 +137,7 @@ void main() {
         tags: {
           'Collection': ['Travel'],
         },
-        status: LearningStatus.inactive,
+        status: LearningStatus.future,
       ),
       card(
         3,

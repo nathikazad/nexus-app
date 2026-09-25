@@ -20,8 +20,7 @@ FSRS for that direction.
 `learning_stage.dart` derives Upcoming/Current/Past from activation and the
 account's recent-answer window (default 10, threshold 80%). Future means inactive.
 Do not manually persist Current/Past or activate replacement cards after recall.
-The legacy `LearningStatus` API/SQLite column only carries activation compatibility
-for existing offline snapshots. Network writes use the boolean `active` attribute.
+Cards store Future, Practice, or Recall. Current/Past are calculated from recall history; session completion does not run a separate progression service.
 
 Language recall includes all cards matching the selected stages and score range,
 just like Practice. When Past is selected, recall setup shows its due count.

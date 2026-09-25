@@ -23,7 +23,7 @@ void main() {
         reviewHistory: const {},
         suspended: false,
       );
-      final latest = card.copyWith(learningStatus: LearningStatus.active);
+      final latest = card.copyWith(learningStatus: LearningStatus.recall);
       final prompts = [
         StudyPrompt(card: card, cue: StudyCue.toLanguage),
         StudyPrompt(
@@ -62,7 +62,7 @@ void main() {
       },
       reviewHistory: const {},
       suspended: false,
-      learningStatus: LearningStatus.active,
+      learningStatus: LearningStatus.recall,
     );
 
     await tester.pumpWidget(
@@ -104,7 +104,7 @@ void main() {
       },
       reviewHistory: const {},
       suspended: false,
-      learningStatus: LearningStatus.active,
+      learningStatus: LearningStatus.recall,
     );
 
     await tester.pumpWidget(

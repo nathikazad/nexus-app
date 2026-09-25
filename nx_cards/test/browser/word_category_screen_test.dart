@@ -35,7 +35,7 @@ void main() {
           },
           reviewHistory: const {},
           suspended: false,
-          learningStatus: LearningStatus.active,
+          learningStatus: LearningStatus.recall,
           tags: {
             'Language': [lang],
             'Word Category': categories,
@@ -102,12 +102,12 @@ void main() {
         _word(
           id: 1,
           category: 'Script',
-          learningStatus: LearningStatus.prep,
+          learningStatus: LearningStatus.practice,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _word(
           id: 2,
-          learningStatus: LearningStatus.active,
+          learningStatus: LearningStatus.recall,
           recallRatings: List.filled(8, 3),
           schedule: const CardSchedule.initial(enabled: true),
           toLanguageSchedule: _schedule(
@@ -117,13 +117,13 @@ void main() {
         _word(
           id: 3,
           category: 'Adjective',
-          learningStatus: LearningStatus.prep,
+          learningStatus: LearningStatus.practice,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _word(
           id: 4,
           modelTypeName: 'Verb',
-          learningStatus: LearningStatus.prep,
+          learningStatus: LearningStatus.practice,
           schedule: const CardSchedule.initial(enabled: true),
         ),
       ],
@@ -236,7 +236,7 @@ void main() {
       cards: [
         _word(
           id: 1,
-          learningStatus: LearningStatus.prep,
+          learningStatus: LearningStatus.practice,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _bookCard(2),
@@ -292,17 +292,17 @@ void main() {
     final now = DateTime.now().toUtc();
     final current = _word(
       id: 1,
-      learningStatus: LearningStatus.active,
+      learningStatus: LearningStatus.recall,
       schedule: _schedule(now.subtract(const Duration(minutes: 2))),
     );
     final available = _word(
       id: 2,
-      learningStatus: LearningStatus.inactive,
+      learningStatus: LearningStatus.future,
       schedule: _schedule(now.subtract(const Duration(minutes: 2))),
     );
     final learnt = _word(
       id: 3,
-      learningStatus: LearningStatus.active,
+      learningStatus: LearningStatus.recall,
       recallRatings: List.filled(8, 3),
       schedule: _schedule(now.subtract(const Duration(minutes: 2))),
     );
@@ -350,12 +350,12 @@ void main() {
     final now = DateTime.now().toUtc();
     final learning = _word(
       id: 1,
-      learningStatus: LearningStatus.active,
+      learningStatus: LearningStatus.recall,
       schedule: _schedule(now),
     );
     final learnt = _word(
       id: 3,
-      learningStatus: LearningStatus.active,
+      learningStatus: LearningStatus.recall,
       recallRatings: List.filled(8, 3),
       schedule: _schedule(now),
     );
@@ -365,12 +365,12 @@ void main() {
         learnt,
         _word(
           id: 4,
-          learningStatus: LearningStatus.prep,
+          learningStatus: LearningStatus.practice,
           schedule: const CardSchedule.initial(enabled: true),
         ),
         _word(
           id: 5,
-          learningStatus: LearningStatus.inactive,
+          learningStatus: LearningStatus.future,
           schedule: const CardSchedule.initial(enabled: true),
         ),
       ],
@@ -400,7 +400,7 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Recall'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Practice'), findsNothing);
     await tester.drag(
-      find.byKey(const ValueKey('active:1')),
+      find.byKey(const ValueKey('recall:1')),
       const Offset(100, 0),
     );
     await tester.pumpAndSettle();
@@ -409,7 +409,7 @@ void main() {
     await tester.tap(find.text('Past  1'));
     await tester.pumpAndSettle();
     await tester.drag(
-      find.byKey(const ValueKey('active:3')),
+      find.byKey(const ValueKey('recall:3')),
       const Offset(100, 0),
     );
     await tester.pumpAndSettle();
@@ -419,23 +419,23 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Practice'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Recall'), findsNothing);
     await tester.drag(
-      find.byKey(const ValueKey('prep:4')),
+      find.byKey(const ValueKey('practice:4')),
       const Offset(-100, 0),
     );
     await tester.pumpAndSettle();
-    expect(repository.changes, [(4, LearningStatus.active)]);
+    expect(repository.changes, [(4, LearningStatus.recall)]);
     await tester.tap(find.text('Future  1'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'Practice'), findsNothing);
     expect(find.widgetWithText(FilledButton, 'Recall'), findsNothing);
     await tester.drag(
-      find.byKey(const ValueKey('inactive:5')),
+      find.byKey(const ValueKey('future:5')),
       const Offset(-100, 0),
     );
     await tester.pumpAndSettle();
     expect(repository.changes, [
-      (4, LearningStatus.active),
-      (5, LearningStatus.prep),
+      (4, LearningStatus.recall),
+      (5, LearningStatus.practice),
     ]);
   });
 
@@ -446,29 +446,29 @@ void main() {
     final cards = [
       _word(
         id: 4,
-        learningStatus: LearningStatus.prep,
+        learningStatus: LearningStatus.practice,
         schedule: _stateSchedule(now, state: 'learning', isNew: true),
       ),
       _word(
         id: 3,
-        learningStatus: LearningStatus.active,
+        learningStatus: LearningStatus.recall,
         schedule: _stateSchedule(now, state: 'review'),
         recallRatings: const [3, 3, 3, 3],
       ),
       _word(
         id: 5,
-        learningStatus: LearningStatus.active,
+        learningStatus: LearningStatus.recall,
         schedule: _stateSchedule(now, state: 'review'),
         recallRatings: const [1, 1, 1, 3],
       ),
       _word(
         id: 2,
-        learningStatus: LearningStatus.active,
+        learningStatus: LearningStatus.recall,
         schedule: _stateSchedule(now, state: 'relearning'),
       ),
       _word(
         id: 1,
-        learningStatus: LearningStatus.active,
+        learningStatus: LearningStatus.recall,
         schedule: _stateSchedule(now, state: 'learning'),
       ),
     ];
@@ -518,20 +518,20 @@ void main() {
       final cards = <StudyCard>[
         _word(
           id: 1,
-          learningStatus: LearningStatus.active,
+          learningStatus: LearningStatus.recall,
           recallRatings: List.filled(8, 3),
           schedule: initial,
         ),
         _word(
           id: 2,
-          learningStatus: LearningStatus.active,
+          learningStatus: LearningStatus.recall,
           recallRatings: List.filled(8, 3),
           schedule: initial,
         ),
-        _word(id: 3, learningStatus: LearningStatus.active, schedule: initial),
+        _word(id: 3, learningStatus: LearningStatus.recall, schedule: initial),
         _word(
           id: 101,
-          learningStatus: LearningStatus.inactive,
+          learningStatus: LearningStatus.future,
           schedule: initial,
           category: 'Phrase',
           modelTypeName: 'Phrase',
@@ -539,7 +539,7 @@ void main() {
         ),
         _word(
           id: 102,
-          learningStatus: LearningStatus.inactive,
+          learningStatus: LearningStatus.future,
           schedule: initial,
           category: 'Phrase',
           modelTypeName: 'Phrase',
@@ -547,7 +547,7 @@ void main() {
         ),
         _word(
           id: 103,
-          learningStatus: LearningStatus.inactive,
+          learningStatus: LearningStatus.future,
           schedule: initial,
           category: 'Phrase',
           modelTypeName: 'Phrase',
