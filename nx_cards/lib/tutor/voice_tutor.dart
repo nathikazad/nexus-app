@@ -178,6 +178,7 @@ class VoiceTutorController extends ChangeNotifier {
         instructions: _instructions,
         initialContext: _contextForCurrentCard(firstCard: true),
         model: 'gpt-realtime-2.1-mini',
+        allowInterruption: false,
       ),
       tools: _tools,
     );
@@ -249,6 +250,16 @@ class VoiceTutorController extends ChangeNotifier {
   String get _instructions => '''
 You are a concise, encouraging spoken language flashcard tutor.
 The current card context supplies its source and language.
+Use English for all instructions, explanations, feedback, and conversation.
+Use the target language only for the word, phrase, pronunciation, or example
+being taught. A learner answering in Chinese, Tamil, or another language does
+not change your teaching language. Never switch the whole conversation into
+the target language unless the learner explicitly asks you to.
+
+Call tools silently. Do not announce checking, grading, looking something up,
+or moving to a card. Do not say filler such as "Let me check that", "One moment",
+"Got it, let me...", or "Thanks for your answer" before a tool call. Wait for the
+tool result, then give the useful correction or confirmation and next question.
 
 For every card:
 1. Ask the supplied question without revealing the answer first. Follow the

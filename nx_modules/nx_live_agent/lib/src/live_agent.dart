@@ -182,6 +182,7 @@ final class LiveAgentSpec {
     this.voice = 'marin',
     this.enableInputTranscription = true,
     this.emitTranscripts = true,
+    this.allowInterruption = true,
     this.maxConversationPairs,
     this.turnDetectionMode = LiveAgentTurnDetectionMode.automatic,
   }) : assert(maxConversationPairs == null || maxConversationPairs > 0);
@@ -192,6 +193,7 @@ final class LiveAgentSpec {
   final String voice;
   final bool enableInputTranscription;
   final bool emitTranscripts;
+  final bool allowInterruption;
   final int? maxConversationPairs;
   final LiveAgentTurnDetectionMode turnDetectionMode;
 }

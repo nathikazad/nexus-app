@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'response_coordinator.dart';
+
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -33,6 +35,130 @@ final class OpenAiRealtimeTransport
   final List<MediaStreamTrack> _remoteAudioTracks = <MediaStreamTrack>[];
   Completer<void>? _dataChannelReady;
   bool _closed = false;
+  late ResponseCoordinator _responses = ResponseCoordinator(
+    () => _send({'type': 'response.create'}),
+  );
+  bool _allowInterruption = true;
+  bool _inputRequested = true;
+  Completer<void>? _playbackFinished;
+  Timer? _microphoneResumeTimer;
+
+  Future<void> _microphoneUpdates = Future<void>.value();
+
+  Future<void> _applyMicrophoneState() {
+    final enabled =
+        _inputRequested &&
+        (_allowInterruption ||
+            (_playbackFinished == null && _microphoneResumeTimer == null));
+    final stream = _localStream;
+    final update = _microphoneUpdates.then((_) async {
+      if (_closed || stream == null || stream != _localStream) return;
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        // Keep AudioRecord alive: disabling the track restarts recording on
+        // Android and can leave some devices capturing near-silent input.
+        await Helper.setMicrophoneMuted(!enabled);
+      } else {
+        for (final track in stream.getAudioTracks()) {
+          track.enabled = enabled;
+        }
+      }
+      _diagnostic('microphone', {
+        'enabled': enabled,
+        'continuous_capture':
+            !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
+      });
+    });
+    _microphoneUpdates = update.catchError((Object error) {
+      _emit(
+        LiveAgentEvent(
+          LiveAgentEventType.error,
+          text: 'Could not update microphone: $error',
+        ),
+      );
+    });
+    return _microphoneUpdates;
+  }
+
+  void _playbackStarted() {
+    _responses.playbackStarted();
+    _microphoneResumeTimer?.cancel();
+    _microphoneResumeTimer = null;
+    _playbackFinished ??= Completer<void>();
+    unawaited(_applyMicrophoneState());
+  }
+
+  void _playbackEnded() {
+    _responses.playbackFinished();
+    final finished = _playbackFinished;
+    _playbackFinished = null;
+    // Allow the device's output buffer and acoustic echo to drain as well.
+    _microphoneResumeTimer?.cancel();
+    _microphoneResumeTimer = Timer(const Duration(milliseconds: 250), () {
+      _microphoneResumeTimer = null;
+      if (!_closed) unawaited(_applyMicrophoneState());
+    });
+    finished?.complete();
+  }
+
+  static const _diagnosticsEnabled = bool.fromEnvironment(
+    'NX_LIVE_AGENT_DIAGNOSTICS',
+  );
+  final Stopwatch _diagnosticClock = Stopwatch();
+  Timer? _diagnosticTimer;
+  bool _readingStats = false;
+
+  void _diagnostic(String event, [Map<String, Object?> fields = const {}]) {
+    if (!_diagnosticsEnabled) return;
+    debugPrint(
+      'NxLiveAgent ${jsonEncode({'ms': _diagnosticClock.elapsedMilliseconds, 'event': event, ...fields})}',
+    );
+  }
+
+  Future<void> _logAudioStats() async {
+    final peer = _peerConnection;
+    if (_closed || peer == null || _readingStats) return;
+    _readingStats = true;
+    try {
+      final reports = await peer.getStats();
+      if (_closed || peer != _peerConnection) return;
+      for (final report in reports) {
+        if (!const {
+          'inbound-rtp',
+          'outbound-rtp',
+          'remote-inbound-rtp',
+          'candidate-pair',
+          'media-source',
+        }.contains(report.type))
+          continue;
+        // Only numeric transport/audio measurements, never SDP, addresses,
+        // credentials, conversation text or microphone recordings.
+        final fields = <String, Object?>{'type': report.type};
+        for (final key in const [
+          'packetsReceived',
+          'packetsSent',
+          'packetsLost',
+          'jitter',
+          'bytesReceived',
+          'bytesSent',
+          'concealedSamples',
+          'concealmentEvents',
+          'totalSamplesReceived',
+          'audioLevel',
+          'totalAudioEnergy',
+          'roundTripTime',
+          'currentRoundTripTime',
+        ]) {
+          if (report.values[key] case final num value) fields[key] = value;
+        }
+        _diagnostic('rtc_stats', fields);
+      }
+    } catch (_) {
+      _diagnostic('rtc_stats_unavailable');
+    } finally {
+      _readingStats = false;
+    }
+  }
+
   final Set<String> _conversationItemIds = <String>{};
   final List<({String id, String role})> _conversationMessages = [];
   bool _emitTranscripts = true;
@@ -52,15 +178,37 @@ final class OpenAiRealtimeTransport
     }
     await close();
     _closed = false;
+    _responses = ResponseCoordinator(() => _send({'type': 'response.create'}));
+    _diagnosticClock
+      ..reset()
+      ..start();
+    _diagnostic('connect');
     _conversationItemIds.clear();
     _conversationMessages.clear();
     _remoteAudioTracks.clear();
     _emitTranscripts = spec.emitTranscripts;
+    _allowInterruption = spec.allowInterruption;
     _maxConversationPairs = spec.maxConversationPairs;
     final inputEnabled =
         spec.turnDetectionMode == LiveAgentTurnDetectionMode.automatic;
     try {
-      await _configureAudioSession();
+      final recorderAudio =
+          !kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.android &&
+          !spec.allowInterruption;
+      if (recorderAudio) {
+        // Match normal recorders instead of the device's telephony DSP route.
+        // Cards uses half-duplex input, so acoustic echo processing is unnecessary.
+        await WebRTC.initialize(
+          options: {
+            'bypassVoiceProcessing': true,
+            'androidAudioConfiguration': AndroidAudioConfiguration.media
+                .toMap(),
+          },
+        );
+      }
+      await _configureAudioSession(recorderAudio: recorderAudio);
+      _diagnostic('audio_capture_mode', {'recorder': recorderAudio});
       // getUserMedia requests RECORD_AUDIO and resolves only after the user
       // responds. Android requires that grant before a microphone FGS starts.
       final stream = await _openMicrophone();
@@ -72,12 +220,15 @@ final class OpenAiRealtimeTransport
         throw StateError('Voice startup was cancelled.');
       }
       _localStream = stream;
+      _inputRequested = inputEnabled;
+      await _applyMicrophoneState();
       await _startAndroidForegroundService();
 
       final peer = await createPeerConnection({'sdpSemantics': 'unified-plan'});
       _peerConnection = peer;
       peer.onConnectionState = (state) {
         if (_closed) return;
+        _diagnostic('peer_state', {'state': state.name});
         switch (state) {
           case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
             _emit(const LiveAgentEvent(LiveAgentEventType.connected));
@@ -97,7 +248,10 @@ final class OpenAiRealtimeTransport
       };
 
       for (final track in stream.getAudioTracks()) {
-        track.enabled = inputEnabled;
+        track.enabled =
+            !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+            ? true
+            : inputEnabled;
         await peer.addTrack(track, stream);
       }
 
@@ -108,13 +262,14 @@ final class OpenAiRealtimeTransport
       );
       _dataChannel = channel;
       channel.onDataChannelState = (state) {
+        _diagnostic('data_channel_state', {'state': state.name});
         if (state == RTCDataChannelState.RTCDataChannelOpen &&
             !(_dataChannelReady?.isCompleted ?? true)) {
           _dataChannelReady!.complete();
         }
       };
       channel.onMessage = (message) {
-        if (!message.isBinary) unawaited(_handleMessage(message.text));
+        if (!message.isBinary) unawaited(handleServerMessage(message.text));
       };
 
       final offer = await peer.createOffer();
@@ -140,6 +295,12 @@ final class OpenAiRealtimeTransport
         RTCSessionDescription(response.body, 'answer'),
       );
       await _dataChannelReady!.future.timeout(const Duration(seconds: 15));
+      if (_diagnosticsEnabled) {
+        _diagnosticTimer = Timer.periodic(
+          const Duration(seconds: 5),
+          (_) => unawaited(_logAudioStats()),
+        );
+      }
     } catch (_) {
       try {
         await close();
@@ -186,6 +347,8 @@ final class OpenAiRealtimeTransport
       for (final itemId in _conversationItemIds)
         if (!keepItemIds.contains(itemId)) itemId,
     ];
+    await _playbackFinished?.future;
+    if (_closed) return;
     for (final itemId in discarded) {
       await _send({'type': 'conversation.item.delete', 'item_id': itemId});
       _conversationItemIds.remove(itemId);
@@ -194,14 +357,15 @@ final class OpenAiRealtimeTransport
   }
 
   @override
-  Future<void> requestResponse() => _send({'type': 'response.create'});
+  Future<void> requestResponse() => _responses.request();
 
   @override
   Future<void> cancelResponse() => _send({'type': 'response.cancel'});
 
   @override
-  Future<void> setAutomaticTurnDetection(bool enabled) =>
-      _send(openAiTurnDetectionUpdate(enabled));
+  Future<void> setAutomaticTurnDetection(bool enabled) => _send(
+    openAiTurnDetectionUpdate(enabled, allowInterruption: _allowInterruption),
+  );
 
   @override
   Future<void> clearInputAudio() => _send({'type': 'input_audio_buffer.clear'});
@@ -212,10 +376,8 @@ final class OpenAiRealtimeTransport
 
   @override
   Future<void> setInputEnabled(bool enabled) async {
-    for (final track
-        in _localStream?.getAudioTracks() ?? <MediaStreamTrack>[]) {
-      track.enabled = enabled;
-    }
+    _inputRequested = enabled;
+    await _applyMicrophoneState();
   }
 
   @override
@@ -226,26 +388,67 @@ final class OpenAiRealtimeTransport
   }
 
   Future<void> _send(Map<String, Object?> event) async {
+    _diagnostic('send', {'type': event['type']});
     final channel = _dataChannel;
     if (channel == null) throw StateError('The live agent is not connected.');
     await _dataChannelReady?.future;
     await channel.send(RTCDataChannelMessage(jsonEncode(event)));
   }
 
-  Future<void> _handleMessage(String raw) async {
+  @visibleForTesting
+  Future<void> handleServerMessage(String raw) async {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
       final event = Map<String, dynamic>.from(decoded);
+      if (_diagnosticsEnabled) {
+        final type = event['type']?.toString() ?? '';
+        if (!type.endsWith('.delta')) {
+          final response = event['response'];
+          final error = event['error'];
+          final details = response is Map ? response['status_details'] : null;
+          _diagnostic('receive', {
+            'type': type,
+            if (response is Map) 'status': response['status'],
+            if (details is Map) 'reason': details['reason'],
+            if (error is Map) 'error_code': error['code'],
+          });
+        }
+      }
+      final type = event['type'];
+      if (type == 'response.created') _responses.generationStarted();
+      if (type == 'response.done') _responses.generationFinished();
+      final serverError = event['error'];
+      if (type == 'error' &&
+          serverError is Map &&
+          serverError['code'] == 'conversation_already_has_active_response') {
+        _responses.conflict();
+      }
+      final part = event['part'];
+      if (type == 'output_audio_buffer.started' ||
+          (type == 'response.content_part.added' &&
+              part is Map &&
+              part['type'] == 'audio')) {
+        _playbackStarted();
+      } else if (type == 'output_audio_buffer.stopped' ||
+          type == 'output_audio_buffer.cleared') {
+        _playbackEnded();
+      }
       _trackConversationItem(event);
       if (event['type'] == 'response.done') {
         await _pruneConversationPairs();
       }
       for (final parsed in parseOpenAiRealtimeEvent(event)) {
+        if (_closed) return;
+        // Generation can finish seconds before the speaker finishes playback.
+        if (parsed.type == LiveAgentEventType.listening &&
+            _playbackFinished != null)
+          continue;
         if (_emitTranscripts || parsed.type != LiveAgentEventType.transcript) {
           _emit(parsed);
         }
       }
+      await _responses.flush();
     } catch (error) {
       _emit(
         LiveAgentEvent(
@@ -288,6 +491,8 @@ final class OpenAiRealtimeTransport
       _conversationMessages,
       maxPairs,
     );
+    await _playbackFinished?.future;
+    if (_closed) return;
     for (final itemId in obsolete) {
       await _send({'type': 'conversation.item.delete', 'item_id': itemId});
       _conversationItemIds.remove(itemId);
@@ -301,7 +506,16 @@ final class OpenAiRealtimeTransport
 
   @override
   Future<void> close() async {
+    _diagnostic('close');
+    _responses.close();
+    _diagnosticTimer?.cancel();
+    _diagnosticTimer = null;
     _closed = true;
+    _microphoneResumeTimer?.cancel();
+    _microphoneResumeTimer = null;
+    _playbackFinished?.complete();
+    _playbackFinished = null;
+    await _microphoneUpdates;
     final stream = _localStream;
     _localStream = null;
     if (stream != null) {
@@ -365,7 +579,7 @@ Map<String, Object?> openAiRealtimeSession({
         'transcription': {'model': 'gpt-4o-mini-transcribe'},
       'turn_detection':
           spec.turnDetectionMode == LiveAgentTurnDetectionMode.automatic
-          ? {...openAiSemanticVad()}
+          ? {...openAiSemanticVad(allowInterruption: spec.allowInterruption)}
           : null,
     },
     'output': {'voice': spec.voice},
@@ -374,23 +588,30 @@ Map<String, Object?> openAiRealtimeSession({
   'tool_choice': 'auto',
 };
 
-Map<String, Object?> openAiSemanticVad() => const <String, Object?>{
-  'type': 'semantic_vad',
-  'eagerness': 'medium',
-  'create_response': true,
-  'interrupt_response': true,
-};
-
-Map<String, Object?> openAiTurnDetectionUpdate(bool enabled) =>
+Map<String, Object?> openAiSemanticVad({bool allowInterruption = true}) =>
     <String, Object?>{
-      'type': 'session.update',
-      'session': {
-        'type': 'realtime',
-        'audio': {
-          'input': {'turn_detection': enabled ? openAiSemanticVad() : null},
-        },
-      },
+      'type': 'semantic_vad',
+      'eagerness': 'medium',
+      'create_response': true,
+      'interrupt_response': allowInterruption,
     };
+
+Map<String, Object?> openAiTurnDetectionUpdate(
+  bool enabled, {
+  bool allowInterruption = true,
+}) => <String, Object?>{
+  'type': 'session.update',
+  'session': {
+    'type': 'realtime',
+    'audio': {
+      'input': {
+        'turn_detection': enabled
+            ? openAiSemanticVad(allowInterruption: allowInterruption)
+            : null,
+      },
+    },
+  },
+};
 
 List<String> conversationItemIdsOutsideRecentPairs(
   List<({String id, String role})> messages,
@@ -457,6 +678,13 @@ List<LiveAgentEvent> parseOpenAiRealtimeEvent(Map<String, dynamic> event) {
       ];
     case 'error':
       final error = event['error'];
+      // A late server interruption may reference a just-deleted old message.
+      // The connection remains usable; this is not a fatal session error.
+      if (error is Map &&
+          (error['code'] == 'item_truncate_invalid_item_id' ||
+              error['code'] == 'conversation_already_has_active_response')) {
+        return const [];
+      }
       final message = error is Map
           ? error['message']?.toString()
           : error?.toString();
@@ -572,7 +800,7 @@ final class MicrophonePermissionException implements Exception {
       'Microphone in this app’s permissions in Settings.';
 }
 
-Future<void> _configureAudioSession() async {
+Future<void> _configureAudioSession({bool recorderAudio = false}) async {
   final session = await AudioSession.instance;
   await session.configure(
     AudioSessionConfiguration(
@@ -581,9 +809,11 @@ Future<void> _configureAudioSession() async {
           AVAudioSessionCategoryOptions.defaultToSpeaker |
           AVAudioSessionCategoryOptions.allowBluetooth,
       avAudioSessionMode: AVAudioSessionMode.voiceChat,
-      androidAudioAttributes: const AndroidAudioAttributes(
+      androidAudioAttributes: AndroidAudioAttributes(
         contentType: AndroidAudioContentType.speech,
-        usage: AndroidAudioUsage.voiceCommunication,
+        usage: recorderAudio
+            ? AndroidAudioUsage.media
+            : AndroidAudioUsage.voiceCommunication,
       ),
       androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
       androidWillPauseWhenDucked: false,

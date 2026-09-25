@@ -108,6 +108,7 @@ void main() {
 
     await controller.start(const StaticLiveAgentCredentialProvider('test-key'));
     expect(transport.connectedSpec?.model, 'gpt-realtime-2.1-mini');
+    expect(transport.connectedSpec?.allowInterruption, false);
     expect(
       transport.connectedTools.map((tool) => tool.name),
       containsAll([

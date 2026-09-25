@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
 
 void main() {
@@ -13,16 +14,29 @@ void main() {
   const audio = MethodChannel('com.ryanheise.audio_session');
   late Completer<Object?> permission;
   late List<String> calls;
+  late List<bool> microphoneMutes;
+  Map<dynamic, dynamic>? initialization;
+  Completer<Object?>? serviceGate;
   late OpenAiRealtimeTransport transport;
 
   setUp(() {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     permission = Completer<Object?>();
+    WebRTC.initialized = false;
+    initialization = null;
     calls = [];
+    microphoneMutes = [];
+    serviceGate = null;
     transport = OpenAiRealtimeTransport();
     messenger.setMockMethodCallHandler(audio, (call) async => null);
     messenger.setMockMethodCallHandler(rtc, (call) async {
       calls.add(call.method);
+      if (call.method == 'initialize') {
+        initialization = (call.arguments as Map)['options'] as Map;
+      }
+      if (call.method == 'setMicrophoneMuted') {
+        microphoneMutes.add((call.arguments as Map)['muted'] as bool);
+      }
       if (call.method == 'getUserMedia') return permission.future;
       return null;
     });
@@ -31,6 +45,7 @@ void main() {
       if (call.method == 'isRunningService') return false;
       if (call.method == 'checkNotificationPermission') return 0;
       if (call.method == 'startService') {
+        if (serviceGate != null) return serviceGate!.future;
         throw PlatformException(
           code: 'service-test-stop',
           message: 'Service reached after permission',
@@ -48,7 +63,7 @@ void main() {
   });
   Future<void> start() => transport.connect(
     credential: 'test',
-    spec: const LiveAgentSpec(instructions: 'Test'),
+    spec: const LiveAgentSpec(instructions: 'Test', allowInterruption: false),
     tools: const [],
   );
   Future<void> waitForPermission() async {
@@ -58,6 +73,57 @@ void main() {
     expect(calls, contains('getUserMedia'));
     expect(calls, isNot(contains('startService')));
   }
+
+  test(
+    'Android playback uses ADM silence and restores input without stopping tracks',
+    () async {
+      serviceGate = Completer<Object?>();
+      final result = expectLater(start(), throwsA(isA<PlatformException>()));
+      await waitForPermission();
+      expect(initialization?['bypassVoiceProcessing'], true);
+      expect(
+        (initialization?['androidAudioConfiguration']
+            as Map)['androidAudioMode'],
+        'normal',
+      );
+      permission.complete({
+        'streamId': 'microphone',
+        'audioTracks': [],
+        'videoTracks': [],
+      });
+      for (var i = 0; i < 30 && !calls.contains('startService'); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(microphoneMutes, [false]);
+      await transport.handleServerMessage(
+        '{"type":"output_audio_buffer.started"}',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(microphoneMutes.last, true);
+      await transport.handleServerMessage(
+        '{"type":"output_audio_buffer.stopped"}',
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(microphoneMutes.last, false);
+      await transport.setInputEnabled(false);
+      await transport.handleServerMessage(
+        '{"type":"output_audio_buffer.started"}',
+      );
+      await transport.handleServerMessage(
+        '{"type":"output_audio_buffer.stopped"}',
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(
+        microphoneMutes.last,
+        true,
+        reason: 'User mute survives playback ending',
+      );
+      expect(calls, isNot(contains('mediaStreamTrackSetEnable')));
+      expect(calls, isNot(contains('mediaStreamTrackStop')));
+      serviceGate!.completeError(PlatformException(code: 'test-finished'));
+      await result;
+    },
+  );
 
   test(
     'waits for microphone grant before service and cleans up a service failure',

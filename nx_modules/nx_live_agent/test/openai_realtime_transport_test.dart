@@ -2,6 +2,115 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_live_agent/nx_live_agent.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  test('Cards turn-taking disables automatic interruption', () {
+    final session = openAiRealtimeSession(
+      spec: const LiveAgentSpec(
+        instructions: 'Tutor',
+        allowInterruption: false,
+      ),
+      tools: const [],
+    );
+    final vad =
+        ((session['audio'] as Map)['input'] as Map)['turn_detection'] as Map;
+    expect(vad['interrupt_response'], false);
+    final update = openAiTurnDetectionUpdate(true, allowInterruption: false);
+    final input = ((update['session'] as Map)['audio'] as Map)['input'] as Map;
+    expect((input['turn_detection'] as Map)['interrupt_response'], false);
+  });
+
+  test('late truncation errors are recoverable; other errors are surfaced', () {
+    expect(
+      parseOpenAiRealtimeEvent({
+        'type': 'error',
+        'error': {'code': 'item_truncate_invalid_item_id'},
+      }),
+      isEmpty,
+    );
+    expect(
+      parseOpenAiRealtimeEvent({
+        'type': 'error',
+        'error': {'code': 'other', 'message': 'Failure'},
+      }).single.type,
+      LiveAgentEventType.error,
+    );
+  });
+
+  test('active response conflict does not fail the voice session', () {
+    expect(
+      parseOpenAiRealtimeEvent({
+        'type': 'error',
+        'error': {'code': 'conversation_already_has_active_response'},
+      }),
+      isEmpty,
+    );
+  });
+
+  test(
+    'generation completion does not announce listening before playback ends',
+    () async {
+      final transport = OpenAiRealtimeTransport();
+      final events = <LiveAgentEvent>[];
+      final subscription = transport.events.listen(events.add);
+      await transport.handleServerMessage(
+        '{"type":"output_audio_buffer.started"}',
+      );
+      await transport.handleServerMessage(
+        '{"type":"response.done","response":{"output":[]}}',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        events.map((e) => e.type),
+        isNot(contains(LiveAgentEventType.listening)),
+      );
+      await transport.handleServerMessage(
+        '{"type":"output_audio_buffer.stopped"}',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(events.last.type, LiveAgentEventType.playbackStopped);
+      await subscription.cancel();
+      await transport.dispose();
+    },
+  );
+
+  test('conversation cleanup waits for audio drain', () async {
+    final transport = OpenAiRealtimeTransport();
+    await transport.handleServerMessage(
+      '{"type":"output_audio_buffer.started"}',
+    );
+    var finished = false;
+    final cleanup = transport.discardConversation().then(
+      (_) => finished = true,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(finished, false);
+    await transport.handleServerMessage(
+      '{"type":"output_audio_buffer.stopped"}',
+    );
+    await cleanup;
+    expect(finished, true);
+    await transport.dispose();
+  });
+
+  test('cancelled playback also releases pending cleanup', () async {
+    final transport = OpenAiRealtimeTransport();
+    await transport.handleServerMessage(
+      '{"type":"output_audio_buffer.started"}',
+    );
+    var finished = false;
+    final cleanup = transport.discardConversation().then(
+      (_) => finished = true,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(finished, false);
+    await transport.handleServerMessage(
+      '{"type":"output_audio_buffer.cleared"}',
+    );
+    await cleanup;
+    expect(finished, true);
+    await transport.dispose();
+  });
+
   test('parses arbitrary Realtime function calls', () {
     final events = parseOpenAiRealtimeEvent({
       'type': 'response.done',
