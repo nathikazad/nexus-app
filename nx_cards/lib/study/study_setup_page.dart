@@ -556,9 +556,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           }
           if (call.method == 'prepare') return preparations.prepare(index);
           if (call.method == 'exampleCard') {
-            if (recall) {
-              throw PlatformException(code: 'navigation_disabled_in_recall');
-            }
             final targetId = args['cardId'];
             final parent = queue[index].content as LanguageCardContent;
             final permitted = {

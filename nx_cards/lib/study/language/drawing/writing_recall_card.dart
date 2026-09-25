@@ -100,6 +100,7 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
                 when widget.audioRepository != null) ...[
               const SizedBox(width: 8),
               PronunciationButton(
+                autoPlay: true,
                 audioUrl: audioUrl,
                 repository: widget.audioRepository!,
               ),

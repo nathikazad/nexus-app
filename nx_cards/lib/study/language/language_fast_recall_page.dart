@@ -1,3 +1,5 @@
+import 'package:nx_cards/audio/audio_providers.dart';
+import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'dart:async';
@@ -247,7 +249,7 @@ class _FastRecallHeader extends StatelessWidget {
   );
 }
 
-class _FastRecallRow extends StatefulWidget {
+class _FastRecallRow extends ConsumerStatefulWidget {
   const _FastRecallRow({
     super.key,
     required this.number,
@@ -270,10 +272,10 @@ class _FastRecallRow extends StatefulWidget {
   final VoidCallback onOpenCard;
 
   @override
-  State<_FastRecallRow> createState() => _FastRecallRowState();
+  ConsumerState<_FastRecallRow> createState() => _FastRecallRowState();
 }
 
-class _FastRecallRowState extends State<_FastRecallRow> {
+class _FastRecallRowState extends ConsumerState<_FastRecallRow> {
   static const _swipeThreshold = 72.0;
   static const _maximumDrag = 104.0;
 
@@ -462,6 +464,17 @@ class _FastRecallRowState extends State<_FastRecallRow> {
                                         ),
                                       ),
                               ),
+                              if (_revealed &&
+                                  widget.content.audioUrl?.isNotEmpty == true &&
+                                  ref.watch(cardAudioRepositoryProvider) !=
+                                      null)
+                                PronunciationButton(
+                                  audioUrl: widget.content.audioUrl!,
+                                  repository: ref.watch(
+                                    cardAudioRepositoryProvider,
+                                  )!,
+                                  autoPlay: true,
+                                ),
                               const SizedBox(width: 6),
                               SizedBox(
                                 width: 84,

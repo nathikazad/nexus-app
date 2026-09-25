@@ -90,63 +90,50 @@ class _ExampleCard extends ConsumerWidget {
     final palette = RecallPalette.of(context);
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _openPhrase(context, ref),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: palette.soft,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: palette.line),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  example.text,
-                  style: const TextStyle(fontSize: 18, height: 1.4),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  example.transliteration,
-                  style: const TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: RecallColors.faint,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: palette.soft,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: palette.line),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: InkWell(
+                  onTap: () => _openPhrase(context, ref),
+                  child: Text(
+                    example.text,
+                    style: const TextStyle(fontSize: 18, height: 1.4),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  example.translation,
-                  style: const TextStyle(color: RecallColors.muted),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                example.transliteration,
+                style: const TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: RecallColors.faint,
                 ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () => _openPhrase(context, ref),
-                    child: const Wrap(
-                      spacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Icon(Icons.menu_book_outlined, size: 18),
-                        Text('Open card'),
-                      ],
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                example.translation,
+                style: const TextStyle(color: RecallColors.muted),
+              ),
+              if (audioUrl?.isNotEmpty == true && audioRepository != null) ...[
+                const SizedBox(height: 10),
+                LanguageAudioControls(
+                  key: ValueKey('$audioKey:$audioUrl'),
+                  audioUrl: audioUrl!,
+                  repository: audioRepository!,
+                  autoPlay: false,
                 ),
-                if (audioUrl?.isNotEmpty == true &&
-                    audioRepository != null) ...[
-                  const SizedBox(height: 10),
-                  LanguageAudioControls(
-                    key: ValueKey('$audioKey:$audioUrl'),
-                    audioUrl: audioUrl!,
-                    repository: audioRepository!,
-                    autoPlay: false,
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       ),

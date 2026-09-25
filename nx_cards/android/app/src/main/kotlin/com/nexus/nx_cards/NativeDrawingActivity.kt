@@ -165,7 +165,7 @@ class NativeDrawingActivity : Activity() {
             control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
             control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
-            control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard() }
+            control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard(); if (card["audio"] == true) play() }
         } else {
             control("No", "no") { rate(false) }
             control("Yes", "yes") { rate(true) }
@@ -244,10 +244,10 @@ class NativeDrawingActivity : Activity() {
                     text = value
                     gravity = Gravity.START
                     setPadding(0, 0, 0, dp(5))
-                    if (key == "text" && !recall && example["cardId"] is Number) {
+                    if (key == "text" && (!recall || revealed) && example["cardId"] is Number) {
                         contentDescription = "Open example card: $value"
                         isFocusable = true
-                        setOnClickListener { if (!busy && !recall) openExample((example["cardId"] as Number).toInt()) }
+                        setOnClickListener { if (!busy && (!recall || revealed)) openExample((example["cardId"] as Number).toInt()) }
                         var pressedOnText = false
                         fun hitsText(event: MotionEvent): Boolean {
                             val lines = layout ?: return false

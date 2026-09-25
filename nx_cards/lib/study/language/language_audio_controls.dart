@@ -27,9 +27,11 @@ class PronunciationButton extends StatefulWidget {
     super.key,
     required this.audioUrl,
     required this.repository,
+    this.autoPlay = false,
   });
 
   final String audioUrl;
+  final bool autoPlay;
   final CardAudioRepository repository;
 
   @override
@@ -41,11 +43,22 @@ class _PronunciationButtonState extends State<PronunciationButton> {
   bool _loading = false;
   bool _playing = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoPlay) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_play());
+      });
+    }
+  }
+
   Future<void> _play() async {
     if (_loading) return;
     setState(() => _loading = true);
     try {
       final bytes = await widget.repository.fetch(widget.audioUrl);
+      if (!mounted) return;
       await _player.play(languageAudioSource(bytes));
       if (mounted) setState(() => _playing = true);
       await _player.onPlayerComplete.first;

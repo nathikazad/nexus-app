@@ -14,6 +14,7 @@ void main() {
     'English Script recall uses drawing and reveals the right letter',
     (tester) async {
       final card = _scriptCard();
+      _FakeAudioRepository.requests = 0;
       await _pumpRecall(tester, card, StudyCue.fromLanguage, writing: true);
 
       expect(find.text('Letter ka'), findsOneWidget);
@@ -48,9 +49,13 @@ void main() {
             .onPressed,
         isNotNull,
       );
+      expect(_FakeAudioRepository.requests, 0);
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
 
+      expect(_FakeAudioRepository.requests, 1);
+      await tester.pump();
+      expect(_FakeAudioRepository.requests, 1);
       expect(
         find.byKey(const ValueKey<String>('writing-recall-answer')),
         findsOneWidget,
@@ -187,6 +192,11 @@ StudyCard _scriptCard() => StudyCard(
 );
 
 class _FakeAudioRepository implements CardAudioRepository {
+  static int requests = 0;
   @override
-  Future<Uint8List> fetch(String audioUrl) async => Uint8List(0);
+  Future<Uint8List> fetch(String audioUrl) async {
+    requests++;
+    // Exercise automatic fetching and graceful failure without a native player.
+    throw StateError('Audio unavailable in this test');
+  }
 }
