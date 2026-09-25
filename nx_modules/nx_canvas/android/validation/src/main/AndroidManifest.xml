@@ -3,4 +3,5 @@
         <activity android:name="com.nexus.nx_canvas.NativeEditorActivity" android:exported="false" android:screenOrientation="locked" />
     </application>
     <instrumentation android:name=".CanvasInstrumentation" android:targetPackage="com.nexus.nx_canvas.validation" android:label="Canvas regression checks" />
+    <instrumentation android:name=".BigmeInstrumentation" android:targetPackage="com.nexus.nx_canvas.validation" android:label="Bigme canvas checks" />
 </manifest>

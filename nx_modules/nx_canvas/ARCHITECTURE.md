@@ -261,3 +261,26 @@ stored in recovery records, so restart recovery always persists the drawing.
 The Android Docs host uses Flutter texture rendering to avoid measured SurfaceView
 teardown stalls during activity handoff. The native firmware handwriting surface
 and direct pen forwarding are independent and unchanged.
+
+## Bigme firmware input
+
+`CanvasInputFactory` selects the existing NoteView adapter when that widget is
+available, then the Bigme XRZ `HandwrittenClient` adapter used by NX Cards.
+Availability checks in the Flutter plugin use the same factory. The Bigme path
+uses app-local XRZ hidden API access and a native surface; it ships no firmware
+binaries and sends no per-point events through Flutter.
+
+Cooked Bigme coordinates are already view-local. `BigmeStrokeRecord` converts
+completed contacts through density and the current viewport without applying
+NoteView's panel rotation a second time. Pen, rubber and region contacts enter
+the existing operation/import/journal pipeline. Erasers remain geometric edits;
+a settled eraser import refreshes the foreground from the authoritative model.
+The input lifecycle drains pending callbacks before changing tools, replacing
+the foreground, navigating, or closing. Normal Android surface painting happens
+after pen-up; live segments go directly to the firmware framebuffer.
+
+Run the firmware/model/engine unit tests through the Android Gradle project.
+The separate `canvas-validation` app includes `.BigmeInstrumentation`, which
+checks actual service connection plus synthetic callback autosave, undo/redo,
+erasing and durable reopen without accessing the Docs library. Physical stylus
+latency and feel still require hands-on verification.

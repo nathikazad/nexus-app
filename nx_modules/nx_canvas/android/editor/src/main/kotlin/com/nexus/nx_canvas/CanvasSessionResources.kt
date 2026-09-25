@@ -17,7 +17,7 @@ class AndroidCanvasScheduler(private val handler: Handler) : CanvasScheduler {
  * All session state/queues belong to CanvasSessionResources, never this registry.
  */
 class CanvasComponents(
-    val input: (Context, DiagnosticSink) -> AndroidCanvasInput = { context, diagnostics -> TabletInputAdapter(context, diagnostics) },
+    val input: (Context, DiagnosticSink) -> AndroidCanvasInput = { context, diagnostics -> CanvasInputFactory.create(context, diagnostics) },
     val renderer: (DiagnosticSink) -> CanvasRenderer<BitmapCanvasFrame> = { BitmapCanvasRenderer(InkMetrics(), it) },
     val overviewRenderer: CanvasOverviewRenderer = DefaultOverviewRenderer(),
     val diagnostics: DiagnosticSink = CanvasDiagnostics,

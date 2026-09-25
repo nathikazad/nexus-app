@@ -24,7 +24,7 @@ class NxCanvasPlugin : FlutterPlugin, ActivityAware, PluginRegistry.ActivityResu
                     // Legacy example recovery only; retain old files until explicitly acknowledged.
                     "recover" -> background(result, "legacyRecover") { repository.pending() }
                     "ack" -> background(result, "legacyAck") { repository.acknowledge(); null }
-                    "available" -> result.success(runCatching { Class.forName("com.xrz.NoteView") }.isSuccess)
+                    "available" -> result.success(CanvasInputFactory.backend() != null)
                     "recoverDocument" -> background(result, "recoverDocument") { repository.document() }
                     "peekDocument" -> background(result, "peekDocument") {
                         if(repository.active) repository.journal().read()?.takeIf { it.token != call.arguments }?.payload() else null
@@ -33,7 +33,7 @@ class NxCanvasPlugin : FlutterPlugin, ActivityAware, PluginRegistry.ActivityResu
                     "openDocument" -> {
                         check(pending == null && !repository.active) { "Canvas already open" }
                         check(this.binding != null) { "Canvas requires a foreground activity" }
-                        Class.forName("com.xrz.NoteView")
+                        check(CanvasInputFactory.backend() != null) { "No supported handwriting service" }
                         val input = call.arguments as Map<*, *>
                         require(input["documentId"] is String && input["title"] is String)
                         pending = result

@@ -6,6 +6,7 @@ import android.view.SurfaceHolder
 
 /** Android-only surface contract. Hardware implementation is selected at assembly. */
 interface AndroidCanvasInput : CanvasInput {
+    val requiresErasureRepaint: Boolean get() = false
     val view: View
     val rotation: Int
     val holder: SurfaceHolder

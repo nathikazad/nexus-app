@@ -11,6 +11,7 @@ dependencies {
     api(project(":canvas-engine"))
     api(project(":canvas-diagnostics"))
     compileOnly(project(":vendor-api"))
+    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:6.1")
     testImplementation("junit:junit:4.13.2")
 }
 

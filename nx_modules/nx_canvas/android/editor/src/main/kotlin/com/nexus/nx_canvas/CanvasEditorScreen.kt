@@ -67,6 +67,8 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         diagnostics.event(name, mapOf("trace_id" to traceId,
             "wall_ms" to (System.currentTimeMillis() - tappedAt)))
     }
+    private var erasureRepaintPending = false
+    private var erasureRepaintScheduled = false
     private var overlayRepairPending = false
     private var latestSaveState = CanvasSaveCoordinator.SaveState.SAVED
     private val idleStatus = CanvasIdleUpdate(scheduler) {
@@ -144,6 +146,10 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             session=CanvasSessionResources(engine, title, repository, scheduler, components=components,
                 imported={kind ->
                     if (kind != InkOperationKind.DRAW) {
+                        if (this.input.requiresErasureRepaint) {
+                            erasureRepaintPending = true
+                            scheduleErasureRepaint()
+                        }
                         overlayRepairPending = true
                         idleStatus.request()
                     }
@@ -229,6 +235,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private fun resumeInk(){
         val enabled = ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&!rendering&&nativeTool()
         flag(enabled)
+        scheduleErasureRepaint()
         if (enabled && initialPresented && !openReported) {
             openReported = true
             transition("transition.open.input_enabled", openTappedAtMs)
@@ -283,9 +290,23 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         })
         }
     }
-    private fun drainAction() { if(::session.isInitialized)session.actions.drain() }
+    private fun drainAction() {
+        if(::session.isInitialized)session.actions.drain()
+        scheduleErasureRepaint()
+    }
+    private fun scheduleErasureRepaint() {
+        if (!erasureRepaintPending || erasureRepaintScheduled || destroyed || closing) return
+        erasureRepaintScheduled = true
+        main.post {
+            erasureRepaintScheduled = false
+            if (!destroyed && !closing && ready && !busy && !rendering && !penPending && pendingImports == 0 && nativeTool()) {
+                perform("reconcile_eraser") { renderForeground() }
+            }
+        }
+    }
     private fun renderForeground() {
         if(importFailed)return
+        erasureRepaintPending = false
         flag(false)
         session.renders.request(CanvasRenderRequest(engine.snapshot(),density,body.width,body.height,input.rotation))
     }
