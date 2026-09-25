@@ -646,8 +646,6 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             emptyText:
                                 'Activate Future cards to practice them here.',
                             dashboard: data,
-                            previousStatus: LearningStatus.notStarted,
-                            previousActionLabel: '−',
                             showScheduleStatus: true,
                           ),
                           LearningCardsTab(
@@ -658,8 +656,6 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 : widget.allCards || widget.tagSystem != null
                                 ? 'No cards are currently being learned.'
                                 : 'No words are currently being learned.',
-                            previousStatus: LearningStatus.notStarted,
-                            previousActionLabel: '←',
 
                             dashboard: data,
                           ),
@@ -671,8 +667,6 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                 : widget.allCards || widget.tagSystem != null
                                 ? 'No cards have reached 80% yet.'
                                 : 'No words have reached 80% yet.',
-                            previousStatus: LearningStatus.notStarted,
-                            previousActionLabel: '←',
                             dashboard: data,
                           ),
                           LearningCardsTab(

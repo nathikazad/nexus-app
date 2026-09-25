@@ -355,9 +355,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('right swipe moves learning and learnt words back one status', (
-    tester,
-  ) async {
+  testWidgets('only Future cards can be swiped to activate', (tester) async {
     final repository = _RecordingCardLibrary();
     final now = DateTime.now().toUtc();
     final learning = _word(
@@ -370,7 +368,22 @@ void main() {
       learningStatus: LearningStatus.learnt,
       schedule: _schedule(now),
     );
-    final dashboard = CardsDashboard(cards: [learning, learnt]);
+    final dashboard = CardsDashboard(
+      cards: [
+        learning,
+        learnt,
+        _word(
+          id: 4,
+          learningStatus: LearningStatus.learning,
+          schedule: const CardSchedule.initial(enabled: true),
+        ),
+        _word(
+          id: 5,
+          learningStatus: LearningStatus.notStarted,
+          schedule: const CardSchedule.initial(enabled: true),
+        ),
+      ],
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -398,7 +411,7 @@ void main() {
       const Offset(100, 0),
     );
     await tester.pumpAndSettle();
-    expect(repository.changes.last, (1, LearningStatus.notStarted));
+    expect(repository.changes, isEmpty);
 
     await tester.tap(find.text('Past  1'));
     await tester.pumpAndSettle();
@@ -407,7 +420,23 @@ void main() {
       const Offset(100, 0),
     );
     await tester.pumpAndSettle();
-    expect(repository.changes.last, (3, LearningStatus.notStarted));
+    expect(repository.changes, isEmpty);
+    await tester.tap(find.text('Upcoming  1'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const ValueKey('learning:4')),
+      const Offset(100, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.changes, isEmpty);
+    await tester.tap(find.text('Future  1'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const ValueKey('not_started:5')),
+      const Offset(-100, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.changes, [(5, LearningStatus.learning)]);
   });
 
   testWidgets('shows subtle state pills beside fronts and sorts by state', (

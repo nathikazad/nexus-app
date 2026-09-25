@@ -141,22 +141,16 @@ class BookPage extends ConsumerWidget {
                         cards: upcoming,
                         emptyText: 'Activate Future cards to practice.',
                         dashboard: data,
-                        previousStatus: LearningStatus.notStarted,
-                        previousActionLabel: '−',
                       ),
                       LearningCardsTab(
                         cards: learning,
                         showScheduleStatus: true,
                         emptyText: 'No cards are currently being learned.',
-                        previousStatus: LearningStatus.notStarted,
-                        previousActionLabel: '←',
                         dashboard: data,
                       ),
                       LearningCardsTab(
                         cards: learnt,
                         emptyText: 'No cards have been moved to Past yet.',
-                        previousStatus: LearningStatus.notStarted,
-                        previousActionLabel: '←',
                         dashboard: data,
                       ),
                       LearningCardsTab(

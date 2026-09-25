@@ -20,8 +20,6 @@ class LearningCardsTab extends ConsumerWidget {
     this.priorityScores = const {},
     this.showScheduleStatus = false,
     this.showLearningStatus = false,
-    this.previousStatus,
-    this.previousActionLabel,
     this.nextStatus,
     this.actionLabel,
   });
@@ -32,8 +30,6 @@ class LearningCardsTab extends ConsumerWidget {
   final CardsDashboard dashboard;
   final bool showScheduleStatus;
   final bool showLearningStatus;
-  final LearningStatus? previousStatus;
-  final String? previousActionLabel;
   final LearningStatus? nextStatus;
   final String? actionLabel;
 
@@ -76,8 +72,6 @@ class LearningCardsTab extends ConsumerWidget {
                             priorityScore: priorityScores[card.id],
                             showScheduleStatus: showScheduleStatus,
                             showLearningStatus: showLearningStatus,
-                            previousStatus: previousStatus,
-                            previousActionLabel: previousActionLabel,
                             nextStatus: nextStatus,
                             actionLabel: actionLabel,
                           ),
@@ -98,8 +92,6 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
     this.priorityScore,
     required this.showScheduleStatus,
     required this.showLearningStatus,
-    this.previousStatus,
-    this.previousActionLabel,
     this.nextStatus,
     this.actionLabel,
   });
@@ -108,8 +100,6 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
   final double? priorityScore;
   final bool showScheduleStatus;
   final bool showLearningStatus;
-  final LearningStatus? previousStatus;
-  final String? previousActionLabel;
   final LearningStatus? nextStatus;
   final String? actionLabel;
 
@@ -123,13 +113,12 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
   bool _dragging = false;
   bool _working = false;
 
-  bool get _canDrag =>
-      widget.previousStatus != null || widget.nextStatus != null;
+  bool get _canDrag => !widget.card.active && widget.nextStatus != null;
 
   void _drag(DragUpdateDetails details) {
     if (!_canDrag) return;
     final minimum = widget.nextStatus == null ? 0.0 : -_actionWidth;
-    final maximum = widget.previousStatus == null ? 0.0 : _actionWidth;
+    const maximum = 0.0;
     setState(() {
       _dragging = true;
       _offset = (_offset + details.delta.dx).clamp(minimum, maximum).toDouble();
@@ -138,7 +127,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
 
   void _finishDrag(DragEndDetails details) {
     final reveal = _offset.abs() >= _actionWidth * .42;
-    final status = _offset < 0 ? widget.nextStatus : widget.previousStatus;
+    final status = _offset < 0 ? widget.nextStatus : null;
     setState(() {
       _dragging = false;
       _offset = reveal && status != null
@@ -210,12 +199,6 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
               color: Theme.of(context).colorScheme.inverseSurface,
               child: Stack(
                 children: [
-                  if (widget.previousStatus case final status?)
-                    _statusAction(
-                      alignment: Alignment.centerLeft,
-                      status: status,
-                      label: widget.previousActionLabel ?? '',
-                    ),
                   if (widget.nextStatus case final status?)
                     _statusAction(
                       alignment: Alignment.centerRight,
