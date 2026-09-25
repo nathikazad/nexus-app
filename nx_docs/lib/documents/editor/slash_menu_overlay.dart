@@ -48,7 +48,9 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     keepEditorFocusNotifier.increase();
     _menuService = _NxSelectionMenuService(
       onDismiss: widget.onDismiss,
-      style: SelectionMenuStyle.light,
+      style: AppColors.isDark
+          ? SelectionMenuStyle.dark
+          : SelectionMenuStyle.light,
     );
     _staticItems = _nxStaticSelectionMenuItems(
       uploadDocumentImage: widget.uploadDocumentImage,
@@ -77,37 +79,67 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     if (usesTouchEditingControls(context)) {
       return Material(
         color: AppColors.panel,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         clipBehavior: Clip.antiAlias,
         child: SafeArea(
           top: false,
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
                 child: Row(
                   children: [
                     const Expanded(
                       child: Text(
                         'Insert block',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                          letterSpacing: -.4,
+                        ),
                       ),
                     ),
                     IconButton(
                       tooltip: 'Close insert',
                       onPressed: widget.onDismiss,
-                      icon: const Icon(Icons.close),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.subtle,
+                        foregroundColor: AppColors.muted,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.close_rounded, size: 20),
                     ),
                   ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Search blocks or links',
-                    prefixIcon: Icon(Icons.search),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: AppColors.muted,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.subtle,
+                    hintStyle: TextStyle(color: AppColors.muted, fontSize: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.blue),
+                    ),
                   ),
                   onChanged: _searchFromKeyboard,
                 ),
@@ -119,6 +151,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
                     : rows.isEmpty
                     ? const Center(child: Text('No results'))
                     : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                         itemCount: rows.length,
                         itemBuilder: (context, index) => ConstrainedBox(
                           constraints: const BoxConstraints(minHeight: 48),
@@ -225,6 +258,13 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
 
     final lowerKeyword = _keyword.toLowerCase();
     final rows = <_NxSlashRow>[
+      for (final item in _staticItems)
+        if (lowerKeyword.isEmpty ||
+            item.allKeywords.any((keyword) => keyword.contains(lowerKeyword)))
+          _NxSelectionItemRow(
+            item: item,
+            onSelected: () => _selectStaticItem(item),
+          ),
       for (final type in LinkableModelType.values)
         if (lowerKeyword.isEmpty ||
             type.command.contains(lowerKeyword) ||
@@ -232,13 +272,6 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
           _NxLinkableModelCommandRow(
             modelType: type,
             onSelected: () => _enterLinkableModelSearch(type),
-          ),
-      for (final item in _staticItems)
-        if (lowerKeyword.isEmpty ||
-            item.allKeywords.any((keyword) => keyword.contains(lowerKeyword)))
-          _NxSelectionItemRow(
-            item: item,
-            onSelected: () => _selectStaticItem(item),
           ),
     ];
     return rows;

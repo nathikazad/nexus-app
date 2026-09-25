@@ -231,34 +231,63 @@ class _ReadEditModeToggle extends StatefulWidget {
 class _ReadEditModeToggleState extends State<_ReadEditModeToggle> {
   @override
   Widget build(BuildContext context) {
+    final touch = usesTouchEditingControls(context);
+    final extent = touch ? 44.0 : 30.0;
     return Material(
-      color: AppColors.panel.withValues(alpha: 0.72),
-      elevation: 1,
-      shadowColor: const Color(0x1f000000),
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.line.withValues(alpha: 0.72)),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        padding: const EdgeInsets.all(2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            _ReadEditModeButton(
-              icon: Icons.article_outlined,
-              label: 'Read',
-              selected: widget.mode == _DocumentEditorMode.read,
-              onPressed: () => widget.onChanged(_DocumentEditorMode.read),
-            ),
-            const SizedBox(width: 2),
-            _ReadEditModeButton(
-              icon: Icons.keyboard_alt_outlined,
-              label: 'Edit',
-              selected: widget.mode == _DocumentEditorMode.edit,
-              onPressed: () => widget.onChanged(_DocumentEditorMode.edit),
-            ),
-          ],
+      color: AppColors.subtle,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: SizedBox(
+          width: extent * 2,
+          height: extent,
+          child: Stack(
+            children: [
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: widget.mode == _DocumentEditorMode.read
+                    ? Alignment.centerLeft
+                    : Alignment.centerRight,
+                child: Container(
+                  width: extent,
+                  height: extent,
+                  decoration: BoxDecoration(
+                    color: AppColors.panel,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.line.withValues(alpha: .6),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: .06),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  _ReadEditModeButton(
+                    icon: Icons.chrome_reader_mode_outlined,
+                    label: 'Read',
+                    selected: widget.mode == _DocumentEditorMode.read,
+                    extent: extent,
+                    onPressed: () => widget.onChanged(_DocumentEditorMode.read),
+                  ),
+                  _ReadEditModeButton(
+                    icon: Icons.edit_outlined,
+                    label: 'Edit',
+                    selected: widget.mode == _DocumentEditorMode.edit,
+                    extent: extent,
+                    onPressed: () => widget.onChanged(_DocumentEditorMode.edit),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -270,49 +299,36 @@ class _ReadEditModeButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.selected,
+    required this.extent,
     required this.onPressed,
   });
-
   final IconData icon;
   final String label;
   final bool selected;
+  final double extent;
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    final foreground = selected ? AppColors.onFloating : AppColors.muted;
-    if (usesTouchEditingControls(context)) {
-      return TextButton.icon(
+  Widget build(BuildContext context) => Semantics(
+    selected: selected,
+    child: SizedBox.square(
+      dimension: extent,
+      child: IconButton(
+        tooltip: label,
         onPressed: onPressed,
-        icon: Icon(icon, size: 18),
-        label: Text(label),
-        style: TextButton.styleFrom(
-          minimumSize: const Size(72, 44),
-          foregroundColor: foreground,
-          backgroundColor: selected ? AppColors.floating : Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-        ),
-      );
-    }
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        onTap: selected ? null : onPressed,
-        borderRadius: BorderRadius.circular(4),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.floating : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+        icon: Icon(icon, size: extent >= 44 ? 20 : 17),
+        style: IconButton.styleFrom(
+          foregroundColor: selected ? AppColors.text : AppColors.muted,
+          padding: EdgeInsets.zero,
+          minimumSize: Size.square(extent),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 16, color: foreground),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 enum _DocumentEditorMode {

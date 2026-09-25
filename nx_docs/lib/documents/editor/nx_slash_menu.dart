@@ -99,6 +99,8 @@ List<SelectionMenuItem> _nxStaticSelectionMenuItems({
   Future<String> Function(String source)? uploadDocumentImage,
 }) {
   return <SelectionMenuItem>[
+    for (final item in standardSelectionMenuItems)
+      if (!item.allKeywords.contains('image')) item,
     SelectionMenuItem.node(
       getName: () => 'Toggle',
       keywords: const <String>['toggle', 'details', 'collapse'],
@@ -121,8 +123,6 @@ List<SelectionMenuItem> _nxStaticSelectionMenuItems({
       replace: _replaceCurrentParagraph,
     ),
     _nxImageSelectionMenuItem(uploadDocumentImage: uploadDocumentImage),
-    for (final item in standardSelectionMenuItems)
-      if (!item.allKeywords.contains('image')) item,
   ];
 }
 

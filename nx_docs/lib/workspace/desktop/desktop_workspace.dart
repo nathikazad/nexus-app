@@ -93,6 +93,10 @@ Future<void> showDocumentInspectorSheet(BuildContext context, int documentId) {
     useSafeArea: true,
     showDragHandle: true,
     backgroundColor: AppColors.panel,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    clipBehavior: Clip.antiAlias,
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(

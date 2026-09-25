@@ -275,13 +275,13 @@ void main() {
     await _pumpWorkspace(tester, 700);
     await tester.tap(find.text('Draft: API design notes').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Read'));
+    await tester.tap(find.byTooltip('Read'));
     await tester.pumpAndSettle();
     expect(
       tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor)).editable,
       isFalse,
     );
-    await tester.tap(find.text('Edit'));
+    await tester.tap(find.byTooltip('Edit'));
     await tester.pumpAndSettle();
     final state = tester
         .widget<AppFlowyEditor>(find.byType(AppFlowyEditor))

@@ -39,20 +39,24 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Container(
-            height: 40,
+            height: widget.onClose == null ? 40 : 56,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
-              color: AppColors.sidebar,
+              color: widget.onClose == null
+                  ? AppColors.sidebar
+                  : AppColors.panel,
               border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
             child: Row(
               children: <Widget>[
                 Text(
-                  widget.onClose == null ? 'INSPECTOR' : 'DOCUMENT',
+                  widget.onClose == null ? 'INSPECTOR' : 'Document',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.faint,
-                    fontWeight: FontWeight.w700,
+                    fontSize: widget.onClose == null ? 11 : 20,
+                    color: widget.onClose == null
+                        ? AppColors.faint
+                        : AppColors.text,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const Spacer(),
@@ -62,9 +66,9 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                       : 'Close details',
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 28,
-                    height: 28,
+                  constraints: BoxConstraints.tightFor(
+                    width: widget.onClose == null ? 28 : 44,
+                    height: widget.onClose == null ? 28 : 44,
                   ),
                   onPressed:
                       widget.onClose ??

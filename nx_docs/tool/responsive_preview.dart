@@ -18,6 +18,9 @@ import 'package:nx_docs/workspace/workspace_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppColors.isDark =
+      WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+      Brightness.dark;
   final repository = FakeDocumentRepository();
   final sample = await repository.create(title: 'A little room to write');
   const body =

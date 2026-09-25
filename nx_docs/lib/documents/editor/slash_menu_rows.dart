@@ -31,7 +31,7 @@ class _NxLinkableModelCommandRow implements _NxSlashRow {
       selected: selected,
       icon: _iconForLinkableModelType(modelType),
       title: modelType.kgqlName,
-      subtitle: 'Search ${modelType.kgqlName} models',
+      subtitle: 'Link to a ${modelType.kgqlName.toLowerCase()}',
       onTap: onSelected,
     );
   }
@@ -120,24 +120,37 @@ class _NxSlashTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final touch = usesTouchEditingControls(context);
     return InkWell(
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: selected ? AppColors.subtle : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: touch ? 10 : 8,
+          ),
           child: Row(
             children: <Widget>[
-              SizedBox(
-                width: 24,
+              Container(
+                width: touch ? 40 : 24,
+                height: touch ? 40 : null,
+                decoration: touch
+                    ? BoxDecoration(
+                        color: AppColors.subtle,
+                        borderRadius: BorderRadius.circular(12),
+                      )
+                    : null,
                 child: Center(
                   child:
                       leading ?? Icon(icon, size: 18, color: AppColors.muted),
                 ),
               ),
-              const SizedBox(width: 9),
+              SizedBox(width: touch ? 14 : 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +161,7 @@ class _NxSlashTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: AppColors.text,
-                        fontSize: 13,
+                        fontSize: touch ? 15 : 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -158,7 +171,10 @@ class _NxSlashTile extends StatelessWidget {
                         subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: AppColors.muted, fontSize: 11),
+                        style: TextStyle(
+                          color: AppColors.muted,
+                          fontSize: touch ? 12 : 11,
+                        ),
                       ),
                     ],
                   ],

@@ -99,6 +99,9 @@ class _MobileColorMenuState extends State<_MobileColorMenu> {
                           ? AppColors.hover
                           : AppColors.panel,
                       minimumSize: const Size(0, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: () => setState(() => _highlight = highlight),
                     child: Text(highlight ? 'Highlight' : 'Text Color'),
@@ -153,7 +156,7 @@ class _MobileColorMenuState extends State<_MobileColorMenu> {
             padding: const EdgeInsets.symmetric(horizontal: 6),
             minimumSize: const Size(0, 44),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
           onPressed: () => _apply(hex),
