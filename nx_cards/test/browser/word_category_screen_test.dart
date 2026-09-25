@@ -414,7 +414,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(repository.changes, isEmpty);
-    await tester.tap(find.text('Upcoming  1'));
+    await tester.tap(find.text('Preparing  1'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'Practice'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Recall'), findsNothing);
@@ -505,7 +505,7 @@ void main() {
       'word 3',
     ].map((label) => tester.getCenter(find.text(label)).dy).toList();
     expect(order, orderedEquals([...order]..sort()));
-    await tester.tap(find.text('Upcoming  1'));
+    await tester.tap(find.text('Preparing  1'));
     await tester.pumpAndSettle();
     expect(find.text('word 4'), findsOneWidget);
     expect(find.text('UPCOMING'), findsNothing);

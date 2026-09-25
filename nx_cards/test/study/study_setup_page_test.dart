@@ -109,7 +109,7 @@ void main() {
   ) async {
     await showSetup(tester);
     expect(find.text('3 available'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'Upcoming'), findsNothing);
+    expect(find.widgetWithText(FilterChip, 'Preparing'), findsNothing);
     expect(find.widgetWithText(FilterChip, 'Current'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Past'), findsOneWidget);
     expect(find.text('Recall format'), findsOneWidget);
@@ -149,7 +149,7 @@ void main() {
     expect(find.textContaining('Past cards due'), findsNothing);
     expect(find.text('Recall format'), findsNothing);
     expect(find.text('Start AI tutor'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'Upcoming'), findsNothing);
+    expect(find.widgetWithText(FilterChip, 'Preparing'), findsNothing);
   });
   testWidgets('untried reverse direction of Active cards is Current', (
     tester,

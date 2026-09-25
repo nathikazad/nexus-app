@@ -91,8 +91,8 @@ void main() {
       expect(selector().selected, {LearningStatus.inactive});
       for (final entry in {
         'Prep': LearningStatus.prep,
-        'Active': LearningStatus.active,
-        'Inactive': LearningStatus.inactive,
+        'Recall': LearningStatus.active,
+        'Future': LearningStatus.inactive,
       }.entries) {
         await tester.tap(find.text(entry.key));
         await tester.pumpAndSettle();

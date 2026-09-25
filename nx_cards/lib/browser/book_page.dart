@@ -129,7 +129,7 @@ class BookPage extends ConsumerWidget {
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       tabs: [
-                        Tab(text: 'Upcoming  ${upcoming.length}'),
+                        Tab(text: 'Preparing  ${upcoming.length}'),
                         Tab(text: 'Current  ${learning.length}'),
                         Tab(text: 'Past  ${learnt.length}'),
                         Tab(text: 'Future  ${notStarted.length}'),
