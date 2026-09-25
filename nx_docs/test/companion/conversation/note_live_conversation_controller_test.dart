@@ -191,7 +191,7 @@ NxDocument _document() => NxDocument(
   document: 'The document body',
   jsonDocument: const {},
   wordCount: 3,
-  status: 'Draft',
+
   topics: const [],
   areaTags: const [],
   tagsBySystem: const {},

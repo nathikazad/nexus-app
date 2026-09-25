@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
+import 'package:nx_offline/nx_offline_storage.dart';
 
 part 'notes_database.g.dart';
 
@@ -123,10 +125,12 @@ class LocalSnapshots extends Table {
   ],
 )
 class NotesDatabase extends _$NotesDatabase {
-  NotesDatabase(super.executor);
+  NotesDatabase(super.executor, {this.migrationFiles});
+
+  final ContentFiles? migrationFiles;
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   Future<void> _createProjectionIndexes() => customStatement(
     'CREATE INDEX IF NOT EXISTS document_summary_order ON document_summaries '
@@ -193,6 +197,64 @@ class NotesDatabase extends _$NotesDatabase {
           );
         }
       }
+      if (from < 7) {
+        // Remove retired document metadata from cached records and queued saves.
+        for (final target in const <(String, String)>[
+          ('local_documents', 'document_json'),
+          ('document_summaries', 'document_json'),
+          ('local_snapshots', 'document_json'),
+          ('sync_conflicts', 'local_document_json'),
+          ('sync_conflicts', 'remote_document_json'),
+          ('sync_outbox', 'payload_json'),
+        ]) {
+          var after = 0;
+          while (true) {
+            final rows = await customSelect(
+              'SELECT rowid AS id, ${target.$2} AS value FROM ${target.$1} WHERE rowid > ? ORDER BY rowid LIMIT 25',
+              variables: [Variable(after)],
+            ).get();
+            if (rows.isEmpty) break;
+            for (final row in rows) {
+              final old = row.read<String>('value');
+              final cleaned = await _migrateDocumentMetadata(
+                old,
+                '${target.$1}_${row.read<int>('id')}',
+              );
+              if (old != cleaned) {
+                await customStatement(
+                  'UPDATE ${target.$1} SET ${target.$2} = ? WHERE rowid = ?',
+                  [cleaned, row.read<int>('id')],
+                );
+              }
+            }
+            after = rows.last.read<int>('id');
+          }
+        }
+      }
     },
   );
+  Future<String> _migrateDocumentMetadata(String stored, String id) async {
+    final reference = isContentReference(stored);
+    if (reference && migrationFiles == null) {
+      throw StateError(
+        'Content storage is required for the document metadata migration',
+      );
+    }
+    final raw = reference ? await migrationFiles!.read(stored) : stored;
+    final value = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    value.remove('status');
+    final tags = value['tags_by_system'];
+    if (tags is Map) tags.remove('Status');
+    if (value['body_ref'] is String) {
+      value['body_ref'] = await _migrateDocumentMetadata(
+        value['body_ref'] as String,
+        '${id}_body',
+      );
+    }
+    final cleaned = jsonEncode(value);
+    if (cleaned == raw) return stored;
+    return reference
+        ? migrationFiles!.write('metadata_v7', id, cleaned)
+        : cleaned;
+  }
 }

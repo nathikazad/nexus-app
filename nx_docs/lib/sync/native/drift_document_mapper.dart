@@ -101,7 +101,6 @@ Map<String, Object?> _documentToJson(NxDocument document) {
     'document': document.document,
     'json_document': document.jsonDocument,
     'word_count': document.wordCount,
-    'status': document.status,
     'topics': document.topics,
     'area_tags': document.areaTags,
     'tags_by_system': document.tagsBySystem,
@@ -144,7 +143,6 @@ NxDocument _documentFromJson(Map<String, Object?> json) {
     document: json['document']! as String,
     jsonDocument: Map<String, dynamic>.from(json['json_document']! as Map),
     wordCount: json['word_count']! as int,
-    status: json['status']! as String,
     topics: List<String>.from(json['topics']! as List),
     areaTags: List<String>.from(json['area_tags']! as List),
     tagsBySystem: <String, List<String>>{

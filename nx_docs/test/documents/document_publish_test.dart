@@ -51,14 +51,13 @@ void main() {
       baseDocument,
       tagsBySystem: const {
         'Topic': ['Spiritual', 'Business', 'Spiritual'],
-        'Status': ['Draft'],
       },
     );
     final second = appFlowyContentHash(
       baseDocument,
       tagsBySystem: const {
         'Topic': ['Business', 'Spiritual'],
-        'Status': ['Published'],
+
         'Area': ['Private'],
       },
     );
@@ -130,7 +129,6 @@ void main() {
       jsonDocument,
       tagsBySystem: const {
         'Topic': ['Business'],
-        'Status': ['Draft'],
       },
     );
     final updated =
@@ -144,7 +142,6 @@ void main() {
           jsonDocument,
           tagsBySystem: const {
             'Topic': ['Business'],
-            'Status': ['Published'],
           },
         );
 
@@ -180,7 +177,6 @@ void main() {
       jsonDocument: jsonDocument,
       tagsBySystem: const {
         'Topic': ['Spiritual'],
-        'Status': ['Draft'],
       },
       publishedAt: '2026-07-04T00:00:00.000Z',
     );

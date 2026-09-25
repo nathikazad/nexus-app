@@ -456,7 +456,7 @@ final class DocumentSummary {
     required this.title,
     required this.modelTypeName,
     required this.wordCount,
-    required this.status,
+
     required this.topics,
     required this.areaTags,
     required this.tagsBySystem,
@@ -475,7 +475,7 @@ final class DocumentSummary {
       title: document.title,
       modelTypeName: document.modelTypeName,
       wordCount: document.wordCount,
-      status: document.status,
+
       topics: document.topics,
       areaTags: document.areaTags,
       tagsBySystem: document.tagsBySystem,
@@ -493,7 +493,7 @@ final class DocumentSummary {
   final String title;
   final String modelTypeName;
   final int wordCount;
-  final String status;
+
   final List<String> topics;
   final List<String> areaTags;
   final Map<String, List<String>> tagsBySystem;
@@ -518,7 +518,7 @@ final class DocumentSummary {
       document: '',
       jsonDocument: const <String, dynamic>{},
       wordCount: wordCount,
-      status: status,
+
       topics: topics,
       areaTags: areaTags,
       tagsBySystem: tagsBySystem,
@@ -553,7 +553,7 @@ class NxDocument {
     required this.document,
     required this.jsonDocument,
     required this.wordCount,
-    required this.status,
+
     required this.topics,
     required this.areaTags,
     required this.tagsBySystem,
@@ -575,7 +575,7 @@ class NxDocument {
   final String document;
   final Map<String, dynamic> jsonDocument;
   final int wordCount;
-  final String status;
+
   final List<String> topics;
   final List<String> areaTags;
   final Map<String, List<String>> tagsBySystem;
@@ -610,7 +610,7 @@ class NxDocument {
     String? document,
     Map<String, dynamic>? jsonDocument,
     int? wordCount,
-    String? status,
+
     List<String>? topics,
     List<String>? areaTags,
     Map<String, List<String>>? tagsBySystem,
@@ -634,7 +634,7 @@ class NxDocument {
       document: document ?? this.document,
       jsonDocument: jsonDocument ?? this.jsonDocument,
       wordCount: wordCount ?? this.wordCount,
-      status: status ?? this.status,
+
       topics: topics ?? this.topics,
       areaTags: areaTags ?? this.areaTags,
       tagsBySystem: tagsBySystem ?? this.tagsBySystem,

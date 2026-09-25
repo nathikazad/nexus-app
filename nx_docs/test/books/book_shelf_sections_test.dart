@@ -65,7 +65,7 @@ NxDocument _book(
   document: '',
   jsonDocument: const <String, dynamic>{},
   wordCount: 0,
-  status: 'Draft',
+
   topics: const <String>[],
   areaTags: const <String>[],
   tagsBySystem: const <String, List<String>>{},

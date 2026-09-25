@@ -4,6 +4,11 @@ import 'package:nx_docs/documents/data/kgql/document_mapper.dart';
 import 'package:nx_docs/documents/document_models.dart';
 
 void main() {
+  test('creation does not require a Status tag system', () {
+    expect(setModelRequestForCreateDocument().toJson()['tags'], isNull);
+    expect(documentForCreatedId(1).tagsBySystem, isNot(contains('Status')));
+  });
+
   test('book update writes the same tag payload as a document update', () {
     final request = setModelRequestForUpdateDocument(
       _document(modelTypeName: 'Book'),
@@ -14,10 +19,6 @@ void main() {
     expect(
       tags,
       containsAll(<Map<String, Object>>[
-        <String, Object>{
-          'system': kDocumentStatusTagSystem,
-          'nodes': <String>['Draft'],
-        },
         <String, Object>{
           'system': kDocumentTopicTagSystem,
           'nodes': <String>['Technical'],
@@ -125,7 +126,7 @@ NxDocument _document({
       'document': <String, dynamic>{'type': 'page', 'children': []},
     },
     wordCount: 1,
-    status: 'Draft',
+
     topics: const <String>['Technical'],
     areaTags: const <String>[],
     tagsBySystem: const <String, List<String>>{},

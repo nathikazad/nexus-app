@@ -55,6 +55,9 @@ final notesDatabaseProvider = Provider.family<NotesDatabase, String>((
       ),
       native: const DriftNativeOptions(shareAcrossIsolates: true),
     ),
+    migrationFiles: ContentFiles.application(
+      'nx_docs:$accountKey$storageProfileSuffix',
+    ),
   );
   ref.onDispose(database.close);
   return database;

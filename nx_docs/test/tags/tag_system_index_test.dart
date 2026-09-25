@@ -8,19 +8,17 @@ void main() {
     final first = offlineTestDocument().copyWith(
       tagsBySystem: const <String, List<String>>{
         'Topic': <String>['Flutter', 'Offline'],
-        'Status': <String>['Draft'],
       },
     );
     final second = offlineTestDocument(id: 2).copyWith(
       tagsBySystem: const <String, List<String>>{
         'Topic': <String>['Flutter', 'Flutter'],
-        'Status': <String>['Published'],
       },
     );
 
     final systems = tagSystemsFromDocuments([first, second]);
 
-    expect(systems.map((system) => system.name), <String>['Status', 'Topic']);
+    expect(systems.map((system) => system.name), <String>['Topic']);
     expect(
       systems.last.nodes.map((node) => (node.name, node.count)),
       <(String, int)>[('Flutter', 2), ('Offline', 1)],

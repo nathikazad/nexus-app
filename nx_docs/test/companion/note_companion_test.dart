@@ -275,7 +275,7 @@ NxDocument _document(int id) {
     document: 'Text',
     jsonDocument: const <String, dynamic>{},
     wordCount: 1,
-    status: 'Draft',
+
     topics: const <String>[],
     areaTags: const <String>[],
     tagsBySystem: const <String, List<String>>{},

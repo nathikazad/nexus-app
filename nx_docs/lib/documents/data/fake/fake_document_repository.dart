@@ -47,11 +47,10 @@ class FakeDocumentRepository implements DocumentRepository {
         },
       },
       wordCount: 0,
-      status: 'Draft',
+
       topics: const <String>[],
       areaTags: const <String>[],
       tagsBySystem: const <String, List<String>>{
-        'Status': <String>['Draft'],
         'Topic': <String>[],
         'Area': <String>[],
       },
@@ -112,9 +111,6 @@ class FakeDocumentRepository implements DocumentRepository {
   @override
   Future<List<NxDocument>> listByTag(DocumentTagFilter filter) async {
     final rows = _documents.where((document) {
-      if (filter.system == 'Status') {
-        return document.status == filter.node;
-      }
       return document.tagsBySystem[filter.system]?.contains(filter.node) ??
           false;
     }).toList();
@@ -245,24 +241,6 @@ class FakeDocumentRepository implements DocumentRepository {
   Future<List<TagSystem>> listTagSystems() async {
     return <TagSystem>[
       TagSystem(
-        name: 'Status',
-        exclusive: true,
-        nodes: <TagNode>[
-          for (final name in const [
-            'Draft',
-            'In Progress',
-            'Published',
-            'Discarded',
-          ])
-            TagNode(
-              name: name,
-              count: _documents
-                  .where((document) => document.status == name)
-                  .length,
-            ),
-        ],
-      ),
-      TagSystem(
         name: 'Topic',
         nodes: <TagNode>[
           for (final name in const [
@@ -329,7 +307,6 @@ class FakeDocumentRepository implements DocumentRepository {
         document.title,
         document.document,
         document.excerpt,
-        document.status,
         ...document.tagsBySystem.values.expand((tags) => tags),
       ].join(' ').toLowerCase().contains(q);
     }).toList();
@@ -406,7 +383,6 @@ List<NxDocument> _seedDocuments() {
   NxDocument document({
     required int id,
     required String title,
-    required String status,
     required List<String> topics,
     required List<String> areas,
     required bool pinned,
@@ -424,14 +400,9 @@ List<NxDocument> _seedDocuments() {
       document: document,
       jsonDocument: <String, dynamic>{'plainText': document},
       wordCount: words,
-      status: status,
       topics: topics,
       areaTags: areas,
-      tagsBySystem: <String, List<String>>{
-        'Status': <String>[status],
-        'Topic': topics,
-        'Area': areas,
-      },
+      tagsBySystem: <String, List<String>>{'Topic': topics, 'Area': areas},
       pinned: pinned,
       updatedAt: now.subtract(Duration(minutes: minutesAgo)),
       updatedLabel: minutesAgo < 60
@@ -449,7 +420,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 1,
       title: 'Draft: API design notes',
-      status: 'Draft',
+
       topics: const ['Technical'],
       areas: const ['Work', 'Infrastructure'],
       pinned: false,
@@ -463,7 +434,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 2,
       title: 'Meditation and the Mind',
-      status: 'Published',
+
       topics: const ['Spiritual'],
       areas: const ['Personal'],
       pinned: false,
@@ -478,7 +449,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 3,
       title: 'The Economics of Meditation',
-      status: 'In Progress',
+
       topics: const ['Spiritual', 'Economic'],
       areas: const ['Personal'],
       pinned: false,
@@ -492,7 +463,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 4,
       title: 'Internal notes app direction',
-      status: 'Draft',
+
       topics: const ['Product'],
       areas: const ['Work', 'Product'],
       pinned: false,
@@ -506,7 +477,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 5,
       title: 'KGQL API shape for notes',
-      status: 'In Progress',
+
       topics: const ['Technical'],
       areas: const ['Work', 'Infrastructure'],
       pinned: false,
@@ -520,7 +491,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 6,
       title: 'Notes product spec',
-      status: 'In Progress',
+
       topics: const ['Product'],
       areas: const ['Work', 'Product'],
       pinned: true,
@@ -534,7 +505,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 7,
       title: 'KGQL document model',
-      status: 'Draft',
+
       topics: const ['Technical'],
       areas: const ['Work', 'Infrastructure'],
       pinned: true,
@@ -549,7 +520,7 @@ List<NxDocument> _seedDocuments() {
     document(
       id: 8,
       title: 'Writing system principles',
-      status: 'Published',
+
       topics: const ['Personal'],
       areas: const ['Personal'],
       pinned: true,

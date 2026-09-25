@@ -124,7 +124,7 @@ final class FakeDocumentWorkspace implements DocumentWorkspace {
       document: created.document,
       jsonDocument: created.jsonDocument,
       wordCount: created.wordCount,
-      status: created.status,
+
       topics: created.topics,
       areaTags: created.areaTags,
       tagsBySystem: created.tagsBySystem,

@@ -19,12 +19,10 @@ NxDocument offlineTestDocument({
       'document': <String, Object?>{'body': body},
     },
     wordCount: body.split(RegExp(r'\s+')).length,
-    status: 'Draft',
+
     topics: const <String>[],
     areaTags: const <String>[],
-    tagsBySystem: const <String, List<String>>{
-      'Status': <String>['Draft'],
-    },
+    tagsBySystem: const <String, List<String>>{},
     pinned: pinned,
     updatedAt: timestamp,
     updatedLabel: 'test',

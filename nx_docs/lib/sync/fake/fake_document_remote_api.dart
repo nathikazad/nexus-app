@@ -200,7 +200,7 @@ final class FakeDocumentRemoteApi
         'document': <String, dynamic>{'type': 'page', 'children': <Object>[]},
       },
       wordCount: 0,
-      status: 'Draft',
+
       topics: const <String>[],
       areaTags: const <String>[],
       tagsBySystem: const <String, List<String>>{},

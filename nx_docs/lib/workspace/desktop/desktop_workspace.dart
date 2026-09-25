@@ -15,7 +15,6 @@ import 'package:nx_docs/documents/document_actions.dart';
 import 'package:nx_docs/companion/note_companion.dart';
 import 'package:nx_docs/books/book_shelf.dart';
 import 'package:nx_docs/documents/editor/document_editor_view.dart';
-import 'package:nx_docs/library/document_row.dart';
 import 'package:nx_docs/settings/settings_button.dart';
 import 'package:nx_docs/workspace/workspace_state.dart';
 

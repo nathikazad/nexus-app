@@ -585,7 +585,7 @@ NxDocument _document() {
     document: '# Heading\nBody text',
     jsonDocument: const <String, dynamic>{},
     wordCount: 4,
-    status: 'Draft',
+
     topics: const <String>[],
     areaTags: const <String>[],
     tagsBySystem: const <String, List<String>>{},

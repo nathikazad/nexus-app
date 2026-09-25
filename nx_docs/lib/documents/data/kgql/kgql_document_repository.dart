@@ -314,7 +314,7 @@ class KgqlDocumentRepository implements DocumentRepository {
         document.title,
         document.document,
         document.excerpt,
-        document.status,
+
         ...document.tagsBySystem.values.expand((tags) => tags),
       ].join(' ').toLowerCase().contains(q);
     }).toList();
@@ -439,7 +439,6 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   bool _documentHasTag(NxDocument document, String system, String node) {
     return switch (system) {
-      kDocumentStatusTagSystem => document.status == node,
       _ => document.tagsBySystem[system]?.contains(node) ?? false,
     };
   }

@@ -37,10 +37,6 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
         : ref.watch(documentSnapshotsProvider(id)).value ?? const [];
     final tagSystems =
         ref.watch(offlineTagSystemsProvider).value ?? const <TagSystem>[];
-    final statusSystem = tagSystems.where((system) => system.name == 'Status');
-    final editableTagSystems = tagSystems
-        .where((system) => system.name != 'Status')
-        .toList();
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.panel,
@@ -134,19 +130,6 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                         title: 'Details',
                         child: Column(
                           children: <Widget>[
-                            _InspectorStatusPair(
-                              document: document,
-                              statuses: statusSystem.isEmpty
-                                  ? const <String>[
-                                      'Draft',
-                                      'In Progress',
-                                      'Published',
-                                      'Discarded',
-                                    ]
-                                  : statusSystem.first.nodes
-                                        .map((node) => node.name)
-                                        .toList(),
-                            ),
                             _InspectorPair(
                               label: 'Model ID',
                               value: '${document.id}',
@@ -172,7 +155,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                         title: 'Tags',
                         child: _InspectorTagsEditor(
                           document: document,
-                          systems: editableTagSystems,
+                          systems: tagSystems,
                         ),
                       ),
                       _InspectorSection(

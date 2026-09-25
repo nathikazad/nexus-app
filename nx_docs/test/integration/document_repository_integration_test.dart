@@ -15,15 +15,10 @@ void main() {
       final harness = _IntegrationHarness();
 
       final systems = await harness.repo.listTagSystems();
-      final status = systems.singleWhere(
-        (system) => system.name == kDocumentStatusTagSystem,
-      );
       final topic = systems.singleWhere(
         (system) => system.name == kDocumentTopicTagSystem,
       );
 
-      expect(status.hierarchical, isFalse);
-      expect(status.nodes.map((node) => node.name), contains('Draft'));
       expect(topic.hierarchical, isFalse);
       expect(topic.nodes.map((node) => node.name), isNotEmpty);
       expect(
@@ -54,7 +49,7 @@ void main() {
       cleanupIds.add(created.id);
 
       expect(created.title, 'Untitled document');
-      expect(created.status, 'Draft');
+
       expect(created.topics, isEmpty);
 
       final updated = await harness.repo.updateDraft(
@@ -71,7 +66,7 @@ void main() {
 
       expect(updated.title, contains(marker));
       expect(updated.document, contains(marker));
-      expect(updated.status, 'Draft');
+
       expect(updated.topics, contains(topicName));
       expect(updated.pinned, isTrue);
 
@@ -90,14 +85,6 @@ void main() {
 
       final pinned = await harness.repo.listPinned(limit: 50);
       expect(pinned.map((document) => document.id), contains(updated.id));
-
-      final statusTagged = await harness.repo.listByTag(
-        const DocumentTagFilter(
-          system: kDocumentStatusTagSystem,
-          node: 'Draft',
-        ),
-      );
-      expect(statusTagged.map((document) => document.id), contains(updated.id));
 
       final topicTagged = await harness.repo.listByTag(
         DocumentTagFilter(system: kDocumentTopicTagSystem, node: topicName),

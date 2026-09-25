@@ -166,7 +166,6 @@ class _AddTagMenu extends StatelessWidget {
 
 List<String> _tagsForSystem(NxDocument document, String system) {
   return switch (system) {
-    'Status' => <String>[document.status],
     'Topic' => document.topics,
     'Area' => document.areaTags,
     _ => document.tagsBySystem[system] ?? const <String>[],

@@ -158,7 +158,7 @@ NxDocument _document({DocumentPublishState? publish}) {
     document: '',
     jsonDocument: _jsonDocument('hello'),
     wordCount: 1,
-    status: '',
+
     topics: const [],
     areaTags: const [],
     tagsBySystem: const {},

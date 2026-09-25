@@ -17,7 +17,6 @@ NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
   final tags = model.tags ?? const <String, List<String>>{};
   final topics = List<String>.from(tags[kDocumentTopicTagSystem] ?? const []);
   final areaTags = List<String>.from(tags[kDocumentAreaTagSystem] ?? const []);
-  final statusTags = tags[kDocumentStatusTagSystem] ?? const [];
   final audioUrl = model.attrString(kDocumentAttrAudioUrl);
   final audioSourceHash = model.attrString(kDocumentAttrAudioSourceHash);
   final audioManifest = DocumentAudioManifest.tryParse(
@@ -30,7 +29,6 @@ NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
     document: document,
     jsonDocument: jsonDocument,
     wordCount: _countWords(document),
-    status: statusTags.isEmpty ? 'Draft' : statusTags.first,
     topics: topics,
     areaTags: areaTags,
     tagsBySystem: {
@@ -64,7 +62,6 @@ NxDocument documentSummaryFromModel(Model model) {
   final tags = model.tags ?? const <String, List<String>>{};
   final topics = List<String>.from(tags[kDocumentTopicTagSystem] ?? const []);
   final areaTags = List<String>.from(tags[kDocumentAreaTagSystem] ?? const []);
-  final statusTags = tags[kDocumentStatusTagSystem] ?? const [];
   final excerpt = model.description?.trim() ?? '';
   return NxDocument(
     id: model.id,
@@ -73,7 +70,6 @@ NxDocument documentSummaryFromModel(Model model) {
     document: '',
     jsonDocument: const <String, dynamic>{},
     wordCount: model.attrInt(kDocumentAttrWordCount) ?? 0,
-    status: statusTags.isEmpty ? 'Draft' : statusTags.first,
     topics: topics,
     areaTags: areaTags,
     tagsBySystem: {
@@ -136,9 +132,6 @@ SetModelRequest setModelRequestForCreateDocument({
             .toJson(),
       ),
     ],
-    tags: [
-      SetModelTag(system: kDocumentStatusTagSystem, nodes: const ['Draft']),
-    ],
   );
 }
 
@@ -157,11 +150,10 @@ NxDocument documentForCreatedId(
     document: document,
     jsonDocument: _blankDocumentJson(document),
     wordCount: _countWords(document),
-    status: 'Draft',
+
     topics: const <String>[],
     areaTags: const <String>[],
     tagsBySystem: const <String, List<String>>{
-      kDocumentStatusTagSystem: <String>['Draft'],
       kDocumentTopicTagSystem: <String>[],
     },
     pinned: false,
@@ -216,8 +208,6 @@ List<SetModelTag>? _setModelTagsForDocument(
   }
 
   final tags = <SetModelTag>[
-    if (canWrite(kDocumentStatusTagSystem))
-      SetModelTag(system: kDocumentStatusTagSystem, nodes: [document.status]),
     for (final entry in _editableTagSystemsForDocument(document).entries)
       if (canWrite(entry.key))
         SetModelTag(system: entry.key, nodes: entry.value, clear: true),
@@ -227,8 +217,7 @@ List<SetModelTag>? _setModelTagsForDocument(
 
 Map<String, List<String>> _editableTagSystemsForDocument(NxDocument document) {
   final tags = <String, List<String>>{
-    for (final entry in document.tagsBySystem.entries)
-      if (entry.key != kDocumentStatusTagSystem) entry.key: entry.value,
+    for (final entry in document.tagsBySystem.entries) entry.key: entry.value,
   };
   tags[kDocumentTopicTagSystem] = document.topics;
   if (document.areaTags.isNotEmpty ||

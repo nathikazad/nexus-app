@@ -104,7 +104,7 @@ class _SidebarBooksState extends ConsumerState<_SidebarBooks> {
     return [
       document.title,
       document.excerpt,
-      document.status,
+
       document.readingState,
       ...document.tagsBySystem.values.expand((tags) => tags),
     ].join(' ').toLowerCase().contains(query);

@@ -448,7 +448,7 @@ NxDocument _document(int id, String title) => NxDocument(
   document: 'Document $id body',
   jsonDocument: const {},
   wordCount: 3,
-  status: 'Draft',
+
   topics: const [],
   areaTags: const [],
   tagsBySystem: const {},

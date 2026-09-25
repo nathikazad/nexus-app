@@ -17,6 +17,5 @@ const kDocumentSnapAttrVersionNumber = 'version_number';
 const kDocumentSnapAttrChangeSummary = 'change_summary';
 const kDocumentSnapAttrSource = 'source';
 
-const kDocumentStatusTagSystem = 'Status';
 const kDocumentTopicTagSystem = 'Topic';
 const kDocumentAreaTagSystem = 'Area';

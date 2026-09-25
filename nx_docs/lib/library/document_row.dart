@@ -27,8 +27,6 @@ class DocumentRow extends StatelessWidget {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  StatusDot(status: document.status),
-                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       document.title,
@@ -41,7 +39,7 @@ class DocumentRow extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                '${document.status} · ${document.topics.isEmpty ? 'Untagged' : document.topics.first} · ${document.updatedLabel}',
+                '${document.topics.isEmpty ? 'Untagged' : document.topics.first} · ${document.updatedLabel}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(
@@ -60,30 +58,6 @@ class DocumentRow extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class StatusDot extends StatelessWidget {
-  const StatusDot({required this.status, super.key});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 7,
-      height: 7,
-      decoration: BoxDecoration(
-        color: switch (status) {
-          'Draft' => AppColors.amber,
-          'In Progress' => AppColors.blue,
-          'Published' => AppColors.green,
-          'Discarded' => AppColors.red,
-          _ => AppColors.muted,
-        },
-        shape: BoxShape.circle,
       ),
     );
   }

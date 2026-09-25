@@ -94,8 +94,6 @@ class _OverlayResultRow extends StatelessWidget {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  StatusDot(status: document.status),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       document.title,
@@ -109,7 +107,7 @@ class _OverlayResultRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${document.status} · edited ${document.updatedLabel}',
+                    'Edited ${document.updatedLabel}',
                     style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ],
