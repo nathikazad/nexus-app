@@ -9,7 +9,6 @@ import 'package:nx_docs/library/library_providers.dart';
 import 'package:nx_docs/app/theme.dart';
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/tags/tag_system.dart';
-import 'package:nx_docs/books/book_shelf.dart';
 import 'package:nx_docs/documents/editor/document_editor_view.dart';
 import 'package:nx_docs/library/document_row.dart';
 import 'package:nx_docs/settings/settings_button.dart';
@@ -30,7 +29,7 @@ class MobileWorkspace extends ConsumerWidget {
       pageKey = 'results-${state.resultContext.hashCode}';
       page = _MobileResults(contextState: state.resultContext!);
     } else {
-      pageKey = 'section-${state.section.name}';
+      pageKey = 'documents';
       page = _MobileSectionPage(state: state);
     }
     return _MobilePageTransition(
@@ -82,13 +81,7 @@ class _MobileSectionPage extends ConsumerWidget {
           ),
         ),
       ),
-      body: switch (state.section) {
-        MobileSection.documents => const _MobileHome(),
-        MobileSection.books => const _MobileBooks(),
-        MobileSection.tags => const _MobileTags(),
-        MobileSection.search => const _MobileSearch(),
-      },
-      bottomNavigationBar: _MobileBottomNav(section: state.section),
+      body: const _MobileHome(),
     );
   }
 }
@@ -176,130 +169,260 @@ class _MobileTopChrome extends StatelessWidget {
   }
 }
 
-class _MobileBottomNav extends ConsumerWidget {
-  const _MobileBottomNav({required this.section});
-
-  final MobileSection section;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          color: AppColors.panel,
-          border: Border(top: BorderSide(color: AppColors.line)),
-        ),
-        child: Row(
-          children: <Widget>[
-            _MobileNavItem(
-              icon: Icons.description_outlined,
-              label: 'Docs',
-              active: section == MobileSection.documents,
-              onTap: () => ref
-                  .read(mobileWorkspaceProvider.notifier)
-                  .setSection(MobileSection.documents),
-            ),
-            _MobileNavItem(
-              icon: Icons.menu_book_outlined,
-              label: 'Books',
-              active: section == MobileSection.books,
-              onTap: () => ref
-                  .read(mobileWorkspaceProvider.notifier)
-                  .setSection(MobileSection.books),
-            ),
-            _MobileNavItem(
-              icon: Icons.sell_outlined,
-              label: 'Tags',
-              active: section == MobileSection.tags,
-              onTap: () => ref
-                  .read(mobileWorkspaceProvider.notifier)
-                  .setSection(MobileSection.tags),
-            ),
-            _MobileNavItem(
-              icon: Icons.search,
-              label: 'Search',
-              active: section == MobileSection.search,
-              onTap: () => ref
-                  .read(mobileWorkspaceProvider.notifier)
-                  .setSection(MobileSection.search),
-            ),
-          ],
-        ),
-      ),
+final _mobileTagFilterProvider =
+    NotifierProvider<_MobileTagFilter, DocumentTagFilter?>(
+      _MobileTagFilter.new,
     );
-  }
+
+class _MobileTagFilter extends Notifier<DocumentTagFilter?> {
+  @override
+  DocumentTagFilter? build() => null;
+  void select(DocumentTagFilter? filter) => state = filter;
 }
 
-class _MobileNavItem extends StatelessWidget {
-  const _MobileNavItem({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(
-              icon,
-              size: 21,
-              color: active ? AppColors.text : AppColors.faint,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: active ? AppColors.text : AppColors.faint,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileHome extends ConsumerWidget {
+class _MobileHome extends ConsumerStatefulWidget {
   const _MobileHome();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MobileHome> createState() => _MobileHomeState();
+}
+
+class _MobileHomeState extends ConsumerState<_MobileHome> {
+  late final TextEditingController _search;
+
+  @override
+  void initState() {
+    super.initState();
+    _search = TextEditingController(
+      text: ref.read(mobileWorkspaceProvider).searchText,
+    );
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showFilters() async {
+    FocusScope.of(context).unfocus();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final systems = ref.watch(offlineTagSystemsProvider);
+          final selected = ref.watch(_mobileTagFilterProvider);
+          return SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * .7,
+              ),
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Filter documents',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.text,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close filters',
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('All tags'),
+                    trailing: selected == null ? const Icon(Icons.check) : null,
+                    onTap: () {
+                      ref.read(_mobileTagFilterProvider.notifier).select(null);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  if (systems.isLoading) const LinearProgressIndicator(),
+                  if (systems.hasError)
+                    const Text('Could not load tags. Try again.'),
+                  if (systems.hasValue && systems.value!.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'Tags added to your documents will appear here.',
+                      ),
+                    ),
+                  for (final system
+                      in systems.value ?? const <TagSystem>[]) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16, bottom: 8),
+                      child: Text(
+                        system.name,
+                        style: TextStyle(
+                          color: AppColors.muted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    for (final node in system.nodes)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(node.name),
+                        trailing:
+                            selected?.system == system.name &&
+                                selected?.node == node.name
+                            ? const Icon(Icons.check)
+                            : Text(
+                                '${node.count}',
+                                style: TextStyle(color: AppColors.faint),
+                              ),
+                        onTap: () {
+                          ref
+                              .read(_mobileTagFilterProvider.notifier)
+                              .select(
+                                DocumentTagFilter(
+                                  system: system.name,
+                                  node: node.name,
+                                ),
+                              );
+                          Navigator.pop(context);
+                        },
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = ref.watch(mobileWorkspaceProvider).searchText;
+    final filter = ref.watch(_mobileTagFilterProvider);
+    final filtering = query.trim().isNotEmpty || filter != null;
     final pinned =
         ref.watch(offlinePinnedDocumentsProvider).value ?? const <NxDocument>[];
     final recent =
         ref.watch(offlineRecentDocumentsProvider).value ?? const <NxDocument>[];
+    final matches = filtering
+        ? ref.watch(
+            query.trim().isEmpty
+                ? offlineAllDocumentsProvider
+                : offlineDocumentSearchProvider(query),
+          )
+        : const AsyncValue<List<NxDocument>>.data([]);
+    final rows = (matches.value ?? const <NxDocument>[])
+        .where(
+          (document) =>
+              filter == null ||
+              (document.tagsBySystem[filter.system] ?? const <String>[])
+                  .contains(filter.node),
+        )
+        .toList();
     return ListView(
       padding: const EdgeInsets.all(14),
       children: <Widget>[
-        TextField(
-          style: const TextStyle(fontSize: 13),
-          decoration: InputDecoration(
-            hintText: 'Search documents...',
-            prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
-            prefixIconConstraints: const BoxConstraints(minWidth: 34),
-          ),
-          onChanged: (value) =>
-              ref.read(mobileWorkspaceProvider.notifier).setSearchText(value),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _search,
+                style: const TextStyle(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search documents...',
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.faint,
+                  ),
+                  suffixIcon: query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            _search.clear();
+                            ref
+                                .read(mobileWorkspaceProvider.notifier)
+                                .setSearchText('');
+                          },
+                        ),
+                ),
+                onChanged: ref
+                    .read(mobileWorkspaceProvider.notifier)
+                    .setSearchText,
+              ),
+            ),
+            const SizedBox(width: 10),
+            IconButton.filledTonal(
+              tooltip: 'Filter documents',
+              style: IconButton.styleFrom(
+                minimumSize: const Size.square(48),
+                backgroundColor: filter == null
+                    ? AppColors.subtle
+                    : AppColors.hover,
+                foregroundColor: filter == null
+                    ? AppColors.muted
+                    : AppColors.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _showFilters,
+              icon: Icon(filter == null ? Icons.tune : Icons.filter_alt),
+            ),
+          ],
         ),
+        if (filter != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: InputChip(
+                label: Text('${filter.system}: ${filter.node}'),
+                onDeleted: () =>
+                    ref.read(_mobileTagFilterProvider.notifier).select(null),
+              ),
+            ),
+          ),
         const SizedBox(height: 22),
-        _MobileSection(title: 'Pinned', rows: pinned.take(5).toList()),
-        const SizedBox(height: 22),
-        _MobileSection(title: 'Recent', rows: recent.take(5).toList()),
+        if (filtering) ...[
+          if (matches.isLoading) const LinearProgressIndicator(),
+          if (matches.hasError)
+            const Text('Could not load documents. Try again.')
+          else if (!matches.isLoading && rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                'No documents match',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.muted),
+              ),
+            ),
+          _MobileSection(title: 'Results', rows: rows),
+        ] else ...[
+          if (pinned.isNotEmpty) ...[
+            _MobileSection(title: 'Pinned', rows: pinned.take(5).toList()),
+            const SizedBox(height: 22),
+          ],
+          _MobileSection(title: 'Recent', rows: recent),
+        ],
       ],
     );
   }
@@ -333,248 +456,6 @@ class _MobileSection extends ConsumerWidget {
             onTap: () => ref
                 .read(mobileWorkspaceProvider.notifier)
                 .openDocument(document.id),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
-}
-
-class _MobileBooks extends ConsumerStatefulWidget {
-  const _MobileBooks();
-
-  @override
-  ConsumerState<_MobileBooks> createState() => _MobileBooksState();
-}
-
-class _MobileBooksState extends ConsumerState<_MobileBooks> {
-  BookCollectionView _collection = BookCollectionView.toRead;
-
-  @override
-  Widget build(BuildContext context) {
-    final books = ref.watch(offlineBooksProvider).value ?? const <NxDocument>[];
-    final reading = booksForReadingState(books, 'reading');
-    final collection = booksForReadingState(books, _collection.value);
-    return ListView(
-      key: const ValueKey<String>('mobile-book-sections'),
-      padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
-      children: <Widget>[
-        BookShelfSectionHeader(
-          title: 'Currently Reading',
-          count: reading.length,
-        ),
-        const SizedBox(height: 10),
-        _MobileBookRows(
-          rows: reading,
-          emptyMessage: 'No books currently in progress',
-        ),
-        const SizedBox(height: 24),
-        BookShelfSectionHeader(
-          title: '',
-          count: collection.length,
-          trailing: BookCollectionSwitch(
-            value: _collection,
-            onChanged: (value) => setState(() => _collection = value),
-          ),
-        ),
-        const SizedBox(height: 10),
-        _MobileBookRows(
-          rows: collection,
-          emptyMessage: _collection == BookCollectionView.toRead
-              ? 'No books waiting to be read'
-              : 'No finished books',
-        ),
-      ],
-    );
-  }
-}
-
-class _MobileBookRows extends ConsumerWidget {
-  const _MobileBookRows({required this.rows, required this.emptyMessage});
-
-  final List<NxDocument> rows;
-  final String emptyMessage;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (rows.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-        decoration: BoxDecoration(
-          color: AppColors.panel,
-          border: Border.all(color: AppColors.line),
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Text(
-          emptyMessage,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: AppColors.faint),
-        ),
-      );
-    }
-    return Column(
-      children: <Widget>[
-        for (final document in rows) ...<Widget>[
-          DocumentRow(
-            key: ValueKey<String>('mobile-book-${document.id}'),
-            document: document,
-            onTap: () => ref
-                .read(mobileWorkspaceProvider.notifier)
-                .openDocument(document.id),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
-}
-
-class _MobileTags extends ConsumerWidget {
-  const _MobileTags();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final systems =
-        ref.watch(offlineTagSystemsProvider).value ?? const <TagSystem>[];
-    final documents =
-        ref.watch(offlineAllDocumentsProvider).value ?? const <NxDocument>[];
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
-      children: <Widget>[
-        for (final system in systems) ...<Widget>[
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 8),
-            child: Text(
-              system.name.toUpperCase(),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.faint,
-              ),
-            ),
-          ),
-          for (final node in system.nodes)
-            ..._tagRows(ref, system.name, node, documents),
-          const SizedBox(height: 22),
-        ],
-      ],
-    );
-  }
-
-  List<Widget> _tagRows(
-    WidgetRef ref,
-    String system,
-    TagNode node,
-    List<NxDocument> documents, [
-    int depth = 0,
-  ]) {
-    return <Widget>[
-      Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: () {
-            final rows = documents
-                .where((document) {
-                  final tags =
-                      document.tagsBySystem[system] ?? const <String>[];
-                  return tags.contains(node.name);
-                })
-                .toList(growable: false);
-            ref
-                .read(mobileWorkspaceProvider.notifier)
-                .showResults(
-                  DocumentResultContext(
-                    title: '$system: ${node.name}',
-                    query: DocumentQuery(
-                      tagFilters: <DocumentTagFilter>[
-                        DocumentTagFilter(system: system, node: node.name),
-                      ],
-                    ),
-                    resultIds: rows.map((document) => document.id).toList(),
-                    results: rows,
-                  ),
-                );
-          },
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(8 + depth * 16.0, 9, 8, 9),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    node.name,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.muted,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${node.count}',
-                  style: TextStyle(fontSize: 12, color: AppColors.faint),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      for (final child in node.children)
-        ..._tagRows(ref, system, child, documents, depth + 1),
-    ];
-  }
-}
-
-class _MobileSearch extends ConsumerWidget {
-  const _MobileSearch();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(mobileWorkspaceProvider);
-    final rows =
-        ref.watch(offlineDocumentSearchProvider(state.searchText)).value ??
-        const <NxDocument>[];
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: <Widget>[
-        TextField(
-          autofocus: true,
-          style: const TextStyle(fontSize: 13),
-          decoration: InputDecoration(
-            hintText: 'Search documents...',
-            prefixIcon: Icon(Icons.search, size: 18, color: AppColors.faint),
-            prefixIconConstraints: const BoxConstraints(minWidth: 34),
-          ),
-          onChanged: (value) =>
-              ref.read(mobileWorkspaceProvider.notifier).setSearchText(value),
-        ),
-        const SizedBox(height: 22),
-        Text(
-          state.searchText.isEmpty ? 'TYPE TO SEARCH' : 'RESULTS',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: AppColors.faint,
-          ),
-        ),
-        const SizedBox(height: 8),
-        for (final document in rows) ...<Widget>[
-          DocumentRow(
-            document: document,
-            onTap: () => ref
-                .read(mobileWorkspaceProvider.notifier)
-                .openDocument(
-                  document.id,
-                  context: DocumentResultContext(
-                    title: 'Search: ${state.searchText}',
-                    query: DocumentQuery(searchText: state.searchText),
-                    resultIds: rows.map((row) => row.id).toList(),
-                    results: rows,
-                  ),
-                ),
           ),
           const SizedBox(height: 8),
         ],

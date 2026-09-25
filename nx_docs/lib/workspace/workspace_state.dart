@@ -344,7 +344,7 @@ class MobileWorkspaceNotifier extends Notifier<MobileWorkspaceState> {
 
   void setSearchText(String value) {
     state = state.copyWith(
-      section: MobileSection.search,
+      section: MobileSection.documents,
       searchText: value,
       showResults: false,
       navigationDirection: MobileNavigationDirection.neutral,

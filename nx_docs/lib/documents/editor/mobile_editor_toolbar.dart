@@ -5,46 +5,6 @@ extension _MobileEditorSurface on _NxAppFlowyEditorState {
     return LayoutBuilder(
       builder: (context, constraints) => Column(
         children: [
-          if (View.of(context).viewInsets.bottom == 0)
-            Builder(
-              builder: (context) => Row(
-                children: [
-                  TextButton.icon(
-                    icon: const Icon(Icons.add, size: 20),
-                    label: const Text('Insert'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.text,
-                      backgroundColor: AppColors.subtle,
-                      minimumSize: const Size(0, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () => appendNxDocumentElement(
-                      context,
-                      _editorState,
-                      atSelection: true,
-                      searchLinkableModels: widget.searchLinkableModels,
-                      createLinkedDocument: widget.createLinkedDocument!,
-                      onLinkableModelSelected: widget.onLinkableModelSelected!,
-                      uploadDocumentImage: widget.uploadDocumentImage,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'Undo',
-                    icon: const Icon(Icons.undo, size: 20),
-                    onPressed: _editorState.undoManager.undo,
-                  ),
-                  IconButton(
-                    tooltip: 'Redo',
-                    icon: const Icon(Icons.redo, size: 20),
-                    onPressed: _editorState.undoManager.redo,
-                  ),
-                ],
-              ),
-            ),
           Expanded(child: editor),
           ValueListenableBuilder<Selection?>(
             valueListenable: _editorState.selectionNotifier,

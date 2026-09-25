@@ -20,6 +20,44 @@ import 'package:nx_docs/workspace/workspace_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('unified search retains text and combines with tag filters', (
+    tester,
+  ) async {
+    await _pumpWorkspace(tester, 390);
+    expect(find.text('Books'), findsNothing);
+    expect(find.text('Tags'), findsNothing);
+    await tester.enterText(find.byType(TextField), 'API');
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'API',
+    );
+    expect(find.text('Draft: API design notes'), findsOneWidget);
+    await tester.tap(find.byTooltip('Filter documents'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Infrastructure'));
+    await tester.pumpAndSettle();
+    expect(find.text('Area: Infrastructure'), findsOneWidget);
+    expect(find.text('Draft: API design notes'), findsOneWidget);
+    await tester.tap(find.text('Draft: API design notes'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Undo'), findsNothing);
+    expect(find.byTooltip('Redo'), findsNothing);
+    await tester.tap(find.byIcon(Icons.arrow_back).first);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'API',
+    );
+    expect(find.text('Area: Infrastructure'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'no matching document');
+    await tester.pumpAndSettle();
+    expect(find.text('No documents match'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
   for (final width in [320.0, 390.0, 744.0]) {
     testWidgets('create, rename, edit and reopen at width $width', (
       tester,
@@ -31,7 +69,7 @@ void main() {
       await tester.pumpAndSettle();
       final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
       expect(editor.editable, isTrue);
-      expect(find.text('Insert'), findsOneWidget);
+      expect(find.text('Insert'), findsNothing);
       await tester.tap(find.byKey(const ValueKey<String>('title-display-100')));
       await tester.pumpAndSettle();
       await tester.enterText(
