@@ -6,7 +6,14 @@ import 'package:nx_docs/documents/document_models.dart';
 void main() {
   test('creation does not require a Status tag system', () {
     expect(setModelRequestForCreateDocument().toJson()['tags'], isNull);
-    expect(documentForCreatedId(1).tagsBySystem, isNot(contains('Status')));
+    final created = documentForCreatedId(1);
+    expect(created.tagsBySystem, isEmpty);
+    expect(
+      setModelRequestForUpdateDocument(
+        created.copyWith(document: 'First edit'),
+      ).toJson()['tags'],
+      isNull,
+    );
   });
 
   test('book update writes the same tag payload as a document update', () {

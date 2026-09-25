@@ -153,9 +153,7 @@ NxDocument documentForCreatedId(
 
     topics: const <String>[],
     areaTags: const <String>[],
-    tagsBySystem: const <String, List<String>>{
-      kDocumentTopicTagSystem: <String>[],
-    },
+    tagsBySystem: const <String, List<String>>{},
     pinned: false,
     updatedAt: updatedAt,
     updatedLabel: _relativeLabel(updatedAt),
@@ -219,7 +217,9 @@ Map<String, List<String>> _editableTagSystemsForDocument(NxDocument document) {
   final tags = <String, List<String>>{
     for (final entry in document.tagsBySystem.entries) entry.key: entry.value,
   };
-  tags[kDocumentTopicTagSystem] = document.topics;
+  if (document.topics.isNotEmpty || tags.containsKey(kDocumentTopicTagSystem)) {
+    tags[kDocumentTopicTagSystem] = document.topics;
+  }
   if (document.areaTags.isNotEmpty ||
       tags.containsKey(kDocumentAreaTagSystem)) {
     tags[kDocumentAreaTagSystem] = document.areaTags;
