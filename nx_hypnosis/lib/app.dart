@@ -407,12 +407,12 @@ class _HypnosisHomeState extends State<HypnosisHome> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         heading(
-          'Tapes',
+          'Tape',
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton.outlined(
-                tooltip: 'Desires',
+                tooltip: 'Desire',
                 onPressed: () => go(View.desires),
                 style: IconButton.styleFrom(
                   fixedSize: const Size(44, 44),
@@ -484,10 +484,10 @@ class _HypnosisHomeState extends State<HypnosisHome> {
   Widget desiresScreen() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      backButton('Tapes', () => go(View.tapes)),
+      backButton('Tape', () => go(View.tapes)),
       const SizedBox(height: 16),
       heading(
-        'Desires',
+        'Desire',
         trailing: plus('Add desire', () {
           selectedDesire = null;
           editing = false;
@@ -626,7 +626,7 @@ class _HypnosisHomeState extends State<HypnosisHome> {
       children: [
         Row(
           children: [
-            Expanded(child: backButton('Desires', () => go(View.desires))),
+            Expanded(child: backButton('Desire', () => go(View.desires))),
             PopupMenuButton<String>(
               tooltip: 'Desire options',
               icon: const Icon(Icons.more_horiz),
@@ -686,7 +686,7 @@ class _HypnosisHomeState extends State<HypnosisHome> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        backButton('Tapes', () => go(View.tapes)),
+        backButton('Tape', () => go(View.tapes)),
         const SizedBox(height: 20),
         heading(t.title, trailing: play(t, dark: true), small: true),
         Padding(

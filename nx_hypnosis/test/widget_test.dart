@@ -34,7 +34,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(testApp(sample()));
-      expect(find.text('Tapes'), findsOneWidget);
+      expect(find.text('Tape'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
       expect(find.byTooltip('Create a story'), findsNothing);
       expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
@@ -56,7 +56,7 @@ void main() {
   ) async {
     final data = sample();
     await tester.pumpWidget(testApp(data));
-    await tester.tap(find.byTooltip('Desires'));
+    await tester.tap(find.byTooltip('Desire'));
     await tester.pumpAndSettle();
     expect(find.text('I create useful things.'), findsNothing);
     await tester.tap(find.byTooltip('Add desire'));

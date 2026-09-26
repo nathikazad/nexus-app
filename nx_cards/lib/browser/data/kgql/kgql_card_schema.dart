@@ -349,6 +349,7 @@ bool _deepEquals(Object? left, Object? right) {
 SetModelTypeRequest buildCardSchemaRequest() {
   return SetModelTypeRequest(
     name: cardModelType,
+    parent: ParentLink.fromName('Digital Nouns'),
     typeKind: 'base',
     description:
         'A flashcard with structured content and independent cue-based FSRS state and review history.',

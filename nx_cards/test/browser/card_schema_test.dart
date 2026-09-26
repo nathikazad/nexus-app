@@ -54,6 +54,7 @@ void main() {
 
   test('card schema keeps only query fields outside versioned JSON', () {
     final json = buildCardSchemaRequest().toJson();
+    expect(json['parent'], {'link': 'Digital Nouns'});
     final attributes = (json['attribute_definitions'] as List<dynamic>)
         .map((row) => row['key'])
         .toSet();
