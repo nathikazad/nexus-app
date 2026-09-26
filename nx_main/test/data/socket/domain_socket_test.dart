@@ -32,9 +32,13 @@ void main() {
       () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final domains = <String?>[];
+    final agents = <String?>[];
+    final sources = <String?>[];
     final sockets = <WebSocket>[];
     server.listen((request) async {
       domains.add(request.headers.value('x-nexus-domain-id'));
+      agents.add(request.headers.value('x-agent-id'));
+      sources.add(request.headers.value('x-device-source'));
       final socket = await WebSocketTransformer.upgrade(request);
       sockets.add(socket);
       socket.listen((_) {});
@@ -63,6 +67,13 @@ void main() {
           agentId: 'nx_main',
           authHeaders: (_) async => {}));
     }
-    expect(domains, ['7', '9', '7', '9']);
+    await voice.connect(VoiceSocketSessionConfig(
+      socketUrl: url, userId: '1', domainId: 9,
+      clientApp: 'nx_watch', agentId: 'personal_assistant',
+      deviceSource: 'nx_watch', authHeaders: (_) async => {},
+    ));
+    expect(domains, ['7', '9', '7', '9', '9']);
+    expect(agents, [null, null, 'nx_main', 'nx_main', 'personal_assistant']);
+    expect(sources, [null, null, null, null, 'nx_watch']);
   });
 }

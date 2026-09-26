@@ -560,7 +560,8 @@ class BleBackgroundService {
       final socketMetadata = <String, String>{
         'X-Nexus-Domain-Id': domainId.toString(),
         'X-Client-App': 'nx_main',
-        'X-Agent-Id': 'nx_main',
+        'X-Agent-Id': 'personal_assistant',
+        'X-Device-Source': 'necklace',
       };
       final uploadBase = telemetryHttpBaseUrl?.isNotEmpty == true
           ? telemetryHttpBaseUrl!

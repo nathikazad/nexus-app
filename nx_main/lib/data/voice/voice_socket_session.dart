@@ -10,6 +10,7 @@ class VoiceSocketSessionConfig {
     required this.domainId,
     required this.clientApp,
     required this.agentId,
+    this.deviceSource,
     required this.authHeaders,
   });
 
@@ -18,9 +19,11 @@ class VoiceSocketSessionConfig {
   final int domainId;
   final String clientApp;
   final String agentId;
+  final String? deviceSource;
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
-  String get key => '$socketUrl|$userId|$domainId|$clientApp|$agentId';
+  String get key =>
+      '$socketUrl|$userId|$domainId|$clientApp|$agentId|${deviceSource ?? ""}';
 }
 
 class VoiceSocketTurn {
@@ -222,6 +225,7 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
       'X-Nexus-Domain-Id': config.domainId.toString(),
       'X-Client-App': config.clientApp,
       'X-Agent-Id': config.agentId,
+      if (config.deviceSource != null) 'X-Device-Source': config.deviceSource!,
     };
   }
 }

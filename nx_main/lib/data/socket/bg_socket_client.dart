@@ -155,8 +155,8 @@ class SocketClient {
             }
             if (generation != _generation) return;
             final blePayload = _serverAudioPacketToBlePayload(message);
-            // Forward server audio payloads to BLE after removing the WebSocket
-            // protocol envelope. Non-audio binary packets are forwarded as-is.
+            // Text/progress/control frames must never enter the firmware Opus parser.
+            if (blePayload == null) return;
             if (onPacketFromServer != null) {
               onPacketFromServer!(blePayload).catchError((e) {
                 debugPrint("[Socket] Error forwarding packet to BLE: $e");
@@ -277,14 +277,16 @@ class SocketClient {
     }
   }
 
-  Uint8List _serverAudioPacketToBlePayload(Uint8List packet) {
-    if (packet.length < 2) return packet;
+  Uint8List? _serverAudioPacketToBlePayload(Uint8List packet) {
+    if (packet.length < 2) return null;
 
     final byteData = ByteData.sublistView(packet);
     final headerType = byteData.getUint16(0, Endian.little);
 
     if (headerType == _audioEofPacket) {
-      final meta = _audioReceiveMeta ?? 0;
+      // No invented 0:0 turn for empty or malformed responses.
+      if (packet.length != 6 || !_audioReceiveActive) return null;
+      final meta = _audioReceiveMeta!;
       _finishAudioReception();
       return Uint8List.fromList([
         _audioEofPacket & 0xFF,
@@ -295,18 +297,18 @@ class SocketClient {
     }
 
     if (headerType != _opusAudioPacket || packet.length < 12) {
-      return packet;
+      return null;
     }
 
     final meta = byteData.getUint16(8, Endian.little);
     final opusSize = byteData.getUint16(10, Endian.little);
     final opusStart = 12;
     final opusEnd = opusStart + opusSize;
-    if (opusEnd > packet.length) {
+    if (opusSize == 0 || opusEnd != packet.length) {
       debugPrint(
-        "[Socket] Incomplete server audio packet: need $opusEnd got ${packet.length}",
+        "[Socket] Invalid server audio packet: size $opusSize, expected $opusEnd got ${packet.length}",
       );
-      return packet;
+      return null;
     }
     _recordAudioReception(
       opusBytes: opusSize,
@@ -452,21 +454,23 @@ class SocketClient {
   /// Handle DEVICE_REQUEST from server. Returns true if handled (don't forward to BLE).
   Future<bool> _handleDeviceRequestIfNeeded(
       Uint8List message, int generation) async {
-    if (message.length < 12) return false;
+    if (message.length < 6) return false;
     final byteData = ByteData.view(
         message.buffer, message.offsetInBytes, message.lengthInBytes);
     final headerType = byteData.getUint16(4, Endian.little);
     if (headerType != _DEVICE_REQUEST) return false;
+    // Recognized control frames are consumed even when malformed or unsupported.
+    if (message.length < 12) return true;
 
     final requestId = byteData.getUint32(6, Endian.little);
     final payloadSize = byteData.getUint16(10, Endian.little);
-    if (message.length < 12 + payloadSize) return false;
+    if (message.length != 12 + payloadSize) return true;
 
-    final payloadStr = utf8.decode(message.sublist(12, 12 + payloadSize));
     try {
+      final payloadStr = utf8.decode(message.sublist(12, 12 + payloadSize));
       final payload = jsonDecode(payloadStr) as Map<String, dynamic>;
       final action = payload['action'] as String?;
-      if (action == null) return false;
+      if (action == null) return true;
 
       if (action == 'get_gps') {
         // Fake GPS: always return same coordinates (SF)
@@ -502,7 +506,15 @@ class SocketClient {
     } catch (e) {
       debugPrint("[Socket] Error handling device request: $e");
     }
-    return false;
+    if (generation == _generation) {
+      sendDeviceResponsePacket(
+          requestId,
+          jsonEncode({
+            'success': false,
+            'error': 'Unsupported or failed device request'
+          }));
+    }
+    return true;
   }
 
   /// Send DEVICE_RESPONSE to server.

@@ -139,7 +139,8 @@ class WatchVoiceRelay {
           userId: userId,
           domainId: _domainId!,
           clientApp: 'nx_watch',
-          agentId: 'nx_watch',
+          agentId: 'personal_assistant',
+          deviceSource: 'nx_watch',
           authHeaders: _authHeaders!,
         ),
       );
