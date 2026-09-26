@@ -32,10 +32,16 @@ final hypnosisDataSessionProvider = Provider.autoDispose
       );
     });
 
-class HypnosisSession extends ConsumerWidget {
+class HypnosisSession extends ConsumerStatefulWidget {
   const HypnosisSession({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HypnosisSession> createState() => _HypnosisSessionState();
+}
+
+class _HypnosisSessionState extends ConsumerState<HypnosisSession>
+    with RememberedLoginProfile<HypnosisSession> {
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(authProvider);
     final cached = ref.watch(activeHypnosisUserProvider);
     final user = cached.value ?? session.value;
@@ -60,13 +66,44 @@ class HypnosisSession extends ConsumerWidget {
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 24),
-              if (session.isLoading || cached.isLoading)
+              SizedBox(
+                width: 280,
+                child: DropdownButtonFormField<AuthLoginProfile>(
+                  key: ValueKey(selectedLoginProfile?.userId),
+                  initialValue: selectedLoginProfile,
+                  hint: const Text('Select person'),
+                  items: [
+                    for (final profile in authLoginProfiles)
+                      DropdownMenuItem(
+                        value: profile,
+                        child: Text(profile.label),
+                      ),
+                  ],
+                  onChanged:
+                      restoringLoginProfile ||
+                          session.isLoading ||
+                          cached.isLoading
+                      ? null
+                      : (profile) =>
+                            setState(() => selectedLoginProfile = profile),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (session.isLoading ||
+                  cached.isLoading ||
+                  restoringLoginProfile)
                 const CircularProgressIndicator()
               else
                 FilledButton(
-                  onPressed: () => ref
-                      .read(authProvider.notifier)
-                      .login('', BackendPreset.hosted),
+                  onPressed: selectedLoginProfile == null
+                      ? null
+                      : () => ref
+                            .read(authProvider.notifier)
+                            .login(
+                              '',
+                              BackendPreset.hosted,
+                              profile: selectedLoginProfile,
+                            ),
                   child: const Text('Sign in with Nexus'),
                 ),
               if (session.hasError)

@@ -33,7 +33,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Log In'), findsOneWidget);
-    expect(find.text('Nathik'), findsOneWidget);
+    expect(find.text('Nathik'), findsNothing);
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
     expect(find.text('Yareni'), findsNothing);
     expect(find.byType(TextFormField), findsNothing);
     expect(

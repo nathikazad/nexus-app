@@ -16,7 +16,7 @@ class AuthLoginFields extends StatelessWidget {
   });
 
   final BackendPreset preset;
-  final AuthLoginProfile profile;
+  final AuthLoginProfile? profile;
   final bool loading;
   final ValueChanged<BackendPreset> onPresetChanged;
   final ValueChanged<AuthLoginProfile> onProfileChanged;
@@ -40,6 +40,10 @@ class AuthLoginFields extends StatelessWidget {
       ),
       const SizedBox(height: 16),
       DropdownButtonFormField<AuthLoginProfile>(
+        key: ValueKey(profile?.userId),
+        hint: const Text('Select person'),
+        validator: (value) =>
+            value == null ? 'Select a person to sign in' : null,
         initialValue: profile,
         isExpanded: true,
         decoration: const InputDecoration(labelText: 'Person'),

@@ -119,13 +119,14 @@ class PostLoginScreen extends ConsumerStatefulWidget {
   ConsumerState<PostLoginScreen> createState() => _PostLoginScreenState();
 }
 
-class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
+class _PostLoginScreenState extends ConsumerState<PostLoginScreen>
+    with RememberedLoginProfile<PostLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   @override
   Widget build(BuildContext context) {
+    final loading = ref.watch(authProvider).isLoading || restoringLoginProfile;
     return Scaffold(
       backgroundColor: const Color(0xfffafafa),
       body: SafeArea(
@@ -183,8 +184,10 @@ class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
                     const LoginLabel('PERSON'),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<AuthLoginProfile>(
+                      key: ValueKey(selectedLoginProfile?.userId),
+                      hint: const Text('Select person'),
                       isExpanded: true,
-                      initialValue: _selectedProfile,
+                      initialValue: selectedLoginProfile,
                       decoration: loginDecoration(icon: Icons.person_outline),
                       items: [
                         for (final profile in authLoginProfiles)
@@ -193,11 +196,13 @@ class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
                             child: Text(profile.label),
                           ),
                       ],
-                      onChanged: (profile) {
-                        if (profile != null) {
-                          setState(() => _selectedProfile = profile);
-                        }
-                      },
+                      onChanged: loading
+                          ? null
+                          : (profile) {
+                              if (profile != null) {
+                                setState(() => selectedLoginProfile = profile);
+                              }
+                            },
                     ),
                     const SizedBox(height: 16),
                     const LoginLabel('BACKEND'),
@@ -213,11 +218,13 @@ class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
                             child: Text(preset.label),
                           ),
                       ],
-                      onChanged: (preset) {
-                        if (preset != null) {
-                          setState(() => _selectedPreset = preset);
-                        }
-                      },
+                      onChanged: loading
+                          ? null
+                          : (preset) {
+                              if (preset != null) {
+                                setState(() => _selectedPreset = preset);
+                              }
+                            },
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
@@ -226,7 +233,9 @@ class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 15),
                       ),
-                      onPressed: _login,
+                      onPressed: loading || selectedLoginProfile == null
+                          ? null
+                          : _login,
                       child: const Text(
                         'Log In',
                         style: TextStyle(fontWeight: FontWeight.w700),
@@ -249,10 +258,12 @@ class _PostLoginScreenState extends ConsumerState<PostLoginScreen> {
   }
 
   Future<void> _login() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     if (!_formKey.currentState!.validate()) return;
     final error = await ref
         .read(authProvider.notifier)
-        .login(_selectedProfile.userId, _selectedPreset);
+        .login(profile.userId, _selectedPreset, profile: profile);
     if (error == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(error), backgroundColor: const Color(0xffef4444)),

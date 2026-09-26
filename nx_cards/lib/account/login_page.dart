@@ -10,17 +10,19 @@ class CardsLoginScreen extends ConsumerStatefulWidget {
   ConsumerState<CardsLoginScreen> createState() => _CardsLoginScreenState();
 }
 
-class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
-  AuthLoginProfile _profile = authLoginProfiles.first;
+class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen>
+    with RememberedLoginProfile<CardsLoginScreen> {
   BackendPreset _preset = BackendPreset.defaultPreset;
 
   Future<void> _login() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     final error = await ref
         .read(authProvider.notifier)
         .login(
-          _preset.requiresOidc ? '' : _profile.userId,
+          _preset.requiresOidc ? '' : profile.userId,
           _preset,
-          profile: _profile,
+          profile: profile,
         );
     if (error != null && mounted) {
       ScaffoldMessenger.of(
@@ -31,7 +33,7 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loading = ref.watch(authProvider).isLoading;
+    final loading = ref.watch(authProvider).isLoading || restoringLoginProfile;
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -71,14 +73,17 @@ class _CardsLoginScreenState extends ConsumerState<CardsLoginScreen> {
                 const SizedBox(height: 32),
                 AuthLoginFields(
                   preset: _preset,
-                  profile: _profile,
+                  profile: selectedLoginProfile,
                   loading: loading,
                   onPresetChanged: (value) => setState(() => _preset = value),
-                  onProfileChanged: (value) => setState(() => _profile = value),
+                  onProfileChanged: (value) =>
+                      setState(() => selectedLoginProfile = value),
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: loading ? null : _login,
+                  onPressed: loading || selectedLoginProfile == null
+                      ? null
+                      : _login,
                   child: loading
                       ? const SizedBox.square(
                           dimension: 18,

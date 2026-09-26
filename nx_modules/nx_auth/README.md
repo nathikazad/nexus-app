@@ -21,3 +21,18 @@ ZITADEL identity, granting Nexus project roles, and administratively binding
 the exact issuer/subject to the existing user. Do not bootstrap another Nexus
 user when preserving an existing personal domain and shared memberships.
 Passwords and verification codes must not be placed in these profiles.
+
+## Remembered account
+
+Each installed app persists the last successfully authenticated user separately
+from its active session. A valid session still restores automatically. After
+logout or session expiry, the login form preselects that person; logout retains
+this preference. Selecting a different person only changes the preference after
+successful sign-in. Existing active-session preferences are migrated before an
+expired session is cleared.
+
+All app login screens use `RememberedLoginProfile`. With no recognized saved
+person, the field says “Select person” and sign-in requires an explicit choice.
+Hosted login passes that person's hint and checks the verified identity. This
+preference contains only a user ID, grants no access, and is local to the app's
+installation; it is not guaranteed to survive uninstalling the app.

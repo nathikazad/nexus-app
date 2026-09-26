@@ -16,21 +16,19 @@ class ExpenseLoginScreen extends ConsumerStatefulWidget {
   ConsumerState<ExpenseLoginScreen> createState() => _ExpenseLoginScreenState();
 }
 
-class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
+class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen>
+    with RememberedLoginProfile<ExpenseLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   Future<void> _handleLogin() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     if (!_formKey.currentState!.validate()) return;
 
     final errorMessage = await ref
         .read(authProvider.notifier)
-        .login(
-          _selectedProfile.userId,
-          _selectedPreset,
-          profile: _selectedProfile,
-        );
+        .login(profile.userId, _selectedPreset, profile: profile);
 
     if (errorMessage == null) {
       // Login succeeded — navigation handled by auth state listener / router.
@@ -50,7 +48,7 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final loading = authState.isLoading;
+    final loading = authState.isLoading || restoringLoginProfile;
 
     final labelStyle = GoogleFonts.inter(
       fontSize: 11,
@@ -137,8 +135,10 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<AuthLoginProfile>(
+                  key: ValueKey(selectedLoginProfile?.userId),
+                  hint: const Text('Select person'),
                   isExpanded: true,
-                  initialValue: _selectedProfile,
+                  initialValue: selectedLoginProfile,
                   style: GoogleFonts.inter(fontSize: 14),
                   decoration: fieldDeco(
                     'Select person',
@@ -168,7 +168,7 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                       ? null
                       : (AuthLoginProfile? profile) {
                           if (profile != null) {
-                            setState(() => _selectedProfile = profile);
+                            setState(() => selectedLoginProfile = profile);
                           }
                         },
                 ),
@@ -221,7 +221,9 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: loading ? null : _handleLogin,
+                    onPressed: loading || selectedLoginProfile == null
+                        ? null
+                        : _handleLogin,
                     child: loading
                         ? const SizedBox(
                             width: 22,

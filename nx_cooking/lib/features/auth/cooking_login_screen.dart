@@ -16,16 +16,18 @@ class CookingLoginScreen extends ConsumerStatefulWidget {
   ConsumerState<CookingLoginScreen> createState() => _CookingLoginScreenState();
 }
 
-class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
+class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen>
+    with RememberedLoginProfile<CookingLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   Future<void> _handleLogin() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     if (!_formKey.currentState!.validate()) return;
     final errorMessage = await ref
         .read(authProvider.notifier)
-        .login(_selectedProfile.userId, _selectedPreset);
+        .login(profile.userId, _selectedPreset, profile: profile);
 
     if (errorMessage == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -36,7 +38,7 @@ class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final loading = authState.isLoading;
+    final loading = authState.isLoading || restoringLoginProfile;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -92,7 +94,9 @@ class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
                 const _FieldLabel('PERSON'),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<AuthLoginProfile>(
-                  initialValue: _selectedProfile,
+                  key: ValueKey(selectedLoginProfile?.userId),
+                  hint: const Text('Select person'),
+                  initialValue: selectedLoginProfile,
                   decoration: _fieldDecoration(
                     'Select person',
                     prefix: const Icon(
@@ -113,7 +117,7 @@ class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
                       ? null
                       : (profile) {
                           if (profile != null) {
-                            setState(() => _selectedProfile = profile);
+                            setState(() => selectedLoginProfile = profile);
                           }
                         },
                 ),
@@ -148,7 +152,9 @@ class _CookingLoginScreenState extends ConsumerState<CookingLoginScreen> {
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
-                  onPressed: loading ? null : _handleLogin,
+                  onPressed: loading || selectedLoginProfile == null
+                      ? null
+                      : _handleLogin,
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.orange500,
                     foregroundColor: Colors.white,

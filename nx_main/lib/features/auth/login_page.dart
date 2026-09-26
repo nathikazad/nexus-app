@@ -10,17 +10,19 @@ class LoginPage extends ConsumerStatefulWidget {
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage>
+    with RememberedLoginProfile<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
 
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   Future<void> _handleLogin() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     if (_formKey.currentState!.validate()) {
       final errorMessage = await ref
           .read(authProvider.notifier)
-          .login(_selectedProfile.userId, _selectedPreset);
+          .login(profile.userId, _selectedPreset, profile: profile);
 
       if (errorMessage == null) {
         return;
@@ -40,7 +42,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final isLoading = authState.isLoading;
+    final isLoading = authState.isLoading || restoringLoginProfile;
     final theme = Theme.of(context);
     final dropdownTextStyle = theme.textTheme.bodyLarge?.copyWith(
           color: theme.colorScheme.onSurface,
@@ -67,7 +69,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: 48),
                 DropdownButtonFormField<AuthLoginProfile>(
-                  initialValue: _selectedProfile,
+                  key: ValueKey(selectedLoginProfile?.userId),
+                  hint: const Text('Select person'),
+                  initialValue: selectedLoginProfile,
                   style: dropdownTextStyle,
                   iconEnabledColor: theme.colorScheme.onSurfaceVariant,
                   dropdownColor: theme.colorScheme.surface,
@@ -88,7 +92,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ? null
                       : (AuthLoginProfile? profile) {
                           if (profile != null) {
-                            setState(() => _selectedProfile = profile);
+                            setState(() => selectedLoginProfile = profile);
                           }
                         },
                 ),
@@ -122,7 +126,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: isLoading ? null : _handleLogin,
+                  onPressed: isLoading || selectedLoginProfile == null
+                      ? null
+                      : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),

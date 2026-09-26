@@ -44,6 +44,12 @@ class AuthController extends AsyncNotifier<User?> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString(PrefsKeys.userId);
+      // Migrate the previous session before an expired token can clear it.
+      if (userId != null &&
+          userId.isNotEmpty &&
+          !prefs.containsKey(PrefsKeys.lastUserId)) {
+        await prefs.setString(PrefsKeys.lastUserId, userId);
+      }
       final presetKey = prefs.getString(PrefsKeys.backendPreset);
       BackendPreset? preset = BackendPreset.fromKey(presetKey);
 
@@ -83,6 +89,7 @@ class AuthController extends AsyncNotifier<User?> {
           return null;
         }
         await prefs.setString(PrefsKeys.userId, identity.userId);
+        await prefs.setString(PrefsKeys.lastUserId, identity.userId);
         return await _restoreDomain(
           User(userId: identity.userId, preset: preset),
         );
@@ -137,6 +144,8 @@ class AuthController extends AsyncNotifier<User?> {
       final user = await _restoreDomain(
         User(userId: resolvedUserId, preset: preset),
       );
+      if (generation != _generation || !ref.mounted) return 'Sign-in cancelled';
+      await prefs.setString(PrefsKeys.lastUserId, resolvedUserId);
       if (generation != _generation || !ref.mounted) return 'Sign-in cancelled';
       state = AsyncValue.data(user);
       print('[AuthController] Login successful');

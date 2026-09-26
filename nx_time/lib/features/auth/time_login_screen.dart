@@ -15,17 +15,19 @@ class TimeLoginScreen extends ConsumerStatefulWidget {
   ConsumerState<TimeLoginScreen> createState() => _TimeLoginScreenState();
 }
 
-class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
+class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen>
+    with RememberedLoginProfile<TimeLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   Future<void> _handleLogin() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     if (!_formKey.currentState!.validate()) return;
 
     final errorMessage = await ref
         .read(authProvider.notifier)
-        .login(_selectedProfile.userId, _selectedPreset);
+        .login(profile.userId, _selectedPreset, profile: profile);
 
     if (errorMessage == null) {
       return;
@@ -44,7 +46,7 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final loading = authState.isLoading;
+    final loading = authState.isLoading || restoringLoginProfile;
 
     final labelStyle = GoogleFonts.inter(
       fontSize: 11,
@@ -131,8 +133,10 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<AuthLoginProfile>(
+                  key: ValueKey(selectedLoginProfile?.userId),
+                  hint: const Text('Select person'),
                   isExpanded: true,
-                  initialValue: _selectedProfile,
+                  initialValue: selectedLoginProfile,
                   style: GoogleFonts.inter(fontSize: 14),
                   decoration: fieldDeco(
                     'Select person',
@@ -157,7 +161,7 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
                       ? null
                       : (AuthLoginProfile? profile) {
                           if (profile != null) {
-                            setState(() => _selectedProfile = profile);
+                            setState(() => selectedLoginProfile = profile);
                           }
                         },
                 ),
@@ -204,7 +208,9 @@ class _TimeLoginScreenState extends ConsumerState<TimeLoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: loading ? null : _handleLogin,
+                    onPressed: loading || selectedLoginProfile == null
+                        ? null
+                        : _handleLogin,
                     child: loading
                         ? const SizedBox(
                             width: 22,

@@ -10,16 +10,18 @@ class BooksLoginScreen extends ConsumerStatefulWidget {
   ConsumerState<BooksLoginScreen> createState() => _BooksLoginScreenState();
 }
 
-class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
+class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen>
+    with RememberedLoginProfile<BooksLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   Future<void> _login() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     if (!_formKey.currentState!.validate()) return;
     final error = await ref
         .read(authProvider.notifier)
-        .login(_selectedProfile.userId, _selectedPreset);
+        .login(profile.userId, _selectedPreset, profile: profile);
     if (error == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(error), backgroundColor: AppColors.red),
@@ -29,7 +31,7 @@ class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
-    final loading = auth.isLoading;
+    final loading = auth.isLoading || restoringLoginProfile;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -82,8 +84,10 @@ class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
                     const _LoginLabel('PERSON'),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<AuthLoginProfile>(
+                      key: ValueKey(selectedLoginProfile?.userId),
+                      hint: const Text('Select person'),
                       isExpanded: true,
-                      initialValue: _selectedProfile,
+                      initialValue: selectedLoginProfile,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.person_outline, size: 20),
                       ),
@@ -98,7 +102,7 @@ class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
                           ? null
                           : (profile) {
                               if (profile != null) {
-                                setState(() => _selectedProfile = profile);
+                                setState(() => selectedLoginProfile = profile);
                               }
                             },
                     ),
@@ -128,7 +132,9 @@ class _BooksLoginScreenState extends ConsumerState<BooksLoginScreen> {
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
-                      onPressed: loading ? null : _login,
+                      onPressed: loading || selectedLoginProfile == null
+                          ? null
+                          : _login,
                       child: loading
                           ? const SizedBox(
                               width: 20,

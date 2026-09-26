@@ -10,19 +10,21 @@ class DocsLoginPage extends ConsumerStatefulWidget {
   ConsumerState<DocsLoginPage> createState() => _DocsLoginPageState();
 }
 
-class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
+class _DocsLoginPageState extends ConsumerState<DocsLoginPage>
+    with RememberedLoginProfile<DocsLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  AuthLoginProfile _selectedProfile = authLoginProfiles.first;
   BackendPreset _selectedPreset = BackendPreset.defaultPreset;
 
   Future<void> _login() async {
+    final profile = selectedLoginProfile;
+    if (restoringLoginProfile || profile == null) return;
     if (!_formKey.currentState!.validate()) return;
     final error = await ref
         .read(authProvider.notifier)
         .login(
-          _selectedPreset.requiresOidc ? '' : _selectedProfile.userId,
+          _selectedPreset.requiresOidc ? '' : profile.userId,
           _selectedPreset,
-          profile: _selectedProfile,
+          profile: profile,
         );
     if (error == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -33,7 +35,7 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
-    final loading = auth.isLoading;
+    final loading = auth.isLoading || restoringLoginProfile;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -86,16 +88,18 @@ class _DocsLoginPageState extends ConsumerState<DocsLoginPage> {
                     const SizedBox(height: 36),
                     AuthLoginFields(
                       preset: _selectedPreset,
-                      profile: _selectedProfile,
+                      profile: selectedLoginProfile,
                       loading: loading,
                       onPresetChanged: (value) =>
                           setState(() => _selectedPreset = value),
                       onProfileChanged: (value) =>
-                          setState(() => _selectedProfile = value),
+                          setState(() => selectedLoginProfile = value),
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
-                      onPressed: loading ? null : _login,
+                      onPressed: loading || selectedLoginProfile == null
+                          ? null
+                          : _login,
                       child: loading
                           ? const SizedBox(
                               width: 20,
