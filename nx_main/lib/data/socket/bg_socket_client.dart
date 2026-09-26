@@ -30,6 +30,7 @@ class SocketClient {
 
   WebSocketChannel? _channel;
   String? _url;
+  int _generation = 0;
   Map<String, String>? _accessHeaders;
   Future<Map<String, String>> Function(bool forceRefresh)? _authHeaders;
   bool _isConnected = false;
@@ -69,16 +70,21 @@ class SocketClient {
     Map<String, String>? headers,
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
   }) async {
-    _accessHeaders = headers;
+    final domain = headers?.entries
+        .where((entry) => entry.key.toLowerCase() == 'x-nexus-domain-id')
+        .map((entry) => int.tryParse(entry.value))
+        .firstOrNull;
+    if (domain == null || domain <= 0) {
+      await disconnect();
+      throw StateError(
+          'A selected domain is required for the wearable socket.');
+    }
+    final closing = disconnect();
+    final generation = _generation;
+    await closing;
+    if (generation != _generation) return false;
+    _accessHeaders = Map<String, String>.from(headers!);
     _authHeaders = authHeaders;
-    if (_isConnected && _url == url) {
-      debugPrint("[Socket] Already connected to $url");
-      return true;
-    }
-    if (_isConnected && _url != url) {
-      await disconnect(clearQueuedPackets: false);
-    }
-
     _url = url;
     return ensureConnected(reason: 'connect');
   }
@@ -108,33 +114,46 @@ class SocketClient {
       return false;
     }
 
+    final generation = _generation;
+    final url = _url!;
+    final accessHeaders = _accessHeaders;
+    final authHeaders = _authHeaders;
+    WebSocketChannel? channel;
     try {
       debugPrint("[Socket] Connecting to $_url...");
 
       final headers = <String, String>{
-        ...?_accessHeaders,
-        ...?await _authHeaders?.call(forceRefresh),
+        ...?await authHeaders?.call(forceRefresh),
+        ...?accessHeaders,
       };
-      _channel = IOWebSocketChannel.connect(
-        _url!,
+      if (generation != _generation) return false;
+      channel = IOWebSocketChannel.connect(
+        url,
         headers: headers,
         pingInterval: const Duration(seconds: 20),
         connectTimeout: const Duration(seconds: 10),
       );
 
-      await _channel!.ready;
+      _channel = channel;
+      await channel.ready;
+      if (generation != _generation) {
+        await channel.sink.close();
+        return false;
+      }
       _isConnected = true;
 
       debugPrint("[Socket] Connected to $_url");
 
       // Listen for messages from server
-      _channel!.stream.listen(
+      channel.stream.listen(
         (message) async {
+          if (generation != _generation) return;
           if (message is Uint8List) {
             // Intercept DEVICE_REQUEST packets - handle and respond, don't forward to BLE
-            if (await _handleDeviceRequestIfNeeded(message)) {
+            if (await _handleDeviceRequestIfNeeded(message, generation)) {
               return;
             }
+            if (generation != _generation) return;
             final blePayload = _serverAudioPacketToBlePayload(message);
             // Forward server audio payloads to BLE after removing the WebSocket
             // protocol envelope. Non-audio binary packets are forwarded as-is.
@@ -150,10 +169,12 @@ class SocketClient {
           }
         },
         onError: (error) {
+          if (generation != _generation) return;
           debugPrint("[Socket] Error: $error");
           _handleDisconnection();
         },
         onDone: () {
+          if (generation != _generation) return;
           debugPrint("[Socket] Connection closed");
           _handleDisconnection();
         },
@@ -165,7 +186,9 @@ class SocketClient {
 
       return true;
     } catch (e) {
-      if (!forceRefresh && _authHeaders != null) {
+      if (generation != _generation) return false;
+      unawaited(channel?.sink.close());
+      if (!forceRefresh && authHeaders != null) {
         debugPrint('[Socket] Initial connection failed; refreshing session');
         return _connect(forceRefresh: true);
       }
@@ -212,6 +235,8 @@ class SocketClient {
   }
 
   void _queuePacket(Uint8List data, int? index) {
+    // Never retain packets without an explicitly selected session.
+    if (_url == null) return;
     // Limit queue size to prevent memory issues
     if (_packetQueue.length >= maxQueueSize) {
       debugPrint(
@@ -425,7 +450,8 @@ class SocketClient {
   static const int _DEVICE_RESPONSE = 0x0005;
 
   /// Handle DEVICE_REQUEST from server. Returns true if handled (don't forward to BLE).
-  Future<bool> _handleDeviceRequestIfNeeded(Uint8List message) async {
+  Future<bool> _handleDeviceRequestIfNeeded(
+      Uint8List message, int generation) async {
     if (message.length < 12) return false;
     final byteData = ByteData.view(
         message.buffer, message.offsetInBytes, message.lengthInBytes);
@@ -466,6 +492,7 @@ class SocketClient {
       ];
       if (deviceActions.contains(action) && onDeviceRequest != null) {
         final result = await onDeviceRequest!(requestId, action, payload);
+        if (generation != _generation) return true;
         if (result != null) {
           sendDeviceResponsePacket(requestId, result);
           debugPrint("[Socket] Handled $action request via onDeviceRequest");
@@ -560,23 +587,21 @@ class SocketClient {
   }
 
   Future<void> disconnect({bool clearQueuedPackets = true}) async {
+    ++_generation;
     _isConnected = false;
     _connectFuture = null;
-
-    if (_channel != null) {
-      try {
-        await _channel!.sink.close();
-      } catch (e) {
-        debugPrint("[Socket] Error closing: $e");
-      }
-      _channel = null;
+    _url = null;
+    _accessHeaders = null;
+    _authHeaders = null;
+    final channel = _channel;
+    _channel = null;
+    if (clearQueuedPackets) _packetQueue.clear();
+    _audioReceiveActive = false;
+    try {
+      await channel?.sink.close();
+    } catch (e) {
+      debugPrint('[Socket] Error closing: $e');
     }
-
-    if (clearQueuedPackets) {
-      _packetQueue.clear();
-    }
-    debugPrint(
-        "[Socket] Disconnected (${_packetQueue.length} packets in queue)");
   }
 
   /// Clear the packet queue (useful for testing or when you want to drop queued packets)

@@ -22,6 +22,7 @@ void main() {
     relay.configure(
       socketUrl: 'wss://socket.nathikazad.com',
       userId: '1',
+      domainId: 7,
       authHeaders: (_) async => {'authorization': 'Bearer test'},
     );
 
@@ -32,6 +33,7 @@ void main() {
 
     expect(socket.config?.clientApp, 'nx_watch');
     expect(socket.config?.agentId, 'nx_watch');
+    expect(socket.config?.domainId, 7);
     expect(socket.sentOpusPackets, isNotEmpty);
     expect(socket.audioEofCount, 1);
   });
@@ -99,7 +101,8 @@ void main() {
     final socket = _FakeVoiceSocketSession();
     final relay = WatchVoiceRelay(bridge: bridge, socketSession: socket)
       ..start();
-    relay.configure(socketUrl: null, userId: null, authHeaders: null);
+    relay.configure(
+        socketUrl: null, userId: null, domainId: null, authHeaders: null);
 
     bridge.emitStart();
     await _drain(relay);

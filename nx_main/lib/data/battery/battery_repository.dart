@@ -15,7 +15,8 @@ class HttpBatteryRepository implements BatteryRepository {
     String baseUrl,
     String userId,
   ) {
-    return svc.fetchBatteryDates(baseUrl, userId, httpClient: _client);
+    return svc.fetchBatteryDates(baseUrl, userId,
+        httpClient: _client ?? (throw StateError('Select a domain first')));
   }
 
   @override
@@ -24,6 +25,7 @@ class HttpBatteryRepository implements BatteryRepository {
     String userId,
     DateTime day,
   ) {
-    return svc.fetchBatteryDay(baseUrl, userId, day, httpClient: _client);
+    return svc.fetchBatteryDay(baseUrl, userId, day,
+        httpClient: _client ?? (throw StateError('Select a domain first')));
   }
 }

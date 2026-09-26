@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:nx_db/auth.dart';
 
 /// Calls an MCP tool and returns the result
 ///
 /// [toolName] - The name of the tool to call on the MCP server
 /// [arguments] - Optional arguments to pass to the tool
-/// [mcpUrl] - The URL of the MCP server (defaults to http://localhost:8000/mcp)
+/// [mcpUrl] - The MCP URL for the selected backend.
 ///
 /// Returns a Map with the tool result or an error
 Future<Map<String, dynamic>> callMCPTool(
   String toolName, {
   Map<String, dynamic>? arguments,
-  String mcpUrl = 'https://b79fcf799613.ngrok-free.app/mcp',
+  required String mcpUrl,
+  required NexusAuthenticatedClient client,
 }) async {
   debugPrint('MCP tool called: $toolName with params: $arguments');
 
@@ -27,7 +28,7 @@ Future<Map<String, dynamic>> callMCPTool(
       'id': DateTime.now().millisecondsSinceEpoch,
     };
 
-    final response = await http.post(
+    final response = await client.post(
       Uri.parse(mcpUrl),
       headers: {
         'Content-Type': 'application/json',

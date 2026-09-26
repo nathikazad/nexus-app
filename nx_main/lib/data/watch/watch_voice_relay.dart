@@ -54,6 +54,8 @@ class WatchVoiceRelay {
 
   String? _socketUrl;
   String? _userId;
+  int? _domainId;
+  int _generation = 0;
   Future<Map<String, String>> Function(bool forceRefresh)? _authHeaders;
   bool _started = false;
   bool _inputTurnActive = false;
@@ -63,14 +65,20 @@ class WatchVoiceRelay {
   void configure({
     required String? socketUrl,
     required String? userId,
+    required int? domainId,
     required Future<Map<String, String>> Function(bool forceRefresh)?
         authHeaders,
   }) {
-    final changed = _socketUrl != socketUrl || _userId != userId;
+    final changed =
+        _socketUrl != socketUrl || _userId != userId || _domainId != domainId;
     _socketUrl = socketUrl;
     _userId = userId;
+    _domainId = domainId;
     _authHeaders = authHeaders;
-    if (changed && _socketSession.isConnected) {
+    if (changed) {
+      ++_generation;
+      _inputTurnActive = false;
+      _resetTurnState();
       unawaited(_socketSession.disconnect());
     }
   }
@@ -85,6 +93,7 @@ class WatchVoiceRelay {
   }
 
   Future<void> stop() async {
+    ++_generation;
     await _audioStartSubscription?.cancel();
     await _audioSubscription?.cancel();
     await _eofSubscription?.cancel();
@@ -109,15 +118,18 @@ class WatchVoiceRelay {
   void _handleAudioStart(WatchAudioStart _) {
     _resetTurnState();
     _inputTurnActive = true;
+    final generation = _generation;
     _queueSend(() async {
       await _sendStatus('Connecting...');
+      if (generation != _generation) return;
 
       final socketUrl = _socketUrl;
       final userId = _userId;
       if (socketUrl == null ||
           socketUrl.trim().isEmpty ||
           userId == null ||
-          userId.trim().isEmpty) {
+          userId.trim().isEmpty ||
+          _domainId == null) {
         throw StateError('Not logged in or missing socket URL.');
       }
 
@@ -125,11 +137,13 @@ class WatchVoiceRelay {
         VoiceSocketSessionConfig(
           socketUrl: socketUrl,
           userId: userId,
+          domainId: _domainId!,
           clientApp: 'nx_watch',
           agentId: 'nx_watch',
           authHeaders: _authHeaders!,
         ),
       );
+      if (generation != _generation) return;
       _socketSession.beginAudioTurn();
       await _sendStatus('Recording...');
     });
@@ -140,9 +154,11 @@ class WatchVoiceRelay {
       _handleAudioStart(WatchAudioStart());
     }
 
+    final generation = _generation;
     _queueSend(() async {
       final pcm16 = _resampleWatchPacket(packet);
       final opusPackets = await _inputEncoder.addPcmChunk(pcm16);
+      if (generation != _generation) return;
       for (final opus in opusPackets) {
         _socketSession.sendAudioPacket(opus);
       }
@@ -150,16 +166,19 @@ class WatchVoiceRelay {
   }
 
   void _handleAudioEof(WatchAudioEOF _) {
+    final generation = _generation;
     _queueSend(() async {
       if (!_inputTurnActive) return;
       final tailPcm16 = _watchToSocketResampler.flush();
       if (tailPcm16.isNotEmpty) {
         final tailPackets = await _inputEncoder.addPcmChunk(tailPcm16);
+        if (generation != _generation) return;
         for (final opus in tailPackets) {
           _socketSession.sendAudioPacket(opus);
         }
       }
       final finalPackets = await _inputEncoder.flush(padFinalFrame: true);
+      if (generation != _generation) return;
       for (final opus in finalPackets) {
         _socketSession.sendAudioPacket(opus);
       }
@@ -170,11 +189,14 @@ class WatchVoiceRelay {
   }
 
   void _handleResponseAudio(NxVoiceAudioChunk packet) {
+    final generation = _generation;
     _playbackChain = _playbackChain.then((_) async {
+      if (generation != _generation) return;
       final decode = _decodeResponseOpus;
       final pcm16 = decode == null
           ? await _responseDecoder.decode(packet.opus)
           : await decode(packet.opus);
+      if (generation != _generation) return;
       final pcm24 = _socketToWatchResampler.process(pcm16);
       if (pcm24.isNotEmpty) {
         await _bridge.sendPlaybackAudioToWatch(
@@ -188,7 +210,9 @@ class WatchVoiceRelay {
   }
 
   void _handleResponseEof(NxVoiceAudioEof _) {
+    final generation = _generation;
     _playbackChain = _playbackChain.then((_) async {
+      if (generation != _generation) return;
       final tail = _socketToWatchResampler.flush();
       if (tail.isNotEmpty) {
         await _bridge.sendPlaybackAudioToWatch(
@@ -226,8 +250,13 @@ class WatchVoiceRelay {
   }
 
   void _queueSend(Future<void> Function() action) {
-    _sendChain = _sendChain.then((_) => action()).catchError(
+    final generation = _generation;
+    _sendChain = _sendChain.then((_) async {
+      if (generation != _generation) return;
+      await action();
+    }).catchError(
       (Object error, StackTrace stackTrace) {
+        if (generation != _generation) return;
         _inputTurnActive = false;
         _handleSocketError(error);
       },

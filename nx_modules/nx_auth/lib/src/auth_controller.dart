@@ -174,9 +174,9 @@ class AuthController extends AsyncNotifier<User?> {
       return user;
     }
     final candidates = domains.where((d) => d.id == saved).toList();
-    final selected = domains.length == 1
-        ? domains.single
-        : candidates.firstOrNull;
+    // Restore only a previously selected, still accessible domain.
+    // Even one membership requires explicit selection on first login.
+    final selected = candidates.firstOrNull;
     if (selected == null) {
       await prefs.remove(_domainKey(user));
       return user;

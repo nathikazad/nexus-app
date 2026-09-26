@@ -132,16 +132,35 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
   bool _stopInFlight = false;
   bool _showOverlayForCurrentTurn = true;
   Timer? _textIdleTimer;
+  int _generation = 0;
 
   @override
   VoiceSocketState build() {
-    ref.onDispose(() {
-      _textIdleTimer?.cancel();
-      unawaited(_mic?.dispose());
-      unawaited(_player?.dispose());
-      unawaited(_voiceSession?.disconnect());
+    ref.listen(
+        authProvider.select((value) =>
+            value.value?.domainId == null ? null : value.value!.sessionKey),
+        (previous, next) {
+      if (previous == next) return;
+      _retireSession();
+      state = const VoiceSocketState.idle();
     });
+    ref.onDispose(_retireSession);
     return const VoiceSocketState.idle();
+  }
+
+  void _retireSession() {
+    ++_generation;
+    _textIdleTimer?.cancel();
+    unawaited(_mic?.dispose());
+    unawaited(_player?.dispose());
+    unawaited(_voiceSession?.disconnect());
+    _mic = null;
+    _player = null;
+    _voiceSession = null;
+    _appLogUploader = null;
+    _activeTurn = null;
+    _lastTurn = null;
+    _stopInFlight = false;
   }
 
   void dismissOverlay() {
@@ -154,6 +173,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       return;
     }
 
+    final generation = _generation;
     final userId = ref.read(userIdProvider);
     final socketUrl = ref.read(sockWsUrlProvider);
     if (userId == null || userId.isEmpty || socketUrl == null) {
@@ -174,6 +194,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         socketUrl: socketUrl,
         userId: userId,
       );
+      if (generation != _generation) return;
       final mic = _mic ??= NxMicrophoneOpusStreamer();
       _sentPacketsThisTurn = 0;
       _sentBytesThisTurn = 0;
@@ -188,11 +209,13 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
 
       final started = await mic.start(
         onOpusPacket: (opus) {
+          if (generation != _generation) return;
           _sentPacketsThisTurn++;
           _sentBytesThisTurn += opus.length;
           session.sendAudioPacket(opus);
         },
         onError: (error) {
+          if (generation != _generation) return;
           state = state.copyWith(
             phase: VoiceSocketPhase.error,
             overlayVisible: true,
@@ -201,6 +224,10 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         },
       );
 
+      if (generation != _generation) {
+        await mic.dispose();
+        return;
+      }
       if (!started) {
         _activeTurn = null;
         state = state.copyWith(
@@ -223,6 +250,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         clearError: true,
       );
     } catch (error) {
+      if (generation != _generation) return;
       _activeTurn = null;
       state = state.copyWith(
         phase: VoiceSocketPhase.error,
@@ -236,6 +264,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     if (_stopInFlight || state.phase != VoiceSocketPhase.recording) {
       return;
     }
+    final generation = _generation;
     _stopInFlight = true;
     state = state.copyWith(
       phase: VoiceSocketPhase.waiting,
@@ -252,6 +281,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       }
 
       final remaining = await mic.stop();
+      if (generation != _generation) return;
       for (final opus in remaining) {
         _sentPacketsThisTurn++;
         _sentBytesThisTurn += opus.length;
@@ -282,14 +312,17 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         },
       );
     } catch (error) {
+      if (generation != _generation) return;
       state = state.copyWith(
         phase: VoiceSocketPhase.error,
         overlayVisible: true,
         error: error.toString(),
       );
     } finally {
-      _stopInFlight = false;
-      _activeTurn = null;
+      if (generation == _generation) {
+        _stopInFlight = false;
+        _activeTurn = null;
+      }
     }
   }
 
@@ -301,6 +334,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       throw StateError('Voice socket is busy.');
     }
 
+    final generation = _generation;
     final userId = ref.read(userIdProvider);
     final socketUrl = ref.read(sockWsUrlProvider);
     if (userId == null || userId.isEmpty || socketUrl == null) {
@@ -319,6 +353,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         socketUrl: socketUrl,
         userId: userId,
       );
+      if (generation != _generation) return;
       _receivedPacketsThisTurn = 0;
       _receivedBytesThisTurn = 0;
       _showOverlayForCurrentTurn = false;
@@ -343,6 +378,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       );
       state = state.copyWith(phase: VoiceSocketPhase.waiting, clearError: true);
     } catch (error) {
+      if (generation != _generation) return;
       state = state.copyWith(
         phase: VoiceSocketPhase.error,
         overlayVisible: false,
@@ -356,6 +392,11 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     required String socketUrl,
     required String userId,
   }) async {
+    final generation = _generation;
+    final user = ref.read(authProvider).value;
+    if (user == null || user.domainId == null || user.userId != userId) {
+      throw StateError('Select a domain before starting voice.');
+    }
     final httpBaseUrl =
         ref.read(imageBaseUrlProvider) ?? httpBaseFromSocketUrl(socketUrl);
     _configureAppLogUploader(httpBaseUrl: httpBaseUrl);
@@ -365,21 +406,24 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         VoiceSocketSessionConfig(
           socketUrl: socketUrl,
           userId: userId,
+          domainId: user.requiredDomainId,
           clientApp: 'nx_main',
           agentId: 'nx_main',
           authHeaders: (forceRefresh) => nexusAuthHeaders(
-            ref.read(authProvider).value!.preset,
+            user.preset,
             userId,
             forceRefresh: forceRefresh,
           ),
         ),
       );
+      if (generation != _generation) throw StateError('Voice session changed.');
       return existing;
     }
 
     final player = _player ??= NxWavAudioPlayer();
     final session = VoiceSocketSession()
       ..onAudioChunk = (packet) {
+        if (generation != _generation) return;
         _textIdleTimer?.cancel();
         _receivedPacketsThisTurn++;
         _receivedBytesThisTurn += packet.opus.length;
@@ -389,6 +433,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         unawaited(player.addOpusPacket(packet.opus));
       }
       ..onAudioEof = (_) {
+        if (generation != _generation) return;
         _textIdleTimer?.cancel();
         _uploadAppLog(
           eventName: 'websocket_opus_reception_summary',
@@ -406,6 +451,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         state = state.copyWith(phase: VoiceSocketPhase.idle);
       }
       ..onTextChunk = (packet) {
+        if (generation != _generation) return;
         _handleTextPacket(packet.text);
         if (state.phase == VoiceSocketPhase.waiting) {
           state = state.copyWith(phase: VoiceSocketPhase.responding);
@@ -415,11 +461,13 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         }
       }
       ..onTextEof = (_) {
+        if (generation != _generation) return;
         _textIdleTimer?.cancel();
         _showOverlayForCurrentTurn = true;
         state = state.copyWith(phase: VoiceSocketPhase.idle);
       }
       ..onError = (error) {
+        if (generation != _generation) return;
         state = state.copyWith(
           phase: VoiceSocketPhase.error,
           overlayVisible: true,
@@ -427,21 +475,23 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         );
       };
 
+    _voiceSession = session;
     await session.connect(
       VoiceSocketSessionConfig(
         socketUrl: socketUrl,
         userId: userId,
+        domainId: user.requiredDomainId,
         clientApp: 'nx_main',
         agentId: 'nx_main',
         authHeaders: (forceRefresh) => nexusAuthHeaders(
-          ref.read(authProvider).value!.preset,
+          user.preset,
           userId,
           forceRefresh: forceRefresh,
         ),
       ),
     );
 
-    _voiceSession = session;
+    if (generation != _generation) throw StateError('Voice session changed.');
     return session;
   }
 
@@ -621,7 +671,8 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     _appLogUploader = NxAppLogUploader(
       httpBaseUrl: httpBaseUrl,
       origin: 'nx_main',
-      httpClient: ref.read(nexusHttpClientProvider),
+      httpClient: ref.read(nexusHttpClientProvider) ??
+          (throw StateError('Select a domain first')),
     );
   }
 

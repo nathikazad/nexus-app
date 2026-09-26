@@ -10,7 +10,7 @@ class NexusAuthenticatedClient extends http.BaseClient {
   NexusAuthenticatedClient({
     required this.preset,
     required this.userId,
-    this.domainId,
+    required this.domainId,
     http.Client? inner,
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
   }) : _inner = inner ?? http.Client(),
@@ -22,12 +22,13 @@ class NexusAuthenticatedClient extends http.BaseClient {
   bool _closed = false;
   final BackendPreset preset;
   final String userId;
-  final int? domainId;
+  final int domainId;
   final http.Client _inner;
   final Future<Map<String, String>> Function(bool forceRefresh) _authHeaders;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (domainId <= 0) throw StateError('A selected domain is required');
     final body = await request.finalize().toBytes();
     final first = await _sendCopy(request, body, forceRefresh: false);
     if (!preset.requiresOidc || first.statusCode != 401) return first;
@@ -51,7 +52,7 @@ class NexusAuthenticatedClient extends http.BaseClient {
     copy.headers.remove('authorization');
     copy.headers.addAll(await _authHeaders(forceRefresh));
     if (_closed) throw StateError('Domain session closed');
-    if (domainId != null) copy.headers['x-nexus-domain-id'] = '$domainId';
+    copy.headers['x-nexus-domain-id'] = '$domainId';
     return _inner.send(copy);
   }
 

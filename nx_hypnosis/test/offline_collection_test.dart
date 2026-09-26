@@ -46,6 +46,7 @@ RemoteCollection collection(
   User(userId: '1', preset: BackendPreset.hosted),
   cache: cache,
   transport: NexusAuthenticatedClient(
+      domainId: 7,
     preset: BackendPreset.hosted,
     userId: '1',
     authHeaders: (_) async => {},

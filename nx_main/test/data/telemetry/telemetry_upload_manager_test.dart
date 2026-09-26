@@ -32,6 +32,7 @@ void main() {
     final seen = <String>[];
     var firstRequests = 0;
     final first = NexusAuthenticatedClient(
+      domainId: 7,
       preset: BackendPreset.hosted,
       userId: '7',
       inner: MockClient((request) async {
@@ -47,6 +48,7 @@ void main() {
       },
     );
     final second = NexusAuthenticatedClient(
+      domainId: 7,
       preset: BackendPreset.hosted,
       userId: '8',
       inner: MockClient((request) async {

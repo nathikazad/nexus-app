@@ -37,6 +37,7 @@ void main() {
               ? http.Response.bytes([1, 2, 3], 200)
               : http.Response(jsonEncode(payload()), 200);
         }),
+        domainId: 1,
       );
       final data = RemoteCollection(user, transport: client);
       addTearDown(data.dispose);
@@ -57,6 +58,7 @@ void main() {
             ? http.Response(jsonEncode(payload()), 200)
             : http.Response('Unavailable', 503),
       ),
+      domainId: 1,
     );
     final data = RemoteCollection(user, transport: client);
     addTearDown(data.dispose);

@@ -83,9 +83,24 @@ class BleBackgroundService {
     TelemetryUploadManager? telemetryUploadManager;
     GpsUploadManager? gpsUploadManager;
     http.Client? authenticatedHttpClient;
+    int sessionGeneration = 0;
     bool appIsForeground = true;
     String? gpsHttpBaseUrl;
     String? gpsTimezoneLabel;
+
+    Future<void> retireSession() async {
+      final gps = gpsUploadManager;
+      final client = authenticatedHttpClient;
+      gpsUploadManager = null;
+      telemetryUploadManager = null;
+      authenticatedHttpClient = null;
+      gpsHttpBaseUrl = null;
+      gpsTimezoneLabel = null;
+      final disconnected = socketClient.disconnect();
+      client?.close();
+      await gps?.stop(flushPending: false);
+      await disconnected;
+    }
 
     // ============================================================================
     // 2. BLE CONFIGURATION
@@ -204,6 +219,7 @@ class BleBackgroundService {
     }
 
     void ensureSocketForAudioTurn(String? turnkey) {
+      final generation = sessionGeneration;
       if (socketClient.isConnected) return;
       if (!audioForwardNoSocketLogged) {
         audioForwardNoSocketLogged = true;
@@ -228,6 +244,7 @@ class BleBackgroundService {
           .ensureConnected(
               reason: 'ble_audio${turnkey == null ? '' : ':$turnkey'}')
           .then((connected) async {
+        if (generation != sessionGeneration) return;
         if (connected) {
           logAudioForwardEvent(
             eventName: 'audio_forward_connect_succeeded',
@@ -487,8 +504,12 @@ class BleBackgroundService {
 
     // Socket control events
     service.on('socket.connect').listen((event) async {
+      final generation = ++sessionGeneration;
+      await retireSession();
+      if (generation != sessionGeneration) return;
       final url = event?['url'] as String?;
       final userId = event?['userId'] as String?;
+      final domainId = event?['domainId'] as int?;
       final telemetryHttpBaseUrl = event?['telemetryHttpBaseUrl'] as String?;
       final preset = BackendPreset.fromKey(event?['preset'] as String?);
       final clientAppId = event?['clientAppId'] as String?;
@@ -497,6 +518,8 @@ class BleBackgroundService {
           url.isEmpty ||
           userId == null ||
           userId.isEmpty ||
+          domainId == null ||
+          domainId <= 0 ||
           preset == null ||
           clientAppId == null ||
           clientAppId.isEmpty) {
@@ -509,13 +532,10 @@ class BleBackgroundService {
         return;
       }
 
-      await gpsUploadManager?.stop(flushPending: true);
-      gpsUploadManager = null;
-      authenticatedHttpClient?.close();
-
       final oidc = NexusOidcService();
       if (preset.requiresOidc) {
         final identity = await oidc.restore(preset, clientAppId);
+        if (generation != sessionGeneration) return;
         if (identity == null || identity.userId != userId) {
           debugPrint('[Socket] Background auth session is unavailable');
           await socketClient.disconnect();
@@ -533,10 +553,12 @@ class BleBackgroundService {
       final client = NexusAuthenticatedClient(
         preset: preset,
         userId: userId,
+        domainId: domainId,
         authHeaders: authHeaders,
       );
       authenticatedHttpClient = client;
       final socketMetadata = <String, String>{
+        'X-Nexus-Domain-Id': domainId.toString(),
         'X-Client-App': 'nx_main',
         'X-Agent-Id': 'nx_main',
       };
@@ -555,6 +577,7 @@ class BleBackgroundService {
       gpsHttpBaseUrl = uploadBase;
       gpsTimezoneLabel = localTimezoneOffsetLabel();
       await startGpsIfBackground('socket.connect');
+      if (generation != sessionGeneration) return;
       await socketClient.connect(
         url,
         headers: socketMetadata,
@@ -563,13 +586,8 @@ class BleBackgroundService {
     });
 
     service.on('socket.disconnect').listen((event) async {
-      await gpsUploadManager?.stop(flushPending: true);
-      gpsUploadManager = null;
-      gpsHttpBaseUrl = null;
-      gpsTimezoneLabel = null;
-      await socketClient.disconnect();
-      authenticatedHttpClient?.close();
-      authenticatedHttpClient = null;
+      ++sessionGeneration;
+      await retireSession();
     });
 
     service.on('gps.flush').listen((event) async {
@@ -938,6 +956,7 @@ class BleBackgroundService {
   void connectSocket({
     required String url,
     required String telemetryHttpBaseUrl,
+    required int domainId,
     required String userId,
     required BackendPreset preset,
     required String clientAppId,
@@ -946,6 +965,7 @@ class BleBackgroundService {
     _service.invoke('socket.connect', {
       'url': url,
       'telemetryHttpBaseUrl': telemetryHttpBaseUrl,
+      'domainId': domainId,
       'userId': userId,
       'preset': preset.key,
       'clientAppId': clientAppId,

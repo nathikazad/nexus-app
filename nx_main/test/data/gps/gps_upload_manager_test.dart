@@ -108,6 +108,7 @@ void main() {
     var requests = 0;
     final refreshes = <bool>[];
     final authenticatedClient = NexusAuthenticatedClient(
+      domainId: 7,
       preset: BackendPreset.hosted,
       userId: '7',
       inner: MockClient((request) async {

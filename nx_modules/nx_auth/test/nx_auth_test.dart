@@ -13,6 +13,7 @@ void main() {
         received = request;
         return http.Response('ok', 200);
       }),
+      domainId: 1,
     );
 
     await client.get(
@@ -39,6 +40,7 @@ void main() {
         refreshes.add(forceRefresh);
         return {'authorization': 'Bearer token-${refreshes.length}'};
       },
+      domainId: 1,
     );
 
     final response = await client.get(Uri.parse('https://nexus.example/test'));

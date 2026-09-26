@@ -7,6 +7,7 @@ class VoiceSocketSessionConfig {
   const VoiceSocketSessionConfig({
     required this.socketUrl,
     required this.userId,
+    required this.domainId,
     required this.clientApp,
     required this.agentId,
     required this.authHeaders,
@@ -14,11 +15,12 @@ class VoiceSocketSessionConfig {
 
   final String socketUrl;
   final String userId;
+  final int domainId;
   final String clientApp;
   final String agentId;
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
-  String get key => '$socketUrl|$userId|$clientApp|$agentId';
+  String get key => '$socketUrl|$userId|$domainId|$clientApp|$agentId';
 }
 
 class VoiceSocketTurn {
@@ -60,6 +62,7 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
   final NxVoiceSocketClient _socket;
 
   String? _sessionKey;
+  int _generation = 0;
   int _streamIndex = 0;
   int _packetIndex = 0;
   VoiceSocketTurn? _activeTurn;
@@ -111,6 +114,9 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
 
   @override
   Future<void> connect(VoiceSocketSessionConfig config) async {
+    if (config.domainId <= 0)
+      throw StateError('A selected domain is required.');
+    final generation = ++_generation;
     _attachHandlers();
     final key = config.key;
     if (_socket.isConnected && _sessionKey == key) {
@@ -121,12 +127,14 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
       await _socket.disconnect(clearQueuedPackets: true);
     }
 
+    if (generation != _generation) throw StateError('Voice session changed.');
     _sessionKey = key;
     final connected = await _socket.connect(
       config.socketUrl,
       headers: _headersFor(config),
       authHeaders: config.authHeaders,
     );
+    if (generation != _generation) throw StateError('Voice session changed.');
     if (!connected) {
       throw StateError('Could not connect to voice socket.');
     }
@@ -182,6 +190,8 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
 
   @override
   Future<void> disconnect({bool clearQueuedPackets = true}) async {
+    ++_generation;
+    _sessionKey = null;
     _activeTurn = null;
     await _socket.disconnect(clearQueuedPackets: clearQueuedPackets);
   }
@@ -209,6 +219,7 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
 
   Map<String, String> _headersFor(VoiceSocketSessionConfig config) {
     return <String, String>{
+      'X-Nexus-Domain-Id': config.domainId.toString(),
       'X-Client-App': config.clientApp,
       'X-Agent-Id': config.agentId,
     };

@@ -51,14 +51,13 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
       final watchRelay =
           !kIsWeb && Platform.isIOS ? ref.read(watchVoiceRelayProvider) : null;
       final user = next.value;
-      if (user == null) {
-        if (_activeSocketSessionKey != null) {
-          _activeSocketSessionKey = null;
-          service.disconnectSocket();
-        }
+      if (user == null || user.domainId == null) {
+        _activeSocketSessionKey = null;
+        service.disconnectSocket();
         watchRelay?.configure(
           socketUrl: null,
           userId: null,
+          domainId: null,
           authHeaders: null,
         );
         return;
@@ -67,7 +66,7 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
       final urls = resolve(user.preset);
       final sessionKey = [
         urls.sockWs,
-        user.userId,
+        user.sessionKey,
       ].join('|');
       if (_activeSocketSessionKey == sessionKey) return;
 
@@ -79,9 +78,10 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
         ?..configure(
           socketUrl: urls.sockWs,
           userId: user.userId,
+          domainId: user.requiredDomainId,
           authHeaders: (forceRefresh) => nexusAuthHeaders(
             user.preset,
-            user.userId,
+            user.sessionKey,
             forceRefresh: forceRefresh,
           ),
         )
@@ -90,6 +90,7 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
         url: urls.sockWs,
         telemetryHttpBaseUrl: urls.imageHttp,
         userId: user.userId,
+        domainId: user.requiredDomainId,
         preset: user.preset,
         clientAppId: ref.read(nexusClientAppIdProvider),
       );

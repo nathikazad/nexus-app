@@ -93,15 +93,19 @@ class NxVoiceSocketClient {
       _reconnectAttempts = 0;
       onConnected?.call();
       _flushQueue();
-      _channel!.stream.listen(
+      channel.stream.listen(
         (message) {
-          unawaited(_handleMessage(message));
+          if (generation != _generation) return;
+          unawaited(_handleMessage(message, generation));
         },
         onError: (Object error) {
+          if (generation != _generation) return;
           onError?.call(error);
           _handleDisconnection();
         },
-        onDone: _handleDisconnection,
+        onDone: () {
+          if (generation == _generation) _handleDisconnection();
+        },
         cancelOnError: true,
       );
       return true;
@@ -193,8 +197,9 @@ class NxVoiceSocketClient {
   }
 
   Future<void> disconnect({bool clearQueuedPackets = true}) async {
-    _generation++;
+    final generation = ++_generation;
     _url = null;
+    if (clearQueuedPackets) _queue.clear();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _isConnected = false;
@@ -209,17 +214,14 @@ class NxVoiceSocketClient {
       }
     }
 
-    if (clearQueuedPackets) {
-      _queue.clear();
-    }
-    onDisconnected?.call();
+    if (generation == _generation) onDisconnected?.call();
   }
 
   void clearQueue() {
     _queue.clear();
   }
 
-  Future<void> _handleMessage(Object message) async {
+  Future<void> _handleMessage(Object message, int generation) async {
     if (message is String) {
       final packet = NxVoiceTextChunk(text: message, streamIndex: 0);
       onPacket?.call(packet);
@@ -240,6 +242,7 @@ class NxVoiceSocketClient {
 
     if (packet is NxVoiceDeviceRequest && onDeviceRequest != null) {
       final response = await onDeviceRequest!(packet);
+      if (generation != _generation) return;
       if (response != null) {
         sendDeviceResponse(
           requestId: packet.requestId,

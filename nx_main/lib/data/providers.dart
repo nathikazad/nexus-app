@@ -46,5 +46,7 @@ final batteryRepositoryProvider = Provider<BatteryRepository>((ref) {
 });
 
 final gpsRepositoryProvider = Provider<GpsRepository>((ref) {
-  return data_gps.HttpGpsRepository(client: ref.watch(nexusHttpClientProvider));
+  return data_gps.HttpGpsRepository(
+      client: ref.watch(nexusHttpClientProvider) ??
+          (throw StateError('Select a domain first')));
 });

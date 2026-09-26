@@ -8,6 +8,7 @@ import 'backend_presets.dart';
 import 'oidc_config.dart';
 import 'user.dart';
 import 'session_availability.dart';
+import 'flows/auth_flow.dart';
 
 class NexusIdentity {
   const NexusIdentity({required this.userId});
@@ -63,12 +64,7 @@ class NexusOidcService {
         allowedAudiences: config.allowedAudiences,
         allowedIdTokenAlgorithms: const ['RS256'],
         supportOfflineAuth: true,
-        options: const OidcPlatformSpecificOptions(
-          android: OidcNativeOptionsAndroid(
-            preferredBrowserPackages: ['com.android.chrome'],
-            flowTimeoutSeconds: 300,
-          ),
-        ),
+        options: nexusAuthFlowOptions,
       ),
     );
     await manager.init();
@@ -98,8 +94,10 @@ class NexusOidcService {
     _restorePreset = preset;
     _restoreClientAppId = clientAppId;
     await _ensureInitialized();
-    final user = await _manager!.loginAuthorizationCodeFlow(
-      loginHint: profile?.loginHint,
+    final user = await authorizeForPlatform(
+      currentAuthFlowPlatform,
+      _manager!,
+      profile?.loginHint,
     );
     if (user == null) throw Exception('Sign-in was cancelled');
     final identity = await _loadIdentity(preset);

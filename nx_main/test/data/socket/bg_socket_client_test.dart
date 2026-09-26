@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
 
 void main() {
-  test('SocketClient queues binary packets when disconnected', () {
+  test('SocketClient does not adopt packets without a domain session', () {
     final client = SocketClient();
     expect(client.isConnected, isFalse);
     expect(client.connectionState, SocketConnectionState.disconnected);
@@ -12,7 +12,7 @@ void main() {
 
     final status = client.sendPacket(Uint8List.fromList([1, 2, 3]), index: 1);
     expect(status, SocketSendStatus.queuedNoConnection);
-    expect(client.queuedPacketCount, 1);
+    expect(client.queuedPacketCount, 0);
   });
 
   test('ensureConnected does not retry without a configured URL', () async {

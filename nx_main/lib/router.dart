@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nx_db/nx_db.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_model_list_query.dart';
 import 'package:nexus_voice_assistant/features/auth/login_page.dart';
+import 'package:nexus_voice_assistant/features/auth/ios_auth_navigation.dart';
 import 'package:nexus_voice_assistant/features/home/home_page.dart';
 import 'package:nexus_voice_assistant/features/logs/log_detail_page.dart';
 import 'package:nexus_voice_assistant/features/logs/logs_providers.dart';
@@ -20,14 +22,29 @@ final appBootstrapProvider = FutureProvider<void>((ref) async {
   ref.watch(graphqlClientProvider);
 }, name: 'appBootstrapProvider');
 
+class _IosAuthRouterRefresh extends ChangeNotifier {
+  void refresh() => notifyListeners();
+}
+
 /// Router provider that handles navigation based on AppStatus.
 /// Prevents flicker by checking bootstrap status first.
 final routerProvider = Provider<GoRouter>((ref) {
-  final bootstrapState = ref.watch(appBootstrapProvider);
-  final appStatus = ref.watch(appStatusProvider);
+  final iosFlow = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  final bootstrapState = iosFlow
+      ? ref.read(appBootstrapProvider)
+      : ref.watch(appBootstrapProvider);
+  final appStatus =
+      iosFlow ? ref.read(appStatusProvider) : ref.watch(appStatusProvider);
+  final refresh = iosFlow ? _IosAuthRouterRefresh() : null;
+  if (refresh != null) {
+    ref.listen(appBootstrapProvider, (_, __) => refresh.refresh());
+    ref.listen(appStatusProvider, (_, __) => refresh.refresh());
+    ref.onDispose(refresh.dispose);
+  }
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/login',
+    refreshListenable: refresh,
     debugLogDiagnostics: true,
     routes: [
       GoRoute(
@@ -36,7 +53,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginPage(),
+        builder: (context, state) =>
+            const DomainSessionGate(child: LoginPage()),
       ),
       GoRoute(
         path: '/',
@@ -109,6 +127,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.uri.path;
 
+      if (iosFlow) {
+        return iosAuthRedirect(
+          location: location,
+          bootstrapping: ref.read(appBootstrapProvider).isLoading,
+          status: ref.read(appStatusProvider),
+        );
+      }
+
       print('[Router] redirect() called - location: $location');
       print('[Router] bootstrapState.isLoading: ${bootstrapState.isLoading}');
       print('[Router] appStatus: $appStatus');
@@ -144,4 +170,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
     },
   );
+  if (iosFlow) ref.onDispose(router.dispose);
+  return router;
 }, name: 'routerProvider');

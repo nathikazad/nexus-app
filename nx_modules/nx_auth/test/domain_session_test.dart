@@ -34,9 +34,9 @@ void main() {
     return c;
   }
 
-  test('one membership auto-selects; multiple require selection', () async {
+  test('even one membership requires explicit selection', () async {
     final one = await restore((_) async => [personal]);
-    expect(one.read(authProvider).value?.domainId, 1);
+    expect(one.read(authProvider).value?.domainId, isNull);
     final many = await restore((_) async => [personal, shared]);
     expect(many.read(authProvider).value?.domainId, isNull);
     await many.read(authProvider.notifier).selectDomain(2);
@@ -54,7 +54,7 @@ void main() {
     final c = await restore((_) async => [personal, shared], saved: 2);
     expect(c.read(authProvider).value?.domainId, 2);
     final revoked = await restore((_) async => [personal], saved: 2);
-    expect(revoked.read(authProvider).value?.domainId, 1);
+    expect(revoked.read(authProvider).value?.domainId, isNull);
   });
   test('offline restoration differs from authentication rejection', () async {
     final offline = await restore(

@@ -23,6 +23,9 @@
 			</array>
 		</dict>
 	</array>
+	<!-- OIDC's ASWebAuthenticationSession owns nx-main auth callbacks. -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
