@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
-
 import 'package:nx_voice/nx_voice.dart';
+import '../../application/sessions/agent_routes.dart';
+import '../../application/sessions/session_identity.dart';
 
 class VoiceSocketSessionConfig {
   const VoiceSocketSessionConfig({
@@ -22,8 +23,12 @@ class VoiceSocketSessionConfig {
   final String? deviceSource;
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
-  String get key =>
-      '$socketUrl|$userId|$domainId|$clientApp|$agentId|${deviceSource ?? ""}';
+  SessionIdentity get identity => SessionIdentity(
+      backend: socketUrl,
+      userId: userId,
+      domainId: domainId,
+      clientApp: clientApp);
+  String get key => '${identity.key}|$agentId|${deviceSource ?? ""}';
 }
 
 class VoiceSocketTurn {
@@ -221,11 +226,10 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
   }
 
   Map<String, String> _headersFor(VoiceSocketSessionConfig config) {
-    return <String, String>{
-      'X-Nexus-Domain-Id': config.domainId.toString(),
-      'X-Client-App': config.clientApp,
-      'X-Agent-Id': config.agentId,
-      if (config.deviceSource != null) 'X-Device-Source': config.deviceSource!,
-    };
+    return AgentRoute(
+            clientApp: config.clientApp,
+            agentId: config.agentId,
+            source: config.deviceSource)
+        .headers(config.domainId);
   }
 }

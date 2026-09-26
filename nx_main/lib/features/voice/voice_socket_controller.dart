@@ -1,3 +1,4 @@
+import 'package:nexus_voice_assistant/application/sessions/agent_routes.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -407,8 +408,8 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
           socketUrl: socketUrl,
           userId: userId,
           domainId: user.requiredDomainId,
-          clientApp: 'nx_main',
-          agentId: 'nx_main',
+          clientApp: AgentRoutes.app.clientApp,
+          agentId: AgentRoutes.app.agentId,
           authHeaders: (forceRefresh) => nexusAuthHeaders(
             user.preset,
             userId,
@@ -481,8 +482,8 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         socketUrl: socketUrl,
         userId: userId,
         domainId: user.requiredDomainId,
-        clientApp: 'nx_main',
-        agentId: 'nx_main',
+        clientApp: AgentRoutes.app.clientApp,
+        agentId: AgentRoutes.app.agentId,
         authHeaders: (forceRefresh) => nexusAuthHeaders(
           user.preset,
           userId,

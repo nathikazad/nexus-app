@@ -4,14 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:nexus_voice_assistant/app.dart';
-import 'package:nexus_voice_assistant/data/background/background_service.dart';
+import 'package:nexus_voice_assistant/data/background/background_entrypoint.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
 import 'package:nexus_voice_assistant/data/watch/watch_bridge_service.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_voice/nx_voice.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
-import 'dart:ui';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,16 +47,4 @@ void main() async {
       child: const NexusVoiceAssistantApp(),
     ),
   );
-}
-
-@pragma('vm:entry-point')
-Future<bool> onIosBackground(ServiceInstance service) async {
-  WidgetsFlutterBinding.ensureInitialized();
-  DartPluginRegistrant.ensureInitialized();
-  return true;
-}
-
-@pragma('vm:entry-point')
-Future<void> onStart(ServiceInstance service) async {
-  await BleBackgroundService.startBackgroundService(service);
 }

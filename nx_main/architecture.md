@@ -1,5 +1,9 @@
 # Mobile App File Transfer Architecture
 
+For the current app/wearable routing modules and regression contracts, see
+[Wearable routing and maintenance](docs/wearable-routing.md). The file-transfer
+design below is a separate historical proposal.
+
 ## Overview
 
 This document describes the mobile app architecture for file transfer over BLE, mirroring the firmware's layered design. The architecture separates transport concerns from protocol logic, making it easy to test and maintain.

@@ -1,3 +1,4 @@
+import 'package:nexus_voice_assistant/application/sessions/agent_routes.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -138,9 +139,9 @@ class WatchVoiceRelay {
           socketUrl: socketUrl,
           userId: userId,
           domainId: _domainId!,
-          clientApp: 'nx_watch',
-          agentId: 'personal_assistant',
-          deviceSource: 'nx_watch',
+          clientApp: AgentRoutes.watch.clientApp,
+          agentId: AgentRoutes.watch.agentId,
+          deviceSource: AgentRoutes.watch.source,
           authHeaders: _authHeaders!,
         ),
       );

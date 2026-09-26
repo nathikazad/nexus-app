@@ -4,6 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../necklace/necklace_audio_codec.dart';
+import '../necklace/necklace_device_protocol.dart';
+import '../necklace/necklace_socket_port.dart';
+export '../necklace/necklace_socket_port.dart'
+    show SocketConnectionState, SocketSendStatus;
 
 class _QueuedPacket {
   final Uint8List data;
@@ -12,22 +17,7 @@ class _QueuedPacket {
   _QueuedPacket(this.data, this.index);
 }
 
-enum SocketConnectionState {
-  disconnected,
-  connecting,
-  connected,
-}
-
-enum SocketSendStatus {
-  sent,
-  queuedNoConnection,
-  queuedAfterSendFailure,
-}
-
-class SocketClient {
-  static const int _opusAudioPacket = 0x0001;
-  static const int _audioEofPacket = 0xFFFC;
-
+class SocketClient implements NecklaceSocketPort {
   WebSocketChannel? _channel;
   String? _url;
   int _generation = 0;
@@ -35,12 +25,8 @@ class SocketClient {
   Future<Map<String, String>> Function(bool forceRefresh)? _authHeaders;
   bool _isConnected = false;
   Future<bool>? _connectFuture;
-  bool _audioReceiveActive = false;
-  int _audioReceivePacketCount = 0;
-  int _audioReceiveOpusByteCount = 0;
-  int? _audioReceiveTurnId;
-  int? _audioReceiveNonce;
-  int? _audioReceiveMeta;
+  final _audioCodec = NecklaceAudioCodec();
+  final _deviceProtocol = NecklaceDeviceProtocol();
   // Packet queue for when socket is disconnected
   final List<_QueuedPacket> _packetQueue = [];
   static const int maxQueueSize =
@@ -48,7 +34,9 @@ class SocketClient {
 
   // Callback to forward packets from server to BLE
   Future<void> Function(Uint8List)? onPacketFromServer;
-  void Function(Map<String, dynamic> summary)? onAudioReceptionSummary;
+  set onAudioReceptionSummary(void Function(Map<String, dynamic>)? callback) {
+    _audioCodec.onAudioReceptionSummary = callback;
+  }
 
   /// Callback to handle device requests (e.g. take_photo). Returns response payload or null.
   Future<String?> Function(
@@ -150,11 +138,14 @@ class SocketClient {
           if (generation != _generation) return;
           if (message is Uint8List) {
             // Intercept DEVICE_REQUEST packets - handle and respond, don't forward to BLE
-            if (await _handleDeviceRequestIfNeeded(message, generation)) {
+            if (await _deviceProtocol.handle(message,
+                isCurrent: () => generation == _generation,
+                respond: sendDeviceResponsePacket,
+                onDeviceRequest: onDeviceRequest)) {
               return;
             }
             if (generation != _generation) return;
-            final blePayload = _serverAudioPacketToBlePayload(message);
+            final blePayload = _audioCodec.decode(message);
             // Text/progress/control frames must never enter the firmware Opus parser.
             if (blePayload == null) return;
             if (onPacketFromServer != null) {
@@ -277,101 +268,6 @@ class SocketClient {
     }
   }
 
-  Uint8List? _serverAudioPacketToBlePayload(Uint8List packet) {
-    if (packet.length < 2) return null;
-
-    final byteData = ByteData.sublistView(packet);
-    final headerType = byteData.getUint16(0, Endian.little);
-
-    if (headerType == _audioEofPacket) {
-      // No invented 0:0 turn for empty or malformed responses.
-      if (packet.length != 6 || !_audioReceiveActive) return null;
-      final meta = _audioReceiveMeta!;
-      _finishAudioReception();
-      return Uint8List.fromList([
-        _audioEofPacket & 0xFF,
-        (_audioEofPacket >> 8) & 0xFF,
-        meta & 0xFF,
-        (meta >> 8) & 0xFF,
-      ]);
-    }
-
-    if (headerType != _opusAudioPacket || packet.length < 12) {
-      return null;
-    }
-
-    final meta = byteData.getUint16(8, Endian.little);
-    final opusSize = byteData.getUint16(10, Endian.little);
-    final opusStart = 12;
-    final opusEnd = opusStart + opusSize;
-    if (opusSize == 0 || opusEnd != packet.length) {
-      debugPrint(
-        "[Socket] Invalid server audio packet: size $opusSize, expected $opusEnd got ${packet.length}",
-      );
-      return null;
-    }
-    _recordAudioReception(
-      opusBytes: opusSize,
-      turnId: (meta >> 8) & 0x0F,
-      meta: meta,
-    );
-
-    final blePayload = Uint8List(4 + opusSize);
-    final out = ByteData.sublistView(blePayload);
-    out.setUint16(0, meta, Endian.little);
-    out.setUint16(2, opusSize, Endian.little);
-    blePayload.setRange(4, 4 + opusSize, packet, opusStart);
-    return blePayload;
-  }
-
-  String _utcNow() => DateTime.now().toUtc().toIso8601String();
-
-  void _recordAudioReception({required int opusBytes, int? turnId, int? meta}) {
-    if (!_audioReceiveActive) {
-      _audioReceiveActive = true;
-      _audioReceivePacketCount = 0;
-      _audioReceiveOpusByteCount = 0;
-      _audioReceiveTurnId = null;
-      _audioReceiveNonce = null;
-      _audioReceiveMeta = null;
-      debugPrint("[BLE BG] ${_utcNow()} UTC websocket opus reception started");
-    }
-    _audioReceivePacketCount++;
-    _audioReceiveOpusByteCount += opusBytes;
-    _audioReceiveTurnId ??= turnId;
-    _audioReceiveNonce ??= meta == null ? null : ((meta >> 12) & 0x0F);
-    _audioReceiveMeta ??= meta;
-  }
-
-  void _finishAudioReception() {
-    if (!_audioReceiveActive) return;
-    final turnText =
-        _audioReceiveTurnId == null ? "" : ", turn_id=$_audioReceiveTurnId";
-    final nonceText =
-        _audioReceiveNonce == null ? "" : ", nonce=$_audioReceiveNonce";
-    final turnkey = _audioReceiveNonce == null || _audioReceiveTurnId == null
-        ? null
-        : "$_audioReceiveNonce:$_audioReceiveTurnId";
-    final turnkeyText = turnkey == null ? "" : ", turnkey=$turnkey";
-    debugPrint(
-      "[BLE BG] ${_utcNow()} UTC websocket opus reception finished "
-      "$_audioReceivePacketCount packets, $_audioReceiveOpusByteCount bytes$turnText$nonceText$turnkeyText",
-    );
-    onAudioReceptionSummary?.call({
-      'opus_packets': _audioReceivePacketCount,
-      'opus_bytes': _audioReceiveOpusByteCount,
-      if (_audioReceiveTurnId != null) 'turn_id': _audioReceiveTurnId,
-      if (_audioReceiveNonce != null) 'nonce': _audioReceiveNonce,
-      if (turnkey != null) 'turnkey': turnkey,
-    });
-    _audioReceiveActive = false;
-    _audioReceivePacketCount = 0;
-    _audioReceiveOpusByteCount = 0;
-    _audioReceiveTurnId = null;
-    _audioReceiveNonce = null;
-    _audioReceiveMeta = null;
-  }
-
   void sendText(String message) {
     if (!_isConnected || _channel == null) {
       debugPrint("[Socket] Cannot send: not connected");
@@ -448,74 +344,7 @@ class SocketClient {
     }
   }
 
-  static const int _DEVICE_REQUEST = 0x0004;
   static const int _DEVICE_RESPONSE = 0x0005;
-
-  /// Handle DEVICE_REQUEST from server. Returns true if handled (don't forward to BLE).
-  Future<bool> _handleDeviceRequestIfNeeded(
-      Uint8List message, int generation) async {
-    if (message.length < 6) return false;
-    final byteData = ByteData.view(
-        message.buffer, message.offsetInBytes, message.lengthInBytes);
-    final headerType = byteData.getUint16(4, Endian.little);
-    if (headerType != _DEVICE_REQUEST) return false;
-    // Recognized control frames are consumed even when malformed or unsupported.
-    if (message.length < 12) return true;
-
-    final requestId = byteData.getUint32(6, Endian.little);
-    final payloadSize = byteData.getUint16(10, Endian.little);
-    if (message.length != 12 + payloadSize) return true;
-
-    try {
-      final payloadStr = utf8.decode(message.sublist(12, 12 + payloadSize));
-      final payload = jsonDecode(payloadStr) as Map<String, dynamic>;
-      final action = payload['action'] as String?;
-      if (action == null) return true;
-
-      if (action == 'get_gps') {
-        // Fake GPS: always return same coordinates (SF)
-        final result = jsonEncode({
-          'lat': 37.7749,
-          'lng': -122.4194,
-          'accuracy': 10.0,
-        });
-        sendDeviceResponsePacket(requestId, result);
-        debugPrint("[Socket] Handled get_gps request, sent fake GPS");
-        return true;
-      }
-
-      const deviceActions = [
-        'take_photo',
-        'get_camera_status',
-        'start_record',
-        'stop_record',
-        'set_record_period',
-        'get_battery',
-        'vibrate',
-        'power_cycle',
-      ];
-      if (deviceActions.contains(action) && onDeviceRequest != null) {
-        final result = await onDeviceRequest!(requestId, action, payload);
-        if (generation != _generation) return true;
-        if (result != null) {
-          sendDeviceResponsePacket(requestId, result);
-          debugPrint("[Socket] Handled $action request via onDeviceRequest");
-          return true;
-        }
-      }
-    } catch (e) {
-      debugPrint("[Socket] Error handling device request: $e");
-    }
-    if (generation == _generation) {
-      sendDeviceResponsePacket(
-          requestId,
-          jsonEncode({
-            'success': false,
-            'error': 'Unsupported or failed device request'
-          }));
-    }
-    return true;
-  }
 
   /// Send DEVICE_RESPONSE to server.
   /// Format: [header 2B][index 4B][request_id 4B][payload_size 2B][payload]
@@ -608,7 +437,7 @@ class SocketClient {
     final channel = _channel;
     _channel = null;
     if (clearQueuedPackets) _packetQueue.clear();
-    _audioReceiveActive = false;
+    _audioCodec.reset();
     try {
       await channel?.sink.close();
     } catch (e) {
