@@ -68,23 +68,19 @@ void main() {
     });
     expect(() => AgentRoutes.necklace.headers(0), throwsStateError);
   });
-  test('session isolate boundary preserves identity and rejects missing domain',
+  test('ambient isolate boundary excludes selected domain and requires user',
       () {
     final config = BackgroundSessionCommand(
         url: 'ws://localhost:1',
         telemetryHttpBaseUrl: 'http://localhost:2',
         userId: '1',
-        domainId: 7,
         preset: BackendPreset.piLan,
         clientAppId: 'nx_main');
     expect(BackgroundSessionCommand.fromMap(config.toMap()).identity,
         config.identity);
-    final missing = config.toMap()..remove('domainId');
+    expect(config.toMap().containsKey('domainId'), isFalse);
+    final missing = config.toMap()..remove('userId');
     expect(() => BackgroundSessionCommand.fromMap(missing),
         throwsA(isA<TypeError>()));
-    expect(
-        () =>
-            BackgroundSessionCommand.fromMap(config.toMap()..['domainId'] = 0),
-        throwsStateError);
   });
 }

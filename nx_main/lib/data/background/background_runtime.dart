@@ -19,6 +19,7 @@ import '../necklace/necklace_device_port.dart';
 import '../necklace/necklace_relay.dart';
 import 'background_commands.dart';
 import 'background_session_command.dart';
+import 'ambient_storage_domain.dart';
 
 class BackgroundRuntime {
   /// Start the background service (called from onStart entry point)
@@ -243,7 +244,6 @@ class BackgroundRuntime {
       }
       final url = command.url;
       final userId = command.userId;
-      final domainId = command.domainId;
       final preset = command.preset;
       final clientAppId = command.clientAppId;
       final telemetryHttpBaseUrl = command.telemetryHttpBaseUrl;
@@ -266,17 +266,27 @@ class BackgroundRuntime {
         return {'authorization': 'Bearer $token'};
       }
 
-      final client = NexusAuthenticatedClient(
-        preset: preset,
-        userId: userId,
-        domainId: domainId,
-        authHeaders: authHeaders,
-      );
-      authenticatedHttpClient = client;
-      final socketMetadata = AgentRoutes.necklace.headers(domainId);
       final uploadBase = telemetryHttpBaseUrl.isNotEmpty
           ? telemetryHttpBaseUrl
           : httpBaseFromSocketUrl(url);
+      late int storageDomainId;
+      try {
+        storageDomainId = await loadAmbientStorageDomain(
+            httpBaseUrl: uploadBase, authHeaders: authHeaders);
+      } catch (error) {
+        debugPrint('[Socket] Personal storage lookup failed: $error');
+        return;
+      }
+      if (generation != sessionGeneration) return;
+
+      final client = NexusAuthenticatedClient(
+        preset: preset,
+        userId: userId,
+        domainId: storageDomainId,
+        authHeaders: authHeaders,
+      );
+      authenticatedHttpClient = client;
+      final socketMetadata = AgentRoutes.necklace.ambientHeaders();
       unawaited(printServerClockDrift(uploadBase, client));
       telemetryUploadManager = TelemetryUploadManager(
         httpBaseUrl: uploadBase,

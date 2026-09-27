@@ -6,6 +6,18 @@ class AgentRoute {
   final String agentId;
   final String? source;
 
+  Map<String, String> ambientHeaders() {
+    if (agentId != 'personal_assistant' || source == null) {
+      throw StateError('Ambient mode requires a device assistant route.');
+    }
+    return {
+      'X-Nexus-Session-Mode': 'ambient',
+      'X-Client-App': clientApp,
+      'X-Agent-Id': agentId,
+      'X-Device-Source': source!,
+    };
+  }
+
   Map<String, String> headers(int domainId) {
     if (domainId <= 0) throw StateError('A selected domain is required.');
     return {

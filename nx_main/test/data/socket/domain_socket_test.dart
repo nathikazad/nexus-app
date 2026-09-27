@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
 import 'package:nexus_voice_assistant/data/voice/voice_socket_session.dart';
+import 'package:nexus_voice_assistant/application/sessions/agent_routes.dart';
 
 void main() {
   test('wearable rejects absent domain before opening any connection',
@@ -68,12 +69,27 @@ void main() {
           authHeaders: (_) async => {}));
     }
     await voice.connect(VoiceSocketSessionConfig(
-      socketUrl: url, userId: '1', domainId: 9,
-      clientApp: 'nx_watch', agentId: 'personal_assistant',
-      deviceSource: 'nx_watch', authHeaders: (_) async => {},
+      socketUrl: url,
+      userId: '1',
+      domainId: 9,
+      clientApp: 'nx_watch',
+      agentId: 'personal_assistant',
+      deviceSource: 'nx_watch',
+      authHeaders: (_) async => {},
     ));
-    expect(domains, ['7', '9', '7', '9', '9']);
-    expect(agents, [null, null, 'nx_main', 'nx_main', 'personal_assistant']);
-    expect(sources, [null, null, null, null, 'nx_watch']);
+    expect(
+        await wearable.connect(url,
+            headers: AgentRoutes.necklace.ambientHeaders()),
+        isTrue);
+    expect(domains, ['7', '9', '7', '9', '9', null]);
+    expect(agents, [
+      null,
+      null,
+      'nx_main',
+      'nx_main',
+      'personal_assistant',
+      'personal_assistant'
+    ]);
+    expect(sources, [null, null, null, null, 'nx_watch', 'necklace']);
   });
 }

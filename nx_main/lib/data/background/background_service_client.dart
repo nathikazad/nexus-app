@@ -160,7 +160,6 @@ class BackgroundServiceClient {
   void connectSocket({
     required String url,
     required String telemetryHttpBaseUrl,
-    required int domainId,
     required String userId,
     required BackendPreset preset,
     required String clientAppId,
@@ -170,7 +169,6 @@ class BackgroundServiceClient {
         url: url,
         telemetryHttpBaseUrl: telemetryHttpBaseUrl,
         userId: userId,
-        domainId: domainId,
         preset: preset,
         clientAppId: clientAppId);
     _service.invoke('socket.connect', command.toMap());

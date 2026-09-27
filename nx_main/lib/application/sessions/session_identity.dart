@@ -1,7 +1,11 @@
 import 'dart:convert';
 
 /// Immutable ownership of asynchronous work. No default domain is permitted.
-class SessionIdentity {
+abstract interface class SessionKey {
+  String get key;
+}
+
+class SessionIdentity implements SessionKey {
   SessionIdentity(
       {required this.backend,
       required this.userId,
@@ -23,6 +27,26 @@ class SessionIdentity {
   @override
   bool operator ==(Object other) =>
       other is SessionIdentity && other.key == key;
+  @override
+  int get hashCode => key.hashCode;
+}
+
+/// A device relay belongs to an authenticated user, not an app's selected domain.
+class AmbientSessionIdentity implements SessionKey {
+  AmbientSessionIdentity(
+      {required this.backend, required this.userId, required this.clientApp}) {
+    if (backend.isEmpty || userId.isEmpty || clientApp.isEmpty) {
+      throw StateError('Backend, user and app are required.');
+    }
+  }
+  final String backend;
+  final String userId;
+  final String clientApp;
+  @override
+  String get key => jsonEncode(['ambient', backend, userId, clientApp]);
+  @override
+  bool operator ==(Object other) =>
+      other is AmbientSessionIdentity && other.key == key;
   @override
   int get hashCode => key.hashCode;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import '../../application/sessions/session_coordinator.dart';
+import '../../application/sessions/session_identity.dart';
 import '../providers.dart';
 import 'background_session_command.dart';
 
@@ -11,8 +12,8 @@ final ambientSessionProvider = Provider<void>((ref) {
   final service = ref.read(bleBackgroundServiceProvider);
   final watch =
       !kIsWeb && Platform.isIOS ? ref.read(watchVoiceRelayProvider) : null;
-  final coordinator = SessionCoordinator<User>(
-    disconnectNecklace: service.disconnectSocket,
+  final watchCoordinator = SessionCoordinator<User>(
+    disconnectNecklace: () {},
     configureWatch: (user) {
       watch?.configure(
         socketUrl: user == null ? null : resolve(user.preset).sockWs,
@@ -25,13 +26,17 @@ final ambientSessionProvider = Provider<void>((ref) {
       );
       if (user != null) watch?.start();
     },
+    connectNecklace: (_) {},
+  );
+  final coordinator = SessionCoordinator<User>(
+    disconnectNecklace: service.disconnectSocket,
+    configureWatch: (_) {},
     connectNecklace: (user) {
       final urls = resolve(user.preset);
       service.connectSocket(
           url: urls.sockWs,
           telemetryHttpBaseUrl: urls.imageHttp,
           userId: user.userId,
-          domainId: user.requiredDomainId,
           preset: user.preset,
           clientAppId: ref.read(nexusClientAppIdProvider));
     },
@@ -40,6 +45,17 @@ final ambientSessionProvider = Provider<void>((ref) {
     if (!next.hasValue) return;
     final user = next.value;
     if (user == null || user.domainId == null) {
+      watchCoordinator.update(null, null);
+    } else {
+      watchCoordinator.update(
+          SessionIdentity(
+              backend: user.preset.key,
+              userId: user.userId,
+              domainId: user.requiredDomainId,
+              clientApp: 'nx_watch'),
+          user);
+    }
+    if (user == null) {
       coordinator.update(null, null);
       return;
     }
@@ -48,7 +64,6 @@ final ambientSessionProvider = Provider<void>((ref) {
         url: urls.sockWs,
         telemetryHttpBaseUrl: urls.imageHttp,
         userId: user.userId,
-        domainId: user.requiredDomainId,
         preset: user.preset,
         clientAppId: ref.read(nexusClientAppIdProvider));
     coordinator.update(config.identity, user);

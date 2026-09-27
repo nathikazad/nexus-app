@@ -10,9 +10,9 @@ class SessionCoordinator<T> {
   final void Function() disconnectNecklace;
   final void Function(T?) configureWatch;
   final void Function(T) connectNecklace;
-  SessionIdentity? _active;
+  SessionKey? _active;
 
-  void update(SessionIdentity? identity, T? configuration) {
+  void update(SessionKey? identity, T? configuration) {
     if (identity == null || configuration == null) {
       _active = null;
       disconnectNecklace();

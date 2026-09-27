@@ -58,14 +58,20 @@ class SocketClient implements NecklaceSocketPort {
     Map<String, String>? headers,
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
   }) async {
-    final domain = headers?.entries
-        .where((entry) => entry.key.toLowerCase() == 'x-nexus-domain-id')
-        .map((entry) => int.tryParse(entry.value))
-        .firstOrNull;
-    if (domain == null || domain <= 0) {
+    final metadata = {
+      for (final entry in (headers ?? <String, String>{}).entries)
+        entry.key.toLowerCase(): entry.value
+    };
+    final ambient = metadata['x-nexus-session-mode'] == 'ambient';
+    final domain = int.tryParse(metadata['x-nexus-domain-id'] ?? '');
+    if (ambient
+        ? metadata.containsKey('x-nexus-domain-id') ||
+            metadata['x-agent-id'] != 'personal_assistant' ||
+            metadata['x-device-source'] != 'necklace'
+        : domain == null || domain <= 0) {
       await disconnect();
       throw StateError(
-          'A selected domain is required for the wearable socket.');
+          'A valid domain session or explicit ambient necklace session is required.');
     }
     final closing = disconnect();
     final generation = _generation;
