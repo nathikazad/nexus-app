@@ -3471,14 +3471,28 @@ class _CreateMenuSheet extends StatelessWidget {
   }
 }
 
-class _AppMenuSheet extends StatelessWidget {
+class _AppMenuSheet extends ConsumerWidget {
   const _AppMenuSheet();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).value;
     return _MenuSheet(
       title: 'Menu',
       children: <Widget>[
+        if (user?.domainId != null)
+          ListTile(
+            title: const Text('Domain'),
+            subtitle: Text(user!.domainName ?? 'Domain ${user.domainId}'),
+            trailing: TextButton(
+              onPressed: () {
+                final auth = ref.read(authProvider.notifier);
+                Navigator.of(context).pop();
+                auth.clearDomain();
+              },
+              child: const Text('Switch'),
+            ),
+          ),
         _MenuOption(
           key: const ValueKey('menu-funnels-option'),
           icon: Icons.filter_alt_outlined,

@@ -11,7 +11,13 @@ void main() {
       PrefsKeys.backendPreset: BackendPreset.hosted.key,
     });
     final container = ProviderContainer(
-      overrides: [authProvider.overrideWith(PeopleAuthController.new)],
+      overrides: [
+        authProvider.overrideWith(PeopleAuthController.new),
+        domainLoaderProvider.overrideWithValue((_) async => []),
+        oidcSessionRestoreProvider.overrideWithValue(
+          (_, __) async => const NexusIdentity(userId: '2'),
+        ),
+      ],
     );
     addTearDown(container.dispose);
 
@@ -48,7 +54,13 @@ void main() {
       PrefsKeys.backendPreset: BackendPreset.hosted.key,
     });
     final container = ProviderContainer(
-      overrides: [authProvider.overrideWith(PeopleAuthController.new)],
+      overrides: [
+        authProvider.overrideWith(PeopleAuthController.new),
+        domainLoaderProvider.overrideWithValue((_) async => []),
+        oidcSessionRestoreProvider.overrideWithValue(
+          (_, __) async => const NexusIdentity(userId: '2'),
+        ),
+      ],
     );
     addTearDown(container.dispose);
 

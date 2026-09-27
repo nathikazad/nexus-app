@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_db/auth.dart';
 
 enum PeopleAppSection { people, meetings, pending, logs, funnels }
 
@@ -36,7 +37,15 @@ class PeopleWorkspaceState {
 
 class PeopleWorkspaceNotifier extends Notifier<PeopleWorkspaceState> {
   @override
-  PeopleWorkspaceState build() => const PeopleWorkspaceState();
+  PeopleWorkspaceState build() {
+    ref.watch(
+      authProvider.select((auth) {
+        final user = auth.value;
+        return user?.domainId == null ? null : user!.sessionKey;
+      }),
+    );
+    return const PeopleWorkspaceState();
+  }
 
   void setSection(PeopleAppSection section) {
     state = state.copyWith(section: section);

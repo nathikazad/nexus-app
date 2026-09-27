@@ -117,7 +117,8 @@ void main() {
 }
 
 class _IntegrationHarness {
-  _IntegrationHarness() : client = createClient(_graphqlEndpoint, _userId) {
+  _IntegrationHarness()
+    : client = createClient(_graphqlEndpoint, _userId, domainId: _domainId) {
     repo = KgqlPeopleRepository(
       client: client,
       loadPersonSchema: loadPersonSchema,
@@ -161,3 +162,15 @@ String get _graphqlEndpoint =>
 
 String get _userId =>
     Platform.environment['NX_PEOPLE_INTEGRATION_USER_ID'] ?? '1';
+
+int get _domainId {
+  final id = int.tryParse(
+    Platform.environment['NX_PEOPLE_INTEGRATION_DOMAIN_ID'] ?? '',
+  );
+  if (id == null || id <= 0) {
+    throw StateError(
+      'Set NX_PEOPLE_INTEGRATION_DOMAIN_ID to an explicit test domain',
+    );
+  }
+  return id;
+}
