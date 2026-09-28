@@ -7,6 +7,8 @@ import 'audio_asset.dart';
 abstract interface class AudioStore {
   factory AudioStore.application(String account) =
       platform.ApplicationAudioStore;
+  Future<bool> contains(AudioAsset asset);
+  Future<void> flush();
   Future<Uint8List?> read(AudioAsset asset);
   Future<void> write(AudioAsset asset, Uint8List bytes);
   Future<void> retain(Set<String> hashes);

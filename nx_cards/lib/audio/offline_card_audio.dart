@@ -52,6 +52,7 @@ final class OfflineCardAudioRepository implements CardAudioRepository {
             .timeout(const Duration(seconds: 45));
         if (_closed) throw StateError('Audio session closed');
         await store.write(asset, bytes);
+        if (foreground) await store.flush();
         return bytes;
       }, foreground: foreground);
 
@@ -76,9 +77,25 @@ final class OfflineCardAudioRepository implements CardAudioRepository {
       }
     }
 
-    report(true);
+    // Check disk metadata silently. Only missing/changed audio enters the
+    // download queue; a normal sync never reopens verified recordings.
+    final pending = <AudioAsset>[];
+    for (final asset in unique.values) {
+      if (_closed || generation != _generation) return;
+      try {
+        if (await store.contains(asset)) {
+          ready++;
+        } else {
+          pending.add(asset);
+        }
+      } catch (_) {
+        failed++;
+      }
+    }
+    if (_closed || generation != _generation) return;
+    report(pending.isNotEmpty);
     await Future.wait([
-      for (final asset in unique.values)
+      for (final asset in pending)
         () async {
           try {
             await _download(asset);
@@ -93,6 +110,7 @@ final class OfflineCardAudioRepository implements CardAudioRepository {
     if (!_closed && generation == _generation && failed == 0 && canClean()) {
       await store.retain(unique.values.map((a) => a.sha256).toSet());
     }
+    await store.flush();
     report(false);
   }
 

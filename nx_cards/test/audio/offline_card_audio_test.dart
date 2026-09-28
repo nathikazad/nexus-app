@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:nx_cards/audio/audio_store.dart';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,6 +58,55 @@ void main() {
       );
       expect(await offline.fetch(a.url), bytes);
       await offline.close();
+    },
+  );
+  test(
+    'unchanged sync and restart stay silent and do not load audio bytes',
+    () async {
+      final bytes = Uint8List.fromList([7, 8, 9]);
+      final a = asset(bytes);
+      final remote = Remote({a.url: bytes});
+      final initial = OfflineCardAudioRepository(remote: remote, store: store);
+      await initial.sync([a], canClean: () => true);
+      await initial.close();
+      final index = File('${root.path}/verified.json');
+      final before = await index.readAsString();
+      final modified = (await index.stat()).modified;
+      final checked = MetadataOnlyStore(DirectoryAudioStore(root));
+      final repo = OfflineCardAudioRepository(remote: remote, store: checked);
+      final reports = <AudioDownloadProgress>[];
+      final subscription = repo.changes.listen(reports.add);
+      await repo.sync([a], canClean: () => true);
+      await repo.sync([a], canClean: () => true);
+      await Future<void>.delayed(Duration.zero);
+      expect(remote.requests, 1);
+      expect(checked.reads, 0);
+      expect(reports.any((p) => p.running), isFalse);
+      expect(await index.readAsString(), before);
+      expect((await index.stat()).modified, modified);
+      await subscription.cancel();
+      await repo.close();
+    },
+  );
+  test(
+    'deleted file is downloaded again even with a saved verification index',
+    () async {
+      final bytes = Uint8List.fromList([4, 5, 6]);
+      final a = asset(bytes);
+      final remote = Remote({a.url: bytes});
+      final repo = OfflineCardAudioRepository(remote: remote, store: store);
+      await repo.sync([a], canClean: () => true);
+      await File('${root.path}/${a.sha256}.mp3').delete();
+      await repo.sync([a], canClean: () => true);
+      expect(remote.requests, 2);
+      expect(await store.read(a), bytes);
+      final file = File('${root.path}/${a.sha256}.mp3');
+      await file.writeAsBytes([0, 0, 0]);
+      await file.setLastModified(DateTime.utc(2020));
+      await repo.sync([a], canClean: () => true);
+      expect(remote.requests, 3);
+      expect(await store.read(a), bytes);
+      await repo.close();
     },
   );
   test(
@@ -123,4 +173,25 @@ void main() {
       await repo.close();
     },
   );
+}
+
+class MetadataOnlyStore implements AudioStore {
+  MetadataOnlyStore(this.delegate);
+  final AudioStore delegate;
+  int reads = 0;
+  @override
+  Future<bool> contains(AudioAsset asset) => delegate.contains(asset);
+  @override
+  Future<void> flush() => delegate.flush();
+  @override
+  Future<Uint8List?> read(AudioAsset asset) {
+    reads++;
+    return delegate.read(asset);
+  }
+
+  @override
+  Future<void> write(AudioAsset asset, Uint8List bytes) =>
+      delegate.write(asset, bytes);
+  @override
+  Future<void> retain(Set<String> hashes) => delegate.retain(hashes);
 }
