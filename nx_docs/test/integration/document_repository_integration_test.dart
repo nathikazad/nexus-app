@@ -189,14 +189,14 @@ Map<String, dynamic> _appflowyDocumentJson(String text) {
 }
 
 bool get runNotesIntegration =>
-    Platform.environment['RUN_NX_NOTES_INTEGRATION'] == 'true';
+    Platform.environment['RUN_NX_DOCS_INTEGRATION'] == 'true';
 
 const kNotesIntegrationSkipReason =
-    'Set RUN_NX_NOTES_INTEGRATION=true and run PGDB on localhost.';
+    'Set RUN_NX_DOCS_INTEGRATION=true and run PGDB on localhost.';
 
 String get _graphqlEndpoint =>
-    Platform.environment['NX_NOTES_INTEGRATION_GRAPHQL_HTTP'] ??
+    Platform.environment['NX_DOCS_INTEGRATION_GRAPHQL_HTTP'] ??
     kIntegrationTestBackendUrls.graphqlHttp;
 
 String get _userId =>
-    Platform.environment['NX_NOTES_INTEGRATION_USER_ID'] ?? '1';
+    Platform.environment['NX_DOCS_INTEGRATION_USER_ID'] ?? '1';

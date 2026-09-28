@@ -27,7 +27,7 @@ part 'companion_audio.dart';
 part 'companion_view.dart';
 
 const notePlaybackSpeeds = <double>[0.75, 1, 1.25, 1.5, 2];
-const _notePlaybackSpeedPreferenceKey = 'nx_notes.note_playback_speed';
+const _notePlaybackSpeedPreferenceKey = 'nx_docs.note_playback_speed';
 
 class NoteCompanion extends ConsumerStatefulWidget {
   const NoteCompanion({

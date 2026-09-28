@@ -77,12 +77,11 @@ publishing/publishing_providers.dart publishing services and triggers
 
 ## Web deployment
 
-The server retains the legacy `nx_notes` static directory for deployment
-compatibility:
+The server uses the `nx_docs` static directory:
 
 ```sh
-flutter build web --release --base-href /docs/
-rsync -az --delete build/web/ ../../servers/mcp/server/static/nx_notes/
+flutter build web --release --base-href /nx_docs/web/
+rsync -az --delete build/web/ ../../servers/nexus/http/static/nx_docs/
 ```
 
 ## Native library synchronization

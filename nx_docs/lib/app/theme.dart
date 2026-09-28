@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDarkModeNotifier extends Notifier<bool> with WidgetsBindingObserver {
-  static const String preferenceKey = 'nx_notes.appearance.dark_mode';
+  static const String preferenceKey = 'nx_docs.appearance.dark_mode';
 
   bool _followsSystem = true;
   bool _isObservingSystemBrightness = false;

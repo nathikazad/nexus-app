@@ -20,7 +20,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
-        dbAuditSourceKindProvider.overrideWithValue('nx_notes'),
+        dbAuditSourceKindProvider.overrideWithValue('nx_docs'),
         nexusClientAppIdProvider.overrideWithValue(
           kIsWeb ? 'nx_docs_web' : 'nx_docs',
         ),

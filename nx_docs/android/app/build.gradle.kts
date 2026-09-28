@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.nexus.nx_notes"
+    namespace = "com.nexus.nx_docs"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.nexus.nx_notes"
+        applicationId = "com.nexus.nx_docs"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

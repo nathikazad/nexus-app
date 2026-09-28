@@ -11,7 +11,7 @@ final class LiveAgentPcmPlayer: NSObject, AVCaptureAudioDataOutputSampleBufferDe
   // CoreAudio can synchronously contact audiohald while resolving inputNode.
   // Doing that on Flutter's platform thread can freeze the entire window.
   private let microphoneQueue = DispatchQueue(
-    label: "com.nexus.nxnotes.live-agent-microphone",
+    label: "com.nexus.nxdocs.live-agent-microphone",
     qos: .userInitiated
   )
   private let format = AVAudioFormat(
@@ -31,7 +31,7 @@ final class LiveAgentPcmPlayer: NSObject, AVCaptureAudioDataOutputSampleBufferDe
 
   init(messenger: FlutterBinaryMessenger) {
     channel = FlutterMethodChannel(
-      name: "nx_notes/live_agent_pcm_player",
+      name: "nx_docs/live_agent_pcm_player",
       binaryMessenger: messenger
     )
     super.init()

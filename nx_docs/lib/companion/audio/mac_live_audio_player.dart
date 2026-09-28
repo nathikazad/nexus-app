@@ -8,7 +8,7 @@ final class MacLiveAudioPlayer implements LiveRealtimeAudioDevice {
     _channel.setMethodCallHandler(_handleNativeEvent);
   }
 
-  static const _channelName = 'nx_notes/live_agent_pcm_player';
+  static const _channelName = 'nx_docs/live_agent_pcm_player';
   final MethodChannel _channel;
 
   void Function()? _onPlaybackStarted;

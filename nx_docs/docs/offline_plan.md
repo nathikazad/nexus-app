@@ -80,7 +80,7 @@ the web, iOS, and Android applications.
 - Connected the sync engine to the KGQL adapter with memory and Drift stores,
   verifying create/update flow, initial reconciliation, and account partitioning
   through a deterministic repository test double.
-- Generated the macOS Flutter target with the `com.nexus.nxnotes` application
+- Generated the macOS Flutter target with the `com.nexus.nxdocs` application
   identity, sandboxed network/file entitlements, and desktop window defaults.
 - Verified 112 non-integration tests, a clean `flutter analyze` run, and a
   successful release build at `Nx Docs.app`.

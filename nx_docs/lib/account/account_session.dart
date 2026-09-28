@@ -18,7 +18,7 @@ class CachedSession {
   String get serverId =>
       BackendPreset.fromKey(backendPreset)?.serverId ??
       (throw StateError('Unknown server'));
-  static const String application = 'nx_notes';
+  static const String application = 'nx_docs';
 
   offline.CachedSession get shared => offline.CachedSession(
     serverId: serverId,
@@ -129,15 +129,15 @@ final class _SharedSessionStore implements offline.CachedSessionStore {
 class PreferencesSessionStore implements SessionStore {
   PreferencesSessionStore(this.preferences);
 
-  static const String userIdKey = 'nx_notes.offline_session.user_id';
+  static const String userIdKey = 'nx_docs.offline_session.user_id';
   static const String backendPresetKey =
-      'nx_notes.offline_session.backend_preset';
+      'nx_docs.offline_session.backend_preset';
 
   final SharedPreferences preferences;
 
   @override
   Future<CachedSession?> load() async {
-    final domainId = preferences.getInt('nx_notes.offline_session.domain_id');
+    final domainId = preferences.getInt('nx_docs.offline_session.domain_id');
     if (domainId == null) return null;
     final userId = preferences.getString(userIdKey);
     final preset = preferences.getString(backendPresetKey);
@@ -154,7 +154,7 @@ class PreferencesSessionStore implements SessionStore {
   @override
   Future<void> save(CachedSession session) async {
     await preferences.setInt(
-      'nx_notes.offline_session.domain_id',
+      'nx_docs.offline_session.domain_id',
       session.domainId,
     );
     await preferences.setString(userIdKey, session.userId);
@@ -163,7 +163,7 @@ class PreferencesSessionStore implements SessionStore {
 
   @override
   Future<void> clear() async {
-    await preferences.remove('nx_notes.offline_session.domain_id');
+    await preferences.remove('nx_docs.offline_session.domain_id');
     await preferences.remove(userIdKey);
     await preferences.remove(backendPresetKey);
   }

@@ -34,14 +34,14 @@ perl -0pi -e "s#\"mainJsPath\":\"main\\.dart\\.js\"#\"mainJsPath\":\"main.dart.j
 Sync the local static copy and the remote host checkout:
 
 ```bash
-rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r build/web/ /Users/nathikazad/Projects/Nexus/servers/mcp/server/static/nx_notes/
-rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/server/static/nx_notes/
+rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r build/web/ /Users/nathikazad/Projects/Nexus/servers/nexus/http/static/nx_docs/
+rsync -az --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/nexus/http/static/nx_docs/
 ```
 
 The public service is served by the `nexus-mcp` Docker container, not directly from the remote host checkout. Copy the static files into the container and restart it:
 
 ```bash
-ssh nathik@100.108.43.37 "set -e; docker cp ~/Nexus/nexus-server/mcp/server/static/nx_notes/. nexus-mcp:/app/server/static/nx_notes/; docker exec -u root nexus-mcp sh -lc 'chown -R appuser:appuser /app/server/static/nx_notes && chmod -R a+rX /app/server/static/nx_notes'; docker restart nexus-mcp"
+ssh nathik@100.108.43.37 "set -e; docker cp ~/Nexus/nexus-server/nexus/http/static/nx_docs/. nexus-mcp:/app/nexus/http/static/nx_docs/; docker exec -u root nexus-mcp sh -lc 'chown -R appuser:appuser /app/nexus/http/static/nx_docs && chmod -R a+rX /app/nexus/http/static/nx_docs'; docker restart nexus-mcp"
 ```
 
 Verify the origin before handing off:
@@ -66,4 +66,4 @@ https://nexus.nathikazad.com/docs/?v=$v
 - Cloudflare Tunnel routing is managed remotely by `cloudflared`; on the Pi it maps `nexus.nathikazad.com` to `http://localhost:8001`.
 - If direct Tailscale URL works but Cloudflare is stale, first suspect cached stable Flutter assets.
 - The server route should emit `Cache-Control: no-cache, max-age=0, must-revalidate`, but still use versioned asset URLs for immediate deploy correctness.
-- Do not deploy by rsyncing only to the host checkout; the running container serves `/app/server/static/nx_notes`.
+- Do not deploy by rsyncing only to the host checkout; the running container serves `/app/nexus/http/static/nx_docs`.

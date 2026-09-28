@@ -31,7 +31,7 @@ class KgqlDocumentRepository implements DocumentRepository {
     final result = await document_api.mutateDocument(
       _client,
       setModelRequestForCreateDocument(title: title, kind: kind),
-      auditSourceKind: 'nx_notes',
+      auditSourceKind: 'nx_docs',
     );
     return documentForCreatedId(result.documentId, title: title, kind: kind);
   }
@@ -93,7 +93,7 @@ class KgqlDocumentRepository implements DocumentRepository {
         ],
       ),
       clientUpdatedAt: _nextMutationTime(document.updatedAt),
-      auditSourceKind: 'nx_notes',
+      auditSourceKind: 'nx_docs',
     );
 
     return DocumentSnap(
@@ -236,7 +236,7 @@ class KgqlDocumentRepository implements DocumentRepository {
         ],
       ),
       clientUpdatedAt: DateTime.now().toUtc(),
-      auditSourceKind: 'nx_notes',
+      auditSourceKind: 'nx_docs',
     );
   }
 
@@ -258,7 +258,7 @@ class KgqlDocumentRepository implements DocumentRepository {
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
       clientUpdatedAt: DateTime.now().toUtc(),
-      auditSourceKind: 'nx_notes',
+      auditSourceKind: 'nx_docs',
     );
   }
 
@@ -334,7 +334,7 @@ class KgqlDocumentRepository implements DocumentRepository {
       _client,
       setModelRequestForUpdateDocument(document),
       clientUpdatedAt: document.updatedAt,
-      auditSourceKind: 'nx_notes',
+      auditSourceKind: 'nx_docs',
     );
     return RemoteSaveResult(
       status: switch (result.status) {
@@ -357,7 +357,7 @@ class KgqlDocumentRepository implements DocumentRepository {
       _client,
       SetModelRequest(id: id, delete: true),
       clientUpdatedAt: editTime,
-      auditSourceKind: 'nx_notes',
+      auditSourceKind: 'nx_docs',
     );
     return RemoteSaveResult(
       status: result.status == document_api.DocumentMutationStatus.stale

@@ -97,7 +97,7 @@ void main() {
 
     expect(socket.headers, <String, String>{
       'X-Domain-Id': '1',
-      'X-Client-Id': 'nx_notes',
+      'X-Client-Id': 'nx_docs',
       'X-Transcript-Id': '4209',
     });
     expect(await socket.authHeaders!(true), {

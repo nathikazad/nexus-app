@@ -11,7 +11,7 @@ class NxStoredAudioRemoteControls extends BaseAudioHandler with SeekHandler {
   static Future<NxStoredAudioRemoteControls>? _initialization;
 
   static Future<NxStoredAudioRemoteControls> initialize({
-    String channelId = 'com.nexus.nxNotes.note_audio',
+    String channelId = 'com.nexus.nxDocs.note_audio',
     String channelName = 'Note audio',
   }) {
     return _initialization ??= AudioService.init<NxStoredAudioRemoteControls>(

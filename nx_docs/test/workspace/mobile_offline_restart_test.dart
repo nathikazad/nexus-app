@@ -49,7 +49,7 @@ void main() {
         serverId: 'nexus-primary',
         userId: '1',
         domainId: 1,
-        application: 'nx_notes',
+        application: 'nx_docs',
       ),
       localStore: store,
       remoteApi: const UnavailableDocumentRemoteApi(),

@@ -67,7 +67,7 @@ void main() {
     ).readAsStringSync();
     expect(gradle, isNot(contains('nx_canvas/android')));
     final main = File(
-      '../../nx_docs/android/app/src/main/kotlin/com/nexus/nx_notes/MainActivity.kt',
+      '../../nx_docs/android/app/src/main/kotlin/com/nexus/nx_docs/MainActivity.kt',
     ).readAsStringSync();
     expect(main, isNot(contains('MethodChannel')));
     expect(main, isNot(contains('NativeEditor')));

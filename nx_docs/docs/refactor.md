@@ -156,7 +156,7 @@ separate hard-fetch algorithm that downloads unchanged content.
 The logical identity is:
 
 ```text
-application = nx_notes  # retained compatibility identity for nx_docs
+application = nx_docs
 server       = nexus-primary
 user         = authenticated user ID
 ```

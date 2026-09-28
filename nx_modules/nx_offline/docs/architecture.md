@@ -97,7 +97,7 @@ There is intentionally no generic entity database or generic KGQL transport.
 
 ```dart
 const account = AccountIdentity(
-  application: 'nx_notes',
+  application: 'nx_docs',
   serverId: 'nexus-primary',
   userId: '1',
 );
@@ -108,7 +108,7 @@ presets are routes to the same server and therefore produce the same account.
 Changing a route cannot select a different cache or outbox.
 
 Nx Docs retains its historical physical partition name, `user:<id>`, so an
-installed application continues to open the existing `nx_notes_user_<id>`
+installed application continues to open the existing `nx_docs_user_<id>`
 database. This is an application compatibility detail, not part of shared
 identity semantics.
 

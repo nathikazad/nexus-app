@@ -86,7 +86,7 @@ void main() {
   test(
     'version 5 upgrade strips duplicate summary bodies and preserves the original document',
     () async {
-      final dir = await Directory.systemTemp.createTemp('nx-notes-v5-');
+      final dir = await Directory.systemTemp.createTemp('nx-docs-v5-');
       final path = File('${dir.path}/index.sqlite');
       var db = NotesDatabase(NativeDatabase(path));
       addTearDown(() async {
@@ -132,7 +132,7 @@ void main() {
     final directories = <NotesDatabase, Directory>{};
     runLocalNotesStoreContract(
       createStore: () async {
-        final dir = await Directory.systemTemp.createTemp('nx-notes-contract-');
+        final dir = await Directory.systemTemp.createTemp('nx-docs-contract-');
         final db = NotesDatabase(
           NativeDatabase(File('${dir.path}/index.sqlite')),
         );
@@ -154,7 +154,7 @@ void main() {
   test(
     'migration preserves pending edits; catalog and manifest never open bodies',
     () async {
-      final dir = await Directory.systemTemp.createTemp('nx-notes-files-');
+      final dir = await Directory.systemTemp.createTemp('nx-docs-files-');
       final db = NotesDatabase(
         NativeDatabase(File('${dir.path}/index.sqlite')),
       );
@@ -203,7 +203,7 @@ void main() {
   test(
     'queued upload retains the exact file version after another edit',
     () async {
-      final dir = await Directory.systemTemp.createTemp('nx-notes-generation-');
+      final dir = await Directory.systemTemp.createTemp('nx-docs-generation-');
       final db = NotesDatabase(
         NativeDatabase(File('${dir.path}/index.sqlite')),
       );

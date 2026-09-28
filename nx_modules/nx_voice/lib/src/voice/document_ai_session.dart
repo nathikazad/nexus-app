@@ -16,7 +16,7 @@ class DocumentAiSessionConfig {
     this.domainId,
     this.transcriptId,
     required this.authHeaders,
-    this.clientId = 'nx_notes',
+    this.clientId = 'nx_docs',
     this.loadConversation,
   });
   final String socketUrl;

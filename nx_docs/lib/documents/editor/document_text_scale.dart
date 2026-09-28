@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DocumentTextScaleNotifier extends Notifier<double> {
-  static const preferenceKey = 'nx_notes.reader.text_scale';
+  static const preferenceKey = 'nx_docs.reader.text_scale';
   static const defaultScale = 1.0;
   static const minimumScale = 0.7;
   static const maximumScale = 2.0;

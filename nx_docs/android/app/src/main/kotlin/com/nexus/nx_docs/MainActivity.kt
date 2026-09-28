@@ -1,4 +1,4 @@
-package com.nexus.nx_notes
+package com.nexus.nx_docs
 
 import com.ryanheise.audioservice.AudioServiceFragmentActivity
 import io.flutter.embedding.android.RenderMode

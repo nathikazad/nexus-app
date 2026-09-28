@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PreferencesLastOpenedDocumentStore implements LastOpenedDocumentStore {
   PreferencesLastOpenedDocumentStore(this.preferences);
 
-  static const String keyPrefix = 'nx_notes.last_opened_document.';
+  static const String keyPrefix = 'nx_docs.last_opened_document.';
 
   final SharedPreferences preferences;
 

@@ -48,7 +48,7 @@ final notesDatabaseProvider = Provider.family<NotesDatabase, String>((
   final safeName = accountKey.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
   final database = NotesDatabase(
     driftDatabase(
-      name: 'nx_notes_$safeName$storageProfileSuffix',
+      name: 'nx_docs_$safeName$storageProfileSuffix',
       web: DriftWebOptions(
         sqlite3Wasm: Uri.parse('sqlite3.wasm'),
         driftWorker: Uri.parse('drift_worker.js'),
