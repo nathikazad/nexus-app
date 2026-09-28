@@ -429,7 +429,7 @@ class _AgentRunTile extends StatelessWidget {
       status: run.status,
       subtitle: preview.isEmpty ? 'No prompt captured yet' : preview,
       meta: [
-        if (run.clientApp.isNotEmpty) run.clientApp,
+        if (run.clientId.isNotEmpty) run.clientId,
         '${run.toolCalls} tools',
         '${run.changeOperationIds.length} DB changes',
         _formatDuration(run.durationMs),

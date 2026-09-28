@@ -130,7 +130,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         category: category,
         message: message,
         payload: {
-          'client_app': 'nx_time',
+          'client_id': 'nx_time',
           'agent_id': 'nx_time',
           'agent_name': 'Nx Time Assistant',
           ...payload,
@@ -644,11 +644,10 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       };
 
     final headers = <String, String>{
-      'X-Client-App': 'nx_time',
-      'X-Agent-Id': 'nx_time',
+      'X-Client-Id': 'nx_time',
     };
     debugPrint(
-      '[nx_time voice] socket headers client_app=nx_time '
+      '[nx_time voice] socket headers client_id=nx_time '
       'agent_id=nx_time',
     );
     final connected = await socket.connect(

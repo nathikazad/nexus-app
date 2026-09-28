@@ -12,7 +12,7 @@ void main() {
           int domain = 7,
           String app = 'nx_main'}) =>
       SessionIdentity(
-          backend: backend, userId: user, domainId: domain, clientApp: app);
+          backend: backend, userId: user, domainId: domain, clientId: app);
   test('identity requires a domain and distinguishes every ownership dimension',
       () {
     expect(() => identity(domain: 0), throwsStateError);
@@ -51,20 +51,15 @@ void main() {
   test('routing preserves phone versus wearable agent and source headers', () {
     expect(AgentRoutes.app.headers(7), {
       'X-Nexus-Domain-Id': '7',
-      'X-Client-App': 'nx_main',
-      'X-Agent-Id': 'nx_main'
+      'X-Client-Id': 'nx_main',
     });
     expect(AgentRoutes.necklace.headers(7), {
       'X-Nexus-Domain-Id': '7',
-      'X-Client-App': 'nx_main',
-      'X-Agent-Id': 'personal_assistant',
-      'X-Device-Source': 'necklace'
+      'X-Client-Id': 'necklace',
     });
     expect(AgentRoutes.watch.headers(7), {
       'X-Nexus-Domain-Id': '7',
-      'X-Client-App': 'nx_watch',
-      'X-Agent-Id': 'personal_assistant',
-      'X-Device-Source': 'nx_watch'
+      'X-Client-Id': 'nx_watch',
     });
     expect(() => AgentRoutes.necklace.headers(0), throwsStateError);
   });

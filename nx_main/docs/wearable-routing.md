@@ -38,10 +38,10 @@ not another runtime. `main.dart` uses the dedicated entrypoint file.
 
 ## Routing contracts
 
-- App: `X-Client-App=nx_main`, `X-Agent-Id=nx_main`, no device source.
-- Necklace: `X-Client-App=nx_main`, `X-Agent-Id=personal_assistant`,
+- App: `X-Client-Id=nx_main`, `X-Agent-Id=nx_main`, no device source.
+- Necklace: `X-Client-Id=nx_main`, `X-Agent-Id=personal_assistant`,
   `X-Device-Source=necklace`.
-- Watch: `X-Client-App=nx_watch`, `X-Agent-Id=personal_assistant`,
+- Watch: `X-Client-Id=nx_watch`, `X-Agent-Id=personal_assistant`,
   `X-Device-Source=nx_watch`.
 - All three carry `X-Nexus-Domain-Id`. No fallback domain exists.
 - Session switches retire old sockets/queues; async completions are guarded by

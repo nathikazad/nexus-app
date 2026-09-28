@@ -13,7 +13,7 @@ class BackgroundSessionCommand {
       : identity = AmbientSessionIdentity(
             backend: '${preset.key}|$url',
             userId: userId,
-            clientApp: clientAppId) {
+            clientId: clientAppId) {
     if (url.isEmpty) throw StateError('Socket URL is required.');
   }
   final String url;
@@ -21,7 +21,7 @@ class BackgroundSessionCommand {
   final BackendPreset preset;
   final AmbientSessionIdentity identity;
   String get userId => identity.userId;
-  String get clientAppId => identity.clientApp;
+  String get clientAppId => identity.clientId;
   Map<String, dynamic> toMap() => {
         'url': url,
         'telemetryHttpBaseUrl': telemetryHttpBaseUrl,

@@ -52,7 +52,7 @@ final ambientSessionProvider = Provider<void>((ref) {
               backend: user.preset.key,
               userId: user.userId,
               domainId: user.requiredDomainId,
-              clientApp: 'nx_watch'),
+              clientId: 'nx_watch'),
           user);
     }
     if (user == null) {

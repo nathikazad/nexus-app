@@ -31,9 +31,8 @@ void main() {
     bridge.emitEof();
     await _drain(relay);
 
-    expect(socket.config?.clientApp, 'nx_watch');
-    expect(socket.config?.agentId, 'personal_assistant');
-    expect(socket.config?.deviceSource, 'nx_watch');
+    expect(socket.config?.clientId, 'nx_watch');
+    expect(socket.config?.clientId, 'nx_watch');
     expect(socket.config?.domainId, 7);
     expect(socket.sentOpusPackets, isNotEmpty);
     expect(socket.audioEofCount, 1);

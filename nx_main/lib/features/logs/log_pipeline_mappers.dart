@@ -246,7 +246,7 @@ AudioPipelineTurn _analyzeTurn(String turnkey, List<NexusLogRow> logs) {
   var played = 0;
   var agentId = '';
   var agentName = '';
-  var clientApp = '';
+  var clientId = '';
 
   for (final row in sorted) {
     final payload = normalizedPayload(row);
@@ -254,7 +254,7 @@ AudioPipelineTurn _analyzeTurn(String turnkey, List<NexusLogRow> logs) {
     final identity = _agentIdentityForRow(row);
     agentId = agentId.isEmpty ? identity.agentId : agentId;
     agentName = agentName.isEmpty ? identity.agentName : agentName;
-    clientApp = clientApp.isEmpty ? identity.clientApp : clientApp;
+    clientId = clientId.isEmpty ? identity.clientId : clientId;
     if (event.isNotEmpty) events.putIfAbsent(event, () => row);
     if (row.origin.isNotEmpty) origins.add(row.origin);
     final severity = row.severity.toUpperCase();
@@ -334,7 +334,7 @@ AudioPipelineTurn _analyzeTurn(String turnkey, List<NexusLogRow> logs) {
     origins: origins.toList(),
     agentId: agentId,
     agentName: agentName,
-    clientApp: clientApp,
+    clientId: clientId,
     stages: stages,
     status: status,
     transcript: transcript,
@@ -361,7 +361,7 @@ AgentPipelineRun _analyzeAgentRun(String runId, List<NexusLogRow> logs) {
   var toolErrors = 0;
   var agentId = '';
   var agentName = '';
-  var clientApp = '';
+  var clientId = '';
   var sessionId = '';
   var orderId = '';
   var tokenUsage =
@@ -376,9 +376,8 @@ AgentPipelineRun _analyzeAgentRun(String runId, List<NexusLogRow> logs) {
     agentName = agentName.isEmpty
         ? (payload['agent_name'] ?? '').toString()
         : agentName;
-    clientApp = clientApp.isEmpty
-        ? (payload['client_app'] ?? '').toString()
-        : clientApp;
+    clientId =
+        clientId.isEmpty ? (payload['client_id'] ?? '').toString() : clientId;
     sessionId = sessionId.isEmpty
         ? (payload['session_id'] ?? row.sessionId).toString()
         : sessionId;
@@ -424,7 +423,7 @@ AgentPipelineRun _analyzeAgentRun(String runId, List<NexusLogRow> logs) {
     status: status,
     agentId: agentId,
     agentName: agentName,
-    clientApp: clientApp,
+    clientId: clientId,
     sessionId: sessionId,
     orderId: orderId,
     toolCalls: toolCalls,
@@ -469,10 +468,10 @@ _AgentIdentity _agentIdentityForRow(NexusLogRow row) {
   final payload = normalizedPayload(row);
   var agentId = (payload['agent_id'] ?? '').toString().trim();
   var agentName = (payload['agent_name'] ?? '').toString().trim();
-  final clientApp = (payload['client_app'] ?? '').toString().trim();
+  final clientId = (payload['client_id'] ?? '').toString().trim();
   final origin = row.origin.trim();
-  if (agentId.isEmpty && clientApp == 'nx_time') agentId = 'nx_time';
-  if (agentId.isEmpty && (clientApp == 'nx_main' || clientApp == 'necklace')) {
+  if (agentId.isEmpty && clientId == 'nx_time') agentId = 'nx_time';
+  if (agentId.isEmpty && (clientId == 'nx_main' || clientId == 'necklace')) {
     agentId = 'necklace';
   }
   if (agentId.isEmpty &&
@@ -483,7 +482,7 @@ _AgentIdentity _agentIdentityForRow(NexusLogRow row) {
     agentName = 'Nx Time Assistant';
   if (agentName.isEmpty && agentId == 'necklace')
     agentName = 'Necklace Assistant';
-  return _AgentIdentity(agentId, agentName, clientApp);
+  return _AgentIdentity(agentId, agentName, clientId);
 }
 
 int _compareRows(NexusLogRow a, NexusLogRow b) {
@@ -556,8 +555,8 @@ class _Bounds {
 }
 
 class _AgentIdentity {
-  const _AgentIdentity(this.agentId, this.agentName, this.clientApp);
+  const _AgentIdentity(this.agentId, this.agentName, this.clientId);
   final String agentId;
   final String agentName;
-  final String clientApp;
+  final String clientId;
 }

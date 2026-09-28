@@ -11,13 +11,13 @@ class DocumentAiSessionConfig {
     required this.domainId,
     required this.documentId,
     required this.authHeaders,
-    this.clientApp = 'nx_notes',
-    this.agentId = 'nx_notes',
+    this.clientId = 'nx_notes',
+    this.readingMode = 'document',
     this.selection = '',
   });
 
-  final String clientApp;
-  final String agentId;
+  final String clientId;
+  final String readingMode;
   final String selection;
   final String socketUrl;
   final String userId;
@@ -26,27 +26,27 @@ class DocumentAiSessionConfig {
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
   String get key =>
-      '$socketUrl|$userId|$domainId|$documentId|$agentId|$selection';
+      '$socketUrl|$userId|$domainId|$documentId|$clientId|$readingMode|$selection';
 
   DocumentAiSessionConfig withSelection(String text) => DocumentAiSessionConfig(
-        socketUrl: socketUrl,
-        userId: userId,
-        domainId: domainId,
-        documentId: documentId,
-        authHeaders: authHeaders,
-        clientApp: clientApp,
-        agentId: agentId,
-        selection: text.length > 6000 ? text.substring(0, 6000) : text,
-      );
+    socketUrl: socketUrl,
+    userId: userId,
+    domainId: domainId,
+    documentId: documentId,
+    authHeaders: authHeaders,
+    clientId: clientId,
+    readingMode: readingMode,
+    selection: text.length > 6000 ? text.substring(0, 6000) : text,
+  );
 
   Map<String, String> get headers => <String, String>{
-        'X-Nexus-Domain-Id': '$domainId',
-        'X-Client-App': clientApp,
-        'X-Agent-Id': agentId,
-        'X-Document-Id': documentId.toString(),
-        if (selection.isNotEmpty)
-          'X-Reading-Selection': base64Encode(utf8.encode(selection)),
-      };
+    'X-Nexus-Domain-Id': '$domainId',
+    'X-Client-Id': clientId,
+    if (readingMode != 'document') 'X-Reading-Mode': readingMode,
+    'X-Document-Id': documentId.toString(),
+    if (selection.isNotEmpty)
+      'X-Reading-Selection': base64Encode(utf8.encode(selection)),
+  };
 }
 
 abstract interface class DocumentAiSocketPort {
@@ -62,7 +62,7 @@ abstract interface class DocumentAiSocketPort {
     String url, {
     required Map<String, String> headers,
     required Future<Map<String, String>> Function(bool forceRefresh)
-        authHeaders,
+    authHeaders,
   });
   Future<void> disconnect({bool clearQueuedPackets = true});
   void sendAudioChunk(
@@ -77,7 +77,7 @@ abstract interface class DocumentAiSocketPort {
 
 class NxDocumentAiSocketPort implements DocumentAiSocketPort {
   NxDocumentAiSocketPort([NxVoiceSocketClient? socket])
-      : _socket = socket ?? NxVoiceSocketClient();
+    : _socket = socket ?? NxVoiceSocketClient();
 
   final NxVoiceSocketClient _socket;
 
@@ -108,9 +108,8 @@ class NxDocumentAiSocketPort implements DocumentAiSocketPort {
     String url, {
     required Map<String, String> headers,
     required Future<Map<String, String>> Function(bool forceRefresh)
-        authHeaders,
-  }) =>
-      _socket.connect(url, headers: headers, authHeaders: authHeaders);
+    authHeaders,
+  }) => _socket.connect(url, headers: headers, authHeaders: authHeaders);
 
   @override
   Future<void> disconnect({bool clearQueuedPackets = true}) =>
@@ -122,13 +121,12 @@ class NxDocumentAiSocketPort implements DocumentAiSocketPort {
     required int streamIndex,
     required int packetIndex,
     int? meta,
-  }) =>
-      _socket.sendAudioChunk(
-        opus,
-        streamIndex: streamIndex,
-        packetIndex: packetIndex,
-        meta: meta,
-      );
+  }) => _socket.sendAudioChunk(
+    opus,
+    streamIndex: streamIndex,
+    packetIndex: packetIndex,
+    meta: meta,
+  );
 
   @override
   void sendAudioEof({required int streamIndex, int? meta}) =>
@@ -141,7 +139,7 @@ class NxDocumentAiSocketPort implements DocumentAiSocketPort {
 
 class DocumentAiSession {
   DocumentAiSession({DocumentAiSocketPort? socket})
-      : _socket = socket ?? NxDocumentAiSocketPort();
+    : _socket = socket ?? NxDocumentAiSocketPort();
 
   final DocumentAiSocketPort _socket;
   String? _sessionKey;
@@ -184,7 +182,8 @@ class DocumentAiSession {
     );
     if (!connected) {
       throw StateError(
-          'Could not connect to the document assistant AI socket.');
+        'Could not connect to the document assistant AI socket.',
+      );
     }
     _sessionKey = config.key;
   }

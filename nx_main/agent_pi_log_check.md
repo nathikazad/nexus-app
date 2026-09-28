@@ -130,7 +130,7 @@ ssh pi 'docker logs --since "2026-05-23T00:10:00Z" --until "2026-05-23T00:25:00Z
 
 Useful lines:
 
-- `[ws open] ... client_app=nx_time ...`
+- `[ws open] ... client_id=nx_time ...`
 - `[ws close] ...`
 - `order N started`
 - `order N audio received: ...`

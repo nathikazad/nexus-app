@@ -13,7 +13,7 @@ void main() {
         configureWatch: (_) {},
         connectNecklace: (s) => calls.add(s));
     AmbientSessionIdentity identity(String uid) => AmbientSessionIdentity(
-        backend: 'hosted', userId: uid, clientApp: 'nx_main');
+        backend: 'hosted', userId: uid, clientId: 'nx_main');
     coordinator.update(identity('1'), 'personal');
     coordinator.update(identity('1'), 'home');
     coordinator.update(identity('2'), 'other user');
@@ -23,9 +23,7 @@ void main() {
   test('necklace ambient headers exclude domain while app retains it', () {
     expect(AgentRoutes.necklace.ambientHeaders(), {
       'X-Nexus-Session-Mode': 'ambient',
-      'X-Client-App': 'nx_main',
-      'X-Agent-Id': 'personal_assistant',
-      'X-Device-Source': 'necklace'
+      'X-Client-Id': 'necklace',
     });
     expect(AgentRoutes.app.headers(7)['X-Nexus-Domain-Id'], '7');
     expect(() => AgentRoutes.app.ambientHeaders(), throwsStateError);

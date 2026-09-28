@@ -9,26 +9,22 @@ class VoiceSocketSessionConfig {
     required this.socketUrl,
     required this.userId,
     required this.domainId,
-    required this.clientApp,
-    required this.agentId,
-    this.deviceSource,
+    required this.clientId,
     required this.authHeaders,
   });
 
   final String socketUrl;
   final String userId;
   final int domainId;
-  final String clientApp;
-  final String agentId;
-  final String? deviceSource;
+  final String clientId;
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
 
   SessionIdentity get identity => SessionIdentity(
       backend: socketUrl,
       userId: userId,
       domainId: domainId,
-      clientApp: clientApp);
-  String get key => '${identity.key}|$agentId|${deviceSource ?? ""}';
+      clientId: clientId);
+  String get key => identity.key;
 }
 
 class VoiceSocketTurn {
@@ -226,10 +222,7 @@ class VoiceSocketSession implements VoiceSocketSessionPort {
   }
 
   Map<String, String> _headersFor(VoiceSocketSessionConfig config) {
-    return AgentRoute(
-            clientApp: config.clientApp,
-            agentId: config.agentId,
-            source: config.deviceSource)
+    return AgentRoute(clientId: config.clientId)
         .headers(config.domainId);
   }
 }

@@ -67,7 +67,7 @@ class SocketClient implements NecklaceSocketPort {
     if (ambient
         ? metadata.containsKey('x-nexus-domain-id') ||
             metadata['x-agent-id'] != 'personal_assistant' ||
-            metadata['x-device-source'] != 'necklace'
+            metadata['x-client-id'] != 'necklace'
         : domain == null || domain <= 0) {
       await disconnect();
       throw StateError(

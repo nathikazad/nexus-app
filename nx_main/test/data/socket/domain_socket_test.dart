@@ -39,7 +39,7 @@ void main() {
     server.listen((request) async {
       domains.add(request.headers.value('x-nexus-domain-id'));
       agents.add(request.headers.value('x-agent-id'));
-      sources.add(request.headers.value('x-device-source'));
+      sources.add(request.headers.value('x-client-id'));
       final socket = await WebSocketTransformer.upgrade(request);
       sockets.add(socket);
       socket.listen((_) {});
@@ -64,17 +64,14 @@ void main() {
           socketUrl: url,
           userId: '1',
           domainId: domain,
-          clientApp: 'nx_main',
-          agentId: 'nx_main',
+          clientId: 'nx_main',
           authHeaders: (_) async => {}));
     }
     await voice.connect(VoiceSocketSessionConfig(
       socketUrl: url,
       userId: '1',
       domainId: 9,
-      clientApp: 'nx_watch',
-      agentId: 'personal_assistant',
-      deviceSource: 'nx_watch',
+      clientId: 'nx_watch',
       authHeaders: (_) async => {},
     ));
     expect(
@@ -90,6 +87,6 @@ void main() {
       'personal_assistant',
       'personal_assistant'
     ]);
-    expect(sources, [null, null, null, null, 'nx_watch', 'necklace']);
+    expect(sources, [null, null, 'nx_main', 'nx_main', 'nx_watch', 'necklace']);
   });
 }

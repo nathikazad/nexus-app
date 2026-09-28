@@ -217,7 +217,7 @@ class _AgentRunDetail extends ConsumerWidget {
           title: 'Run Summary',
           child: Column(
             children: [
-              _KeyValue('client_app', run.clientApp),
+              _KeyValue('client_id', run.clientId),
               _KeyValue('session_id', run.sessionId),
               _KeyValue('order_id', run.orderId),
               _KeyValue('tool_calls', run.toolCalls.toString()),

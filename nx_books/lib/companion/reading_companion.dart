@@ -171,10 +171,8 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
         socketUrl: url,
         userId: user.userId,
         documentId: identity.id,
-        clientApp: 'nx_books',
-        agentId: identity.modelType == 'EpubBook'
-            ? 'nx_books_epub'
-            : 'nx_books',
+        clientId: 'nx_books',
+        readingMode: identity.modelType == 'EpubBook' ? 'epub' : 'document',
         authHeaders: (refresh) =>
             nexusAuthHeaders(
               user.preset,

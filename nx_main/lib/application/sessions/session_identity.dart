@@ -10,10 +10,10 @@ class SessionIdentity implements SessionKey {
       {required this.backend,
       required this.userId,
       required this.domainId,
-      required this.clientApp}) {
+      required this.clientId}) {
     if (backend.isEmpty ||
         userId.isEmpty ||
-        clientApp.isEmpty ||
+        clientId.isEmpty ||
         domainId <= 0) {
       throw StateError(
           'Backend, user, app and a positive domain are required.');
@@ -22,8 +22,8 @@ class SessionIdentity implements SessionKey {
   final String backend;
   final String userId;
   final int domainId;
-  final String clientApp;
-  String get key => jsonEncode([backend, userId, domainId, clientApp]);
+  final String clientId;
+  String get key => jsonEncode([backend, userId, domainId, clientId]);
   @override
   bool operator ==(Object other) =>
       other is SessionIdentity && other.key == key;
@@ -34,16 +34,16 @@ class SessionIdentity implements SessionKey {
 /// A device relay belongs to an authenticated user, not an app's selected domain.
 class AmbientSessionIdentity implements SessionKey {
   AmbientSessionIdentity(
-      {required this.backend, required this.userId, required this.clientApp}) {
-    if (backend.isEmpty || userId.isEmpty || clientApp.isEmpty) {
+      {required this.backend, required this.userId, required this.clientId}) {
+    if (backend.isEmpty || userId.isEmpty || clientId.isEmpty) {
       throw StateError('Backend, user and app are required.');
     }
   }
   final String backend;
   final String userId;
-  final String clientApp;
+  final String clientId;
   @override
-  String get key => jsonEncode(['ambient', backend, userId, clientApp]);
+  String get key => jsonEncode(['ambient', backend, userId, clientId]);
   @override
   bool operator ==(Object other) =>
       other is AmbientSessionIdentity && other.key == key;
