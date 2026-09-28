@@ -36,7 +36,9 @@ StudyCard? studyCardFromModel(
         : BasicCardContent(front: front, back: back),
     schedules: <StudyCue, CardSchedule>{
       for (final cue in StudyCue.values)
-        cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
+        if (cue != StudyCue.fromAudio ||
+            _jsonMap(schedule['cues']).containsKey(cue.storageKey))
+          cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
@@ -181,21 +183,23 @@ final class _RelatedModel {
   final String name;
 }
 
-Map<String, dynamic> emptyScheduleJson({required bool languageCard}) =>
-    <String, dynamic>{
-      'version': 3,
-      'algorithm': 'fsrs',
-      'cues': <String, Object?>{
-        for (final cue in StudyCue.values)
-          cue.storageKey: _scheduleNodeJson(
-            CardSchedule.initial(
-              enabled:
-                  cue == StudyCue.fromLanguage ||
-                  (languageCard && cue == StudyCue.toLanguage),
-            ),
-          ),
-      },
-    };
+Map<String, dynamic> emptyScheduleJson({
+  required bool languageCard,
+}) => <String, dynamic>{
+  'version': 3,
+  'algorithm': 'fsrs',
+  'cues': <String, Object?>{
+    for (final cue in StudyCue.values)
+      cue.storageKey: _scheduleNodeJson(
+        CardSchedule.initial(
+          enabled:
+              cue == StudyCue.fromLanguage ||
+              (languageCard &&
+                  (cue == StudyCue.toLanguage || cue == StudyCue.fromAudio)),
+        ),
+      ),
+  },
+};
 
 Map<String, dynamic> scheduleJson(StudyCard card) => <String, dynamic>{
   'version': 3,

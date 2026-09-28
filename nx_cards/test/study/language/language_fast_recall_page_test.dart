@@ -28,20 +28,14 @@ void main() {
           child: MaterialApp(
             home: LanguageFastRecallPage(
               title: 'Chinese',
-              prompts: [
-                StudyPrompt(
-                  card: card,
-                  cue: StudyCue.toLanguage,
-                  listening: true,
-                ),
-              ],
+              prompts: [StudyPrompt(card: card, cue: StudyCue.fromAudio)],
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('āśvāsaṃ'), findsNothing);
       expect(find.text('Listen'), findsOneWidget);
+      expect(find.text('relief'), findsNothing);
       final prompt = tester.getRect(
         find.byKey(const ValueKey('fast-prompt-1')),
       );

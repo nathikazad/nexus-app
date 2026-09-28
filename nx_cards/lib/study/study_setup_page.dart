@@ -78,10 +78,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   late StudyMode _mode;
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
   RecallPresentation _recallPresentation = RecallPresentation.standard;
-  bool _listening = false;
   bool get _reverseLanguageRecall =>
       !_isBookStudy && _cue == StudyCue.toLanguage;
-  bool get _allowsWriting => !_reverseLanguageRecall || _listening;
+  bool get _allowsWriting => !_reverseLanguageRecall;
   RecallPresentation get _effectiveRecallPresentation =>
       !_allowsWriting && _recallPresentation == RecallPresentation.write
       ? RecallPresentation.standard
@@ -169,7 +168,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _recallPresentation = recallPresentation;
         }
 
-        _listening = saved['listening'] == true;
         if (order != null) _order = order;
         if (statuses.isNotEmpty) {
           _learningStatuses
@@ -201,7 +199,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'mode': _mode.name,
         'studyPresentation': _studyPresentation.name,
         'recallPresentation': _recallPresentation.name,
-        'listening': _listening,
         'cue': _cue?.name,
         'combinedPrompt': _combinedPrompt,
         'learningStatuses': [
@@ -240,6 +237,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return <StudyPrompt>[
       for (final card in sorted)
         if (!card.suspended &&
+            card.supportsCue(cue) &&
             card.scheduleFor(cue).enabled &&
             _matchesRecallBaseFilters(card))
           StudyPrompt(card: card, cue: cue),
@@ -768,10 +766,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             card: bodies[i],
             cue: chosen[i].cue,
             showEnglishAndTransliteration: _combinedPrompt,
-            listening:
-                _mode == StudyMode.recall &&
-                _listening &&
-                _cue == StudyCue.toLanguage,
           ),
       ];
       _startupStep('queue_hydrated count=${hydrated.length}');
@@ -1037,35 +1031,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     ...[
                       _SetupCard(
                         number: '01',
-                        title: _reverseLanguageRecall
-                            ? 'Prompt'
-                            : 'Recall format',
+                        title: 'Recall format',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (_reverseLanguageRecall) ...[
-                              SegmentedButton<bool>(
-                                showSelectedIcon: false,
-                                segments: const [
-                                  ButtonSegment(
-                                    value: false,
-                                    label: Text('Read'),
-                                  ),
-                                  ButtonSegment(
-                                    value: true,
-                                    label: Text('Listen'),
-                                  ),
-                                ],
-                                selected: {_listening},
-                                onSelectionChanged: (value) {
-                                  setState(() => _listening = value.single);
-                                  _rememberPreferences();
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              const Text('Recall format'),
-                              const SizedBox(height: 8),
-                            ],
                             SegmentedButton<RecallPresentation>(
                               showSelectedIcon: false,
                               style: const ButtonStyle(

@@ -73,6 +73,18 @@ void main() {
     expect(to['answer'], 'a long sentence');
     expect(NativeDrawingSession.practiceCard(card)['audio'], isTrue);
   });
+  test(
+    'native audio recall hides hints and reveals target script above English',
+    () {
+      final payload = NativeDrawingSession.recallCard(
+        StudyPrompt(card: card, cue: StudyCue.fromAudio),
+      );
+      expect(payload['prompt'], 'Listen');
+      expect(payload['listening'], isTrue);
+      expect(payload['answer'], '很长的句子');
+      expect(payload['subtitle'], 'a long sentence');
+    },
+  );
   test('Android opens a native session with its complete queue', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     final calls = <MethodCall>[];

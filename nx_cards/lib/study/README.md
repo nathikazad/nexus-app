@@ -13,9 +13,10 @@ study.dart / study_queue.dart
 Study delegates review timing to `scheduling/` and voice delivery to `tutor/`.
 
 Language direction is chosen on `LanguagePage` and shared by its lists and
-sessions. Only English → language and language → English are selectable; both
-include pronunciation. Study is ungraded. Recall writes one attempt and updates
-FSRS for that direction.
+sessions. English text → target language, target-language audio → target language,
+and target script → English are selectable. Each has independent history,
+strength, and FSRS state. Study is ungraded. Recall writes one attempt for the
+selected direction regardless of presentation.
 
 `learning_stage.dart` derives Practice/Weak/Strong from activation and the
 account's recent-answer window (default 10, threshold 80%). Future means inactive.
@@ -31,8 +32,18 @@ Settings are stored in
 saving requires connectivity. Server migration and verification are documented
 in `servers/nexus/apps/nx_cards/maintenance/learning-workflow.md`.
 
-Reverse-direction recall offers Written or Listening presentation. Listening
-shows a neutral Listen label and plays target-language audio without a transliteration cue; both ask for the source
-language meaning and use the same `StudyCue.toLanguage` schedule/history.
-The presentation preference is local setup state, never a database direction.
-Standard and writing modes autoplay the prompt; Fast uses per-row playback.
+English and audio recall offer Standard, Fast and Write. Target script → English
+offers Standard and Fast. Standard/Fast imply a spoken response; there is no
+separate response selector or Read/Listen toggle. Writing is optional.
+
+Audio uses `StudyCue.fromAudio` (`from_audio`), shows only “Listen” before reveal,
+and excludes cards without audio. Standard and Write autoplay; Fast uses per-row
+playback. Revealed cards put target script above English. Existing `to_language`
+history stays unchanged; historical listening cannot be distinguished from read
+reviews. Missing audio schedules start fresh; explicit disabled schedules remain
+disabled. No SQLite schema bump is needed; cue maps are JSON.
+
+Deploy the server validator update in
+`servers/nexus/apps/nx_cards/maintenance/three_recall_types.sql` before updated
+clients write. Upgrade other clients editing the same cards, since legacy clients
+can discard unrecognized audio entries when replacing whole cue maps.

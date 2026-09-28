@@ -5,14 +5,15 @@ import 'package:nx_cards/browser/data/models/study_card.dart';
 enum StudyCue {
   fromLanguage('from_language'),
   toLanguage('to_language'),
-  transliteration('transliteration');
+  transliteration('transliteration'),
+  fromAudio('from_audio');
 
   const StudyCue(this.storageKey);
 
   final String storageKey;
 
   /// Transliteration remains decodable for archived history only.
-  static const activeDirections = [fromLanguage, toLanguage];
+  static const activeDirections = [fromLanguage, fromAudio, toLanguage];
 }
 
 class StudyPrompt {
@@ -20,19 +21,15 @@ class StudyPrompt {
     required this.card,
     required this.cue,
     this.showEnglishAndTransliteration = false,
-    this.listening = false,
   });
 
   final StudyCard card;
   final StudyCue cue;
   final bool showEnglishAndTransliteration;
 
-  /// Presentation only: scheduling and history continue to use [cue].
-  final bool listening;
-  bool get isListening =>
-      listening &&
-      cue == StudyCue.toLanguage &&
-      card.content is LanguageCardContent;
+  bool get isListening => cue == StudyCue.fromAudio;
+  bool get recallsTarget =>
+      cue == StudyCue.fromLanguage || cue == StudyCue.fromAudio;
 
   int get cardId => card.id;
   String get prompt => switch (cue) {
@@ -40,10 +37,8 @@ class StudyPrompt {
       showEnglishAndTransliteration && card.content is LanguageCardContent
           ? '${card.front}\n${(card.content as LanguageCardContent).transliteration}'
           : card.front,
-    StudyCue.toLanguage =>
-      isListening
-          ? 'Listen'
-          : card.back,
+    StudyCue.toLanguage => card.back,
+    StudyCue.fromAudio => 'Listen',
     StudyCue.transliteration => switch (card.content) {
       LanguageCardContent(:final transliteration) => transliteration,
       _ => card.front,
@@ -58,6 +53,5 @@ class StudyPrompt {
     card: value,
     cue: cue,
     showEnglishAndTransliteration: showEnglishAndTransliteration,
-    listening: listening,
   );
 }

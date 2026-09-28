@@ -48,6 +48,7 @@ bool availableForRecall(
 }) {
   if (card.suspended ||
       !card.active ||
+      !card.supportsCue(cue) ||
       !card.scheduleFor(cue).enabled ||
       !StudyCue.activeDirections.contains(cue)) {
     return false;

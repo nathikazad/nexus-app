@@ -165,11 +165,10 @@ class NativeDrawingSession {
       ...practiceCard(prompt.card, characters: characters, derived: derived),
       'prompt': prompt.prompt,
       'listening': prompt.isListening,
-      'answer': prompt.cue == StudyCue.fromLanguage
-          ? content.originalScript
-          : content.english,
-      'subtitle':
-          '${content.transliteration} · ${prompt.cue == StudyCue.fromLanguage ? content.english : content.originalScript}',
+      'answer': prompt.recallsTarget ? content.originalScript : content.english,
+      'subtitle': prompt.recallsTarget
+          ? content.english
+          : content.originalScript,
       'audio': content.audioUrl?.isNotEmpty == true,
     };
   }

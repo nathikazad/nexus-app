@@ -3,48 +3,41 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/card_scheduler.dart';
 
 void main() {
-  test(
-    'Written and Listening update the same reverse history and schedule',
-    () {
-      final card = StudyCard(
-        id: 7,
-        reviewHistory: const {},
-        content: const LanguageCardContent(
-          english: 'student',
-          originalScript: '学生',
-          transliteration: 'xuésheng',
-        ),
-        schedules: const {
-          StudyCue.toLanguage: CardSchedule.initial(enabled: true),
-        },
-        suspended: false,
-      );
-      final written = StudyPrompt(card: card, cue: StudyCue.toLanguage);
-      final listening = StudyPrompt(
-        card: card,
-        cue: StudyCue.toLanguage,
-        listening: true,
-      );
-      expect(written.prompt, '学生');
-      expect(listening.withCard(card).prompt, 'Listen');
-      expect(listening.cue, written.cue);
-      final scheduler = FsrsCardScheduler(reviewId: () => 'same-review');
-      final now = DateTime.utc(2026, 9, 27);
-      final a = scheduler.preview(written, now)[CardRating.good]!.card;
-      final b = scheduler.preview(listening, now)[CardRating.good]!.card;
-      expect(
-        a.scheduleFor(StudyCue.toLanguage).dueAt,
-        b.scheduleFor(StudyCue.toLanguage).dueAt,
-      );
-      expect(
-        a.scheduleFor(StudyCue.toLanguage).stability,
-        b.scheduleFor(StudyCue.toLanguage).stability,
-      );
-      expect(b.reviewHistoryFor(StudyCue.toLanguage).single.id, 'same-review');
-      expect(b.reviewHistoryFor(StudyCue.fromLanguage), isEmpty);
-      expect(b.reviewHistoryFor(StudyCue.transliteration), isEmpty);
-    },
-  );
+  test('audio grades have independent history, strength and schedule', () {
+    final card = StudyCard(
+      id: 7,
+      reviewHistory: const {},
+      suspended: false,
+      learningStatus: LearningStatus.recall,
+      content: const LanguageCardContent(
+        english: 'student',
+        originalScript: '学生',
+        transliteration: 'xuésheng',
+        audioUrl: '/student.mp3',
+      ),
+      schedules: const {
+        StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+      },
+    );
+    final scheduler = FsrsCardScheduler(reviewId: () => 'audio-review');
+    final prompt = StudyPrompt(card: card, cue: StudyCue.fromAudio);
+    expect(prompt.withCard(card).prompt, 'Listen');
+    expect(prompt.schedule.enabled, isTrue);
+    final graded = scheduler
+        .preview(prompt, DateTime.utc(2026, 9, 28))[CardRating.good]!
+        .card;
+    expect(
+      graded.reviewHistoryFor(StudyCue.fromAudio).single.id,
+      'audio-review',
+    );
+    expect(graded.scheduleFor(StudyCue.fromAudio).reviewCount, 1);
+    expect(
+      graded.scheduleFor(StudyCue.toLanguage),
+      same(card.scheduleFor(StudyCue.toLanguage)),
+    );
+    expect(graded.reviewHistoryFor(StudyCue.toLanguage), isEmpty);
+    expect(graded.reviewHistoryFor(StudyCue.fromLanguage), isEmpty);
+  });
 
   test('FSRS preview returns a persistable outcome for every rating', () {
     final now = DateTime.utc(2026, 8, 3, 12);

@@ -21,6 +21,34 @@ void main() {
     },
   );
 
+  testWidgets('audio is the third independent direction', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: LanguageDirectionButton(language: 'Chinese')),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Recall direction: English → Chinese'));
+    await tester.pumpAndSettle();
+    expect(find.text('English → Chinese'), findsOneWidget);
+    expect(find.text('Chinese → English'), findsOneWidget);
+    await tester.tap(find.text('Chinese audio → Chinese'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byTooltip('Recall direction: Chinese audio → Chinese'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.volume_up_outlined), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(LanguageDirectionButton)),
+    );
+    expect(
+      container.read(languageDirectionProvider('Chinese')),
+      StudyCue.fromAudio,
+    );
+  });
+
   testWidgets('one direction controls category totals and the opened list', (
     tester,
   ) async {
