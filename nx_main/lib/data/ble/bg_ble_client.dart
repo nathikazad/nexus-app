@@ -16,6 +16,66 @@ import 'package:nexus_voice_assistant/domain/ble/ble_constants.dart';
 
 class BleClient {
   BluetoothDevice? _device;
+  BluetoothCharacteristic? _identityCharacteristic;
+  Future<void> _identityTail = Future.value();
+  int _identityRequestId = 0;
+
+  Future<Uint8List> exchangeIdentity(Uint8List request) {
+    final result = _identityTail.then((_) => _exchangeIdentity(request));
+    _identityTail = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+
+  Future<Uint8List> _exchangeIdentity(Uint8List request) async {
+    final characteristic = _identityCharacteristic;
+    final peripheral = _device;
+    if (!isConnected ||
+        characteristic == null ||
+        peripheral == null ||
+        !_matchesPreferred(peripheral)) {
+      throw StateError('Connect a Necklace with identity firmware first');
+    }
+    final id = ++_identityRequestId;
+    void check() {
+      if (!isConnected ||
+          !_matchesPreferred(peripheral) ||
+          !identical(_device, peripheral) ||
+          !identical(_identityCharacteristic, characteristic)) {
+        throw StateError('Necklace disconnected during authentication');
+      }
+    }
+
+    // Eleven payload bytes also work at the minimum ATT MTU of 23.
+    for (var offset = 0; offset < request.length; offset += 11) {
+      check();
+      final end = (offset + 11 < request.length) ? offset + 11 : request.length;
+      final packet = Uint8List(9 + end - offset);
+      final fields = ByteData.sublistView(packet);
+      packet[0] = 1;
+      fields.setUint32(1, id, Endian.little);
+      fields.setUint16(5, offset, Endian.little);
+      fields.setUint16(7, request.length, Endian.little);
+      packet.setRange(9, packet.length, request.sublist(offset, end));
+      await characteristic.write(packet, withoutResponse: false, timeout: 10);
+    }
+    final deadline = DateTime.now().add(const Duration(seconds: 15));
+    while (DateTime.now().isBefore(deadline)) {
+      check();
+      final response =
+          Uint8List.fromList(await characteristic.read(timeout: 10));
+      check();
+      if (response.length >= 6 &&
+          response[0] == 1 &&
+          ByteData.sublistView(response).getUint32(1, Endian.little) == id) {
+        if (response[5] == 0) return response.sublist(6);
+        if (response[5] != 1)
+          throw StateError('Necklace rejected identity request');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    throw TimeoutException('Necklace identity request timed out');
+  }
+
   BluetoothCharacteristic? _audioTxCharacteristic;
   BluetoothCharacteristic? _audioRxCharacteristic;
   BluetoothCharacteristic? _batteryCharacteristic;
@@ -237,6 +297,7 @@ class BleClient {
     _deviceNameCharacteristic = null;
     _fileTxCharacteristic = null;
     _fileRxCharacteristic = null;
+    _identityCharacteristic = null;
     _fileCtrlCharacteristic = null;
     _cameraCmdCharacteristic = null;
     _cameraStatusCharacteristic = null;
@@ -347,7 +408,10 @@ class BleClient {
 
       for (BluetoothCharacteristic char in targetService.characteristics) {
         final uuid = char.uuid.toString().toLowerCase();
-        if (uuid == BleConstants.audioTxCharacteristicUuid.toLowerCase()) {
+        if (uuid == 'beb54841-36e1-4688-b7f5-ea07361b26ae') {
+          _identityCharacteristic = char;
+        } else if (uuid ==
+            BleConstants.audioTxCharacteristicUuid.toLowerCase()) {
           _audioTxCharacteristic = char;
         } else if (uuid ==
             BleConstants.audioRxCharacteristicUuid.toLowerCase()) {

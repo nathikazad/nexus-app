@@ -21,7 +21,7 @@ class HardwarePage extends ConsumerStatefulWidget {
 
 class _HardwarePageState extends ConsumerState<HardwarePage> {
   Widget _wifiDevicesButton() => IconButton(
-        tooltip: 'Wi-Fi devices',
+        tooltip: 'Devices',
         icon: const Icon(Icons.router_outlined),
         onPressed: () => Navigator.of(context)
             .push<void>(MaterialPageRoute(builder: (_) => const DevicesPage())),

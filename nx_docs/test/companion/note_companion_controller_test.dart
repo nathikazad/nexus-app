@@ -11,6 +11,9 @@ import 'package:nx_voice/nx_voice.dart';
 import 'package:nx_voice/stored_audio.dart';
 
 class _FakeSocket implements NoteAiSocketPort {
+  @override
+  void sendContext(String input, String context) {}
+
   bool connected = false;
   void Function(NxVoiceTextChunk packet)? textChunk;
   void Function(NxVoiceTextEof packet)? textEof;

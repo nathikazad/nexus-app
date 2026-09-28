@@ -1,51 +1,36 @@
 import 'dart:typed_data';
-import 'dart:convert';
 
 import 'packet_codec.dart';
 import 'socket_client.dart';
+
+class DocumentConversation {
+  const DocumentConversation({required this.transcriptId, this.context = ''});
+  final int transcriptId;
+  final String context;
+}
 
 class DocumentAiSessionConfig {
   const DocumentAiSessionConfig({
     required this.socketUrl,
     required this.userId,
-    required this.domainId,
-    required this.documentId,
+    this.domainId,
+    this.transcriptId,
     required this.authHeaders,
-    this.clientApp = 'nx_notes',
-    this.agentId = 'nx_notes',
-    this.selection = '',
+    this.clientId = 'nx_notes',
+    this.loadConversation,
   });
-
-  final String clientApp;
-  final String agentId;
-  final String selection;
   final String socketUrl;
   final String userId;
-  final int domainId;
-  final int documentId;
+  final int? domainId;
+  final int? transcriptId;
+  final String clientId;
   final Future<Map<String, String>> Function(bool forceRefresh) authHeaders;
-
-  String get key =>
-      '$socketUrl|$userId|$domainId|$documentId|$agentId|$selection';
-
-  DocumentAiSessionConfig withSelection(String text) => DocumentAiSessionConfig(
-        socketUrl: socketUrl,
-        userId: userId,
-        domainId: domainId,
-        documentId: documentId,
-        authHeaders: authHeaders,
-        clientApp: clientApp,
-        agentId: agentId,
-        selection: text.length > 6000 ? text.substring(0, 6000) : text,
-      );
-
-  Map<String, String> get headers => <String, String>{
-        'X-Nexus-Domain-Id': '$domainId',
-        'X-Client-App': clientApp,
-        'X-Agent-Id': agentId,
-        'X-Document-Id': documentId.toString(),
-        if (selection.isNotEmpty)
-          'X-Reading-Selection': base64Encode(utf8.encode(selection)),
+  final Future<DocumentConversation> Function()? loadConversation;
+  String get key => '$socketUrl|$userId|$domainId|$clientId|$transcriptId';
+  Map<String, String> get headers => {
+        'X-Client-Id': clientId,
+        if (domainId != null) 'X-Domain-Id': '$domainId',
+        if (transcriptId != null) 'X-Transcript-Id': '$transcriptId',
       };
 }
 
@@ -73,6 +58,7 @@ abstract interface class DocumentAiSocketPort {
   });
   void sendAudioEof({required int streamIndex, int? meta});
   void sendTextTurn(String text, {required int streamIndex});
+  void sendContext(String input, String context);
 }
 
 class NxDocumentAiSocketPort implements DocumentAiSocketPort {
@@ -135,6 +121,10 @@ class NxDocumentAiSocketPort implements DocumentAiSocketPort {
       _socket.sendAudioEof(streamIndex: streamIndex, meta: meta);
 
   @override
+  void sendContext(String input, String context) => _socket
+      .sendEvent({'type': 'input_context', 'input': input, 'context': context});
+
+  @override
   void sendTextTurn(String text, {required int streamIndex}) =>
       _socket.sendTextTurn(text, streamIndex: streamIndex);
 }
@@ -145,6 +135,8 @@ class DocumentAiSession {
 
   final DocumentAiSocketPort _socket;
   String? _sessionKey;
+  String _referenceContext = '';
+  int _generation = 0;
   int _streamIndex = 0;
   int _packetIndex = 0;
   NxVoiceAudioTurn? _activeAudioTurn;
@@ -166,38 +158,60 @@ class DocumentAiSession {
   set onError(void Function(Object error)? value) => _socket.onError = value;
 
   Future<void> connect(DocumentAiSessionConfig config) async {
-    if (config.documentId <= 0) {
-      throw ArgumentError.value(
-        config.documentId,
-        'documentId',
-        'must be positive',
-      );
+    final generation = ++_generation;
+    if ((config.domainId != null && config.domainId! <= 0) ||
+        (config.transcriptId != null && config.transcriptId! <= 0)) {
+      throw ArgumentError('Domain and transcript IDs must be positive');
     }
-    if (_socket.isConnected && _sessionKey == config.key) return;
-    if (_sessionKey != null && _sessionKey != config.key) {
-      await _socket.disconnect(clearQueuedPackets: true);
-    }
+    final conversation = await config.loadConversation?.call();
+    if (generation != _generation) throw StateError('Session closed');
+    final transcriptId = conversation?.transcriptId ?? config.transcriptId;
+    if (transcriptId != null && transcriptId <= 0)
+      throw StateError('Invalid transcript');
+    _referenceContext = conversation?.context ?? '';
+    final key = '${config.key}|$transcriptId';
+    if (_socket.isConnected && _sessionKey == key) return;
+    if (_sessionKey != null) await _socket.disconnect(clearQueuedPackets: true);
+    if (generation != _generation) throw StateError('Session closed');
     final connected = await _socket.connect(
       config.socketUrl,
-      headers: config.headers,
+      headers: {
+        ...config.headers,
+        if (transcriptId != null) 'X-Transcript-Id': '$transcriptId'
+      },
       authHeaders: config.authHeaders,
     );
     if (!connected) {
       throw StateError(
-          'Could not connect to the document assistant AI socket.');
+        'Could not connect to the document assistant AI socket.',
+      );
     }
-    _sessionKey = config.key;
+    if (generation != _generation) {
+      await _socket.disconnect();
+      throw StateError('Session closed');
+    }
+    _sessionKey = key;
   }
 
-  void sendTextTurn(String text) {
+  void sendTextTurn(String text, {String context = ''}) {
     final normalized = text.trim();
     if (normalized.isEmpty) return;
     _streamIndex++;
     _activeAudioTurn = null;
+    _socket.sendContext('text', _turnContext(context));
     _socket.sendTextTurn(normalized, streamIndex: _streamIndex);
   }
 
-  void beginAudioTurn() {
+  String _turnContext(String context) {
+    final text =
+        [context, _referenceContext].where((s) => s.isNotEmpty).join('\n\n');
+    return text.runes.length <= 15000
+        ? text
+        : '${String.fromCharCodes(text.runes.take(15000))}\n[Context truncated]';
+  }
+
+  void beginAudioTurn({String context = ''}) {
+    _socket.sendContext('audio', _turnContext(context));
     _streamIndex++;
     _packetIndex = 0;
     _activeAudioTurn = NxVoiceAudioTurn.create(streamIndex: _streamIndex);
@@ -228,6 +242,8 @@ class DocumentAiSession {
   }
 
   Future<void> disconnect() async {
+    _generation++;
+    _referenceContext = '';
     _activeAudioTurn = null;
     _sessionKey = null;
     await _socket.disconnect(clearQueuedPackets: true);

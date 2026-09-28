@@ -5,6 +5,9 @@ import 'package:nx_docs/companion/note_ai_session.dart';
 import 'package:nx_voice/nx_voice.dart';
 
 class _FakeSocket implements NoteAiSocketPort {
+  @override
+  void sendContext(String input, String context) {}
+
   bool connected = false;
   int disconnects = 0;
   String? url;
@@ -87,16 +90,15 @@ void main() {
         domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
-        documentId: 4209,
+        transcriptId: 4209,
         authHeaders: bearer,
       ),
     );
 
     expect(socket.headers, <String, String>{
-      'X-Nexus-Domain-Id': '1',
-      'X-Client-App': 'nx_notes',
-      'X-Agent-Id': 'nx_notes',
-      'X-Document-Id': '4209',
+      'X-Domain-Id': '1',
+      'X-Client-Id': 'nx_notes',
+      'X-Transcript-Id': '4209',
     });
     expect(await socket.authHeaders!(true), {
       'authorization': 'Bearer refreshed',
@@ -112,7 +114,7 @@ void main() {
         domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
-        documentId: 1,
+        transcriptId: 1,
         authHeaders: bearer,
       ),
     );
@@ -121,13 +123,13 @@ void main() {
         domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
-        documentId: 2,
+        transcriptId: 2,
         authHeaders: bearer,
       ),
     );
 
     expect(socket.disconnects, 1);
-    expect(socket.headers?['X-Document-Id'], '2');
+    expect(socket.headers?['X-Transcript-Id'], '2');
   });
 
   test('switching accounts reconnects with the new token provider', () async {
@@ -139,7 +141,7 @@ void main() {
         domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
-        documentId: 1,
+        transcriptId: 1,
         authHeaders: (_) async => {'authorization': 'Bearer account-a'},
       ),
     );
@@ -148,7 +150,7 @@ void main() {
         domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '8',
-        documentId: 1,
+        transcriptId: 1,
         authHeaders: (forceRefresh) async => {
           'authorization':
               'Bearer ${forceRefresh ? 'account-b-new' : 'account-b'}',
@@ -173,7 +175,7 @@ void main() {
         domainId: 1,
         socketUrl: 'wss://socket.example',
         userId: '7',
-        documentId: 42,
+        transcriptId: 42,
         authHeaders: bearer,
       ),
     );

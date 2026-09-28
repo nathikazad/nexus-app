@@ -34,7 +34,7 @@ class AudioPipelineTurn {
     required this.origins,
     required this.agentId,
     required this.agentName,
-    required this.clientApp,
+    required this.clientId,
     required this.stages,
     required this.status,
     required this.transcript,
@@ -55,7 +55,7 @@ class AudioPipelineTurn {
   final List<String> origins;
   final String agentId;
   final String agentName;
-  final String clientApp;
+  final String clientId;
   final List<PipelineStage> stages;
   final String status;
   final String transcript;
@@ -92,7 +92,7 @@ class AgentPipelineRun {
     required this.status,
     required this.agentId,
     required this.agentName,
-    required this.clientApp,
+    required this.clientId,
     required this.sessionId,
     required this.orderId,
     required this.toolCalls,
@@ -113,7 +113,7 @@ class AgentPipelineRun {
   final String status;
   final String agentId;
   final String agentName;
-  final String clientApp;
+  final String clientId;
   final String sessionId;
   final String orderId;
   final int toolCalls;

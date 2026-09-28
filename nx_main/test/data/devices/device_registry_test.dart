@@ -13,7 +13,7 @@ void main() {
         client: MockClient((request) async {
           expect(request.url.path, '/v1/devices');
           expect(request.headers['authorization'], 'Bearer user-access');
-          expect(request.headers.containsKey('x-nexus-domain-id'), false);
+          expect(request.headers.containsKey('x-domain-id'), false);
           expect(jsonDecode(request.body), {'device_type': 'sleepbot_radar'});
           return http.Response(
               '{"device_id":"id","pairing_secret":"secret"}', 200);

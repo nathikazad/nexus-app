@@ -159,7 +159,10 @@ void main() {
               jsonEncode({
                 'status': 'applied',
                 'filename': 'a.jpg',
-                'entity': {'event_id': '1', 'event_time': '2026-09-16T10:15:00'},
+                'entity': {
+                  'event_id': '1',
+                  'event_time': '2026-09-16T10:15:00',
+                },
               }),
             ),
           ),

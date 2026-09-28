@@ -21,7 +21,7 @@ void main() {
         domainId: 1,
         socketUrl: 'ws://test',
         userId: '1',
-        documentId: 7,
+        transcriptId: 7,
         authHeaders: (_) async => {},
       ),
       session: session,
@@ -189,10 +189,8 @@ void main() {
 
   test('text uses selected context and merges streaming/final transcripts', () async {
     expect(await controller.send('Explain', selection: 'A passage'), true);
-    expect(
-      session.sent.single,
-      'Selected passage (reference text):\n"A passage"\n\nQuestion: Explain',
-    );
+    expect(session.sent.single, 'Explain');
+    expect(session.contexts.single, 'A passage');
     expect(controller.messages.single.text, 'Explain');
     controller.receive(
       '{"type":"transcript-delta","role":"assistant","text":"Hello","turnkey":"a"}',
@@ -460,6 +458,7 @@ void main() {
 class _Session extends DocumentAiSession {
   Completer<void>? gate;
   final sent = <String>[];
+  final contexts = <String>[];
   var audioStarts = 0;
   var audioEnds = 0;
   @override
@@ -468,12 +467,13 @@ class _Session extends DocumentAiSession {
   }
 
   @override
-  void sendTextTurn(String text) {
+  void sendTextTurn(String text, {String context = ''}) {
     sent.add(text);
+    contexts.add(context);
   }
 
   @override
-  void beginAudioTurn() {
+  void beginAudioTurn({String context = ''}) {
     audioStarts++;
   }
 

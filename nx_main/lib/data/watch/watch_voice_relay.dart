@@ -139,9 +139,7 @@ class WatchVoiceRelay {
           socketUrl: socketUrl,
           userId: userId,
           domainId: _domainId!,
-          clientApp: AgentRoutes.watch.clientApp,
-          agentId: AgentRoutes.watch.agentId,
-          deviceSource: AgentRoutes.watch.source,
+          clientId: AgentRoutes.watch.clientId,
           authHeaders: _authHeaders!,
         ),
       );

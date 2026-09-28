@@ -104,7 +104,10 @@ void main() {
       '/nx_docs/assets/images/file?user_id=7&document_id=4209&name=abc.png',
     );
     expect(seen.method, 'POST');
-    expect(seen.url.toString(), 'http://100.108.43.37:8001/nx_docs/assets/images');
+    expect(
+      seen.url.toString(),
+      'http://100.108.43.37:8001/nx_docs/assets/images',
+    );
     expect(seen.headers['X-User-Id'], isNull);
     final multipartBody = latin1.decode(seen.bodyBytes);
     expect(multipartBody, contains('name="document_id"'));

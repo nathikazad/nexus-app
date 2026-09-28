@@ -62,8 +62,8 @@ class SocketClient implements NecklaceSocketPort {
       for (final entry in (headers ?? <String, String>{}).entries)
         entry.key.toLowerCase(): entry.value
     };
-    final domain = int.tryParse(metadata['x-nexus-domain-id'] ?? '');
-    if (metadata.containsKey('x-nexus-domain-id') &&
+    final domain = int.tryParse(metadata['x-domain-id'] ?? '');
+    if (metadata.containsKey('x-domain-id') &&
         (domain == null || domain <= 0)) {
       await disconnect();
       throw StateError('Domain ID must be positive when supplied.');

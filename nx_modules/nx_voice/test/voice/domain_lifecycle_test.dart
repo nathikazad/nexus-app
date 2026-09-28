@@ -7,8 +7,7 @@ void main() {
     final credentials = Completer<Map<String, String>>();
     final socket = NxVoiceSocketClient();
     final pending = socket.connect('ws://127.0.0.1:1',
-        headers: {'X-Nexus-Domain-Id': '2'},
-        authHeaders: (_) => credentials.future);
+        headers: {'X-Domain-Id': '2'}, authHeaders: (_) => credentials.future);
     await socket.disconnect();
     credentials.complete({'authorization': 'Bearer old-session'});
     expect(await pending, isFalse);
@@ -24,15 +23,15 @@ void main() {
         socketUrl: 'ws://localhost',
         userId: '7',
         domainId: 1,
-        documentId: 12,
+        transcriptId: 12,
         authHeaders: auth);
     final shared = DocumentAiSessionConfig(
         socketUrl: 'ws://localhost',
         userId: '7',
         domainId: 2,
-        documentId: 12,
+        transcriptId: 12,
         authHeaders: auth);
     expect(personal.key, isNot(shared.key));
-    expect(shared.withSelection('A passage').headers['X-Nexus-Domain-Id'], '2');
+    expect(shared.headers['X-Domain-Id'], '2');
   });
 }

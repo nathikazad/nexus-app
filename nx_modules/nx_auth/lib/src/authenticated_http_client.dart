@@ -52,7 +52,7 @@ class NexusAuthenticatedClient extends http.BaseClient {
     copy.headers.remove('authorization');
     copy.headers.addAll(await _authHeaders(forceRefresh));
     if (_closed) throw StateError('Domain session closed');
-    copy.headers['x-nexus-domain-id'] = '$domainId';
+    copy.headers['x-domain-id'] = '$domainId';
     return _inner.send(copy);
   }
 

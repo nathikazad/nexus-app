@@ -336,10 +336,7 @@ void main() {
     expect(find.text('Future  1'), findsOneWidget);
     await tester.tap(find.text('Strong  1'));
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey<String>('word-state-weak')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey<String>('word-state-weak')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

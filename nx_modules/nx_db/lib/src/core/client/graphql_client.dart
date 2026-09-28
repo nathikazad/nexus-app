@@ -197,7 +197,7 @@ GraphQLClient createClient(
   final usesOidc = preset?.requiresOidc ?? false;
   final defaultHeaders = <String, String>{
     if (!usesOidc) ...buildHttpLinkDefaultHeaders(ep, userId),
-    'x-nexus-domain-id': '$domainId',
+    'x-domain-id': '$domainId',
   };
 
   final httpLink = HttpLink(ep, defaultHeaders: defaultHeaders);
@@ -214,9 +214,9 @@ GraphQLClient createClient(
       initialPayload: usesOidc
           ? () async => {
               'authorization': 'Bearer ${await nexusOidcService.accessToken()}',
-              'x-nexus-domain-id': '$domainId',
+              'x-domain-id': '$domainId',
             }
-          : {'x-user-id': userId, 'x-nexus-domain-id': '$domainId'},
+          : {'x-user-id': userId, 'x-domain-id': '$domainId'},
       headers: defaultHeaders,
     ),
   );

@@ -408,8 +408,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
           socketUrl: socketUrl,
           userId: userId,
           domainId: user.requiredDomainId,
-          clientApp: AgentRoutes.app.clientApp,
-          agentId: AgentRoutes.app.agentId,
+          clientId: AgentRoutes.app.clientId,
           authHeaders: (forceRefresh) => nexusAuthHeaders(
             user.preset,
             userId,
@@ -482,8 +481,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         socketUrl: socketUrl,
         userId: userId,
         domainId: user.requiredDomainId,
-        clientApp: AgentRoutes.app.clientApp,
-        agentId: AgentRoutes.app.agentId,
+        clientId: AgentRoutes.app.clientId,
         authHeaders: (forceRefresh) => nexusAuthHeaders(
           user.preset,
           userId,
@@ -689,7 +687,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
         category: category,
         message: message,
         payload: {
-          'client_app': 'nx_main',
+          'client_id': 'nx_main',
           'agent_id': 'nx_main',
           'agent_name': 'Nx Main Assistant',
           ...payload,

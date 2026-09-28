@@ -44,7 +44,7 @@ final nexusRequestHeadersProvider = FutureProvider<Map<String, String>>((ref) {
   return nexusAuthHeaders(user.preset, user.userId).then(
     (headers) => {
       ...headers,
-      if (user.domainId != null) 'x-nexus-domain-id': '${user.domainId}',
+      if (user.domainId != null) 'x-domain-id': '${user.domainId}',
     },
   );
 }, name: 'nexusRequestHeadersProvider');

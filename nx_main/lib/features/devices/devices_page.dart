@@ -1,8 +1,14 @@
+import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 import '../../data/devices/device_registry.dart';
+import '../../data/devices/necklace_identity.dart';
+import '../../data/devices/necklace_enrollment.dart';
+import '../../data/hardware/paired_device_storage.dart';
+import '../../data/providers.dart';
+import '../hardware/device_selection_page.dart';
 
 final _registryProvider = Provider.autoDispose<DeviceRegistry?>((ref) {
   final user = ref.watch(authProvider).value;
@@ -24,21 +30,115 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
   bool _busy = false;
   Map<String, dynamic>? _pairing;
   String? _error;
+  String? _progress;
+  void _stage(String text) {
+    if (mounted) setState(() => _progress = text);
+  }
+
   Future<void> _run(Future<void> Function(DeviceRegistry) action) async {
     final registry = ref.read(_registryProvider);
     if (registry == null || _busy) return;
     setState(() {
       _busy = true;
       _error = null;
+      _progress = null;
     });
     try {
       await action(registry);
       ref.invalidate(_devicesProvider);
-    } catch (_) {
-      if (mounted)
-        setState(() => _error = 'Could not update devices. Please retry.');
+    } catch (error) {
+      if (mounted && ref.read(_registryProvider) == registry)
+        setState(() => _error = error is StateError
+            ? error.message.toString()
+            : 'Could not update devices. Please retry.');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted)
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+    }
+  }
+
+  Future<void> _addNecklace(DeviceRegistry registry,
+      {String? pendingId}) async {
+    final service = ref.read(bleBackgroundServiceProvider);
+    service.setDevicePairing(true);
+    try {
+      await _pairNecklace(registry, pendingId: pendingId);
+    } finally {
+      service.setDevicePairing(false);
+    }
+  }
+
+  Future<void> _pairNecklace(DeviceRegistry registry,
+      {String? pendingId}) async {
+    _stage('Choose your Necklace');
+    final selected = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const DeviceSelectionPage()));
+    if (selected != true || !mounted || ref.read(_registryProvider) != registry)
+      return;
+    final service = ref.read(bleBackgroundServiceProvider);
+    final remote = await PairedDeviceStorage.getPairedRemoteId();
+    if (remote == null) throw StateError('Select a Necklace first');
+    _stage('Connecting over Bluetooth…');
+    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    while (service.lastKnownBleStatus.name != 'connected' &&
+        DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (!mounted || ref.read(_registryProvider) != registry) return;
+    }
+    Future<Uint8List> exchange(Uint8List request) {
+      if (!mounted || ref.read(_registryProvider) != registry)
+        throw StateError('Account changed');
+      return service.exchangeIdentity(request, expectedRemoteId: remote);
+    }
+
+    final identity = NecklaceIdentity(exchange);
+    final existing = await identity.inspect();
+    if (!mounted || ref.read(_registryProvider) != registry) return;
+    Map<String, dynamic>? setup;
+    if (existing == null) {
+      setup = pendingId == null
+          ? await registry.pair('necklace')
+          : await registry.renewPairing(pendingId);
+    } else {
+      final rows = await registry.list();
+      final matches = rows
+          .where((r) => r['id'] == existing && r['device_type'] == 'necklace')
+          .toList();
+      if (matches.isEmpty || matches.single['status'] == 'revoked') {
+        throw StateError(
+            'This Necklace belongs to a different account or has been revoked.');
+      }
+      if (matches.single['status'] == 'pending')
+        setup = await registry.renewPairing(existing);
+    }
+    if (!mounted || ref.read(_registryProvider) != registry) return;
+    _stage('Linking Necklace to your account…');
+    if (setup != null) await identity.provision(setup);
+    final id = existing ?? setup!['device_id'] as String;
+    final auth = NecklaceDeviceAuth(
+        baseUrl: resolve(registry.user.preset).imageHttp,
+        deviceId: id,
+        exchange: exchange,
+        isCurrent: () => mounted && ref.read(_registryProvider) == registry);
+    try {
+      _stage('Verifying device identity…');
+      await auth.headers(true);
+      final rows = await registry.list();
+      if (!rows.any((r) => r['id'] == id && r['status'] == 'active'))
+        throw StateError('Pairing is not active yet');
+      if (!mounted || ref.read(_registryProvider) != registry) return;
+      if (await PairedDeviceStorage.getPairedRemoteId() != remote)
+        throw StateError('Selected device changed');
+      await NecklaceEnrollment.save(
+          registry.user.preset.key, registry.user.userId, remote, id);
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Necklace paired and ready.')));
+    } finally {
+      auth.close();
     }
   }
 
@@ -50,7 +150,7 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
     });
     final devices = ref.watch(_devicesProvider);
     return Scaffold(
-        appBar: AppBar(title: const Text('Wi-Fi devices'), actions: [
+        appBar: AppBar(title: const Text('Devices'), actions: [
           IconButton(
               onPressed: () => ref.invalidate(_devicesProvider),
               icon: const Icon(Icons.refresh))
@@ -59,6 +159,14 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
           const Text(
               'Devices belong to your account and can query your accessible domains.'),
           const SizedBox(height: 16),
+          FilledButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => _run((registry) => _addNecklace(registry)),
+              icon: const Icon(Icons.bluetooth),
+              label: const Text('Add Necklace')),
+          if (_busy) const LinearProgressIndicator(),
+          if (_progress != null) Text(_progress!),
           for (final type in ['sleepbot_assistant', 'sleepbot_radar'])
             FilledButton(
                 onPressed: _busy
@@ -71,8 +179,8 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                           }
                         }),
                 child: Text(type == 'sleepbot_assistant'
-                    ? 'Pair SleepBot Assistant'
-                    : 'Pair SleepBot Radar')),
+                    ? 'Add SleepBot Assistant'
+                    : 'Add SleepBot Radar')),
           if (_error != null)
             Text(_error!, style: const TextStyle(color: Colors.red)),
           if (_pairing != null)
@@ -101,7 +209,11 @@ class _DevicesPageState extends ConsumerState<DevicesPage> {
                           : PopupMenuButton<String>(
                               enabled: !_busy,
                               onSelected: (action) => _run((registry) async {
-                                if (action == 'renew') {
+                                if (row['device_type'] == 'necklace' &&
+                                    action == 'renew') {
+                                  await _addNecklace(registry,
+                                      pendingId: row['id'] as String);
+                                } else if (action == 'renew') {
                                   final setup = await registry
                                       .renewPairing(row['id'] as String);
                                   if (mounted &&

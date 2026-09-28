@@ -8,6 +8,7 @@ import '../../application/devices/device_command_result.dart';
 import '../../domain/ble/ble_connection_state.dart';
 import '../hardware/camera_command.dart';
 import 'background_commands.dart';
+import '../hardware/paired_device_storage.dart';
 import 'background_session_command.dart';
 
 /// Foreground facade. Only this class encodes commands for the service isolate.
@@ -185,6 +186,31 @@ class BackgroundServiceClient {
 
   void updateAppLifecycleState(AppLifecycleState state) {
     _service.invoke('app.lifecycle', {'state': state.name});
+  }
+
+  void reconnectDeviceSocket() => _service.invoke('device.enrolled');
+  void setDevicePairing(bool active) =>
+      _service.invoke('device.pairing', {'active': active});
+
+  Future<Uint8List> exchangeIdentity(Uint8List data,
+      {String? expectedRemoteId}) async {
+    final remote = await PairedDeviceStorage.getPairedRemoteId();
+    if (remote == null) throw StateError('Select a Necklace first');
+    if (expectedRemoteId != null && remote != expectedRemoteId)
+      throw StateError('Selected Necklace changed');
+    final value = await _sendCommand<Uint8List>(
+      command: DeviceCommand(DeviceCommandKind.identityExchange,
+          bytes: data, name: remote),
+      timeout: const Duration(seconds: 30),
+      responseParser: (result) =>
+          result?.success == true && result?.bytes != null
+              ? Uint8List.fromList(result!.bytes!)
+              : null,
+    );
+    if (value == null)
+      throw StateError(
+          'Could not authenticate Necklace. Check its connection and firmware.');
+    return value;
   }
 
   /// Generic command sender with unique request IDs

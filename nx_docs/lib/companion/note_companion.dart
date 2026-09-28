@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:nx_voice/nx_voice.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -108,6 +110,22 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
       userId: userId,
       audioService: audioService,
       transcriptLoader: ref.read(noteTranscriptLoaderProvider),
+      loadConversation: () async {
+        final response = await httpClient
+            .post(
+              Uri.parse(baseUrl).resolve('/nx_docs/conversation'),
+              headers: {'content-type': 'application/json'},
+              body: jsonEncode({'document_id': widget.document.id}),
+            )
+            .timeout(const Duration(seconds: 15));
+        if (response.statusCode != 200)
+          throw StateError('Conversation unavailable');
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return DocumentConversation(
+          transcriptId: data['transcript_id'] as int,
+          context: data['context'] as String,
+        );
+      },
       authHeaders: (forceRefresh) {
         final user = voiceUser;
         return nexusAuthHeaders(
@@ -115,10 +133,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
           userId,
           forceRefresh: forceRefresh,
         ).then(
-          (headers) => {
-            ...headers,
-            'x-nexus-domain-id': '${user.requiredDomainId}',
-          },
+          (headers) => {...headers, 'x-domain-id': '${user.requiredDomainId}'},
         );
       },
       initialAudio: initialAudio == null

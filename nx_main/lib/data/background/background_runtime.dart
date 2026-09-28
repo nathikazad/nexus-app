@@ -20,6 +20,8 @@ import '../necklace/necklace_relay.dart';
 import 'background_commands.dart';
 import 'background_session_command.dart';
 import 'ambient_storage_domain.dart';
+import '../devices/necklace_identity.dart';
+import '../devices/necklace_enrollment.dart';
 
 class BackgroundRuntime {
   /// Start the background service (called from onStart entry point)
@@ -45,6 +47,11 @@ class BackgroundRuntime {
     GpsUploadManager? gpsUploadManager;
     http.Client? authenticatedHttpClient;
     int sessionGeneration = 0;
+    NecklaceDeviceAuth? deviceAuth;
+    bool pairingDevice = false;
+    Map<String, dynamic>? lastSocketConfig;
+    Future<void> Function(Map<String, dynamic>)? reconnect;
+
     final relay = NecklaceRelay(
       device: BleNecklaceDevicePort(bleClient),
       socketClient: socketClient,
@@ -56,6 +63,8 @@ class BackgroundRuntime {
     String? gpsTimezoneLabel;
 
     Future<void> retireSession() async {
+      deviceAuth?.close();
+      deviceAuth = null;
       final gps = gpsUploadManager;
       final client = authenticatedHttpClient;
       gpsUploadManager = null;
@@ -161,6 +170,13 @@ class BackgroundRuntime {
     bleClient.onConnectionStateChanged = (state) {
       debugPrint("[BLE BG] Connection state: ${state.name}");
       service.invoke('ble.status', {'status': state.name});
+      if (state.name == 'connected') {
+        if (lastSocketConfig != null)
+          unawaited(reconnect?.call(lastSocketConfig!) ?? Future.value());
+      } else {
+        ++sessionGeneration;
+        unawaited(retireSession());
+      }
     };
 
     bleClient.onAudioPacketReceived = relay.onAudioPacket;
@@ -231,15 +247,26 @@ class BackgroundRuntime {
     });
 
     // Socket control events
-    service.on('socket.connect').listen((event) async {
+    Future<void> connectSession(Map<String, dynamic> event) async {
       final generation = ++sessionGeneration;
       await retireSession();
       if (generation != sessionGeneration) return;
       late BackgroundSessionCommand command;
       try {
-        command = BackgroundSessionCommand.fromMap(event!);
+        command = BackgroundSessionCommand.fromMap(event);
       } catch (_) {
         debugPrint('[Socket] Ignoring connect without complete auth session');
+        return;
+      }
+      if (pairingDevice || !bleClient.isConnected) return;
+      final remoteId = bleClient.device?.remoteId.str;
+      if (remoteId == null) return;
+      final enrolledId = await NecklaceEnrollment.load(
+          command.preset.key, command.userId, remoteId);
+      if (generation != sessionGeneration) return;
+      if (enrolledId == null) {
+        service.invoke('ble.error',
+            {'error': 'Add Necklace in Devices to link it to your account.'});
         return;
       }
       final url = command.url;
@@ -248,13 +275,31 @@ class BackgroundRuntime {
       final clientAppId = command.clientAppId;
       final telemetryHttpBaseUrl = command.telemetryHttpBaseUrl;
 
+      final uploadBase = telemetryHttpBaseUrl.isNotEmpty
+          ? telemetryHttpBaseUrl
+          : httpBaseFromSocketUrl(url);
+      final auth = NecklaceDeviceAuth(
+        baseUrl: uploadBase,
+        deviceId: enrolledId,
+        exchange: bleClient.exchangeIdentity,
+        isCurrent: () =>
+            generation == sessionGeneration &&
+            bleClient.isConnected &&
+            bleClient.device?.remoteId.str == remoteId,
+      );
+      deviceAuth = auth;
+      final socketMetadata = AgentRoutes.necklace.headers();
+      await socketClient.connect(url,
+          headers: socketMetadata, authHeaders: auth.headers);
+      if (generation != sessionGeneration) return;
+
+      // User authentication belongs to phone telemetry/GPS, not Necklace's socket.
       final oidc = NexusOidcService();
       if (preset.requiresOidc) {
         final identity = await oidc.restore(preset, clientAppId);
         if (generation != sessionGeneration) return;
         if (identity == null || identity.userId != userId) {
           debugPrint('[Socket] Background auth session is unavailable');
-          await socketClient.disconnect();
           return;
         }
       }
@@ -266,9 +311,6 @@ class BackgroundRuntime {
         return {'authorization': 'Bearer $token'};
       }
 
-      final uploadBase = telemetryHttpBaseUrl.isNotEmpty
-          ? telemetryHttpBaseUrl
-          : httpBaseFromSocketUrl(url);
       late int storageDomainId;
       try {
         storageDomainId = await loadAmbientStorageDomain(
@@ -286,7 +328,6 @@ class BackgroundRuntime {
         authHeaders: authHeaders,
       );
       authenticatedHttpClient = client;
-      final socketMetadata = AgentRoutes.necklace.headers();
       unawaited(printServerClockDrift(uploadBase, client));
       telemetryUploadManager = TelemetryUploadManager(
         httpBaseUrl: uploadBase,
@@ -300,14 +341,29 @@ class BackgroundRuntime {
       gpsTimezoneLabel = localTimezoneOffsetLabel();
       await startGpsIfBackground('socket.connect');
       if (generation != sessionGeneration) return;
-      await socketClient.connect(
-        url,
-        headers: socketMetadata,
-        authHeaders: authHeaders,
-      );
+    }
+
+    reconnect = connectSession;
+    service.on('socket.connect').listen((event) async {
+      if (event == null) return;
+      lastSocketConfig = event;
+      await connectSession(event);
+    });
+    service.on('device.pairing').listen((event) async {
+      pairingDevice = event?['active'] == true;
+      if (pairingDevice) {
+        ++sessionGeneration;
+        await retireSession();
+      } else if (lastSocketConfig != null) {
+        await connectSession(lastSocketConfig!);
+      }
+    });
+    service.on('device.enrolled').listen((_) async {
+      if (lastSocketConfig != null) await connectSession(lastSocketConfig!);
     });
 
     service.on('socket.disconnect').listen((event) async {
+      lastSocketConfig = null;
       ++sessionGeneration;
       await retireSession();
     });
@@ -384,6 +440,15 @@ class BackgroundRuntime {
 
       try {
         switch (request.kind) {
+          case DeviceCommandKind.identityExchange:
+            if (request.name == null ||
+                bleClient.device?.remoteId.str != request.name) {
+              throw StateError('Selected Necklace changed');
+            }
+            final bytes = await bleClient
+                .exchangeIdentity(Uint8List.fromList(request.bytes ?? []));
+            sendResult(success: true, bytes: bytes.toList());
+            break;
           case DeviceCommandKind.writeHaptic:
             final effectId = request.effectId ?? 16;
             final success = await bleClient.writeHaptic(effectId);

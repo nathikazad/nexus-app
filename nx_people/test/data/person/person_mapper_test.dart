@@ -16,7 +16,10 @@ void main() {
 
       final mapped = personFromModel(person);
 
-      expect(mapped.imageUrl, '/nx_people/profile_files/1/linkedin/ada/profile.jpg');
+      expect(
+        mapped.imageUrl,
+        '/nx_people/profile_files/1/linkedin/ada/profile.jpg',
+      );
     });
 
     test('maps desires JSON array onto profile desires', () {

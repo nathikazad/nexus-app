@@ -35,11 +35,15 @@ void main() {
 
   test('downloads once and opens the verified local copy offline', () async {
     final bookCache = cache();
-    final firstPath = await bookCache.openPath(_book('/nx_books/9-example.pdf'));
+    final firstPath = await bookCache.openPath(
+      _book('/nx_books/9-example.pdf'),
+    );
     expect(requests, 1);
     expect(await File(firstPath).readAsBytes(), [37, 80, 68, 70, 45, 1]);
 
-    final secondPath = await bookCache.openPath(_book('/nx_books/9-example.pdf'));
+    final secondPath = await bookCache.openPath(
+      _book('/nx_books/9-example.pdf'),
+    );
     expect(secondPath, firstPath);
     expect(requests, 1);
   });

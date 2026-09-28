@@ -57,6 +57,7 @@ class NoteCompanionController extends ChangeNotifier {
     required NoteTranscriptLoader transcriptLoader,
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
     this.onAudioBlockChanged,
+    this.loadConversation,
     DocumentAudio? initialAudio,
     String? initialBlockKey,
     NoteAiSession? session,
@@ -95,6 +96,7 @@ class NoteCompanionController extends ChangeNotifier {
   }
 
   final int documentId;
+  final Future<DocumentConversation> Function()? loadConversation;
   final String socketUrl;
   final String userId;
   final int domainId;
@@ -387,7 +389,7 @@ class NoteCompanionController extends ChangeNotifier {
         socketUrl: socketUrl,
         userId: userId,
         domainId: domainId,
-        documentId: documentId,
+        loadConversation: loadConversation,
         authHeaders: _authHeaders,
       ),
     );

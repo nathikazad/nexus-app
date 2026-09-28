@@ -10,7 +10,9 @@ void main() {
   test('wearable rejects invalid supplied domain before opening any connection',
       () async {
     final client = SocketClient();
-    await expectLater(client.connect('ws://127.0.0.1:1', headers: {'X-Nexus-Domain-Id': 'bad'}), throwsStateError);
+    await expectLater(
+        client.connect('ws://127.0.0.1:1', headers: {'X-Domain-Id': 'bad'}),
+        throwsStateError);
     expect(await client.ensureConnected(), isFalse);
   });
 
@@ -18,7 +20,7 @@ void main() {
     final auth = Completer<Map<String, String>>();
     final client = SocketClient();
     final connecting = client.connect('ws://127.0.0.1:1',
-        headers: {'X-Nexus-Domain-Id': '7'}, authHeaders: (_) => auth.future);
+        headers: {'X-Domain-Id': '7'}, authHeaders: (_) => auth.future);
     await Future<void>.delayed(Duration.zero);
     client.sendPacket(Uint8List.fromList([1, 2]));
     expect(client.queuedPacketCount, 1);
@@ -37,9 +39,9 @@ void main() {
     final sources = <String?>[];
     final sockets = <WebSocket>[];
     server.listen((request) async {
-      domains.add(request.headers.value('x-nexus-domain-id'));
+      domains.add(request.headers.value('x-domain-id'));
       agents.add(request.headers.value('x-agent-id'));
-      sources.add(request.headers.value('x-device-source'));
+      sources.add(request.headers.value('x-client-id'));
       final socket = await WebSocketTransformer.upgrade(request);
       sockets.add(socket);
       socket.listen((_) {});
@@ -55,41 +57,27 @@ void main() {
       }
       await server.close(force: true);
     });
-    expect(await wearable.connect(url, headers: {'X-Nexus-Domain-Id': '7'}),
-        isTrue);
-    expect(await wearable.connect(url, headers: {'X-Nexus-Domain-Id': '9'}),
-        isTrue);
+    expect(await wearable.connect(url, headers: {'X-Domain-Id': '7'}), isTrue);
+    expect(await wearable.connect(url, headers: {'X-Domain-Id': '9'}), isTrue);
     for (final domain in [7, 9]) {
       await voice.connect(VoiceSocketSessionConfig(
           socketUrl: url,
           userId: '1',
           domainId: domain,
-          clientApp: 'nx_main',
-          agentId: 'nx_main',
+          clientId: 'nx_main',
           authHeaders: (_) async => {}));
     }
     await voice.connect(VoiceSocketSessionConfig(
       socketUrl: url,
       userId: '1',
       domainId: 9,
-      clientApp: 'nx_watch',
-      agentId: 'personal_assistant',
-      deviceSource: 'nx_watch',
+      clientId: 'nx_watch',
       authHeaders: (_) async => {},
     ));
-    expect(
-        await wearable.connect(url,
-            headers: AgentRoutes.necklace.headers()),
+    expect(await wearable.connect(url, headers: AgentRoutes.necklace.headers()),
         isTrue);
     expect(domains, ['7', '9', '7', '9', '9', null]);
-    expect(agents, [
-      null,
-      null,
-      'nx_main',
-      'nx_main',
-      'personal_assistant',
-      'personal_assistant'
-    ]);
-    expect(sources, [null, null, null, null, 'nx_watch', 'necklace']);
+    expect(agents, List<String?>.filled(6, null));
+    expect(sources, [null, null, 'nx_main', 'nx_main', 'nx_watch', 'necklace']);
   });
 }
