@@ -89,7 +89,19 @@ class StudyCard {
   final DateTime? updatedAt;
 
   CardSchedule scheduleFor(StudyCue cue) =>
-      schedules[cue] ?? const CardSchedule.initial(enabled: false);
+      schedules[cue] ??
+      CardSchedule.initial(
+        enabled:
+            cue == StudyCue.fromAudio &&
+            content is LanguageCardContent &&
+            (schedules[StudyCue.fromLanguage]?.enabled == true ||
+                schedules[StudyCue.toLanguage]?.enabled == true),
+      );
+
+  bool supportsCue(StudyCue cue) =>
+      cue != StudyCue.fromAudio ||
+      (content is LanguageCardContent &&
+          (content as LanguageCardContent).audioUrl?.trim().isNotEmpty == true);
 
   List<CardReview> reviewHistoryFor(StudyCue cue) =>
       reviewHistory[cue] ?? const <CardReview>[];
@@ -97,7 +109,7 @@ class StudyCard {
   Iterable<StudyPrompt> get prompts sync* {
     if (suspended) return;
     for (final cue in StudyCue.activeDirections) {
-      if (scheduleFor(cue).enabled) {
+      if (supportsCue(cue) && scheduleFor(cue).enabled) {
         yield StudyPrompt(card: this, cue: cue);
       }
     }

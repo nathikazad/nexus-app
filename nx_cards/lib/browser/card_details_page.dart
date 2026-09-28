@@ -1027,6 +1027,7 @@ String _cueLabel(StudyCue cue, StudyCard card) => switch (cue) {
   StudyCue.fromLanguage => 'Front → ${card.language ?? 'Back'}',
   StudyCue.toLanguage => '${card.language ?? 'Back'} → Front',
   StudyCue.transliteration => 'Transliteration → Front',
+  StudyCue.fromAudio => 'Audio → ${card.language ?? 'Back'}',
 };
 
 String _cardSource(StudyCard card) =>

@@ -35,9 +35,11 @@ class LanguageDirectionButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cue = ref.watch(languageDirectionProvider(language));
-    String label(StudyCue value) => value == StudyCue.fromLanguage
-        ? 'English → $language'
-        : '$language → English';
+    String label(StudyCue value) => switch (value) {
+      StudyCue.fromLanguage => 'English → $language',
+      StudyCue.fromAudio => '$language audio → $language',
+      _ => '$language → English',
+    };
     return PopupMenuButton<StudyCue>(
       tooltip: 'Recall direction: ${label(cue)}',
       initialValue: cue,
@@ -49,11 +51,19 @@ class LanguageDirectionButton extends ConsumerWidget {
       ],
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Text(
-          cue == StudyCue.fromLanguage
-              ? 'EN → ${compactLanguageLabel(language)}'
-              : '${compactLanguageLabel(language)} → EN',
-        ),
+        child: cue == StudyCue.fromAudio
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.volume_up_outlined, size: 20),
+                  Text(' → ${compactLanguageLabel(language)}'),
+                ],
+              )
+            : Text(
+                cue == StudyCue.fromLanguage
+                    ? 'EN → ${compactLanguageLabel(language)}'
+                    : '${compactLanguageLabel(language)} → EN',
+              ),
       ),
     );
   }

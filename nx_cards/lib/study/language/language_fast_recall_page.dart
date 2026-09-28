@@ -624,16 +624,8 @@ class _FastAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = switch (prompt.cue) {
-      StudyCue.fromLanguage ||
-      StudyCue.transliteration => content.originalScript,
-      StudyCue.toLanguage => content.english,
-    };
-    final secondary = switch (prompt.cue) {
-      StudyCue.toLanguage when prompt.isListening => content.originalScript,
-      StudyCue.transliteration => content.english,
-      _ => content.transliteration,
-    };
+    final primary = content.originalScript;
+    final secondary = content.english;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -657,6 +649,11 @@ class _FastAnswer extends StatelessWidget {
             color: RecallColors.faint,
           ),
         ),
+        if (content.transliteration.isNotEmpty)
+          Text(
+            content.transliteration,
+            style: const TextStyle(fontSize: 14, color: RecallColors.faint),
+          ),
       ],
     );
   }

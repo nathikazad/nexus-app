@@ -125,44 +125,28 @@ void main() {
     ]);
   });
 
-  testWidgets('Listening is a saved reverse-direction presentation only', (
-    tester,
-  ) async {
-    await showSetup(tester, cue: StudyCue.toLanguage);
-    expect(find.text('Read'), findsOneWidget);
-    expect(find.text('Prompt'), findsOneWidget);
-    expect(find.text('01'), findsOneWidget);
-    expect(find.text('02'), findsOneWidget);
-    expect(find.text('03'), findsOneWidget);
-    expect(find.text('Write'), findsNothing);
-    expect(find.text('Standard'), findsOneWidget);
-    expect(find.text('Fast'), findsOneWidget);
-    expect(find.text('Listen'), findsOneWidget);
-    await tester.tap(find.text('Listen'));
-    await tester.pumpAndSettle();
-    expect(find.text('Write'), findsOneWidget);
-    await tester.tap(find.text('Write'));
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<SegmentedButton<RecallPresentation>>(
-            find.byType(SegmentedButton<RecallPresentation>),
-          )
-          .selected,
-      {RecallPresentation.write},
-    );
-    final prefs = await SharedPreferences.getInstance();
-    expect(
-      prefs.getString('study_setup.v3.recall.Chinese'),
-      contains('"listening":true'),
-    );
-    expect(find.text('3 available'), findsOneWidget);
-    await tester.tap(find.text('AI').first);
-    await tester.pumpAndSettle();
-    expect(find.text('Listen'), findsNothing);
-    await showSetup(tester);
-    expect(find.text('Listen'), findsNothing);
-  });
+  testWidgets(
+    'audio direction offers the existing three formats without a prompt toggle',
+    (tester) async {
+      await showSetup(tester, cue: StudyCue.fromAudio);
+      expect(find.text('Read'), findsNothing);
+      expect(find.text('Listen'), findsNothing);
+      expect(find.text('Recall format'), findsOneWidget);
+      expect(find.text('Write'), findsOneWidget);
+      expect(find.text('Standard'), findsOneWidget);
+      expect(find.text('Fast'), findsOneWidget);
+      await tester.tap(find.text('Write'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SegmentedButton<RecallPresentation>>(
+              find.byType(SegmentedButton<RecallPresentation>),
+            )
+            .selected,
+        {RecallPresentation.write},
+      );
+    },
+  );
 
   testWidgets('Recall offers Current and Past including not-due Past', (
     tester,

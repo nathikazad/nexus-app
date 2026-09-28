@@ -18,18 +18,22 @@ void main() {
         await _pumpRecall(
           tester,
           _scriptCard(),
-          StudyCue.toLanguage,
+          StudyCue.fromAudio,
           writing: writing,
-          listening: true,
         );
         expect(find.text('ക'), findsNothing);
         expect(find.text('Letter ka'), findsNothing);
-        expect(find.text('ka'), findsOneWidget);
+        expect(find.text('ka'), findsNothing);
+        expect(find.text('Listen'), findsOneWidget);
         expect(_FakeAudioRepository.requests, 1);
         await tester.tap(find.text('Show answer'));
         await tester.pumpAndSettle();
         expect(find.text('Letter ka'), findsOneWidget);
         expect(find.text('ക'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('ക')).dy,
+          lessThan(tester.getTopLeft(find.text('Letter ka')).dy),
+        );
       },
     );
   }
@@ -135,7 +139,12 @@ void main() {
           final answer = tester.widget<Text>(
             find.byKey(const ValueKey('writing-recall-answer')),
           );
-          expect(answer.data, cue == StudyCue.fromLanguage ? '学生' : 'student');
+          expect(
+            answer.data,
+            (cue == StudyCue.fromLanguage || cue == StudyCue.fromAudio)
+                ? '学生'
+                : 'student',
+          );
           expect(find.text('Yes'), findsOneWidget);
           expect(find.text('No'), findsOneWidget);
         });
@@ -168,14 +177,13 @@ Future<void> _pumpRecall(
   StudyCard card,
   StudyCue cue, {
   bool writing = false,
-  bool listening = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         cardWorkspaceProvider.overrideWithValue(null),
         cardAudioRepositoryProvider.overrideWithValue(
-          cue == StudyCue.fromLanguage || listening
+          cue == StudyCue.fromLanguage || cue == StudyCue.fromAudio
               ? _FakeAudioRepository()
               : null,
         ),
@@ -189,7 +197,7 @@ Future<void> _pumpRecall(
           interaction: writing
               ? RecallInteraction.writing
               : RecallInteraction.standard,
-          prompts: [StudyPrompt(card: card, cue: cue, listening: listening)],
+          prompts: [StudyPrompt(card: card, cue: cue)],
         ),
       ),
     ),

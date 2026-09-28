@@ -90,7 +90,10 @@ void main() {
   });
   test('old transliteration stays readable but is never queued', () {
     final c = card([3]);
-    expect(c.prompts.map((p) => p.cue), StudyCue.activeDirections);
+    expect(c.prompts.map((p) => p.cue), [
+      StudyCue.fromLanguage,
+      StudyCue.toLanguage,
+    ]);
     expect(c.schedules.containsKey(StudyCue.transliteration), isTrue);
   });
   test('Current ignores future schedule; Past respects it', () {
