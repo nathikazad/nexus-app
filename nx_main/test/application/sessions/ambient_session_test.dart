@@ -21,13 +21,13 @@ void main() {
     expect(calls, ['personal', 'close', 'other user', 'close']);
   });
   test('necklace ambient headers exclude domain while app retains it', () {
-    expect(AgentRoutes.necklace.ambientHeaders(), {
-      'X-Nexus-Session-Mode': 'ambient',
+    expect(AgentRoutes.necklace.headers(), {
       'X-Client-App': 'nx_main',
       'X-Agent-Id': 'personal_assistant',
       'X-Device-Source': 'necklace'
     });
     expect(AgentRoutes.app.headers(7)['X-Nexus-Domain-Id'], '7');
-    expect(() => AgentRoutes.app.ambientHeaders(), throwsStateError);
+    expect(AgentRoutes.app.headers().containsKey('X-Nexus-Domain-Id'), isFalse);
+    expect(() => AgentRoutes.app.headers(0), throwsStateError);
   });
 }
