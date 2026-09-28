@@ -33,6 +33,8 @@ final class LanguageCardContent extends CardContent {
     required String originalScript,
     required this.transliteration,
     this.audioUrl,
+    this.audioSha256,
+    this.audioBytes,
     List<LanguageExample> examples = const <LanguageExample>[],
     // Keep the public named argument compatible while filtering reads.
     // ignore: prefer_initializing_formals
@@ -44,6 +46,8 @@ final class LanguageCardContent extends CardContent {
 
   final String transliteration;
   final String? audioUrl;
+  final String? audioSha256;
+  final int? audioBytes;
   final List<LanguageExample> _examples;
 
   LanguageCardContent copyWith({
@@ -51,11 +55,15 @@ final class LanguageCardContent extends CardContent {
     String? originalScript,
     String? transliteration,
     String? audioUrl,
+    String? audioSha256,
+    int? audioBytes,
   }) => LanguageCardContent(
     english: english ?? this.english,
     originalScript: originalScript ?? this.originalScript,
     transliteration: transliteration ?? this.transliteration,
     audioUrl: audioUrl ?? this.audioUrl,
+    audioSha256: audioSha256 ?? this.audioSha256,
+    audioBytes: audioBytes ?? this.audioBytes,
     examples: _examples,
   );
 
@@ -72,6 +80,8 @@ final class LanguageExample {
     required this.transliteration,
     required this.translation,
     this.audioUrl,
+    this.audioSha256,
+    this.audioBytes,
     this.cardId,
   });
 
@@ -80,6 +90,8 @@ final class LanguageExample {
   final String transliteration;
   final String translation;
   final String? audioUrl;
+  final String? audioSha256;
+  final int? audioBytes;
 
   Map<String, Object?> toJson() => <String, Object?>{
     if (cardId != null) 'card_id': cardId,
@@ -87,6 +99,8 @@ final class LanguageExample {
     'transliteration': transliteration,
     'translation': translation,
     if (audioUrl?.isNotEmpty == true) 'audio_url': audioUrl,
+    if (audioSha256 != null) 'audio_sha256': audioSha256,
+    if (audioBytes != null) 'audio_bytes': audioBytes,
   };
 
   factory LanguageExample.fromJson(Map<String, dynamic> json) =>
@@ -96,5 +110,7 @@ final class LanguageExample {
         transliteration: json['transliteration']?.toString().trim() ?? '',
         translation: json['translation']?.toString().trim() ?? '',
         audioUrl: json['audio_url']?.toString().trim(),
+        audioSha256: json['audio_sha256'] as String?,
+        audioBytes: (json['audio_bytes'] as num?)?.toInt(),
       );
 }

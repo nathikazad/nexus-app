@@ -1,3 +1,5 @@
+import 'package:nx_cards/audio/audio_providers.dart';
+import 'package:nx_cards/sync/sync_providers.dart';
 import 'data/models/library_summary.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
@@ -151,7 +153,12 @@ class _HomeScaffold extends ConsumerWidget {
           child: Divider(height: 1),
         ),
       ),
-      body: body,
+      body: Column(
+        children: [
+          const _AudioSyncProgress(),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 }
@@ -329,7 +336,7 @@ class _SourceCard extends StatelessWidget {
                       CardMetric(
                         icon: Icons.school_outlined,
                         value: current,
-                        label: 'Current',
+                        label: 'Learning',
                       ),
                     ],
                   ),
@@ -341,4 +348,39 @@ class _SourceCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _AudioSyncProgress extends ConsumerWidget {
+  const _AudioSyncProgress();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(audioDownloadProgressProvider).value;
+    if (progress == null ||
+        progress.total == 0 ||
+        (progress.ready == progress.total && progress.failed == 0)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              progress.running
+                  ? 'Audio downloading: ${progress.ready}/${progress.total}'
+                  : progress.failed > 0
+                  ? 'Audio offline: ${progress.ready}/${progress.total} · ${progress.failed} pending'
+                  : 'Audio offline: ${progress.ready}/${progress.total}',
+            ),
+          ),
+          if (progress.failed > 0 && !progress.running)
+            TextButton(
+              onPressed: () =>
+                  ref.read(cardLibrarySynchronizerProvider)?.prefetchAudio(),
+              child: const Text('Retry'),
+            ),
+        ],
+      ),
+    );
+  }
 }

@@ -128,8 +128,8 @@ class BookPage extends ConsumerWidget {
                       tabAlignment: TabAlignment.start,
                       tabs: [
                         Tab(text: 'Practice  ${upcoming.length}'),
-                        Tab(text: 'Current  ${learning.length}'),
-                        Tab(text: 'Past  ${learnt.length}'),
+                        Tab(text: 'Learning  ${learning.length}'),
+                        Tab(text: 'Learnt  ${learnt.length}'),
                         Tab(text: 'Future  ${notStarted.length}'),
                       ],
                     ),
@@ -153,7 +153,7 @@ class BookPage extends ConsumerWidget {
                       ),
                       LearningCardsTab(
                         cards: learnt,
-                        emptyText: 'No cards have been moved to Past yet.',
+                        emptyText: 'No cards have reached Learnt yet.',
                         dashboard: data,
                       ),
                       LearningCardsTab(

@@ -8,8 +8,8 @@ enum LearningStage {
 
   String get label => switch (this) {
     upcoming => 'Practice',
-    current => 'Current',
-    past => 'Past',
+    current => 'Learning',
+    past => 'Learnt',
     future => 'Future',
   };
 }

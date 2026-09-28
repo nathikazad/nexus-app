@@ -57,6 +57,8 @@ final class DriftLocalCardsStore
       'model_type': row.modelType.value,
       'transliteration': row.transliteration.value,
       'audio_url': row.audioUrl.value,
+      'audio_sha256': row.audioSha256.value,
+      'audio_bytes': row.audioBytes.value,
       'source_book_id': row.sourceBookId.value,
       'source_book_name': row.sourceBookName.value,
     });
@@ -105,6 +107,8 @@ final class DriftLocalCardsStore
         modelType: json['model_type'] as String? ?? row.modelType,
         transliteration: Value(json['transliteration'] as String?),
         audioUrl: Value(json['audio_url'] as String?),
+        audioSha256: Value(json['audio_sha256'] as String?),
+        audioBytes: Value(json['audio_bytes'] as int?),
         sourceBookId: Value(json['source_book_id'] as int?),
         sourceBookName: Value(json['source_book_name'] as String?),
         front: json['front'] as String,

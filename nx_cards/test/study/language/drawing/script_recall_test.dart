@@ -10,6 +10,30 @@ import 'package:nx_cards/study/session/study_session_page.dart';
 import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 
 void main() {
+  for (final writing in [false, true]) {
+    testWidgets(
+      'Listening hides script and autoplays before reveal (writing=$writing)',
+      (tester) async {
+        _FakeAudioRepository.requests = 0;
+        await _pumpRecall(
+          tester,
+          _scriptCard(),
+          StudyCue.toLanguage,
+          writing: writing,
+          listening: true,
+        );
+        expect(find.text('ക'), findsNothing);
+        expect(find.text('Letter ka'), findsNothing);
+        expect(find.text('ka'), findsOneWidget);
+        expect(_FakeAudioRepository.requests, 1);
+        await tester.tap(find.text('Show answer'));
+        await tester.pumpAndSettle();
+        expect(find.text('Letter ka'), findsOneWidget);
+        expect(find.text('ക'), findsOneWidget);
+      },
+    );
+  }
+
   testWidgets(
     'English Script recall uses drawing and reveals the right letter',
     (tester) async {
@@ -144,13 +168,16 @@ Future<void> _pumpRecall(
   StudyCard card,
   StudyCue cue, {
   bool writing = false,
+  bool listening = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         cardWorkspaceProvider.overrideWithValue(null),
         cardAudioRepositoryProvider.overrideWithValue(
-          cue == StudyCue.fromLanguage ? _FakeAudioRepository() : null,
+          cue == StudyCue.fromLanguage || listening
+              ? _FakeAudioRepository()
+              : null,
         ),
         cardsDashboardProvider.overrideWith(
           (_) => Stream.value(const CardsDashboard(cards: [])),
@@ -162,7 +189,7 @@ Future<void> _pumpRecall(
           interaction: writing
               ? RecallInteraction.writing
               : RecallInteraction.standard,
-          prompts: [StudyPrompt(card: card, cue: cue)],
+          prompts: [StudyPrompt(card: card, cue: cue, listening: listening)],
         ),
       ),
     ),

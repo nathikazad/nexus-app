@@ -47,6 +47,7 @@ class NativeDrawingActivity : Activity() {
     private var player: MediaPlayer? = null
     private var audioFile: File? = null
     private var audioGeneration = 0
+    private var listeningIndex = -1
     private val density get() = resources.displayMetrics.density
     private fun dp(value: Int) = (value * density).roundToInt()
     private fun label(size: Float) = TextView(this).apply { textSize = size; setTextColor(Color.BLACK); gravity = Gravity.CENTER }
@@ -142,6 +143,11 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCard() {
         progress.text = "${index + 1} of ${cards.size}"
+        if (recall && !revealed && card["listening"] == true && listeningIndex != index) {
+            listeningIndex = index
+            val expectedIndex = index
+            prompt.post { if (index == expectedIndex && !revealed && !isFinishing && card["audio"] == true) play() }
+        }
         prompt.text = if (recall && revealed) value("answer") else value("prompt")
         prompt.visibility = if (!recall && !visibleAnswer) View.INVISIBLE else View.VISIBLE
         prompt.textSize = if (!recall && card["multiCharacter"] == false) 64f else 32f
@@ -160,7 +166,7 @@ class NativeDrawingActivity : Activity() {
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
         control("Undo", "undo") { ink?.undo() }
         control("Erase", "erase") { ink?.clear {} }
-        if (card["audio"] == true && (!recall || revealed)) control("Play", "play") { play() }
+        if (card["audio"] == true && (!recall || revealed || card["listening"] == true)) control("Play", "play") { play() }
         if (!recall) {
             control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
             control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }

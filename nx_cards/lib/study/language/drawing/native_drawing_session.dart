@@ -164,6 +164,7 @@ class NativeDrawingSession {
     return {
       ...practiceCard(prompt.card, characters: characters, derived: derived),
       'prompt': prompt.prompt,
+      'listening': prompt.isListening,
       'answer': prompt.cue == StudyCue.fromLanguage
           ? content.originalScript
           : content.english,

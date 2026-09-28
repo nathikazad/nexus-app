@@ -3,6 +3,49 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/card_scheduler.dart';
 
 void main() {
+  test(
+    'Written and Listening update the same reverse history and schedule',
+    () {
+      final card = StudyCard(
+        id: 7,
+        reviewHistory: const {},
+        content: const LanguageCardContent(
+          english: 'student',
+          originalScript: '学生',
+          transliteration: 'xuésheng',
+        ),
+        schedules: const {
+          StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+        },
+        suspended: false,
+      );
+      final written = StudyPrompt(card: card, cue: StudyCue.toLanguage);
+      final listening = StudyPrompt(
+        card: card,
+        cue: StudyCue.toLanguage,
+        listening: true,
+      );
+      expect(written.prompt, '学生');
+      expect(listening.withCard(card).prompt, 'xuésheng');
+      expect(listening.cue, written.cue);
+      final scheduler = FsrsCardScheduler(reviewId: () => 'same-review');
+      final now = DateTime.utc(2026, 9, 27);
+      final a = scheduler.preview(written, now)[CardRating.good]!.card;
+      final b = scheduler.preview(listening, now)[CardRating.good]!.card;
+      expect(
+        a.scheduleFor(StudyCue.toLanguage).dueAt,
+        b.scheduleFor(StudyCue.toLanguage).dueAt,
+      );
+      expect(
+        a.scheduleFor(StudyCue.toLanguage).stability,
+        b.scheduleFor(StudyCue.toLanguage).stability,
+      );
+      expect(b.reviewHistoryFor(StudyCue.toLanguage).single.id, 'same-review');
+      expect(b.reviewHistoryFor(StudyCue.fromLanguage), isEmpty);
+      expect(b.reviewHistoryFor(StudyCue.transliteration), isEmpty);
+    },
+  );
+
   test('FSRS preview returns a persistable outcome for every rating', () {
     final now = DateTime.utc(2026, 8, 3, 12);
     final card = StudyCard(

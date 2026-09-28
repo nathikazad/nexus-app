@@ -49,6 +49,12 @@ void main() {
       r"UPDATE offline_outbox SET payload_json=json_set(payload_json,'$.body_ref',?)",
       [oldRef],
     );
+    await db.customStatement(
+      'ALTER TABLE local_study_cards DROP COLUMN audio_sha256',
+    );
+    await db.customStatement(
+      'ALTER TABLE local_study_cards DROP COLUMN audio_bytes',
+    );
     await db.customStatement('PRAGMA user_version=13');
     await db.close();
     db = CardsDatabase(NativeDatabase(file));
@@ -129,6 +135,12 @@ void main() {
             'SELECT remote_id,schedule_json,review_history_json FROM local_study_cards ORDER BY remote_id',
           )
           .get();
+      await db.customStatement(
+        'ALTER TABLE local_study_cards DROP COLUMN audio_sha256',
+      );
+      await db.customStatement(
+        'ALTER TABLE local_study_cards DROP COLUMN audio_bytes',
+      );
       await db.customStatement('PRAGMA user_version=12');
       await db.close();
       db = CardsDatabase(NativeDatabase(file));

@@ -28,22 +28,7 @@ class LanguagePage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(language),
-        actions: [
-          IconButton(
-            tooltip: 'All cards',
-            icon: const Icon(Icons.view_list_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => LanguageCategoryPage(
-                  category: 'All',
-                  allCards: true,
-                  language: language,
-                ),
-              ),
-            ),
-          ),
-          LanguageDirectionButton(language: language),
-        ],
+        actions: [LanguageDirectionButton(language: language)],
       ),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -248,10 +233,10 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
 
     final metrics = <(int, String)>[
       (cards.length, 'Total'),
-      (current, 'Current'),
+      (current, 'Learning'),
       (due, 'Due'),
       (upcoming, 'Practice'),
-      (learnt, 'Past'),
+      (learnt, 'Learnt'),
       (remaining, 'Future'),
     ];
     final widths = metrics.map((entry) {
@@ -483,6 +468,9 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
               ? '$category (${widget.tagSystem ?? 'Type'})'
               : category,
         ),
+        actions: [
+          if (language != null) LanguageDirectionButton(language: language!),
+        ],
       ),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -635,8 +623,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                   ),
                                   tabs: [
                                     Tab(text: 'Practice  ${upcoming.length}'),
-                                    Tab(text: 'Current  ${learning.length}'),
-                                    Tab(text: 'Past  ${learnt.length}'),
+                                    Tab(text: 'Learning  ${learning.length}'),
+                                    Tab(text: 'Learnt  ${learnt.length}'),
                                     Tab(text: 'Future  ${notStarted.length}'),
                                   ],
                                 ),

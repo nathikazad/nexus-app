@@ -95,11 +95,12 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
                     ),
                   ),
           ),
-          if (widget.revealed)
+          if (widget.revealed || widget.prompt.isListening)
             if (_audioUrl case final audioUrl?
                 when widget.audioRepository != null) ...[
               const SizedBox(width: 8),
               PronunciationButton(
+                key: ValueKey('pronunciation:${widget.revealed}'),
                 autoPlay: true,
                 audioUrl: audioUrl,
                 repository: widget.audioRepository!,

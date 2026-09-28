@@ -307,6 +307,28 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                   -0.8,
                                                             ),
                                                           ),
+                                                          if (!_revealed &&
+                                                              _prompt
+                                                                  .isListening)
+                                                            if (_card.content
+                                                                case LanguageCardContent(
+                                                                  audioUrl: final url?,
+                                                                )
+                                                                when url.isNotEmpty &&
+                                                                    audioRepository !=
+                                                                        null)
+                                                              LanguageAudioControls(
+                                                                key: ValueKey(
+                                                                  'listen:${_card.id}:$_index',
+                                                                ),
+                                                                audioUrl: url,
+                                                                repository:
+                                                                    audioRepository,
+                                                              )
+                                                            else
+                                                              const Text(
+                                                                'Pronunciation unavailable for this card',
+                                                              ),
                                                           if (!_revealed)
                                                             const Padding(
                                                               padding:
@@ -363,9 +385,11 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                   height: 8,
                                                                 ),
                                                               ],
-                                                              if (_prompt.cue !=
-                                                                  StudyCue
-                                                                      .toLanguage)
+                                                              if (_prompt
+                                                                      .isListening ||
+                                                                  _prompt.cue !=
+                                                                      StudyCue
+                                                                          .toLanguage)
                                                                 Text(
                                                                   originalScript,
                                                                   textAlign:

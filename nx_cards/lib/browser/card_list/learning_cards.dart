@@ -403,9 +403,9 @@ class _ScheduleStatePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = switch (status.label) {
-      'Current' => (const Color(0xfffff7ed), RecallColors.orange),
+      'Learning' => (const Color(0xfffff7ed), RecallColors.orange),
       'Future' => (const Color(0xfffff1f2), RecallColors.rose),
-      'Past' => (const Color(0xffecfdf5), RecallColors.emerald),
+      'Learnt' => (const Color(0xffecfdf5), RecallColors.emerald),
       'Practice' => (const Color(0xfff0f9ff), RecallColors.sky),
       _ => (RecallColors.soft, RecallColors.muted),
     };

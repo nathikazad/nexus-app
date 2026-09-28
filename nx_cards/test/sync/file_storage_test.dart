@@ -31,7 +31,15 @@ void main() {
       );
       final card = StudyCard(
         id: 1,
-        content: const BasicCardContent(front: 'A', back: 'B'),
+        modelTypeName: 'LanguageFlashcard',
+        content: const LanguageCardContent(
+          english: 'student',
+          originalScript: '学生',
+          transliteration: 'xuésheng',
+          audioUrl: '/audio.mp3',
+          audioSha256: 'abc',
+          audioBytes: 123,
+        ),
         schedules: const {},
         reviewHistory: const {},
         suspended: false,
@@ -40,6 +48,9 @@ void main() {
       expect(await store.verifiedCard(hash), false);
       await store.applyCardBatch([HashedCard(card, hash.hash)]);
       expect(await store.verifiedCard(hash), true);
+      final audio = (await store.getCard(1))!.content as LanguageCardContent;
+      expect(audio.audioSha256, 'abc');
+      expect(audio.audioBytes, 123);
       expect(await store.verifiedCard(const CardHash(1, 'changed')), false);
       await Directory('${dir.path}/content').delete(recursive: true);
       expect(await store.verifiedCard(hash), false);

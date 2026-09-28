@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,51 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
 
 void main() {
+  for (final width in [320.0, 390.0, 760.0]) {
+    testWidgets('listening row keeps playback beside the prompt at $width', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(Size(width, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final card = _card();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardAudioRepositoryProvider.overrideWithValue(_LayoutAudio()),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(CardsDashboard(cards: [card])),
+            ),
+          ],
+          child: MaterialApp(
+            home: LanguageFastRecallPage(
+              title: 'Chinese',
+              prompts: [
+                StudyPrompt(
+                  card: card,
+                  cue: StudyCue.toLanguage,
+                  listening: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final prompt = tester.getRect(
+        find.byKey(const ValueKey('fast-prompt-1')),
+      );
+      final play = tester.getRect(find.byTooltip('Play pronunciation'));
+      expect(play.left - prompt.right, inInclusiveRange(0, 12));
+      expect((play.center.dy - prompt.center.dy).abs(), lessThan(5));
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('fast-hidden-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('relief'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 31));
+    });
+  }
   testWidgets('grades rows inline, reveals answers, and opens card details', (
     tester,
   ) async {
@@ -44,7 +90,7 @@ void main() {
     expect(find.text('Examples'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('ആശ്വാസം'), findsOneWidget);
     expect(find.text('āśvāsaṃ'), findsOneWidget);
@@ -66,7 +112,7 @@ void main() {
     await tester.pumpAndSettle();
     if (find.byTooltip('Did not recall').evaluate().isEmpty) {
       await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
-      await tester.pump();
+      await tester.pumpAndSettle();
     }
     await tester.tap(find.byTooltip('Did not recall'));
     await tester.pumpAndSettle();
@@ -87,7 +133,7 @@ void main() {
     expect(find.text('Session complete'), findsNothing);
     expect(find.text('Tap to reveal'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Recalled'));
     await tester.pumpAndSettle();
     expect(repository.saved, hasLength(2));
@@ -135,10 +181,11 @@ void main() {
     await tester.pumpAndSettle();
     final row = find.byKey(const ValueKey<String>('fast-row-1'));
     await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('ആശ്വാസം'), findsOneWidget);
     final revealedHeight = tester.getSize(row).height;
     await tester.tap(find.byTooltip('Recalled'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 150));
     expect(tester.getSize(row).height, lessThan(revealedHeight));
     await tester.pump(const Duration(milliseconds: 150));
@@ -316,3 +363,9 @@ StudyCard _card({int id = 1}) => StudyCard(
   suspended: false,
   learningStatus: LearningStatus.recall,
 );
+
+class _LayoutAudio implements CardAudioRepository {
+  @override
+  Future<Uint8List> fetch(String url) async =>
+      throw StateError('No native audio in layout test');
+}

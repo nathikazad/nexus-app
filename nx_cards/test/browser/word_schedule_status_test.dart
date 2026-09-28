@@ -24,7 +24,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Current');
+    expect(status?.label, 'Learning');
     expect(status?.isDue, isFalse);
   });
 
@@ -45,7 +45,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Current');
+    expect(status?.label, 'Learning');
     expect(status?.isDue, isFalse);
   });
 
@@ -58,7 +58,7 @@ void main() {
 
     final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.label, 'Current');
+    expect(status?.label, 'Learning');
     expect(status?.isDue, isFalse);
   });
 

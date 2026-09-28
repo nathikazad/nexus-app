@@ -20,11 +20,19 @@ class StudyPrompt {
     required this.card,
     required this.cue,
     this.showEnglishAndTransliteration = false,
+    this.listening = false,
   });
 
   final StudyCard card;
   final StudyCue cue;
   final bool showEnglishAndTransliteration;
+
+  /// Presentation only: scheduling and history continue to use [cue].
+  final bool listening;
+  bool get isListening =>
+      listening &&
+      cue == StudyCue.toLanguage &&
+      card.content is LanguageCardContent;
 
   int get cardId => card.id;
   String get prompt => switch (cue) {
@@ -32,7 +40,10 @@ class StudyPrompt {
       showEnglishAndTransliteration && card.content is LanguageCardContent
           ? '${card.front}\n${(card.content as LanguageCardContent).transliteration}'
           : card.front,
-    StudyCue.toLanguage => card.back,
+    StudyCue.toLanguage =>
+      isListening
+          ? (card.content as LanguageCardContent).transliteration
+          : card.back,
     StudyCue.transliteration => switch (card.content) {
       LanguageCardContent(:final transliteration) => transliteration,
       _ => card.front,
@@ -47,5 +58,6 @@ class StudyPrompt {
     card: value,
     cue: cue,
     showEnglishAndTransliteration: showEnglishAndTransliteration,
+    listening: listening,
   );
 }

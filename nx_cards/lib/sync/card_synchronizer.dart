@@ -1,3 +1,5 @@
+import 'package:nx_cards/audio/audio_asset.dart';
+import 'package:nx_cards/audio/offline_card_audio.dart';
 // ignore_for_file: prefer_initializing_formals
 
 import 'dart:async';
@@ -53,25 +55,53 @@ final class CardLibrarySynchronizer {
   /// latest sync bundle. A transient download failure must be retried by the
   /// next sync even when the card snapshot has not changed.
   Future<void>? _audioPrefetch;
+  bool _audioAgain = false;
+  bool _closed = false;
   final _files = AttachmentQueue();
 
-  Future<void> prefetchAudio() => _audioPrefetch ??= _prefetchAudio()
-      .whenComplete(() => _audioPrefetch = null);
+  Future<void> prefetchAudio() {
+    _audioAgain = true;
+    return _audioPrefetch ??= () async {
+      do {
+        _audioAgain = false;
+        await _prefetchAudio();
+      } while (_audioAgain && !_closed);
+    }().whenComplete(() => _audioPrefetch = null);
+  }
 
   Future<void> _prefetchAudio() async {
     final repository = _audioRepository;
     if (repository == null) return;
+    final store = _localStore;
+    final generation = store is HashCardsStore
+        ? (store as HashCardsStore).editGeneration
+        : null;
     final cards = (await _localStore.readDashboard()).cards;
+    final assets = <AudioAsset>[];
     final urls = <String>{};
     for (final summary in cards) {
       final card = await _localStore.getCard(summary.id);
       if (card?.content case final LanguageCardContent content) {
+        if (repository is OfflineCardAudioRepository) {
+          assets.addAll(AudioAsset.forContent(content));
+        }
         urls.addAll({
           if (content.audioUrl case final url? when url.isNotEmpty) url,
           for (final example in content.examples)
             if (example.audioUrl case final url? when url.isNotEmpty) url,
         });
       }
+    }
+    if (repository is OfflineCardAudioRepository) {
+      await repository.sync(
+        assets,
+        canClean: () =>
+            !_closed &&
+            !_audioAgain &&
+            store is HashCardsStore &&
+            (store as HashCardsStore).editGeneration == generation,
+      );
+      return;
     }
     await Future.wait([
       for (final url in urls)
@@ -93,6 +123,7 @@ final class CardLibrarySynchronizer {
   }
 
   Future<void> close() async {
+    _closed = true;
     await _supervisor.close();
     await _files.close();
   }

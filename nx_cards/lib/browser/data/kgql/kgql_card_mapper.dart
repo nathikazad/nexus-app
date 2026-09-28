@@ -27,6 +27,8 @@ StudyCard? studyCardFromModel(
             transliteration:
                 languageDetails['transliteration']?.toString().trim() ?? '',
             audioUrl: languageDetails['audio_url']?.toString().trim(),
+            audioSha256: languageDetails['audio_sha256'] as String?,
+            audioBytes: (languageDetails['audio_bytes'] as num?)?.toInt(),
             examples: relatedExamples.isNotEmpty
                 ? relatedExamples
                 : languageExamplesFromJson(languageDetails['examples']),
@@ -125,6 +127,8 @@ List<LanguageExample> _languageExamplesFromRelations(
         transliteration: transliteration,
         translation: translation,
         audioUrl: languageDetails['audio_url']?.toString().trim(),
+        audioSha256: languageDetails['audio_sha256'] as String?,
+        audioBytes: (languageDetails['audio_bytes'] as num?)?.toInt(),
       ),
     );
   }
@@ -140,6 +144,8 @@ Map<String, Object?> languageDetailsJson(LanguageCardContent content) =>
     <String, Object?>{
       'transliteration': content.transliteration,
       'audio_url': content.audioUrl,
+      'audio_sha256': content.audioSha256,
+      'audio_bytes': content.audioBytes,
       // Examples are derived from Contains relations. Never write that
       // projection back into the language_details aggregate.
       'examples': const <Object?>[],

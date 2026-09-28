@@ -125,8 +125,8 @@ void main() {
       expect(find.text('after 2'), findsOneWidget);
       expect(find.text('after 3'), findsOneWidget);
       expect(find.text('after 99'), findsNothing);
-      expect(find.text('Current'), findsOneWidget);
-      expect(find.text('Past'), findsOneWidget);
+      expect(find.text('Learning'), findsOneWidget);
+      expect(find.text('Learnt'), findsOneWidget);
       expect(find.text('Future'), findsNWidgets(18));
       await tester.enterText(input, '之后2');
       await tester.pumpAndSettle();

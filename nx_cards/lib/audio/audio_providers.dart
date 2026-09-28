@@ -1,22 +1,11 @@
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'dart:async';
+import 'package:nx_cards/audio/audio_store.dart';
+import 'package:nx_cards/audio/offline_card_audio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/account/account_session.dart';
-import 'package:nx_cards/audio/cached_card_audio.dart';
 import 'package:nx_cards/audio/http_card_audio.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_db/nx_db.dart';
-
-// Keep one cache manager per account, independent of auth restoration rebuilds.
-// Opening two managers for the same database can race disposal against open.
-final cardAudioCacheProvider = Provider.family<CacheManager, String>((
-  ref,
-  account,
-) {
-  final safeName = account.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-  final manager = CacheManager(Config('nx_cards_audio_$safeName'));
-  ref.onDispose(manager.dispose);
-  return manager;
-});
 
 final cardAudioRepositoryProvider = Provider<CardAudioRepository?>((ref) {
   final user = ref.watch(authProvider).value;
@@ -27,18 +16,30 @@ final cardAudioRepositoryProvider = Provider<CardAudioRepository?>((ref) {
   if (baseUrl == null || userId == null) return null;
 
   final client = ref.watch(nexusHttpClientProvider);
-  if (client == null) return null;
 
-  final remote = HttpCardAudioRepository(
-    baseUrl: baseUrl,
-    userId: userId,
-    httpClient: client,
-  );
+  final remote = client == null
+      ? null
+      : HttpCardAudioRepository(
+          baseUrl: baseUrl,
+          userId: userId,
+          httpClient: client,
+        );
   if (!ref.watch(cardsOfflineEnabledProvider) || session == null) return remote;
 
-  final manager = ref.watch(cardAudioCacheProvider(session.account.key));
-  return CachedCardAudioRepository(
+  final repository = OfflineCardAudioRepository(
     remote: remote,
-    cache: FlutterCardAudioByteCache(manager),
+    store: AudioStore.application(session.account.key),
   );
+  ref.onDispose(() => unawaited(repository.close()));
+  return repository;
+});
+
+final audioDownloadProgressProvider = StreamProvider<AudioDownloadProgress>((
+  ref,
+) async* {
+  final repository = ref.watch(cardAudioRepositoryProvider);
+  if (repository is OfflineCardAudioRepository) {
+    yield repository.progress;
+    yield* repository.changes;
+  }
 });

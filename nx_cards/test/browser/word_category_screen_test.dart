@@ -80,7 +80,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        await tester.tap(find.byTooltip('All cards'));
+        await tester.tap(find.text('All'));
         await tester.pumpAndSettle();
         expect(find.text('4 cards · 4 learning'), findsOneWidget);
         for (var id = 1; id <= 4; id++) {
@@ -173,10 +173,10 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1100, 844));
     await tester.pumpAndSettle();
     final nounLearnt = find.byKey(
-      const ValueKey('language-category-noun-past'),
+      const ValueKey('language-category-noun-learnt'),
     );
     final nounLearning = find.byKey(
-      const ValueKey('language-category-noun-current'),
+      const ValueKey('language-category-noun-learning'),
     );
     expect(find.descendant(of: nounLearnt, matching: find.text('1')), findsOne);
     expect(
@@ -209,7 +209,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('language-category-noun-past')),
+      find.byKey(const ValueKey('language-category-noun-learnt')),
       findsNothing,
     );
     await tester.binding.setSurfaceSize(const Size(1100, 844));
@@ -267,8 +267,8 @@ void main() {
     expect(find.text('The Four Steps to the Epiphany'), findsOneWidget);
     await tester.tap(find.text('The Four Steps to the Epiphany'));
     await tester.pumpAndSettle();
-    expect(find.text('Current  0'), findsOneWidget);
-    expect(find.text('Past  0'), findsOneWidget);
+    expect(find.text('Learning  0'), findsOneWidget);
+    expect(find.text('Learnt  0'), findsOneWidget);
     expect(find.text('Future  1'), findsOneWidget);
     await tester.ensureVisible(find.text('Future  1'));
     await tester.tap(find.text('Future  1'));
@@ -331,10 +331,10 @@ void main() {
     expect(find.text('0%'), findsOneWidget);
     expect(find.text('DUE'), findsNothing);
     expect(find.byKey(const ValueKey('word-schedule-due')), findsNothing);
-    expect(find.text('Current  1'), findsOneWidget);
-    expect(find.text('Past  1'), findsOneWidget);
+    expect(find.text('Learning  1'), findsOneWidget);
+    expect(find.text('Learnt  1'), findsOneWidget);
     expect(find.text('Future  1'), findsOneWidget);
-    await tester.tap(find.text('Past  1'));
+    await tester.tap(find.text('Learnt  1'));
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('word-state-learning')),
@@ -406,7 +406,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.changes, isEmpty);
 
-    await tester.tap(find.text('Past  1'));
+    await tester.tap(find.text('Learnt  1'));
     await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const ValueKey('recall:3')),

@@ -76,6 +76,8 @@ final class NativeCardLibrary implements CardWorkspace {
       ) =>
         newContent.copyWith(
           audioUrl: newContent.audioUrl ?? oldContent.audioUrl,
+          audioSha256: newContent.audioSha256 ?? oldContent.audioSha256,
+          audioBytes: newContent.audioBytes ?? oldContent.audioBytes,
         ),
       _ => content,
     };

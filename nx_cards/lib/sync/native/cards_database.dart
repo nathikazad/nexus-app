@@ -14,6 +14,8 @@ class LocalStudyCards extends Table {
   TextColumn get back => text()();
   TextColumn get transliteration => text().nullable()();
   TextColumn get audioUrl => text().nullable()();
+  TextColumn get audioSha256 => text().nullable()();
+  IntColumn get audioBytes => integer().nullable()();
   TextColumn get examplesJson => text().withDefault(const Constant('[]'))();
   TextColumn get linkedWordIdsJson =>
       text().withDefault(const Constant('[]'))();
@@ -40,7 +42,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   Future<void> createHashSchema() => customStatement('''
     CREATE TABLE IF NOT EXISTS card_sync_hashes (
@@ -66,6 +68,13 @@ class CardsDatabase extends _$CardsDatabase {
       await DriftOutboxPersistence.createSchema(this);
     },
     onUpgrade: (migrator, from, to) async {
+      if (from < 15) {
+        await migrator.addColumn(localStudyCards, localStudyCards.audioSha256);
+        await migrator.addColumn(localStudyCards, localStudyCards.audioBytes);
+        // Reload metadata even if a previous client saw the new server hash
+        // but could only persist the URL. Pending user edits stay intact.
+        if (from >= 12) await customStatement('DELETE FROM card_sync_hashes');
+      }
       if (from < 12) await createHashSchema();
       if (from < 11) {
         await migrator.addColumn(localStudyCards, localStudyCards.notes);

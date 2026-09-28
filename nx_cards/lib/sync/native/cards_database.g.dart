@@ -102,6 +102,28 @@ class $LocalStudyCardsTable extends LocalStudyCards
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _audioSha256Meta = const VerificationMeta(
+    'audioSha256',
+  );
+  @override
+  late final GeneratedColumn<String> audioSha256 = GeneratedColumn<String>(
+    'audio_sha256',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _audioBytesMeta = const VerificationMeta(
+    'audioBytes',
+  );
+  @override
+  late final GeneratedColumn<int> audioBytes = GeneratedColumn<int>(
+    'audio_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _examplesJsonMeta = const VerificationMeta(
     'examplesJson',
   );
@@ -266,6 +288,8 @@ class $LocalStudyCardsTable extends LocalStudyCards
     back,
     transliteration,
     audioUrl,
+    audioSha256,
+    audioBytes,
     examplesJson,
     linkedWordIdsJson,
     tagsJson,
@@ -357,6 +381,21 @@ class $LocalStudyCardsTable extends LocalStudyCards
       context.handle(
         _audioUrlMeta,
         audioUrl.isAcceptableOrUnknown(data['audio_url']!, _audioUrlMeta),
+      );
+    }
+    if (data.containsKey('audio_sha256')) {
+      context.handle(
+        _audioSha256Meta,
+        audioSha256.isAcceptableOrUnknown(
+          data['audio_sha256']!,
+          _audioSha256Meta,
+        ),
+      );
+    }
+    if (data.containsKey('audio_bytes')) {
+      context.handle(
+        _audioBytesMeta,
+        audioBytes.isAcceptableOrUnknown(data['audio_bytes']!, _audioBytesMeta),
       );
     }
     if (data.containsKey('examples_json')) {
@@ -516,6 +555,14 @@ class $LocalStudyCardsTable extends LocalStudyCards
         DriftSqlType.string,
         data['${effectivePrefix}audio_url'],
       ),
+      audioSha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}audio_sha256'],
+      ),
+      audioBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}audio_bytes'],
+      ),
       examplesJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}examples_json'],
@@ -588,6 +635,8 @@ class LocalStudyCardRow extends DataClass
   final String back;
   final String? transliteration;
   final String? audioUrl;
+  final String? audioSha256;
+  final int? audioBytes;
   final String examplesJson;
   final String linkedWordIdsJson;
   final String tagsJson;
@@ -611,6 +660,8 @@ class LocalStudyCardRow extends DataClass
     required this.back,
     this.transliteration,
     this.audioUrl,
+    this.audioSha256,
+    this.audioBytes,
     required this.examplesJson,
     required this.linkedWordIdsJson,
     required this.tagsJson,
@@ -644,6 +695,12 @@ class LocalStudyCardRow extends DataClass
     }
     if (!nullToAbsent || audioUrl != null) {
       map['audio_url'] = Variable<String>(audioUrl);
+    }
+    if (!nullToAbsent || audioSha256 != null) {
+      map['audio_sha256'] = Variable<String>(audioSha256);
+    }
+    if (!nullToAbsent || audioBytes != null) {
+      map['audio_bytes'] = Variable<int>(audioBytes);
     }
     map['examples_json'] = Variable<String>(examplesJson);
     map['linked_word_ids_json'] = Variable<String>(linkedWordIdsJson);
@@ -688,6 +745,12 @@ class LocalStudyCardRow extends DataClass
       audioUrl: audioUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(audioUrl),
+      audioSha256: audioSha256 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audioSha256),
+      audioBytes: audioBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(audioBytes),
       examplesJson: Value(examplesJson),
       linkedWordIdsJson: Value(linkedWordIdsJson),
       tagsJson: Value(tagsJson),
@@ -727,6 +790,8 @@ class LocalStudyCardRow extends DataClass
       back: serializer.fromJson<String>(json['back']),
       transliteration: serializer.fromJson<String?>(json['transliteration']),
       audioUrl: serializer.fromJson<String?>(json['audioUrl']),
+      audioSha256: serializer.fromJson<String?>(json['audioSha256']),
+      audioBytes: serializer.fromJson<int?>(json['audioBytes']),
       examplesJson: serializer.fromJson<String>(json['examplesJson']),
       linkedWordIdsJson: serializer.fromJson<String>(json['linkedWordIdsJson']),
       tagsJson: serializer.fromJson<String>(json['tagsJson']),
@@ -755,6 +820,8 @@ class LocalStudyCardRow extends DataClass
       'back': serializer.toJson<String>(back),
       'transliteration': serializer.toJson<String?>(transliteration),
       'audioUrl': serializer.toJson<String?>(audioUrl),
+      'audioSha256': serializer.toJson<String?>(audioSha256),
+      'audioBytes': serializer.toJson<int?>(audioBytes),
       'examplesJson': serializer.toJson<String>(examplesJson),
       'linkedWordIdsJson': serializer.toJson<String>(linkedWordIdsJson),
       'tagsJson': serializer.toJson<String>(tagsJson),
@@ -781,6 +848,8 @@ class LocalStudyCardRow extends DataClass
     String? back,
     Value<String?> transliteration = const Value.absent(),
     Value<String?> audioUrl = const Value.absent(),
+    Value<String?> audioSha256 = const Value.absent(),
+    Value<int?> audioBytes = const Value.absent(),
     String? examplesJson,
     String? linkedWordIdsJson,
     String? tagsJson,
@@ -806,6 +875,8 @@ class LocalStudyCardRow extends DataClass
         ? transliteration.value
         : this.transliteration,
     audioUrl: audioUrl.present ? audioUrl.value : this.audioUrl,
+    audioSha256: audioSha256.present ? audioSha256.value : this.audioSha256,
+    audioBytes: audioBytes.present ? audioBytes.value : this.audioBytes,
     examplesJson: examplesJson ?? this.examplesJson,
     linkedWordIdsJson: linkedWordIdsJson ?? this.linkedWordIdsJson,
     tagsJson: tagsJson ?? this.tagsJson,
@@ -839,6 +910,12 @@ class LocalStudyCardRow extends DataClass
           ? data.transliteration.value
           : this.transliteration,
       audioUrl: data.audioUrl.present ? data.audioUrl.value : this.audioUrl,
+      audioSha256: data.audioSha256.present
+          ? data.audioSha256.value
+          : this.audioSha256,
+      audioBytes: data.audioBytes.present
+          ? data.audioBytes.value
+          : this.audioBytes,
       examplesJson: data.examplesJson.present
           ? data.examplesJson.value
           : this.examplesJson,
@@ -883,6 +960,8 @@ class LocalStudyCardRow extends DataClass
           ..write('back: $back, ')
           ..write('transliteration: $transliteration, ')
           ..write('audioUrl: $audioUrl, ')
+          ..write('audioSha256: $audioSha256, ')
+          ..write('audioBytes: $audioBytes, ')
           ..write('examplesJson: $examplesJson, ')
           ..write('linkedWordIdsJson: $linkedWordIdsJson, ')
           ..write('tagsJson: $tagsJson, ')
@@ -911,6 +990,8 @@ class LocalStudyCardRow extends DataClass
     back,
     transliteration,
     audioUrl,
+    audioSha256,
+    audioBytes,
     examplesJson,
     linkedWordIdsJson,
     tagsJson,
@@ -938,6 +1019,8 @@ class LocalStudyCardRow extends DataClass
           other.back == this.back &&
           other.transliteration == this.transliteration &&
           other.audioUrl == this.audioUrl &&
+          other.audioSha256 == this.audioSha256 &&
+          other.audioBytes == this.audioBytes &&
           other.examplesJson == this.examplesJson &&
           other.linkedWordIdsJson == this.linkedWordIdsJson &&
           other.tagsJson == this.tagsJson &&
@@ -963,6 +1046,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<String> back;
   final Value<String?> transliteration;
   final Value<String?> audioUrl;
+  final Value<String?> audioSha256;
+  final Value<int?> audioBytes;
   final Value<String> examplesJson;
   final Value<String> linkedWordIdsJson;
   final Value<String> tagsJson;
@@ -987,6 +1072,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.back = const Value.absent(),
     this.transliteration = const Value.absent(),
     this.audioUrl = const Value.absent(),
+    this.audioSha256 = const Value.absent(),
+    this.audioBytes = const Value.absent(),
     this.examplesJson = const Value.absent(),
     this.linkedWordIdsJson = const Value.absent(),
     this.tagsJson = const Value.absent(),
@@ -1012,6 +1099,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     required String back,
     this.transliteration = const Value.absent(),
     this.audioUrl = const Value.absent(),
+    this.audioSha256 = const Value.absent(),
+    this.audioBytes = const Value.absent(),
     this.examplesJson = const Value.absent(),
     this.linkedWordIdsJson = const Value.absent(),
     required String tagsJson,
@@ -1046,6 +1135,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Expression<String>? back,
     Expression<String>? transliteration,
     Expression<String>? audioUrl,
+    Expression<String>? audioSha256,
+    Expression<int>? audioBytes,
     Expression<String>? examplesJson,
     Expression<String>? linkedWordIdsJson,
     Expression<String>? tagsJson,
@@ -1071,6 +1162,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       if (back != null) 'back': back,
       if (transliteration != null) 'transliteration': transliteration,
       if (audioUrl != null) 'audio_url': audioUrl,
+      if (audioSha256 != null) 'audio_sha256': audioSha256,
+      if (audioBytes != null) 'audio_bytes': audioBytes,
       if (examplesJson != null) 'examples_json': examplesJson,
       if (linkedWordIdsJson != null) 'linked_word_ids_json': linkedWordIdsJson,
       if (tagsJson != null) 'tags_json': tagsJson,
@@ -1098,6 +1191,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Value<String>? back,
     Value<String?>? transliteration,
     Value<String?>? audioUrl,
+    Value<String?>? audioSha256,
+    Value<int?>? audioBytes,
     Value<String>? examplesJson,
     Value<String>? linkedWordIdsJson,
     Value<String>? tagsJson,
@@ -1123,6 +1218,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       back: back ?? this.back,
       transliteration: transliteration ?? this.transliteration,
       audioUrl: audioUrl ?? this.audioUrl,
+      audioSha256: audioSha256 ?? this.audioSha256,
+      audioBytes: audioBytes ?? this.audioBytes,
       examplesJson: examplesJson ?? this.examplesJson,
       linkedWordIdsJson: linkedWordIdsJson ?? this.linkedWordIdsJson,
       tagsJson: tagsJson ?? this.tagsJson,
@@ -1169,6 +1266,12 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     }
     if (audioUrl.present) {
       map['audio_url'] = Variable<String>(audioUrl.value);
+    }
+    if (audioSha256.present) {
+      map['audio_sha256'] = Variable<String>(audioSha256.value);
+    }
+    if (audioBytes.present) {
+      map['audio_bytes'] = Variable<int>(audioBytes.value);
     }
     if (examplesJson.present) {
       map['examples_json'] = Variable<String>(examplesJson.value);
@@ -1227,6 +1330,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
           ..write('back: $back, ')
           ..write('transliteration: $transliteration, ')
           ..write('audioUrl: $audioUrl, ')
+          ..write('audioSha256: $audioSha256, ')
+          ..write('audioBytes: $audioBytes, ')
           ..write('examplesJson: $examplesJson, ')
           ..write('linkedWordIdsJson: $linkedWordIdsJson, ')
           ..write('tagsJson: $tagsJson, ')
@@ -1270,6 +1375,8 @@ typedef $$LocalStudyCardsTableCreateCompanionBuilder =
       required String back,
       Value<String?> transliteration,
       Value<String?> audioUrl,
+      Value<String?> audioSha256,
+      Value<int?> audioBytes,
       Value<String> examplesJson,
       Value<String> linkedWordIdsJson,
       required String tagsJson,
@@ -1296,6 +1403,8 @@ typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
       Value<String> back,
       Value<String?> transliteration,
       Value<String?> audioUrl,
+      Value<String?> audioSha256,
+      Value<int?> audioBytes,
       Value<String> examplesJson,
       Value<String> linkedWordIdsJson,
       Value<String> tagsJson,
@@ -1363,6 +1472,16 @@ class $$LocalStudyCardsTableFilterComposer
 
   ColumnFilters<String> get audioUrl => $composableBuilder(
     column: $table.audioUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get audioSha256 => $composableBuilder(
+    column: $table.audioSha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get audioBytes => $composableBuilder(
+    column: $table.audioBytes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1486,6 +1605,16 @@ class $$LocalStudyCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get audioSha256 => $composableBuilder(
+    column: $table.audioSha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get audioBytes => $composableBuilder(
+    column: $table.audioBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get examplesJson => $composableBuilder(
     column: $table.examplesJson,
     builder: (column) => ColumnOrderings(column),
@@ -1594,6 +1723,16 @@ class $$LocalStudyCardsTableAnnotationComposer
   GeneratedColumn<String> get audioUrl =>
       $composableBuilder(column: $table.audioUrl, builder: (column) => column);
 
+  GeneratedColumn<String> get audioSha256 => $composableBuilder(
+    column: $table.audioSha256,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get audioBytes => $composableBuilder(
+    column: $table.audioBytes,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get examplesJson => $composableBuilder(
     column: $table.examplesJson,
     builder: (column) => column,
@@ -1696,6 +1835,8 @@ class $$LocalStudyCardsTableTableManager
                 Value<String> back = const Value.absent(),
                 Value<String?> transliteration = const Value.absent(),
                 Value<String?> audioUrl = const Value.absent(),
+                Value<String?> audioSha256 = const Value.absent(),
+                Value<int?> audioBytes = const Value.absent(),
                 Value<String> examplesJson = const Value.absent(),
                 Value<String> linkedWordIdsJson = const Value.absent(),
                 Value<String> tagsJson = const Value.absent(),
@@ -1720,6 +1861,8 @@ class $$LocalStudyCardsTableTableManager
                 back: back,
                 transliteration: transliteration,
                 audioUrl: audioUrl,
+                audioSha256: audioSha256,
+                audioBytes: audioBytes,
                 examplesJson: examplesJson,
                 linkedWordIdsJson: linkedWordIdsJson,
                 tagsJson: tagsJson,
@@ -1746,6 +1889,8 @@ class $$LocalStudyCardsTableTableManager
                 required String back,
                 Value<String?> transliteration = const Value.absent(),
                 Value<String?> audioUrl = const Value.absent(),
+                Value<String?> audioSha256 = const Value.absent(),
+                Value<int?> audioBytes = const Value.absent(),
                 Value<String> examplesJson = const Value.absent(),
                 Value<String> linkedWordIdsJson = const Value.absent(),
                 required String tagsJson,
@@ -1770,6 +1915,8 @@ class $$LocalStudyCardsTableTableManager
                 back: back,
                 transliteration: transliteration,
                 audioUrl: audioUrl,
+                audioSha256: audioSha256,
+                audioBytes: audioBytes,
                 examplesJson: examplesJson,
                 linkedWordIdsJson: linkedWordIdsJson,
                 tagsJson: tagsJson,

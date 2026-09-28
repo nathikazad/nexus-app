@@ -85,6 +85,8 @@ void main() {
     expect(languageDetails['value'], {
       'transliteration': 'kazhivu',
       'audio_url': null,
+      'audio_sha256': null,
+      'audio_bytes': null,
       'examples': <Object?>[],
     });
     final schedule =
@@ -125,12 +127,16 @@ void main() {
                 'language_details': {
                   'transliteration': 'kazhivu',
                   'audio_url': null,
+                  'audio_sha256': null,
+                  'audio_bytes': null,
                   'examples': <Object?>[
                     {
                       'text': 'അവന് നല്ല കഴിവുണ്ട്.',
                       'transliteration': 'avan nalla kazhivundu',
                       'translation': 'He has good talent.',
                       'audio_url': null,
+                      'audio_sha256': null,
+                      'audio_bytes': null,
                     },
                   ],
                 },

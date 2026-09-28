@@ -78,6 +78,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   late StudyMode _mode;
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
   RecallPresentation _recallPresentation = RecallPresentation.standard;
+  bool _listening = false;
+  bool get _reverseLanguageRecall =>
+      !_isBookStudy && _cue == StudyCue.toLanguage;
+  RecallPresentation get _effectiveRecallPresentation =>
+      _reverseLanguageRecall && _recallPresentation == RecallPresentation.write
+      ? RecallPresentation.standard
+      : _recallPresentation;
   StudyCue? get _cue => _isBookStudy
       ? StudyCue.fromLanguage
       : ref.read(
@@ -161,6 +168,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _recallPresentation = recallPresentation;
         }
 
+        _listening = saved['listening'] == true;
         if (order != null) _order = order;
         if (statuses.isNotEmpty) {
           _learningStatuses
@@ -192,6 +200,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'mode': _mode.name,
         'studyPresentation': _studyPresentation.name,
         'recallPresentation': _recallPresentation.name,
+        'listening': _listening,
         'cue': _cue?.name,
         'combinedPrompt': _combinedPrompt,
         'learningStatuses': [
@@ -394,11 +403,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     _beginStartup('recall');
     final prompts = await _latestSelectedPrompts(
       deferBodies:
-          _recallPresentation == RecallPresentation.write &&
+          _effectiveRecallPresentation == RecallPresentation.write &&
           await NativeDrawingSession.isAvailable(),
     );
     if (!mounted || prompts == null) return;
-    if (_recallPresentation == RecallPresentation.write &&
+    if (_effectiveRecallPresentation == RecallPresentation.write &&
         prompts.every((p) => p.card.content is LanguageCardContent)) {
       try {
         if (await _openNativeDrawing(prompts: prompts)) {
@@ -421,7 +430,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           studyScope: widget.studyScope,
           title: widget.title,
           prompts: prompts,
-          interaction: _recallPresentation == RecallPresentation.write
+          interaction: _effectiveRecallPresentation == RecallPresentation.write
               ? RecallInteraction.writing
               : RecallInteraction.standard,
         ),
@@ -758,6 +767,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             card: bodies[i],
             cue: chosen[i].cue,
             showEnglishAndTransliteration: _combinedPrompt,
+            listening:
+                _mode == StudyMode.recall &&
+                _listening &&
+                _cue == StudyCue.toLanguage,
           ),
       ];
       _startupStep('queue_hydrated count=${hydrated.length}');
@@ -1023,40 +1036,71 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     ...[
                       _SetupCard(
                         number: '01',
-                        title: 'Recall format',
-                        child: SegmentedButton<RecallPresentation>(
-                          showSelectedIcon: false,
-                          style: const ButtonStyle(
-                            padding: WidgetStatePropertyAll(
-                              EdgeInsets.symmetric(horizontal: 8),
-                            ),
-                          ),
-                          segments: const [
-                            ButtonSegment(
-                              value: RecallPresentation.standard,
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text('Standard', maxLines: 1),
+                        title: _reverseLanguageRecall
+                            ? 'Prompt'
+                            : 'Recall format',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_reverseLanguageRecall) ...[
+                              SegmentedButton<bool>(
+                                showSelectedIcon: false,
+                                segments: const [
+                                  ButtonSegment(
+                                    value: false,
+                                    label: Text('Read'),
+                                  ),
+                                  ButtonSegment(
+                                    value: true,
+                                    label: Text('Listen'),
+                                  ),
+                                ],
+                                selected: {_listening},
+                                onSelectionChanged: (value) {
+                                  setState(() => _listening = value.single);
+                                  _rememberPreferences();
+                                },
                               ),
-                            ),
-                            ButtonSegment(
-                              value: RecallPresentation.write,
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text('Write', maxLines: 1),
+                              const SizedBox(height: 16),
+                              const Text('Recall format'),
+                              const SizedBox(height: 8),
+                            ],
+                            SegmentedButton<RecallPresentation>(
+                              showSelectedIcon: false,
+                              style: const ButtonStyle(
+                                padding: WidgetStatePropertyAll(
+                                  EdgeInsets.symmetric(horizontal: 8),
+                                ),
                               ),
-                            ),
-                            ButtonSegment(
-                              value: RecallPresentation.fast,
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text('Fast', maxLines: 1),
-                              ),
+                              segments: [
+                                const ButtonSegment(
+                                  value: RecallPresentation.standard,
+                                  label: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Standard', maxLines: 1),
+                                  ),
+                                ),
+                                if (!_reverseLanguageRecall)
+                                  const ButtonSegment(
+                                    value: RecallPresentation.write,
+                                    label: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text('Write', maxLines: 1),
+                                    ),
+                                  ),
+                                const ButtonSegment(
+                                  value: RecallPresentation.fast,
+                                  label: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Fast', maxLines: 1),
+                                  ),
+                                ),
+                              ],
+                              selected: {_effectiveRecallPresentation},
+                              onSelectionChanged: (value) =>
+                                  _selectRecallPresentation(value.single),
                             ),
                           ],
-                          selected: {_recallPresentation},
-                          onSelectionChanged: (value) =>
-                              _selectRecallPresentation(value.single),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -1076,7 +1120,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     FilledButton.icon(
                       onPressed: _cue == null || maxCount == 0 || _starting
                           ? null
-                          : _recallPresentation == RecallPresentation.fast
+                          : _effectiveRecallPresentation ==
+                                RecallPresentation.fast
                           ? _startFastRecall
                           : _start,
                       icon: const Icon(Icons.play_arrow_rounded),
@@ -1146,7 +1191,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       ),
       if (_mode == StudyMode.recall &&
           _learningStatuses.contains(LearningStage.past))
-        Text('Past cards due: $_pastDueCount'),
+        Text('Learnt cards due: $_pastDueCount'),
     ],
   );
 

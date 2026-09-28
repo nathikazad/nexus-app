@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,17 @@ import '../study/study_setup_page_test.dart' show sample;
 import 'category_hierarchy_test.dart' as hierarchy;
 
 void main() {
+  test(
+    'direction labels identify both languages, with a readable fallback',
+    () {
+      expect(compactLanguageLabel('Chinese'), '中');
+      expect(compactLanguageLabel('Tamil'), 'தமிழ்');
+      expect(compactLanguageLabel('Malayalam'), 'മലയാളം');
+      expect(compactLanguageLabel('English'), 'EN');
+      expect(compactLanguageLabel('Spanish'), 'Spanish');
+    },
+  );
+
   testWidgets('one direction controls category totals and the opened list', (
     tester,
   ) async {
@@ -44,20 +56,32 @@ void main() {
       of: find.byKey(ValueKey('language-category-word-$name')),
       matching: find.text(count),
     );
-    expect(metric('past', '1'), findsOneWidget);
+    expect(metric('learnt', '1'), findsOneWidget);
+    expect(find.text('EN → 中'), findsOneWidget);
+    expect(find.byTooltip('All cards'), findsNothing);
     expect(metric('practice', '0'), findsOneWidget);
     await tester.tap(find.byTooltip('Recall direction: English → Chinese'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Chinese → English'));
     await tester.pumpAndSettle();
-    expect(metric('past', '0'), findsOneWidget);
-    expect(metric('current', '1'), findsOneWidget);
-    await tester.tap(find.byTooltip('All cards'));
+    expect(metric('learnt', '0'), findsOneWidget);
+    expect(find.text('中 → EN'), findsOneWidget);
+    expect(metric('learning', '1'), findsOneWidget);
+    await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
-    expect(find.text('Current  1'), findsOneWidget);
-    expect(find.text('Past  0'), findsOneWidget);
-    await tester.tap(find.text('Current  1'));
+    expect(find.text('Learning  1'), findsOneWidget);
+    expect(find.text('Learnt  0'), findsOneWidget);
+    await tester.tap(find.text('Learning  1'));
     await tester.pumpAndSettle();
     expect(find.text('word 1'), findsOneWidget);
+    await tester.tap(find.byTooltip('Recall direction: Chinese → English'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English → Chinese'));
+    await tester.pumpAndSettle();
+    expect(find.text('Learnt  1'), findsOneWidget);
+    expect(find.text('EN → 中'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(metric('learnt', '1'), findsOneWidget);
   });
 }

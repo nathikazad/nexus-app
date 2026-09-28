@@ -36,7 +36,6 @@ class _LanguageFastRecallPageState
   final Map<int, StudyCard> _latestCards = <int, StudyCard>{};
   final Map<int, CardRating> _ratings = <int, CardRating>{};
   final Set<int> _saving = <int>{};
-  String _query = '';
 
   late List<StudyPrompt> _prompts;
 
@@ -49,7 +48,6 @@ class _LanguageFastRecallPageState
     setState(() {
       _prompts = missed;
       _ratings.clear();
-      _query = '';
     });
   }
 
@@ -60,21 +58,6 @@ class _LanguageFastRecallPageState
     for (final prompt in _prompts) {
       _latestCards[prompt.cardId] = prompt.card;
     }
-  }
-
-  List<StudyPrompt> get _visiblePrompts {
-    final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return _prompts;
-    return _prompts
-        .where((queued) {
-          final card = _latestCards[queued.cardId] ?? queued.card;
-          final content = card.content;
-          if (content is! LanguageCardContent) return false;
-          return content.english.toLowerCase().contains(query) ||
-              content.originalScript.toLowerCase().contains(query) ||
-              content.transliteration.toLowerCase().contains(query);
-        })
-        .toList(growable: false);
   }
 
   StudyPrompt _latestPrompt(StudyPrompt queued) =>
@@ -156,7 +139,7 @@ class _LanguageFastRecallPageState
         ],
       );
     }
-    final prompts = _visiblePrompts;
+    final prompts = _prompts;
     return Scaffold(
       appBar: AppBar(title: Text('${widget.title} · Fast recall')),
       body: Center(
@@ -172,9 +155,7 @@ class _LanguageFastRecallPageState
               if (index == 0) {
                 return _FastRecallHeader(
                   total: _prompts.length,
-                  visible: prompts.length,
                   reviewed: _ratings.length,
-                  onSearch: (value) => setState(() => _query = value),
                 );
               }
               final queued = prompts[index - 1];
@@ -203,17 +184,10 @@ class _LanguageFastRecallPageState
 }
 
 class _FastRecallHeader extends StatelessWidget {
-  const _FastRecallHeader({
-    required this.total,
-    required this.visible,
-    required this.reviewed,
-    required this.onSearch,
-  });
+  const _FastRecallHeader({required this.total, required this.reviewed});
 
   final int total;
-  final int visible;
   final int reviewed;
-  final ValueChanged<String> onSearch;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -222,20 +196,11 @@ class _FastRecallHeader extends StatelessWidget {
       Text('FAST RECALL', style: monoLabel),
       const SizedBox(height: 7),
       Text(
-        visible == total ? '$reviewed of $total recalled' : '$visible shown',
+        '$reviewed of $total recalled',
         style: const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.6,
-        ),
-      ),
-      const SizedBox(height: 16),
-      TextField(
-        onChanged: onSearch,
-        textInputAction: TextInputAction.search,
-        decoration: const InputDecoration(
-          hintText: 'Search words',
-          prefixIcon: Icon(Icons.search, size: 20),
         ),
       ),
       const SizedBox(height: 12),
@@ -383,9 +348,12 @@ class _FastRecallRowState extends ConsumerState<_FastRecallRow> {
                         onHorizontalDragEnd: _canSwipe ? _endSwipe : null,
                         onHorizontalDragCancel: _canSwipe ? _cancelSwipe : null,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               SizedBox(
                                 width: 30,
@@ -395,154 +363,213 @@ class _FastRecallRowState extends ConsumerState<_FastRecallRow> {
                                 ),
                               ),
                               Expanded(
-                                flex: 3,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(8),
-                                  onTap: _revealed ? widget.onOpenCard : null,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      widget.prompt.prompt,
-                                      key: ValueKey<String>(
-                                        'fast-prompt-${widget.prompt.cardId}',
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        height: 1.35,
-                                        color: RecallColors.muted,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 4,
-                                child: _revealed
-                                    ? InkWell(
-                                        key: ValueKey<String>(
-                                          'fast-answer-${widget.prompt.cardId}',
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                        onTap: widget.onOpenCard,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 2,
-                                          ),
-                                          child: _FastAnswer(
-                                            prompt: widget.prompt,
-                                            content: widget.content,
-                                          ),
-                                        ),
-                                      )
-                                    : InkWell(
-                                        key: ValueKey<String>(
-                                          'fast-hidden-${widget.prompt.cardId}',
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                        onTap: () =>
-                                            setState(() => _revealed = true),
-                                        child: const Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            vertical: 3,
-                                          ),
-                                          child: Text(
-                                            'Tap to reveal',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: RecallColors.faint,
-                                              fontStyle: FontStyle.italic,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
                                             ),
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                              if (_revealed &&
-                                  widget.content.audioUrl?.isNotEmpty == true &&
-                                  ref.watch(cardAudioRepositoryProvider) !=
-                                      null)
-                                PronunciationButton(
-                                  audioUrl: widget.content.audioUrl!,
-                                  repository: ref.watch(
-                                    cardAudioRepositoryProvider,
-                                  )!,
-                                  autoPlay: true,
-                                ),
-                              const SizedBox(width: 6),
-                              SizedBox(
-                                width: 84,
-                                child: !_revealed
-                                    ? null
-                                    : _swipeCommitted
-                                    ? Icon(
-                                        _swipeRecalled
-                                            ? Icons.thumb_up_alt_outlined
-                                            : Icons.thumb_down_alt_outlined,
-                                        size: 18,
-                                        color: RecallColors.muted,
-                                      )
-                                    : widget.saving
-                                    ? const Center(
-                                        child: SizedBox.square(
-                                          dimension: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      )
-                                    : widget.rating != null
-                                    ? Icon(
-                                        widget.rating == CardRating.good
-                                            ? Icons.thumb_up_alt_outlined
-                                            : Icons.thumb_down_alt_outlined,
-                                        size: 18,
-                                        color: RecallColors.muted,
-                                      )
-                                    : Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          IconButton(
-                                            key: ValueKey<String>(
-                                              'fast-yes-${widget.prompt.cardId}',
-                                            ),
-                                            tooltip: 'Recalled',
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            constraints:
-                                                const BoxConstraints.tightFor(
-                                                  width: 36,
-                                                  height: 36,
+                                            onTap: _revealed
+                                                ? widget.onOpenCard
+                                                : null,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 4,
+                                              ),
+                                              child: Text(
+                                                widget.prompt.prompt,
+                                                key: ValueKey<String>(
+                                                  'fast-prompt-${widget.prompt.cardId}',
                                                 ),
-                                            padding: const EdgeInsets.all(7),
-                                            onPressed: widget.onYes,
-                                            icon: const Icon(
-                                              Icons.thumb_up_alt_outlined,
-                                              size: 19,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  height: 1.35,
+                                                  color: RecallColors.muted,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                          IconButton(
-                                            key: ValueKey<String>(
-                                              'fast-no-${widget.prompt.cardId}',
+                                        ),
+                                        if ((_revealed ||
+                                                widget.prompt.isListening) &&
+                                            widget
+                                                    .content
+                                                    .audioUrl
+                                                    ?.isNotEmpty ==
+                                                true &&
+                                            ref.watch(
+                                                  cardAudioRepositoryProvider,
+                                                ) !=
+                                                null)
+                                          PronunciationButton(
+                                            key: ValueKey(
+                                              'pronunciation:$_revealed',
                                             ),
-                                            tooltip: 'Did not recall',
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            constraints:
-                                                const BoxConstraints.tightFor(
-                                                  width: 36,
-                                                  height: 36,
+                                            audioUrl: widget.content.audioUrl!,
+                                            repository: ref.watch(
+                                              cardAudioRepositoryProvider,
+                                            )!,
+                                            // Fast recall shows multiple rows; play only the row requested.
+                                            autoPlay: _revealed,
+                                          ),
+
+                                        if (!_revealed) ...[
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: InkWell(
+                                              key: ValueKey<String>(
+                                                'fast-hidden-${widget.prompt.cardId}',
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              onTap: () => setState(
+                                                () => _revealed = true,
+                                              ),
+                                              child: const Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: 3,
                                                 ),
-                                            padding: const EdgeInsets.all(7),
-                                            onPressed: widget.onNo,
-                                            icon: const Icon(
-                                              Icons.thumb_down_alt_outlined,
-                                              size: 19,
+                                                child: Text(
+                                                  'Tap to reveal',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: RecallColors.faint,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ],
+                                      ],
+                                    ),
+                                    if (_revealed) ...[
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: InkWell(
+                                              key: ValueKey<String>(
+                                                'fast-answer-${widget.prompt.cardId}',
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              onTap: widget.onOpenCard,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                      vertical: 2,
+                                                    ),
+                                                child: _FastAnswer(
+                                                  prompt: widget.prompt,
+                                                  content: widget.content,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          SizedBox(
+                                            width: 84,
+                                            child: _swipeCommitted
+                                                ? Icon(
+                                                    _swipeRecalled
+                                                        ? Icons
+                                                              .thumb_up_alt_outlined
+                                                        : Icons
+                                                              .thumb_down_alt_outlined,
+                                                    size: 18,
+                                                    color: RecallColors.muted,
+                                                  )
+                                                : widget.saving
+                                                ? const Center(
+                                                    child: SizedBox.square(
+                                                      dimension: 18,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                          ),
+                                                    ),
+                                                  )
+                                                : widget.rating != null
+                                                ? Icon(
+                                                    widget.rating ==
+                                                            CardRating.good
+                                                        ? Icons
+                                                              .thumb_up_alt_outlined
+                                                        : Icons
+                                                              .thumb_down_alt_outlined,
+                                                    size: 18,
+                                                    color: RecallColors.muted,
+                                                  )
+                                                : Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.end,
+                                                    children: [
+                                                      IconButton(
+                                                        key: ValueKey<String>(
+                                                          'fast-yes-${widget.prompt.cardId}',
+                                                        ),
+                                                        tooltip: 'Recalled',
+                                                        visualDensity:
+                                                            VisualDensity
+                                                                .compact,
+                                                        constraints:
+                                                            const BoxConstraints.tightFor(
+                                                              width: 36,
+                                                              height: 36,
+                                                            ),
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              7,
+                                                            ),
+                                                        onPressed: widget.onYes,
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .thumb_up_alt_outlined,
+                                                          size: 19,
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        key: ValueKey<String>(
+                                                          'fast-no-${widget.prompt.cardId}',
+                                                        ),
+                                                        tooltip:
+                                                            'Did not recall',
+                                                        visualDensity:
+                                                            VisualDensity
+                                                                .compact,
+                                                        constraints:
+                                                            const BoxConstraints.tightFor(
+                                                              width: 36,
+                                                              height: 36,
+                                                            ),
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              7,
+                                                            ),
+                                                        onPressed: widget.onNo,
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .thumb_down_alt_outlined,
+                                                          size: 19,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                          ),
+                                        ],
                                       ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -603,6 +630,7 @@ class _FastAnswer extends StatelessWidget {
       StudyCue.toLanguage => content.english,
     };
     final secondary = switch (prompt.cue) {
+      StudyCue.toLanguage when prompt.isListening => content.originalScript,
       StudyCue.transliteration => content.english,
       _ => content.transliteration,
     };

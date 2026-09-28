@@ -46,6 +46,14 @@ const languageDetailsJsonSchema = <String, dynamic>{
   'required': ['transliteration', 'audio_url', 'examples'],
   'properties': {
     'transliteration': {'type': 'string', 'minLength': 1},
+    'audio_sha256': {
+      'type': ['string', 'null'],
+      'pattern': r'^[a-f0-9]{64}$',
+    },
+    'audio_bytes': {
+      'type': ['integer', 'null'],
+      'minimum': 1,
+    },
     'audio_url': {
       'type': ['string', 'null'],
     },
@@ -59,6 +67,14 @@ const languageDetailsJsonSchema = <String, dynamic>{
           'text': {'type': 'string', 'minLength': 1},
           'transliteration': {'type': 'string', 'minLength': 1},
           'translation': {'type': 'string', 'minLength': 1},
+          'audio_sha256': {
+            'type': ['string', 'null'],
+            'pattern': r'^[a-f0-9]{64}$',
+          },
+          'audio_bytes': {
+            'type': ['integer', 'null'],
+            'minimum': 1,
+          },
           'audio_url': {
             'type': ['string', 'null'],
           },

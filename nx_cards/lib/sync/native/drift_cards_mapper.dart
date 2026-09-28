@@ -31,6 +31,12 @@ final class DriftCardsMapper {
         content is LanguageCardContent ? content.transliteration : null,
       ),
       audioUrl: Value(content is LanguageCardContent ? content.audioUrl : null),
+      audioSha256: Value(
+        content is LanguageCardContent ? content.audioSha256 : null,
+      ),
+      audioBytes: Value(
+        content is LanguageCardContent ? content.audioBytes : null,
+      ),
       examplesJson: Value(
         jsonEncode(
           content is LanguageCardContent
@@ -68,6 +74,8 @@ final class DriftCardsMapper {
               originalScript: row.back,
               transliteration: row.transliteration ?? '',
               audioUrl: row.audioUrl,
+              audioSha256: row.audioSha256,
+              audioBytes: row.audioBytes,
               examples: languageExamplesFromJson(jsonDecode(row.examplesJson)),
             )
           : BasicCardContent(front: row.front, back: row.back),

@@ -19,6 +19,16 @@ final languageDirectionProvider = StateProvider.family<StudyCue, String?>((
   return StudyCue.fromLanguage;
 });
 
+/// Compact display only; direction identity still uses the full language name.
+String compactLanguageLabel(String language) =>
+    switch (language.trim().toLowerCase()) {
+      'english' => 'EN',
+      'chinese' || 'mandarin' => '中',
+      'tamil' => 'தமிழ்',
+      'malayalam' => 'മലയാളം',
+      _ => language,
+    };
+
 class LanguageDirectionButton extends ConsumerWidget {
   const LanguageDirectionButton({super.key, required this.language});
   final String language;
@@ -39,7 +49,11 @@ class LanguageDirectionButton extends ConsumerWidget {
       ],
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Text(cue == StudyCue.fromLanguage ? 'EN →' : '→ EN'),
+        child: Text(
+          cue == StudyCue.fromLanguage
+              ? 'EN → ${compactLanguageLabel(language)}'
+              : '${compactLanguageLabel(language)} → EN',
+        ),
       ),
     );
   }
