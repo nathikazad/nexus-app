@@ -38,8 +38,25 @@ class LanguageDirectionButton extends ConsumerWidget {
     String label(StudyCue value) => switch (value) {
       StudyCue.fromLanguage => 'English → $language',
       StudyCue.fromAudio => '$language audio → $language',
-      _ => '$language → English',
+      _ => '$language text → English',
     };
+    Widget compactLabel(StudyCue value) => Semantics(
+      label: label(value),
+      excludeSemantics: true,
+      child: value == StudyCue.fromAudio
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.volume_up_outlined, size: 20),
+                Text(' → ${compactLanguageLabel(language)}'),
+              ],
+            )
+          : Text(
+              value == StudyCue.fromLanguage
+                  ? 'EN → ${compactLanguageLabel(language)}'
+                  : '${compactLanguageLabel(language)} → EN',
+            ),
+    );
     return PopupMenuButton<StudyCue>(
       tooltip: 'Recall direction: ${label(cue)}',
       initialValue: cue,
@@ -47,23 +64,15 @@ class LanguageDirectionButton extends ConsumerWidget {
           ref.read(languageDirectionProvider(language).notifier).state = value,
       itemBuilder: (_) => [
         for (final value in StudyCue.activeDirections)
-          PopupMenuItem(value: value, child: Text(label(value))),
+          PopupMenuItem(
+            key: ValueKey('recall-direction-${value.storageKey}'),
+            value: value,
+            child: compactLabel(value),
+          ),
       ],
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: cue == StudyCue.fromAudio
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.volume_up_outlined, size: 20),
-                  Text(' → ${compactLanguageLabel(language)}'),
-                ],
-              )
-            : Text(
-                cue == StudyCue.fromLanguage
-                    ? 'EN → ${compactLanguageLabel(language)}'
-                    : '${compactLanguageLabel(language)} → EN',
-              ),
+        child: compactLabel(cue),
       ),
     );
   }

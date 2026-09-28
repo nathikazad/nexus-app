@@ -31,9 +31,9 @@ void main() {
     );
     await tester.tap(find.byTooltip('Recall direction: English → Chinese'));
     await tester.pumpAndSettle();
-    expect(find.text('English → Chinese'), findsOneWidget);
-    expect(find.text('Chinese → English'), findsOneWidget);
-    await tester.tap(find.text('Chinese audio → Chinese'));
+    expect(find.text('EN → 中'), findsNWidgets(2));
+    expect(find.text('中 → EN'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('recall-direction-from_audio')));
     await tester.pumpAndSettle();
     expect(
       find.byTooltip('Recall direction: Chinese audio → Chinese'),
@@ -90,7 +90,9 @@ void main() {
     expect(metric('practice', '0'), findsOneWidget);
     await tester.tap(find.byTooltip('Recall direction: English → Chinese'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Chinese → English'));
+    await tester.tap(
+      find.byKey(const ValueKey('recall-direction-to_language')),
+    );
     await tester.pumpAndSettle();
     expect(metric('strong', '0'), findsOneWidget);
     expect(find.text('中 → EN'), findsOneWidget);
@@ -102,9 +104,13 @@ void main() {
     await tester.tap(find.text('Weak  1'));
     await tester.pumpAndSettle();
     expect(find.text('word 1'), findsOneWidget);
-    await tester.tap(find.byTooltip('Recall direction: Chinese → English'));
+    await tester.tap(
+      find.byTooltip('Recall direction: Chinese text → English'),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('English → Chinese'));
+    await tester.tap(
+      find.byKey(const ValueKey('recall-direction-from_language')),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Strong  1'), findsOneWidget);
     expect(find.text('EN → 中'), findsOneWidget);
