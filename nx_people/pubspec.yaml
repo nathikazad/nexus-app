@@ -15,11 +15,18 @@ dependencies:
   google_fonts: ^8.0.2
   graphql_flutter: ^5.1.2
   http: ^1.2.2
+  connectivity_plus: 6.1.5
+  cross_file: ^0.3.4+2
+  drift: ^2.28.1
+  nx_offline:
+    path: ../nx_modules/nx_offline
   nx_db:
     path: ../nx_modules/nx_db
   url_launcher: ^6.3.2
 
 dev_dependencies:
+  nx_data:
+    path: ../nx_modules/nx_data
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0

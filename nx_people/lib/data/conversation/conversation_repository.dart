@@ -1,3 +1,5 @@
+import 'package:nx_people/data/sync/people_data_repository.dart';
+import 'package:nx_db/kgql.dart';
 import 'dart:convert';
 
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -5,11 +7,41 @@ import 'package:nx_db/external_messages.dart';
 import 'package:nx_people/domain/person/person.dart';
 
 class ConversationRepository {
-  ConversationRepository({required GraphQLClient client}) : _client = client;
+  ConversationRepository({required GraphQLClient client, this.data})
+    : _client = client;
 
+  final PeopleDataRepository? data;
   final GraphQLClient _client;
+  Future<Map<String, dynamic>> _sync(Map<String, dynamic> payload) =>
+      data?.conversation(payload) ??
+      syncExternalConversation(_client, conversation: payload);
 
   Future<List<ExternalMessage>> loadAll(PersonConversation conversation) async {
+    if (data != null) {
+      final rows = await data!.messages(conversation.id);
+      final messages = <ExternalMessage>[
+        for (final row in rows)
+          ExternalMessage.fromJson(
+            Map<String, dynamic>.from(row['message'] as Map),
+          ),
+      ];
+      messages.sort((a, b) {
+        final order = (a.sequence ?? 0x7fffffff).compareTo(
+          b.sequence ?? 0x7fffffff,
+        );
+        if (order != 0) return order;
+        final time = (a.messageTime?.millisecondsSinceEpoch ?? double.infinity)
+            .compareTo(
+              b.messageTime?.millisecondsSinceEpoch ?? double.infinity,
+            );
+        if (time != 0) return time;
+        final left = int.tryParse(a.id), right = int.tryParse(b.id);
+        return left != null && right != null
+            ? left.compareTo(right)
+            : a.id.compareTo(b.id);
+      });
+      return messages;
+    }
     final messages = <ExternalMessage>[];
     String? cursor;
     do {
@@ -31,22 +63,28 @@ class ConversationRepository {
     required PersonConversation conversation,
     required bool pending,
   }) async {
-    await syncExternalConversation(
-      _client,
-      conversation: <String, dynamic>{
-        'person_id': personId,
-        'provider': conversation.provider,
-        'external_account_id': conversation.externalAccountId,
-        'external_thread_id': conversation.externalThreadId,
-        'name': conversation.name,
-        'summary': conversation.summary,
-        'last_message_at': conversation.lastMessageAt
-            ?.toUtc()
-            .toIso8601String(),
-        'response_pending': pending,
-        'messages': const <dynamic>[],
-      },
-    );
+    if (data != null) {
+      await data!.set(
+        SetModelRequest(
+          id: conversation.id,
+          attributes: [
+            SetModelAttribute(key: 'response_pending', value: pending),
+          ],
+        ),
+      );
+      return;
+    }
+    await _sync(<String, dynamic>{
+      'person_id': personId,
+      'provider': conversation.provider,
+      'external_account_id': conversation.externalAccountId,
+      'external_thread_id': conversation.externalThreadId,
+      'name': conversation.name,
+      'summary': conversation.summary,
+      'last_message_at': conversation.lastMessageAt?.toUtc().toIso8601String(),
+      'response_pending': pending,
+      'messages': const <dynamic>[],
+    });
   }
 
   Future<void> addAttachments({
@@ -55,36 +93,31 @@ class ConversationRepository {
     required List<Map<String, dynamic>> attachments,
   }) async {
     final stamp = DateTime.now().toUtc().microsecondsSinceEpoch;
-    await syncExternalConversation(
-      _client,
-      conversation: <String, dynamic>{
-        'person_id': personId,
-        'provider': conversation.provider,
-        'external_account_id': conversation.externalAccountId,
-        'external_thread_id': conversation.externalThreadId,
-        'name': conversation.name,
-        'summary': conversation.summary,
-        'last_message_at': conversation.lastMessageAt
-            ?.toUtc()
-            .toIso8601String(),
-        'response_pending': conversation.responsePending,
-        'messages': <Map<String, dynamic>>[
-          for (var index = 0; index < attachments.length; index++)
-            <String, dynamic>{
-              'provider': conversation.provider,
-              'external_account_id': conversation.externalAccountId,
-              'external_thread_id': conversation.externalThreadId,
-              'external_message_id': 'local-attachment-$stamp-$index',
-              'raw_payload': <String, dynamic>{
-                'body': '',
-                'is_from_me': true,
-                'attachments': <Map<String, dynamic>>[attachments[index]],
-                'id_source': 'nx_people_attachment_upload',
-              },
+    await _sync(<String, dynamic>{
+      'person_id': personId,
+      'provider': conversation.provider,
+      'external_account_id': conversation.externalAccountId,
+      'external_thread_id': conversation.externalThreadId,
+      'name': conversation.name,
+      'summary': conversation.summary,
+      'last_message_at': conversation.lastMessageAt?.toUtc().toIso8601String(),
+      'response_pending': conversation.responsePending,
+      'messages': <Map<String, dynamic>>[
+        for (var index = 0; index < attachments.length; index++)
+          <String, dynamic>{
+            'provider': conversation.provider,
+            'external_account_id': conversation.externalAccountId,
+            'external_thread_id': conversation.externalThreadId,
+            'external_message_id': 'local-attachment-$stamp-$index',
+            'raw_payload': <String, dynamic>{
+              'body': '',
+              'is_from_me': true,
+              'attachments': <Map<String, dynamic>>[attachments[index]],
+              'id_source': 'nx_people_attachment_upload',
             },
-        ],
-      },
-    );
+          },
+      ],
+    });
   }
 
   Future<Map<String, dynamic>> importJson({
@@ -98,7 +131,7 @@ class ConversationRepository {
     final payload = Map<String, dynamic>.from(decoded);
     payload['person_id'] = personId;
     _normalizeImport(payload);
-    return syncExternalConversation(_client, conversation: payload);
+    return _sync(payload);
   }
 
   void _normalizeImport(Map<String, dynamic> payload) {

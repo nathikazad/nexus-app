@@ -1,3 +1,4 @@
+import 'package:nx_people/data/sync/people_assets.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -7,11 +8,13 @@ class ConversationAttachmentService {
   ConversationAttachmentService({
     required String baseUrl,
     required http.Client client,
+    this.assets,
   }) : _baseUrl = normalizeHttpEndpoint(
          baseUrl,
        ).replaceFirst(RegExp(r'/$'), ''),
        _client = client;
 
+  final PeopleAssets? assets;
   final String _baseUrl;
   final http.Client _client;
 
@@ -22,6 +25,13 @@ class ConversationAttachmentService {
     required String filename,
     required List<int> bytes,
   }) async {
+    if (assets != null) {
+      return {
+        'url': await assets!.stage(bytes, filename),
+        'name': filename,
+        'size': bytes.length,
+      };
+    }
     final request =
         http.MultipartRequest(
             'POST',

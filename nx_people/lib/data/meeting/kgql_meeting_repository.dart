@@ -1,15 +1,19 @@
+import 'package:nx_people/data/sync/people_data_repository.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_people/domain/meeting/meeting_repository.dart';
 
 class KgqlMeetingRepository implements MeetingRepository {
-  KgqlMeetingRepository({required GraphQLClient client}) : _client = client;
+  KgqlMeetingRepository({required GraphQLClient client, this.data})
+    : _client = client;
 
+  final PeopleDataRepository? data;
   final GraphQLClient _client;
 
   @override
   Future<int> create(MeetingDraft draft) {
-    return setKgqlModel(_client, meetingCreateRequest(draft));
+    return data?.set(meetingCreateRequest(draft)) ??
+        setKgqlModel(_client, meetingCreateRequest(draft));
   }
 }
 

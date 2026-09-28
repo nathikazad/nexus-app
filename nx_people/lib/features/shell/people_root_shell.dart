@@ -1,3 +1,5 @@
+import 'package:nx_people/features/sync/people_sync_status.dart';
+import 'package:nx_people/data/sync/people_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -114,9 +116,16 @@ class PeopleRootShell extends ConsumerWidget {
       backgroundColor: AppColors.bg,
       body: SafeArea(
         bottom: desktop,
-        child: desktop
-            ? const _DesktopWorkspace()
-            : _MobileWorkspace(section: workspace.section),
+        child: Column(
+          children: [
+            const PeopleSyncStatus(),
+            Expanded(
+              child: desktop
+                  ? const _DesktopWorkspace()
+                  : _MobileWorkspace(section: workspace.section),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: desktop ? null : const _BottomTabs(),
       floatingActionButton:
@@ -583,7 +592,7 @@ class _ConversationAttachment extends StatelessWidget {
     if (type.startsWith('image/') && uri != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: Image.network(
+        child: PeopleImage(
           uri.toString(),
           headers: imageConfig?.headers,
           width: 240,
@@ -3174,7 +3183,7 @@ class _LogCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (imageUrl != null)
-            Image.network(
+            PeopleImage(
               imageUrl,
               headers: headers,
               height: 230,
@@ -3788,6 +3797,7 @@ class _LogFormSheetState extends ConsumerState<_LogFormSheet> {
       _showError('Add some text, an image, or both.');
       return;
     }
+    final repository = ref.read(logRepositoryProvider);
     setState(() => _saving = true);
     try {
       String? imageUrl;
@@ -3802,17 +3812,15 @@ class _LogFormSheetState extends ConsumerState<_LogFormSheet> {
           filename: _imageName ?? 'log-image.jpg',
         );
       }
-      await ref
-          .read(logRepositoryProvider)
-          .create(
-            DailyLogDraft(
-              loggedAt: DateTime.now(),
-              entry: entry.isEmpty ? null : entry,
-              imageUrl: imageUrl,
-            ),
-          );
-      ref.invalidate(dailyLogsForDayProvider);
+      await repository.create(
+        DailyLogDraft(
+          loggedAt: DateTime.now(),
+          entry: entry.isEmpty ? null : entry,
+          imageUrl: imageUrl,
+        ),
+      );
       if (!mounted) return;
+      ref.invalidate(dailyLogsForDayProvider);
       Navigator.of(context).pop();
     } catch (error, stackTrace) {
       debugPrint('Log creation failed: $error\n$stackTrace');
@@ -5196,7 +5204,7 @@ class _PersonAvatar extends ConsumerWidget {
         border: Border.all(color: AppColors.line),
         shape: BoxShape.circle,
       ),
-      child: Image.network(
+      child: PeopleImage(
         imageUrl,
         headers: headers,
         fit: BoxFit.cover,

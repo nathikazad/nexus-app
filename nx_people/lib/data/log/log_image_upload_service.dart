@@ -1,13 +1,20 @@
+import 'package:nx_people/data/sync/people_assets.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:nx_db/auth.dart';
 
 class LogImageUploadService {
-  LogImageUploadService({required String baseUrl, required http.Client client})
-    : _baseUrl = normalizeHttpEndpoint(baseUrl).replaceFirst(RegExp(r'/$'), ''),
-      _client = client;
+  LogImageUploadService({
+    required String baseUrl,
+    required http.Client client,
+    this.assets,
+  }) : _baseUrl = normalizeHttpEndpoint(
+         baseUrl,
+       ).replaceFirst(RegExp(r'/$'), ''),
+       _client = client;
 
+  final PeopleAssets? assets;
   final String _baseUrl;
   final http.Client _client;
 
@@ -15,6 +22,7 @@ class LogImageUploadService {
     required List<int> bytes,
     required String filename,
   }) async {
+    if (assets != null) return assets!.stage(bytes, filename);
     final request =
         http.MultipartRequest('POST', Uri.parse('$_baseUrl/snapshots'))
           ..fields['timestamp'] = _timestamp12Digits(DateTime.now())

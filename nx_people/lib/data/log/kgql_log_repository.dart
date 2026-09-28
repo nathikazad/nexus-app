@@ -1,3 +1,4 @@
+import 'package:nx_people/data/sync/people_data_repository.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_people/domain/log/daily_log.dart';
@@ -9,24 +10,28 @@ const kDailyLogImageUrlAttribute = 'image_url';
 const kDailyLogLoggedAtAttribute = 'logged_at';
 
 class KgqlLogRepository implements LogRepository {
-  KgqlLogRepository({required GraphQLClient client}) : _client = client;
+  KgqlLogRepository({required GraphQLClient client, this.data})
+    : _client = client;
 
+  final PeopleDataRepository? data;
   final GraphQLClient _client;
 
   @override
   Future<List<DailyLog>> listForCalendarDay(DateTime dayLocal) async {
-    final models = await fetchKgqlModels(
-      _client,
-      filter: dailyLogDayFilter(dayLocal),
-      struct: const <String, dynamic>{
-        'id': true,
-        'name': true,
-        'model_type_id': true,
-        kDailyLogLoggedAtAttribute: true,
-        kDailyLogEntryAttribute: true,
-        kDailyLogImageUrlAttribute: true,
-      },
-    );
+    final models = data != null
+        ? await data!.models(kDailyLogModelTypeName)
+        : await fetchKgqlModels(
+            _client,
+            filter: dailyLogDayFilter(dayLocal),
+            struct: const <String, dynamic>{
+              'id': true,
+              'name': true,
+              'model_type_id': true,
+              kDailyLogLoggedAtAttribute: true,
+              kDailyLogEntryAttribute: true,
+              kDailyLogImageUrlAttribute: true,
+            },
+          );
     final logs = <DailyLog>[
       for (final model in models)
         if (model.attrDateTime(kDailyLogLoggedAtAttribute) case final loggedAt?)
@@ -37,13 +42,20 @@ class KgqlLogRepository implements LogRepository {
             imageUrl: model.attrString(kDailyLogImageUrlAttribute),
           ),
     ];
+    logs.removeWhere(
+      (log) =>
+          log.loggedAt.year != dayLocal.year ||
+          log.loggedAt.month != dayLocal.month ||
+          log.loggedAt.day != dayLocal.day,
+    );
     logs.sort((left, right) => right.loggedAt.compareTo(left.loggedAt));
     return logs;
   }
 
   @override
   Future<int> create(DailyLogDraft draft) {
-    return setKgqlModel(_client, dailyLogCreateRequest(draft));
+    return data?.set(dailyLogCreateRequest(draft)) ??
+        setKgqlModel(_client, dailyLogCreateRequest(draft));
   }
 }
 

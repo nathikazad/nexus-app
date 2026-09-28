@@ -1,3 +1,4 @@
+import 'package:nx_people/data/sync/people_data_repository.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_people/data/person/person_attr_keys.dart';
@@ -8,14 +9,22 @@ import 'package:nx_people/domain/person/person_query.dart';
 class KgqlPeopleRepository implements PersonRepository {
   KgqlPeopleRepository({
     required GraphQLClient client,
+    this.data,
     required Future<ModelType> Function() loadPersonSchema,
   }) : _client = client,
        _loadPersonSchema = loadPersonSchema;
 
+  final PeopleDataRepository? data;
+  Future<int> _set(SetModelRequest request) =>
+      data?.set(request) ?? setKgqlModel(_client, request);
   final GraphQLClient _client;
   final Future<ModelType> Function() _loadPersonSchema;
   @override
   Future<Person?> getById(int id) async {
+    if (data != null) {
+      final model = await data!.model(id);
+      return model == null ? null : personFromModel(model);
+    }
     final schema = await _loadPersonSchema();
     final model = await fetchKgqlModelById(
       _client,
@@ -56,8 +65,7 @@ class KgqlPeopleRepository implements PersonRepository {
 
   @override
   Future<int> createPerson(PersonDraft draft) async {
-    final id = await setKgqlModel(
-      _client,
+    final id = await _set(
       setKgqlCreate(
         modelType: kPersonModelTypeName,
         name: draft.name.trim(),
@@ -72,8 +80,7 @@ class KgqlPeopleRepository implements PersonRepository {
   @override
   Future<void> updatePerson(int id, PersonDraft draft) async {
     final existing = await getById(id);
-    await setKgqlModel(
-      _client,
+    await _set(
       setKgqlUpdate(
         id: id,
         modelType: kPersonModelTypeName,
@@ -95,8 +102,7 @@ class KgqlPeopleRepository implements PersonRepository {
     Map<String, List<String>> tagsBySystem,
   ) async {
     if (tagsBySystem.isEmpty) return;
-    await setKgqlModel(
-      _client,
+    await _set(
       SetModelRequest(
         id: id,
         tags: [
@@ -124,8 +130,7 @@ class KgqlPeopleRepository implements PersonRepository {
     }
     final relation = _suggestionRelation(person, kind, suggestionIndex);
     if (relation != null && selected.isValid) {
-      await setKgqlModel(
-        _client,
+      await _set(
         SetModelRequest(
           id: personId,
           relations: [
@@ -144,8 +149,7 @@ class KgqlPeopleRepository implements PersonRepository {
       index: suggestionIndex,
       selected: selected,
     );
-    await setKgqlModel(
-      _client,
+    await _set(
       SetModelRequest(id: personId, suggestion: nextSuggestions.toJson()),
     );
   }
@@ -161,8 +165,7 @@ class KgqlPeopleRepository implements PersonRepository {
     if (trimmed.isEmpty) {
       throw ArgumentError.value(name, 'name', 'Company name cannot be empty.');
     }
-    final companyId = await setKgqlModel(
-      _client,
+    final companyId = await _set(
       SetModelRequest(modelType: 'Company', name: trimmed),
     );
     await resolveOrganizationSuggestion(
@@ -258,6 +261,13 @@ class KgqlPeopleRepository implements PersonRepository {
   }
 
   Future<List<Person>> _listAll() async {
+    if (data != null) {
+      final rows = (await data!.models(
+        kPersonModelTypeName,
+      )).map(personFromModel).toList();
+      rows.sort((a, b) => a.name.compareTo(b.name));
+      return rows;
+    }
     final schema = await _loadPersonSchema();
     final models = await fetchKgqlModels(
       _client,
@@ -293,7 +303,7 @@ class KgqlPeopleRepository implements PersonRepository {
     };
     for (final contact in existing) {
       if (contact.id > 0 && !desiredIds.contains(contact.id)) {
-        await setKgqlModel(_client, setKgqlDelete(contact.id));
+        await _set(setKgqlDelete(contact.id));
       }
     }
     for (final contact in desired) {
@@ -302,8 +312,7 @@ class KgqlPeopleRepository implements PersonRepository {
       if (type.isEmpty || value.isEmpty) continue;
       final name = '${_contactTypeLabel(type)}: $value';
       if (contact.id > 0) {
-        await setKgqlModel(
-          _client,
+        await _set(
           setKgqlUpdate(
             id: contact.id,
             modelType: 'Contact',
@@ -316,8 +325,7 @@ class KgqlPeopleRepository implements PersonRepository {
           ),
         );
       } else {
-        final contactId = await setKgqlModel(
-          _client,
+        final contactId = await _set(
           setKgqlCreate(
             modelType: 'Contact',
             name: name,
@@ -328,8 +336,7 @@ class KgqlPeopleRepository implements PersonRepository {
             ],
           ),
         );
-        await setKgqlModel(
-          _client,
+        await _set(
           SetModelRequest(
             id: personId,
             relations: <ModelRelation>[

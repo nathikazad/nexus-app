@@ -1,3 +1,7 @@
+import 'package:flutter/widgets.dart';
+import 'package:nx_data/nx_data.dart';
+import 'package:nx_offline/nx_offline.dart';
+import 'package:nx_people/data/sync/people_sync_providers.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,7 +24,65 @@ class TestAuth extends PeopleAuthController {
   Future<void> selectDomain(int id) async => useDomain(id);
 }
 
+class RecordingOfflineSync implements OfflineSyncBackend {
+  final reasons = <SyncReason>[];
+  @override
+  Future<void> synchronize(SyncReason reason) async => reasons.add(reason);
+}
+
 void main() {
+  testWidgets(
+    'foreground checks freshness and retries offline writes without a socket hint',
+    (tester) async {
+      var freshnessChecks = 0;
+      final offline = RecordingOfflineSync();
+      final session = AppDataSession(
+        definition: AppDataDefinition(
+          name: 'people',
+          refreshVisible: () async {},
+        ),
+        checkFreshness: (refresh) async {
+          freshnessChecks++;
+          await refresh();
+        },
+        offline: offline,
+        policy: const AppDataPolicy(isWeb: false),
+      );
+      final ready = Completer<User?>()
+        ..complete(
+          User(userId: '1', preset: BackendPreset.hosted, domainId: 1),
+        );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            peopleDataSessionProvider.overrideWithValue(session),
+            peopleOfflineStoreProvider.overrideWithValue(null),
+            authProvider.overrideWith(() => TestAuth(ready)),
+            peopleRepositoryProvider.overrideWithValue(FakePeopleRepository()),
+          ],
+          child: const NexusPeopleApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final startupChecks = freshnessChecks;
+      expect(startupChecks, greaterThan(0));
+      offline.reasons.clear();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump(const Duration(seconds: 35));
+      expect(freshnessChecks, startupChecks);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(freshnessChecks, startupChecks + 1);
+      expect(offline.reasons, [SyncReason.appResumed]);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await session.close();
+    },
+  );
+
   testWidgets('no data access during restoration or before domain selection', (
     tester,
   ) async {
@@ -30,6 +92,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          peopleDataSessionProvider.overrideWithValue(null),
+          peopleOfflineStoreProvider.overrideWithValue(null),
           authProvider.overrideWith(() => auth),
           domainLoaderProvider.overrideWithValue(
             (_) async => [
@@ -65,7 +129,11 @@ void main() {
     final ready = Completer<User?>();
     final auth = TestAuth(ready);
     final container = ProviderContainer(
-      overrides: [authProvider.overrideWith(() => auth)],
+      overrides: [
+        peopleDataSessionProvider.overrideWithValue(null),
+        peopleOfflineStoreProvider.overrideWithValue(null),
+        authProvider.overrideWith(() => auth),
+      ],
     );
     addTearDown(container.dispose);
     ready.complete(

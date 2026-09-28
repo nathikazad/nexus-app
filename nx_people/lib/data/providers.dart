@@ -1,3 +1,4 @@
+import 'package:nx_people/data/sync/people_sync_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart'
     show
@@ -41,12 +42,16 @@ final peopleImageConfigProvider = Provider<PeopleImageConfig?>((ref) {
 final peopleRepositoryProvider = Provider<PersonRepository>((ref) {
   return KgqlPeopleRepository(
     client: ref.watch(graphqlClientProvider),
+    data: ref.watch(peopleDataRepositoryProvider),
     loadPersonSchema: () => ref.read(personSchemaProvider.future),
   );
 });
 
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
-  return ConversationRepository(client: ref.watch(graphqlClientProvider));
+  return ConversationRepository(
+    client: ref.watch(graphqlClientProvider),
+    data: ref.watch(peopleDataRepositoryProvider),
+  );
 });
 
 final conversationAttachmentServiceProvider =
@@ -56,7 +61,11 @@ final conversationAttachmentServiceProvider =
       if (baseUrl == null || baseUrl.trim().isEmpty || client == null) {
         return null;
       }
-      return ConversationAttachmentService(baseUrl: baseUrl, client: client);
+      return ConversationAttachmentService(
+        baseUrl: baseUrl,
+        client: client,
+        assets: ref.watch(peopleAssetsProvider),
+      );
     });
 
 final conversationMessagesProvider =
@@ -64,15 +73,22 @@ final conversationMessagesProvider =
       ref,
       conversation,
     ) {
+      ref.watch(peopleDataGenerationProvider);
       return ref.watch(conversationRepositoryProvider).loadAll(conversation);
     });
 
 final logRepositoryProvider = Provider<LogRepository>((ref) {
-  return KgqlLogRepository(client: ref.watch(graphqlClientProvider));
+  return KgqlLogRepository(
+    client: ref.watch(graphqlClientProvider),
+    data: ref.watch(peopleDataRepositoryProvider),
+  );
 });
 
 final meetingRepositoryProvider = Provider<MeetingRepository>((ref) {
-  return KgqlMeetingRepository(client: ref.watch(graphqlClientProvider));
+  return KgqlMeetingRepository(
+    client: ref.watch(graphqlClientProvider),
+    data: ref.watch(peopleDataRepositoryProvider),
+  );
 });
 
 final logImageUploadServiceProvider = Provider<LogImageUploadService?>((ref) {
@@ -81,41 +97,56 @@ final logImageUploadServiceProvider = Provider<LogImageUploadService?>((ref) {
   if (baseUrl == null || baseUrl.trim().isEmpty || client == null) {
     return null;
   }
-  return LogImageUploadService(baseUrl: baseUrl, client: client);
+  return LogImageUploadService(
+    baseUrl: baseUrl,
+    client: client,
+    assets: ref.watch(peopleAssetsProvider),
+  );
 });
 
 final dailyLogsForDayProvider = FutureProvider.family<List<DailyLog>, DateTime>(
-  (ref, day) => ref.watch(logRepositoryProvider).listForCalendarDay(day),
+  (ref, day) {
+    ref.watch(peopleDataGenerationProvider);
+    return ref.watch(logRepositoryProvider).listForCalendarDay(day);
+  },
 );
 
-final recentPeopleProvider = FutureProvider<List<Person>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listRecent(limit: 200),
-);
+final recentPeopleProvider = FutureProvider<List<Person>>((ref) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).listRecent(limit: 200);
+});
 
-final pinnedPeopleProvider = FutureProvider<List<Person>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listPinned(limit: 20),
-);
+final pinnedPeopleProvider = FutureProvider<List<Person>>((ref) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).listPinned(limit: 20);
+});
 
-final followUpPeopleProvider = FutureProvider<List<Person>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listFollowUp(limit: 20),
-);
+final followUpPeopleProvider = FutureProvider<List<Person>>((ref) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).listFollowUp(limit: 20);
+});
 
-final peopleTagSystemsProvider = FutureProvider<List<PeopleTagSystem>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listTagSystems(),
-);
+final peopleTagSystemsProvider = FutureProvider<List<PeopleTagSystem>>((ref) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).listTagSystems();
+});
 
-final personByIdProvider = FutureProvider.family<Person?, int>(
-  (ref, id) => ref.watch(peopleRepositoryProvider).getById(id),
-);
+final personByIdProvider = FutureProvider.family<Person?, int>((ref, id) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).getById(id);
+});
 
-final companiesProvider = FutureProvider<List<String>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listCompanies(),
-);
+final companiesProvider = FutureProvider<List<String>>((ref) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).listCompanies();
+});
 
-final meetingsProvider = FutureProvider<List<String>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listMeetings(),
-);
+final meetingsProvider = FutureProvider<List<String>>((ref) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).listMeetings();
+});
 
-final plannedProvider = FutureProvider<List<String>>(
-  (ref) => ref.watch(peopleRepositoryProvider).listPlanned(),
-);
+final plannedProvider = FutureProvider<List<String>>((ref) {
+  ref.watch(peopleDataGenerationProvider);
+  return ref.watch(peopleRepositoryProvider).listPlanned();
+});
