@@ -42,7 +42,7 @@ class StudyPrompt {
           : card.front,
     StudyCue.toLanguage =>
       isListening
-          ? (card.content as LanguageCardContent).transliteration
+          ? 'Listen'
           : card.back,
     StudyCue.transliteration => switch (card.content) {
       LanguageCardContent(:final transliteration) => transliteration,

@@ -32,7 +32,7 @@ saving requires connectivity. Server migration and verification are documented
 in `servers/nexus/apps/nx_cards/maintenance/learning-workflow.md`.
 
 Reverse-direction recall offers Written or Listening presentation. Listening
-shows transliteration and plays target-language audio; both ask for the source
+shows a neutral Listen label and plays target-language audio without a transliteration cue; both ask for the source
 language meaning and use the same `StudyCue.toLanguage` schedule/history.
 The presentation preference is local setup state, never a database direction.
 Standard and writing modes autoplay the prompt; Fast uses per-row playback.

@@ -24,7 +24,8 @@ void main() {
         );
         expect(find.text('ക'), findsNothing);
         expect(find.text('Letter ka'), findsNothing);
-        expect(find.text('ka'), findsOneWidget);
+        expect(find.text('ka'), findsNothing);
+        expect(find.text('Listen'), findsOneWidget);
         expect(_FakeAudioRepository.requests, 1);
         await tester.tap(find.text('Show answer'));
         await tester.pumpAndSettle();

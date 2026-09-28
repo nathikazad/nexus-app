@@ -40,6 +40,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('āśvāsaṃ'), findsNothing);
+      expect(find.text('Listen'), findsOneWidget);
       final prompt = tester.getRect(
         find.byKey(const ValueKey('fast-prompt-1')),
       );

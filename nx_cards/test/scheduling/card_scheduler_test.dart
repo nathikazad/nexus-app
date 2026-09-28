@@ -26,7 +26,7 @@ void main() {
         listening: true,
       );
       expect(written.prompt, '学生');
-      expect(listening.withCard(card).prompt, 'xuésheng');
+      expect(listening.withCard(card).prompt, 'Listen');
       expect(listening.cue, written.cue);
       final scheduler = FsrsCardScheduler(reviewId: () => 'same-review');
       final now = DateTime.utc(2026, 9, 27);
