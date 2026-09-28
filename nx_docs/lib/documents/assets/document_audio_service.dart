@@ -18,7 +18,7 @@ class DocumentAudioService {
     bool overwrite = false,
   }) async {
     final response = await _client.post(
-      _baseUri.resolve('/docs/audio/generate'),
+      _baseUri.resolve('/nx_docs/audio/generate'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode(<String, Object>{
         'document_id': documentId,

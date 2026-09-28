@@ -12,7 +12,7 @@ class NxDocsStateService {
   final http.Client _client;
 
   Future<int?> loadLastDocumentId() async {
-    final uri = _baseUri.resolve('/docs/state/nx_docs');
+    final uri = _baseUri.resolve('/nx_docs/state');
     final response = await _client.get(uri);
     if (response.statusCode == 404) {
       return null;
@@ -35,7 +35,7 @@ class NxDocsStateService {
     if (documentId <= 0) {
       return;
     }
-    final uri = _baseUri.resolve('/docs/state/nx_docs');
+    final uri = _baseUri.resolve('/nx_docs/state');
     final response = await _client.put(
       uri,
       headers: const {'Content-Type': 'application/json'},

@@ -8,7 +8,7 @@ import 'package:nx_docs/documents/assets/document_image_assets.dart';
 void main() {
   test('parses document image asset urls', () {
     final ref = DocumentImageAssetRef.tryParse(
-      'https://nexus.kgql.io/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'https://nexus.kgql.io/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
 
     expect(ref, isNotNull);
@@ -17,19 +17,19 @@ void main() {
     expect(ref.name, 'abc.png');
     expect(
       ref.relativeUrl,
-      '/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      '/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
   });
 
   test('parses legacy notes image urls as docs image refs', () {
     final ref = DocumentImageAssetRef.tryParse(
-      '/notes/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      '/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
 
     expect(ref, isNotNull);
     expect(
       ref!.relativeUrl,
-      '/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      '/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
   });
 
@@ -40,7 +40,7 @@ void main() {
     );
     expect(
       DocumentImageAssetRef.tryParse(
-        '/docs/assets/images/file?user_id=1&document_id=4209&name=../x.png',
+        '/nx_docs/assets/images/file?user_id=1&document_id=4209&name=../x.png',
       ),
       isNull,
     );
@@ -87,7 +87,7 @@ void main() {
           jsonEncode(<String, Object?>{
             'ok': true,
             'url':
-                '/docs/assets/images/file?user_id=7&document_id=4209&name=abc.png',
+                '/nx_docs/assets/images/file?user_id=7&document_id=4209&name=abc.png',
           }),
           200,
         );
@@ -101,10 +101,10 @@ void main() {
 
     expect(
       url,
-      '/docs/assets/images/file?user_id=7&document_id=4209&name=abc.png',
+      '/nx_docs/assets/images/file?user_id=7&document_id=4209&name=abc.png',
     );
     expect(seen.method, 'POST');
-    expect(seen.url.toString(), 'http://100.108.43.37:8001/docs/assets/images');
+    expect(seen.url.toString(), 'http://100.108.43.37:8001/nx_docs/assets/images');
     expect(seen.headers['X-User-Id'], isNull);
     final multipartBody = latin1.decode(seen.bodyBytes);
     expect(multipartBody, contains('name="document_id"'));
@@ -124,15 +124,15 @@ void main() {
     );
 
     const storedUrl =
-        '/notes/assets/images/file?user_id=1&document_id=4209&name=abc.png';
+        '/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.png';
 
     expect(
       tailscaleService.resolveImageUrl(storedUrl),
-      'http://100.108.43.37:8001/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'http://100.108.43.37:8001/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
     expect(
       wanService.resolveImageUrl(storedUrl),
-      'https://nexus.kgql.io/docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
+      'https://nexus.kgql.io/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.png',
     );
   });
 
@@ -149,14 +149,14 @@ void main() {
       );
 
       final deleted = await service.deleteImageUrl(
-        '/notes/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
+        '/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
       );
 
       expect(deleted, true);
       expect(seen.method, 'DELETE');
       expect(
         seen.url.toString(),
-        'https://nexus.kgql.io/docs/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
+        'https://nexus.kgql.io/nx_docs/assets/images/file?user_id=1&document_id=4209&name=abc.jpg',
       );
     },
   );

@@ -26,7 +26,7 @@ class MirrorPublishTriggerService implements MirrorPublishTrigger {
   }) async {
     if (documentId <= 0) return;
     final response = await _client.post(
-      _resolve('/mirror/publish/trigger'),
+      _resolve('/nx_docs/publish/trigger'),
       headers: _headers(contentTypeJson: true),
       body: jsonEncode({
         'reason': reason,
@@ -81,7 +81,7 @@ class MirrorPublishTriggerService implements MirrorPublishTrigger {
 
   Future<MirrorPublishStatus> fetchPublishStatus() async {
     final response = await _client.get(
-      _resolve('/mirror/publish/status'),
+      _resolve('/nx_docs/publish/status'),
       headers: _headers(),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {

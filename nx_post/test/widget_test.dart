@@ -106,9 +106,9 @@ void main() {
       'DELETE',
     ]);
     expect(requests.map((request) => request.url.path), [
-      '/microblogs',
-      '/microblogs/4627',
-      '/microblogs/4627',
+      '/nx_post/posts',
+      '/nx_post/posts/4627',
+      '/nx_post/posts/4627',
     ]);
   });
 
@@ -123,14 +123,17 @@ void main() {
         child: const NexusPostApp(),
       ),
     );
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('nx_post'), findsOneWidget);
     expect(find.text('Log In'), findsOneWidget);
 
+    await tester.tap(find.byType(DropdownButtonFormField<AuthLoginProfile>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(authLoginProfiles.first.label).last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Log In'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Feed'), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsOneWidget);
@@ -150,8 +153,14 @@ class _TestAuthController extends AuthController {
   Future<User?> build() async => null;
 
   @override
-  Future<String?> login(String userId, BackendPreset preset) async {
-    state = AsyncData(User(userId: userId, preset: BackendPreset.localhost));
+  Future<String?> login(
+    String userId,
+    BackendPreset preset, {
+    AuthLoginProfile? profile,
+  }) async {
+    state = AsyncData(
+      User(userId: userId, preset: BackendPreset.localhost, domainId: 1),
+    );
     return null;
   }
 }

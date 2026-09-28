@@ -10,13 +10,13 @@ void main() {
         name: 'Ada Lovelace',
         modelTypeId: 1,
         attributes: const {
-          'image_url': '/person_image_files/1/linkedin/ada/profile.jpg',
+          'image_url': '/nx_people/profile_files/1/linkedin/ada/profile.jpg',
         },
       );
 
       final mapped = personFromModel(person);
 
-      expect(mapped.imageUrl, '/person_image_files/1/linkedin/ada/profile.jpg');
+      expect(mapped.imageUrl, '/nx_people/profile_files/1/linkedin/ada/profile.jpg');
     });
 
     test('maps desires JSON array onto profile desires', () {

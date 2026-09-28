@@ -93,7 +93,7 @@ class PlaybackState extends WidgetsBindingObserver {
         }
       },
       exchange: (checkpoint) async {
-        final uri = data.endpoint('/hypnosis/state');
+        final uri = data.endpoint('/nx_hypnosis/state');
         final response =
             await (checkpoint == null
                     ? data.client.get(uri)

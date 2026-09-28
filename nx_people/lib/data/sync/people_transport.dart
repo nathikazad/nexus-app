@@ -9,7 +9,7 @@ class PeopleTransport {
   Future<Map<String, dynamic>> execute(Map<String, dynamic> request) async {
     final response = await reads.client
         .post(
-          reads.origin.resolve('/apps/people/commands'),
+          reads.origin.resolve('/nx_people/commands'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(request),
         )

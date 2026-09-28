@@ -43,7 +43,7 @@ void main() {
           expect(request.body, contains('7'));
           uploads++;
           return http.Response(
-            jsonEncode({'url': '/apps/people/assets/7/test.png'}),
+            jsonEncode({'url': '/nx_people/assets/7/test.png'}),
             200,
           );
         }),
@@ -75,12 +75,12 @@ void main() {
       });
       expect(
         resolved['attributes'][0]['value'],
-        '/apps/people/assets/7/test.png',
+        '/nx_people/assets/7/test.png',
       );
-      expect(await assets.uploadLocal(url), '/apps/people/assets/7/test.png');
+      expect(await assets.uploadLocal(url), '/nx_people/assets/7/test.png');
       expect(uploads, 1);
       expect(
-        await assets.read('https://nexus.test/apps/people/assets/7/test.png'),
+        await assets.read('https://nexus.test/nx_people/assets/7/test.png'),
         [1, 2, 3, 4],
       );
       await expectLater(

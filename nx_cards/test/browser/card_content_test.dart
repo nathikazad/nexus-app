@@ -42,7 +42,7 @@ void main() {
         english: 'talent',
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
-        audioUrl: '/cards/assets/audio/file?user_id=1&name=12-abcd.mp3',
+        audioUrl: '/nx_cards/assets/audio/file?user_id=1&name=12-abcd.mp3',
         examples: <LanguageExample>[
           LanguageExample(
             text: 'അവന് നല്ല കഴിവുണ്ട്.',

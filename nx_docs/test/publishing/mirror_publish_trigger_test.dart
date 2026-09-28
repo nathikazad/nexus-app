@@ -25,7 +25,7 @@ void main() {
     expect(seen.method, 'POST');
     expect(
       seen.url.toString(),
-      'http://100.108.43.37:8001/mirror/publish/trigger',
+      'http://100.108.43.37:8001/nx_docs/publish/trigger',
     );
     expect(seen.headers['X-User-Id'], isNull);
     expect(jsonDecode(seen.body), {
@@ -45,7 +45,7 @@ void main() {
           return http.Response('{"ok":true}', 200);
         }
         if (requests
-                .where((item) => item == 'GET /mirror/publish/status')
+                .where((item) => item == 'GET /nx_docs/publish/status')
                 .length ==
             1) {
           return http.Response(
@@ -68,9 +68,9 @@ void main() {
     );
 
     expect(requests, [
-      'POST /mirror/publish/trigger',
-      'GET /mirror/publish/status',
-      'GET /mirror/publish/status',
+      'POST /nx_docs/publish/trigger',
+      'GET /nx_docs/publish/status',
+      'GET /nx_docs/publish/status',
     ]);
   });
 

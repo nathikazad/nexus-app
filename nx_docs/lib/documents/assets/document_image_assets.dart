@@ -126,9 +126,7 @@ class DocumentImageAssetRef {
 
   static DocumentImageAssetRef? tryParse(String raw) {
     final uri = Uri.tryParse(raw);
-    if (uri == null ||
-        (uri.path != _documentImageFilePath &&
-            uri.path != _legacyDocumentImageFilePath)) {
+    if (uri == null || uri.path != _documentImageFilePath) {
       return null;
     }
     final userId = int.tryParse(uri.queryParameters['user_id'] ?? '');
@@ -158,9 +156,8 @@ class DocumentImageAssetRef {
   }
 }
 
-const _documentImageUploadPath = '/docs/assets/images';
-const _documentImageFilePath = '/docs/assets/images/file';
-const _legacyDocumentImageFilePath = '/notes/assets/images/file';
+const _documentImageUploadPath = '/nx_docs/assets/images';
+const _documentImageFilePath = '/nx_docs/assets/images/file';
 
 bool isNetworkImageUrl(String source) {
   final uri = Uri.tryParse(source);

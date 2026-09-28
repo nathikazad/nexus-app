@@ -146,7 +146,7 @@ final class BookFileCache {
         uri.scheme != origin.scheme ||
         uri.host != origin.host ||
         uri.port != origin.port ||
-        !uri.path.startsWith('/books/')) {
+        !uri.path.startsWith('/nx_books/')) {
       throw const FormatException('Book file link is outside Nexus');
     }
     return uri;

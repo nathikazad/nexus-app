@@ -20,7 +20,7 @@ class ExpenseTransport {
     final request =
         http.MultipartRequest(
             'POST',
-            reads.origin.resolve('/apps/expense/receipts'),
+            reads.origin.resolve('/nx_expense/receipts'),
           )
           ..fields.addAll({
             'operation_id': operationId,
@@ -62,7 +62,7 @@ class ExpenseTransport {
   Future<Map<String, dynamic>> execute(Map<String, dynamic> request) async {
     final response = await reads.client
         .post(
-          reads.origin.resolve('/apps/expense/commands'),
+          reads.origin.resolve('/nx_expense/commands'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(request),
         )

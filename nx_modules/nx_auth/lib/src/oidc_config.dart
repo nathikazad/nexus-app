@@ -43,11 +43,11 @@ class NexusOidcConfig {
         .toList(growable: false);
     final expectedScheme = clientAppId.replaceAll('_', '-');
     const webPaths = {
-      'nx_docs_web': '/docs/auth.html',
-      'nx_cards_web': '/flashcards/auth.html',
-      'nx_books_web': '/books/auth.html',
-      'nx_expense_web': '/expenses/auth.html',
-      'nx_hypnosis_web': '/hypnosis-app/auth.html',
+      'nx_docs_web': '/nx_docs/web/auth.html',
+      'nx_cards_web': '/nx_cards/web/auth.html',
+      'nx_books_web': '/nx_books/web/auth.html',
+      'nx_expense_web': '/nx_expense/web/auth.html',
+      'nx_hypnosis_web': '/nx_hypnosis/web/auth.html',
     };
     final webRedirect =
         kIsWeb &&

@@ -21,7 +21,7 @@ Map<String, dynamic> snapshot({String recording = 'v1'}) => {
       'desire_id': '1',
       'title': 'Evening',
       'story': 'Relax.',
-      'audio': {'link': '/hypnosis/recordings/2', 'filename': recording},
+      'audio': {'link': '/nx_hypnosis/recordings/2', 'filename': recording},
     },
   ],
 };

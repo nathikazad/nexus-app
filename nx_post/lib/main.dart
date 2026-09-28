@@ -2410,7 +2410,7 @@ class MicroblogPostRepository {
     final cleanCategories = normalizedTags(categories);
     final payload = await submitMicroblogMultipart(
       method: 'POST',
-      path: '/microblogs',
+      path: '/nx_post/posts',
       text: cleanText,
       postedAt: postedAt,
       mediaUrl: mediaUrl,
@@ -2436,7 +2436,7 @@ class MicroblogPostRepository {
     final cleanCategories = normalizedTags(categories);
     final payload = await submitMicroblogMultipart(
       method: 'PUT',
-      path: '/microblogs/$id',
+      path: '/nx_post/posts/$id',
       text: cleanText,
       postedAt: postedAt,
       mediaUrl: mediaUrl,
@@ -2510,7 +2510,7 @@ class MicroblogPostRepository {
   Future<void> deleteMicroblog(int id) async {
     logNxPost('deleting microblog id=$id');
     final response = await _client.delete(
-      Uri.parse('$normalizedBaseUrl/microblogs/$id'),
+      Uri.parse('$normalizedBaseUrl/nx_post/posts/$id'),
       headers: httpHeaders(),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {

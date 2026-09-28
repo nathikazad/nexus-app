@@ -44,7 +44,7 @@ final class AppReads {
     Map<String, String> query = const {},
   ]) {
     final uri = origin
-        .resolve('/apps/$app/$view')
+        .resolve('/nx_$app/data/$view')
         .replace(queryParameters: query.isEmpty ? null : query);
     return cache.read(uri.toString(), () async {
       final response = await client
