@@ -1,6 +1,6 @@
 import 'package:oidc/oidc.dart';
 
-/// Preserve the verified Chrome Auth Tab / native receiver behavior.
+/// Prefer Chrome when available; native code falls back to other browsers.
 class AndroidAuthFlow {
   const AndroidAuthFlow();
 
