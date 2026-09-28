@@ -336,7 +336,7 @@ class _SourceCard extends StatelessWidget {
                       CardMetric(
                         icon: Icons.school_outlined,
                         value: current,
-                        label: 'Learning',
+                        label: 'Weak',
                       ),
                     ],
                   ),

@@ -82,7 +82,7 @@ void main() {
         );
         await tester.tap(find.text('All'));
         await tester.pumpAndSettle();
-        expect(find.text('4 cards · 4 learning'), findsOneWidget);
+        expect(find.text('4 cards · 4 weak'), findsOneWidget);
         for (var id = 1; id <= 4; id++) {
           expect(find.text('item $id'), findsOneWidget);
         }
@@ -173,10 +173,10 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1100, 844));
     await tester.pumpAndSettle();
     final nounLearnt = find.byKey(
-      const ValueKey('language-category-noun-learnt'),
+      const ValueKey('language-category-noun-strong'),
     );
     final nounLearning = find.byKey(
-      const ValueKey('language-category-noun-learning'),
+      const ValueKey('language-category-noun-weak'),
     );
     expect(find.descendant(of: nounLearnt, matching: find.text('1')), findsOne);
     expect(
@@ -209,7 +209,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('language-category-noun-learnt')),
+      find.byKey(const ValueKey('language-category-noun-strong')),
       findsNothing,
     );
     await tester.binding.setSurfaceSize(const Size(1100, 844));
@@ -267,8 +267,8 @@ void main() {
     expect(find.text('The Four Steps to the Epiphany'), findsOneWidget);
     await tester.tap(find.text('The Four Steps to the Epiphany'));
     await tester.pumpAndSettle();
-    expect(find.text('Learning  0'), findsOneWidget);
-    expect(find.text('Learnt  0'), findsOneWidget);
+    expect(find.text('Weak  0'), findsOneWidget);
+    expect(find.text('Strong  0'), findsOneWidget);
     expect(find.text('Future  1'), findsOneWidget);
     await tester.ensureVisible(find.text('Future  1'));
     await tester.tap(find.text('Future  1'));
@@ -331,13 +331,13 @@ void main() {
     expect(find.text('0%'), findsOneWidget);
     expect(find.text('DUE'), findsNothing);
     expect(find.byKey(const ValueKey('word-schedule-due')), findsNothing);
-    expect(find.text('Learning  1'), findsOneWidget);
-    expect(find.text('Learnt  1'), findsOneWidget);
+    expect(find.text('Weak  1'), findsOneWidget);
+    expect(find.text('Strong  1'), findsOneWidget);
     expect(find.text('Future  1'), findsOneWidget);
-    await tester.tap(find.text('Learnt  1'));
+    await tester.tap(find.text('Strong  1'));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey<String>('word-state-learning')),
+      find.byKey(const ValueKey<String>('word-state-weak')),
       findsNothing,
     );
     expect(tester.takeException(), isNull);
@@ -406,7 +406,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.changes, isEmpty);
 
-    await tester.tap(find.text('Learnt  1'));
+    await tester.tap(find.text('Strong  1'));
     await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const ValueKey('recall:3')),

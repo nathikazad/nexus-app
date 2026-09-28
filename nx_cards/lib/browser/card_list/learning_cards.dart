@@ -383,9 +383,11 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                 )
               : Text(
                   label,
+                  maxLines: 1,
+                  softWrap: false,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 26,
+                    fontSize: 14,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -403,9 +405,9 @@ class _ScheduleStatePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = switch (status.label) {
-      'Learning' => (const Color(0xfffff7ed), RecallColors.orange),
+      'Weak' => (const Color(0xfffff7ed), RecallColors.orange),
       'Future' => (const Color(0xfffff1f2), RecallColors.rose),
-      'Learnt' => (const Color(0xffecfdf5), RecallColors.emerald),
+      'Strong' => (const Color(0xffecfdf5), RecallColors.emerald),
       'Practice' => (const Color(0xfff0f9ff), RecallColors.sky),
       _ => (RecallColors.soft, RecallColors.muted),
     };

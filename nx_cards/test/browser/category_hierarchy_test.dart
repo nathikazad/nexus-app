@@ -84,10 +84,10 @@ void main() {
 
       const priority = [
         'total',
-        'learning',
+        'weak',
         'due',
         'practice',
-        'learnt',
+        'strong',
         'future',
       ];
       int visible() {

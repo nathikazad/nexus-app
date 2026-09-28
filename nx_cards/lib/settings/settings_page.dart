@@ -199,7 +199,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               ),
               const SizedBox(height: 7),
               const Text(
-                'Saved to your account. Practice cards are for preparation. Recall cards below 80% are Learning; 80% or more are Learnt. Missing answers count toward the window.',
+                'Saved to your account. Practice cards are for preparation. Recall cards below 80% are Weak; 80% or more are Strong. Missing answers count toward the window.',
                 style: TextStyle(color: RecallColors.muted, height: 1.4),
               ),
               const SizedBox(height: 18),

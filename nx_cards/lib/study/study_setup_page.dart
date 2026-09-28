@@ -1191,7 +1191,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       ),
       if (_mode == StudyMode.recall &&
           _learningStatuses.contains(LearningStage.past))
-        Text('Learnt cards due: $_pastDueCount'),
+        Text('Strong cards due: $_pastDueCount'),
     ],
   );
 

@@ -99,6 +99,10 @@ void main() {
         expect(selector().selected, {entry.value});
         expect(library.savedStatus, entry.value);
         expect(library.savedCard?.id, 20);
+        expect(
+          find.byKey(const ValueKey('card-detail-recall-strength')),
+          entry.value == LearningStatus.recall ? findsOneWidget : findsNothing,
+        );
       }
       library.pending = Completer<void>();
       await tester.tap(find.text('Practice'));
