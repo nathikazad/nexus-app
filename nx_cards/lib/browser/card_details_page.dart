@@ -151,6 +151,10 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                         style: monoLabel,
                       ),
                     ),
+                    if (card.learningStatus == LearningStatus.recall) ...[
+                      const SizedBox(width: 12),
+                      _RecallStrengthPill(card: card, cue: visibleCue),
+                    ],
                     if (card.suspended)
                       const _StatusPill(
                         label: 'Suspended',
@@ -159,21 +163,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _CardContent(
-                        card: card,
-                        languageContent: languageContent,
-                      ),
-                    ),
-                    if (card.learningStatus == LearningStatus.recall) ...[
-                      const SizedBox(width: 12),
-                      _RecallStrengthPill(card: card, cue: visibleCue),
-                    ],
-                  ],
-                ),
+                _CardContent(card: card, languageContent: languageContent),
                 const SizedBox(height: 16),
                 SegmentedButton<LearningStatus>(
                   key: const ValueKey('card-learning-status'),

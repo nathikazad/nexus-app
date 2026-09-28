@@ -89,6 +89,8 @@ void main() {
       SegmentedButton<LearningStatus> selector() =>
           tester.widget(find.byKey(const ValueKey('card-learning-status')));
       expect(selector().selected, {LearningStatus.future});
+      final content = find.byKey(const ValueKey('card-content'));
+      final contentWidth = tester.getSize(content).width;
       for (final entry in {
         'Practice': LearningStatus.practice,
         'Recall': LearningStatus.recall,
@@ -99,6 +101,17 @@ void main() {
         expect(selector().selected, {entry.value});
         expect(library.savedStatus, entry.value);
         expect(library.savedCard?.id, 20);
+        expect(tester.getSize(content).width, contentWidth);
+        if (entry.value == LearningStatus.recall) {
+          expect(
+            tester
+                .getBottomRight(
+                  find.byKey(const ValueKey('card-detail-recall-strength')),
+                )
+                .dy,
+            lessThan(tester.getTopLeft(content).dy),
+          );
+        }
         expect(
           find.byKey(const ValueKey('card-detail-recall-strength')),
           entry.value == LearningStatus.recall ? findsOneWidget : findsNothing,

@@ -140,6 +140,17 @@ void main() {
     expect(find.text('Listen'), findsOneWidget);
     await tester.tap(find.text('Listen'));
     await tester.pumpAndSettle();
+    expect(find.text('Write'), findsOneWidget);
+    await tester.tap(find.text('Write'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<SegmentedButton<RecallPresentation>>(
+            find.byType(SegmentedButton<RecallPresentation>),
+          )
+          .selected,
+      {RecallPresentation.write},
+    );
     final prefs = await SharedPreferences.getInstance();
     expect(
       prefs.getString('study_setup.v3.recall.Chinese'),
