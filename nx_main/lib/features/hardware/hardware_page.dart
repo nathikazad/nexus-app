@@ -1,3 +1,4 @@
+import 'package:nexus_voice_assistant/features/devices/devices_page.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:nx_db/auth.dart';
@@ -19,6 +20,13 @@ class HardwarePage extends ConsumerStatefulWidget {
 }
 
 class _HardwarePageState extends ConsumerState<HardwarePage> {
+  Widget _wifiDevicesButton() => IconButton(
+        tooltip: 'Wi-Fi devices',
+        icon: const Icon(Icons.router_outlined),
+        onPressed: () => Navigator.of(context)
+            .push<void>(MaterialPageRoute(builder: (_) => const DevicesPage())),
+      );
+
   Future<void> _editDeviceName() async {
     final vm = ref.read(hardwareViewModelProvider);
     final n = ref.read(hardwareViewModelProvider.notifier);
@@ -200,6 +208,7 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
       MaterialPageRoute<void>(
         builder: (context) => Scaffold(
           appBar: AppBar(
+            actions: [_wifiDevicesButton()],
             title: const Text('Preferences'),
             surfaceTintColor: Colors.transparent,
           ),
@@ -273,6 +282,7 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
               title: Text('Nexus', style: refAppBarTitleLarge()),
               surfaceTintColor: Colors.transparent,
               actions: [
+                _wifiDevicesButton(),
                 Tooltip(
                   message: 'Menu',
                   child: Material(
