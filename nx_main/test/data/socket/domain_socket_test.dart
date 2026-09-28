@@ -7,10 +7,10 @@ import 'package:nexus_voice_assistant/data/voice/voice_socket_session.dart';
 import 'package:nexus_voice_assistant/application/sessions/agent_routes.dart';
 
 void main() {
-  test('wearable rejects absent domain before opening any connection',
+  test('wearable rejects invalid supplied domain before opening any connection',
       () async {
     final client = SocketClient();
-    await expectLater(client.connect('ws://127.0.0.1:1'), throwsStateError);
+    await expectLater(client.connect('ws://127.0.0.1:1', headers: {'X-Nexus-Domain-Id': 'bad'}), throwsStateError);
     expect(await client.ensureConnected(), isFalse);
   });
 
@@ -79,7 +79,7 @@ void main() {
     ));
     expect(
         await wearable.connect(url,
-            headers: AgentRoutes.necklace.ambientHeaders()),
+            headers: AgentRoutes.necklace.headers()),
         isTrue);
     expect(domains, ['7', '9', '7', '9', '9', null]);
     expect(agents, [

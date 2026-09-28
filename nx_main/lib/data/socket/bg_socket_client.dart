@@ -62,22 +62,17 @@ class SocketClient implements NecklaceSocketPort {
       for (final entry in (headers ?? <String, String>{}).entries)
         entry.key.toLowerCase(): entry.value
     };
-    final ambient = metadata['x-nexus-session-mode'] == 'ambient';
     final domain = int.tryParse(metadata['x-nexus-domain-id'] ?? '');
-    if (ambient
-        ? metadata.containsKey('x-nexus-domain-id') ||
-            metadata['x-agent-id'] != 'personal_assistant' ||
-            metadata['x-device-source'] != 'necklace'
-        : domain == null || domain <= 0) {
+    if (metadata.containsKey('x-nexus-domain-id') &&
+        (domain == null || domain <= 0)) {
       await disconnect();
-      throw StateError(
-          'A valid domain session or explicit ambient necklace session is required.');
+      throw StateError('Domain ID must be positive when supplied.');
     }
     final closing = disconnect();
     final generation = _generation;
     await closing;
     if (generation != _generation) return false;
-    _accessHeaders = Map<String, String>.from(headers!);
+    _accessHeaders = Map<String, String>.from(headers ?? {});
     _authHeaders = authHeaders;
     _url = url;
     return ensureConnected(reason: 'connect');

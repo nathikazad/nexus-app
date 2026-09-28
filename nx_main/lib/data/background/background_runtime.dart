@@ -286,7 +286,7 @@ class BackgroundRuntime {
         authHeaders: authHeaders,
       );
       authenticatedHttpClient = client;
-      final socketMetadata = AgentRoutes.necklace.ambientHeaders();
+      final socketMetadata = AgentRoutes.necklace.headers();
       unawaited(printServerClockDrift(uploadBase, client));
       telemetryUploadManager = TelemetryUploadManager(
         httpBaseUrl: uploadBase,
