@@ -288,7 +288,7 @@ class BackgroundRuntime {
             bleClient.device?.remoteId.str == remoteId,
       );
       deviceAuth = auth;
-      final socketMetadata = AgentRoutes.necklace.ambientHeaders();
+      final socketMetadata = AgentRoutes.necklace.headers();
       await socketClient.connect(url,
           headers: socketMetadata, authHeaders: auth.headers);
       if (generation != sessionGeneration) return;

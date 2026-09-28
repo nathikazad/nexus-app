@@ -2,9 +2,11 @@
 
 Vendored from pub.dev oidc_android 2.0.1; original LICENSE retained. Used by
 Cards and Docs through explicit path overrides. Apple and web packages are
-unchanged. Shared NX Auth requests Chrome 137+ and a five-minute native deadline.
+unchanged. Shared NX Auth prefers Chrome and uses a five-minute native deadline.
+Chrome is optional: use another Custom Tabs provider or the default browser
+when it is absent. Older Chrome versions use the redirect receiver fallback.
 
-Changes: honor preferredBrowserPackages, report missing/outdated Chrome, catch
+Changes: honor preferredBrowserPackages as preferences, allow browser fallback, catch
 launch failures, reject fallback redirects with wrong path/state, share accepted
 redirect foreground return, and fail/return on timeout. Cards uses
 FlutterFragmentActivity and Docs AudioServiceFragmentActivity so AndroidX Auth

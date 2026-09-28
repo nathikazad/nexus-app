@@ -5,6 +5,28 @@ import 'package:http/testing.dart';
 import 'package:nx_db/app_reads.dart';
 
 void main() {
+  for (final app in [
+    'docs',
+    'books',
+    'cards',
+    'hypnosis',
+    'people',
+    'expense',
+  ]) {
+    test('$app reads use its folder prefix', () async {
+      final reads = AppReads(
+        MockClient((request) async {
+          expect(request.url.path, '/nx_$app/data/initial');
+          return http.Response('{}', 200);
+        }),
+        Uri.parse('https://nexus.example'),
+        app,
+      );
+      await reads.read('initial');
+      await reads.close();
+    });
+  }
+
   test(
     'live reads deduplicate, page only on demand, and invalidate after changes',
     () async {

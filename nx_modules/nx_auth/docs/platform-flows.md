@@ -6,8 +6,10 @@ Web detection takes precedence over the browser's operating system.
 - **iOS:** `ios_auth_flow.dart` owns ASWebAuthenticationSession settings,
   explicitly captures the app's custom callback scheme, and bounds the native
   wait to five minutes. Browser SSO remains enabled.
-- **Android:** `android_auth_flow.dart` preserves the existing Chrome selection,
-  five-minute timeout, and OIDC plugin receiver. Native Android code is unchanged.
+- **Android:** `android_auth_flow.dart` prefers Chrome without requiring it or
+  a minimum Chrome version. The native plugin falls back to another Custom Tabs
+  provider or the default browser, retaining the five-minute timeout and
+  validated OIDC redirect receiver.
 - **Web:** `web_auth_flow.dart` preserves default browser navigation and the
   existing `auth.html` handshake. Callback HTML is unchanged.
 - **Desktop:** continues using the previous OIDC manager defaults.

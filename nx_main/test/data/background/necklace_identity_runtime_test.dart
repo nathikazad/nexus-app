@@ -133,7 +133,6 @@ void main() {
     await until(() => socket.connections.isNotEmpty);
     expect(socket.connections.single, {
       'X-Client-Id': 'necklace',
-      'X-Nexus-Session-Mode': 'ambient',
       'authorization': 'Bearer nd1_${'ab' * 32}',
     });
     await until(() => requests.contains('/v1/domains'));

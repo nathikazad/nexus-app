@@ -140,6 +140,17 @@ void main() {
     expect(find.text('Listen'), findsOneWidget);
     await tester.tap(find.text('Listen'));
     await tester.pumpAndSettle();
+    expect(find.text('Write'), findsOneWidget);
+    await tester.tap(find.text('Write'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<SegmentedButton<RecallPresentation>>(
+            find.byType(SegmentedButton<RecallPresentation>),
+          )
+          .selected,
+      {RecallPresentation.write},
+    );
     final prefs = await SharedPreferences.getInstance();
     expect(
       prefs.getString('study_setup.v3.recall.Chinese'),
@@ -159,8 +170,8 @@ void main() {
     await showSetup(tester);
     expect(find.text('3 available'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Practice'), findsNothing);
-    expect(find.widgetWithText(FilterChip, 'Learning'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'Learnt'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Weak'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Strong'), findsOneWidget);
     expect(find.text('Recall format'), findsOneWidget);
     expect(find.text('Write'), findsOneWidget);
     expect(find.text('Start recall'), findsOneWidget);
@@ -176,7 +187,7 @@ void main() {
     expect(find.text('1 available'), findsOneWidget);
     expect(find.text('Which cards'), findsNothing);
     expect(find.text('Recall score'), findsNothing);
-    expect(find.textContaining('Learnt cards due'), findsNothing);
+    expect(find.textContaining('Strong cards due'), findsNothing);
     expect(find.byType(FilterChip), findsNothing);
     expect(find.text('AI'), findsNothing);
   });
@@ -184,19 +195,19 @@ void main() {
     tester,
   ) async {
     await showSetup(tester);
-    expect(find.text('Learnt cards due: 1'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilterChip, 'Learnt'));
+    expect(find.text('Strong cards due: 1'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Learnt cards due'), findsNothing);
-    await tester.tap(find.widgetWithText(FilterChip, 'Learnt'));
+    expect(find.textContaining('Strong cards due'), findsNothing);
+    await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
     await tester.pumpAndSettle();
     tester.widgetList<Slider>(find.byType(Slider)).first.onChanged!(70);
     await tester.pumpAndSettle();
-    expect(find.text('Learnt cards due: 0'), findsOneWidget);
+    expect(find.text('Strong cards due: 0'), findsOneWidget);
     expect(find.text('1 available'), findsOneWidget);
     await tester.tap(find.text('AI').first);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Learnt cards due'), findsNothing);
+    expect(find.textContaining('Strong cards due'), findsNothing);
     expect(find.text('Recall format'), findsNothing);
     expect(find.text('Start AI tutor'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Practice'), findsNothing);
@@ -220,10 +231,10 @@ void main() {
       await tester.tap(find.text('AI').first);
       await tester.pumpAndSettle();
       expect(slider().value, 2);
-      await tester.tap(find.widgetWithText(FilterChip, 'Learnt'));
+      await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
       await tester.pumpAndSettle();
       expect(slider().value, 1);
-      await tester.tap(find.widgetWithText(FilterChip, 'Learnt'));
+      await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
       await tester.pumpAndSettle();
       expect(slider().value, 1);
     },
@@ -239,10 +250,10 @@ void main() {
         tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
     slider().onChanged!(17);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilterChip, 'Learning'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Weak'));
     await tester.pumpAndSettle();
     expect(find.text('No cards match these filters'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilterChip, 'Learning'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Weak'));
     await tester.pumpAndSettle();
     expect(slider().value, 17);
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));

@@ -145,15 +145,9 @@ class ReadingCompanionController extends ChangeNotifier {
       if (_disposed || generation != _generation) return false;
       _acceptResponses = true;
       messages.add(ReadingMessage('user', text));
-      final excerpt = selection.length > 6000
-          ? selection.substring(0, 6000)
-          : selection;
-      final wire = excerpt.isEmpty
-          ? text
-          : 'Selected passage (reference text):\n${jsonEncode(excerpt)}\n\nQuestion: $text';
-      _pendingTypedWire = wire;
+      _pendingTypedWire = text;
       _pendingTypedQuestion = text;
-      session.sendTextTurn(wire);
+      session.sendTextTurn(text, context: selection);
       _waitForReply();
       return true;
     } catch (_) {
@@ -173,13 +167,13 @@ class ReadingCompanionController extends ChangeNotifier {
     try {
       if (!await _canConnect()) return;
       if (_disposed || !_held || generation != _generation) return;
-      await session.connect(config.withSelection(selection));
+      await session.connect(config);
       if (_disposed || !_held || generation != _generation) {
         busy = false;
         _notify();
         return;
       }
-      session.beginAudioTurn();
+      session.beginAudioTurn(context: selection);
       final started = await microphone.start(
         onOpusPacket: (packet) {
           if (_held && !_disposed && generation == _generation) {

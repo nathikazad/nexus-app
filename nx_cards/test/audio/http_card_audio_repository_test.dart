@@ -21,12 +21,12 @@ void main() {
       );
 
       final bytes = await repository.fetch(
-        '/cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
+        '/nx_cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
       );
 
       expect(
         requested.toString(),
-        'http://100.108.43.37:8001/cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
+        'http://100.108.43.37:8001/nx_cards/assets/audio/file?user_id=7&name=12-abcd.mp3',
       );
       expect(headers['x-user-id'], isNull);
       expect(bytes, [0x49, 0x44, 0x33]);
@@ -41,7 +41,7 @@ void main() {
     );
 
     expect(
-      () => repository.fetch('/cards/assets/audio/file?name=missing.mp3'),
+      () => repository.fetch('/nx_cards/assets/audio/file?name=missing.mp3'),
       throwsA(isA<CardAudioFetchException>()),
     );
   });

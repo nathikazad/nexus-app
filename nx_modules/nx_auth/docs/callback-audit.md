@@ -6,6 +6,24 @@ The initial source audit made no authentication changes. The subsequent live
 tests below exercised sign-out/sign-in and browser sessions with user
 authorization. No account credentials or authentication policy were changed.
 
+## Browser fallback update (2026-09-28)
+
+The Chrome-only restriction described below has been removed from source.
+Chrome remains preferred, with fallback to another Custom Tabs provider or the
+system browser. No minimum Chrome version is enforced. The original stock
+browser passkey failure remains an observed limitation, not grounds to block
+all authentication methods. Redirect path/state checks and the timeout remain.
+
+Validation: all 28 NX Auth Flutter tests and 15 Android plugin tests passed,
+including missing-Chrome fallback and validated redirect completion. Recall
+release build 20260978 compiled and `adb install -r` reported success on Bigme.
+After reconnecting, package manager confirmed build 20260978. Tapping Recall
+“Continue to sign in” opened `com.b300.xrz.web` at the provider login page,
+confirming stock-browser launch without Chrome. The provider still displayed
+“An error occurred during passkey verification” and offered “Use password”.
+Remote taps did not advance that option during this check; full credential
+authentication and return to Recall remain unverified.
+
 ## Implemented and installed after the audit (2026-09-16)
 
 Cards and Docs release build **20260927** were installed with data preserved on

@@ -11,7 +11,7 @@ import 'package:nx_cards/browser/browser.dart';
 AudioAsset asset(List<int> data) {
   final hash = sha256.convert(data).toString();
   return AudioAsset(
-    '/cards/assets/audio/file?name=1-$hash.mp3',
+    '/nx_cards/assets/audio/file?name=1-$hash.mp3',
     hash,
     data.length,
   );

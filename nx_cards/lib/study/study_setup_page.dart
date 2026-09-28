@@ -81,8 +81,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   bool _listening = false;
   bool get _reverseLanguageRecall =>
       !_isBookStudy && _cue == StudyCue.toLanguage;
+  bool get _allowsWriting => !_reverseLanguageRecall || _listening;
   RecallPresentation get _effectiveRecallPresentation =>
-      _reverseLanguageRecall && _recallPresentation == RecallPresentation.write
+      !_allowsWriting && _recallPresentation == RecallPresentation.write
       ? RecallPresentation.standard
       : _recallPresentation;
   StudyCue? get _cue => _isBookStudy
@@ -1080,7 +1081,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                     child: Text('Standard', maxLines: 1),
                                   ),
                                 ),
-                                if (!_reverseLanguageRecall)
+                                if (_allowsWriting)
                                   const ButtonSegment(
                                     value: RecallPresentation.write,
                                     label: FittedBox(
@@ -1191,7 +1192,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       ),
       if (_mode == StudyMode.recall &&
           _learningStatuses.contains(LearningStage.past))
-        Text('Learnt cards due: $_pastDueCount'),
+        Text('Strong cards due: $_pastDueCount'),
     ],
   );
 

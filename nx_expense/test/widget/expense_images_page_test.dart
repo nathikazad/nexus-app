@@ -159,7 +159,10 @@ void main() {
               jsonEncode({
                 'status': 'applied',
                 'filename': 'a.jpg',
-                'entity': {'event_id': '1', 'event_time': '2026-09-16T10:15:00'},
+                'entity': {
+                  'event_id': '1',
+                  'event_time': '2026-09-16T10:15:00',
+                },
               }),
             ),
           ),
@@ -199,7 +202,7 @@ void main() {
       await tester.tap(find.text('Choose image'));
       await tester.pumpAndSettle();
       expect(uploaded, isTrue);
-      expect(request!.url.path, '/apps/expense/receipts');
+      expect(request!.url.path, '/nx_expense/receipts');
       expect(request!.fields['domain_id'], '1');
       expect(request!.fields['operation_id'], isNotEmpty);
       expect(request!.fields.containsKey('modelId'), isFalse);

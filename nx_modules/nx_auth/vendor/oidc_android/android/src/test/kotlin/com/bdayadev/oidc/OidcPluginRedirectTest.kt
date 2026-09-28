@@ -190,12 +190,19 @@ class OidcPluginRedirectTest {
     }
 
     @Test
-    fun `missing requested browser fails promptly without opening the default browser`() {
+    fun `missing preferred browser opens default browser and accepts validated return`() {
         val results = mutableListOf<Result<String?>>()
         plugin.authorize("https://op.example.com/authorize?state=s", "com.example.app://callback",
             "com.example.app", mapOf("preferredBrowserPackages" to listOf("com.android.chrome"))) { results.add(it) }
-        assertTrue(results.single().isFailure)
-        assertNull(org.robolectric.Shadows.shadowOf(activity).nextStartedActivity)
+        assertTrue(results.isEmpty())
+        val launched = org.robolectric.Shadows.shadowOf(activity).nextStartedActivity
+        assertTrue(launched != null)
+        assertNull(launched!!.getPackage(), "fallback must not force Chrome")
+        assertEquals("https://op.example.com/authorize?state=s", launched.data.toString())
+        assertFalse(OidcPlugin.handleRedirect(Uri.parse("com.example.app://callback?code=x&state=wrong")))
+        assertTrue(results.isEmpty())
+        assertTrue(OidcPlugin.handleRedirect(Uri.parse("com.example.app://callback?code=x&state=s")))
+        assertTrue(results.single().isSuccess)
     }
 
 }

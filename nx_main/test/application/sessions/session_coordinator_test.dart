@@ -50,15 +50,15 @@ void main() {
   });
   test('routing preserves phone versus wearable agent and source headers', () {
     expect(AgentRoutes.app.headers(7), {
-      'X-Nexus-Domain-Id': '7',
+      'X-Domain-Id': '7',
       'X-Client-Id': 'nx_main',
     });
     expect(AgentRoutes.necklace.headers(7), {
-      'X-Nexus-Domain-Id': '7',
+      'X-Domain-Id': '7',
       'X-Client-Id': 'necklace',
     });
     expect(AgentRoutes.watch.headers(7), {
-      'X-Nexus-Domain-Id': '7',
+      'X-Domain-Id': '7',
       'X-Client-Id': 'nx_watch',
     });
     expect(() => AgentRoutes.necklace.headers(0), throwsStateError);

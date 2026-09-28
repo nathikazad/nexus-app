@@ -57,16 +57,17 @@ skip_restart=0
 skip_verify=0
 requested_apps=()
 
-app_order=(nx_docs nx_books nx_expense nx_people nx_projects nx_cards)
+app_order=(nx_docs nx_books nx_expense nx_people nx_projects nx_cards nx_hypnosis)
 
 base_href_for() {
   case "$1" in
-    nx_docs) printf '/docs/' ;;
-    nx_books) printf '/books/' ;;
-    nx_expense) printf '/expenses/' ;;
-    nx_people) printf '/people/' ;;
-    nx_projects) printf '/projects/' ;;
-    nx_cards) printf '/flashcards/' ;;
+    nx_docs) printf '/nx_docs/web/' ;;
+    nx_books) printf '/nx_books/web/' ;;
+    nx_expense) printf '/nx_expense/web/' ;;
+    nx_people) printf '/nx_people/web/' ;;
+    nx_projects) printf '/nx_projects/web/' ;;
+    nx_cards) printf '/nx_cards/web/' ;;
+    nx_hypnosis) printf '/nx_hypnosis/web/' ;;
     *) return 1 ;;
   esac
 }
@@ -74,7 +75,7 @@ base_href_for() {
 static_dir_for() {
   case "$1" in
     nx_docs) printf 'nx_notes' ;;
-    nx_books|nx_expense|nx_people|nx_projects|nx_cards) printf '%s' "$1" ;;
+    nx_books|nx_expense|nx_people|nx_projects|nx_cards|nx_hypnosis) printf '%s' "$1" ;;
     *) return 1 ;;
   esac
 }
@@ -88,6 +89,7 @@ normalize_app() {
     nx_people|people) printf 'nx_people' ;;
     nx_projects|projects) printf 'nx_projects' ;;
     nx_cards|cards|flashcards) printf 'nx_cards' ;;
+    nx_hypnosis|hypnosis) printf 'nx_hypnosis' ;;
     *)
       printf 'Unknown app: %s\n' "$1" >&2
       return 1

@@ -26,7 +26,7 @@ void main() {
 
     expect(documentId, 4209);
     expect(seen.method, 'GET');
-    expect(seen.url.toString(), 'http://100.108.43.37:8001/docs/state/nx_docs');
+    expect(seen.url.toString(), 'http://100.108.43.37:8001/nx_docs/state');
     expect(seen.headers['X-User-Id'], isNull);
   });
 
@@ -43,7 +43,7 @@ void main() {
     await service.saveLastDocumentId(4293);
 
     expect(seen.method, 'PUT');
-    expect(seen.url.toString(), 'https://nexus.kgql.io/docs/state/nx_docs');
+    expect(seen.url.toString(), 'https://nexus.kgql.io/nx_docs/state');
     expect(seen.headers['X-User-Id'], isNull);
     expect(jsonDecode(seen.body), {'last_document_id': 4293});
   });

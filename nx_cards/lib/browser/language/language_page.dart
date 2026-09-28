@@ -233,10 +233,10 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
 
     final metrics = <(int, String)>[
       (cards.length, 'Total'),
-      (current, 'Learning'),
+      (current, 'Weak'),
       (due, 'Due'),
       (upcoming, 'Practice'),
-      (learnt, 'Learnt'),
+      (learnt, 'Strong'),
       (remaining, 'Future'),
     ];
     final widths = metrics.map((entry) {
@@ -549,7 +549,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                   ? 'cards'
                                   : category == 'Script'
                                   ? 'letters'
-                                  : 'words'} · ${learning.length} learning',
+                                  : 'words'} · ${learning.length} weak',
                               style: const TextStyle(color: RecallColors.muted),
                             ),
                           ),
@@ -623,8 +623,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                   ),
                                   tabs: [
                                     Tab(text: 'Practice  ${upcoming.length}'),
-                                    Tab(text: 'Learning  ${learning.length}'),
-                                    Tab(text: 'Learnt  ${learnt.length}'),
+                                    Tab(text: 'Weak  ${learning.length}'),
+                                    Tab(text: 'Strong  ${learnt.length}'),
                                     Tab(text: 'Future  ${notStarted.length}'),
                                   ],
                                 ),
@@ -657,10 +657,10 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                             cards: learning,
                             showScheduleStatus: true,
                             emptyText: category == 'Script'
-                                ? 'No letters are currently being learned.'
+                                ? 'No letters are currently weak.'
                                 : widget.allCards || widget.tagSystem != null
-                                ? 'No cards are currently being learned.'
-                                : 'No words are currently being learned.',
+                                ? 'No cards are currently weak.'
+                                : 'No words are currently weak.',
 
                             dashboard: data,
                           ),

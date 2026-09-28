@@ -35,21 +35,25 @@ void main() {
 
   test('downloads once and opens the verified local copy offline', () async {
     final bookCache = cache();
-    final firstPath = await bookCache.openPath(_book('/books/9-example.pdf'));
+    final firstPath = await bookCache.openPath(
+      _book('/nx_books/9-example.pdf'),
+    );
     expect(requests, 1);
     expect(await File(firstPath).readAsBytes(), [37, 80, 68, 70, 45, 1]);
 
-    final secondPath = await bookCache.openPath(_book('/books/9-example.pdf'));
+    final secondPath = await bookCache.openPath(
+      _book('/nx_books/9-example.pdf'),
+    );
     expect(secondPath, firstPath);
     expect(requests, 1);
   });
 
   test('corrupt local content is downloaded and verified again', () async {
     final bookCache = cache();
-    final path = await bookCache.openPath(_book('/books/9-example.pdf'));
+    final path = await bookCache.openPath(_book('/nx_books/9-example.pdf'));
     await File(path).writeAsBytes([0]);
     final repairedPath = await bookCache.openPath(
-      _book('/books/9-example.pdf'),
+      _book('/nx_books/9-example.pdf'),
     );
     expect(requests, 2);
     expect(await File(repairedPath).readAsBytes(), [37, 80, 68, 70, 45, 2]);
@@ -57,7 +61,7 @@ void main() {
 
   test('rejects links outside the configured Nexus origin', () async {
     await expectLater(
-      cache().openPath(_book('https://example.com/books/stolen.pdf')),
+      cache().openPath(_book('https://example.com/nx_books/stolen.pdf')),
       throwsFormatException,
     );
     expect(requests, 0);
@@ -68,14 +72,14 @@ void main() {
     () async {
       const hash =
           '4b9d984d2b0cc5ef4d53caf2ef449f2bfd0cbf6a68d2e6b24c52f98e0d9e7b91';
-      final book = _book('/books/9-example.pdf', hash: hash, size: 6);
+      final book = _book('/nx_books/9-example.pdf', hash: hash, size: 6);
       final bookCache = cache();
       await bookCache.openPath(book);
       await bookCache.openPath(book);
       expect(requests, 1);
       await expectLater(
         bookCache.openPath(
-          _book('/books/9-example.pdf', hash: 'incorrect', size: 6),
+          _book('/nx_books/9-example.pdf', hash: 'incorrect', size: 6),
         ),
         throwsStateError,
       );

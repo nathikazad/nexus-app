@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -170,9 +171,33 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
         domainId: user.requiredDomainId,
         socketUrl: url,
         userId: user.userId,
-        documentId: identity.id,
+        loadConversation: () async {
+          final client = ref.read(nexusHttpClientProvider);
+          if (client == null ||
+              ref.read(authProvider).value?.storageKey != user.storageKey) {
+            throw StateError('Account or domain changed');
+          }
+          final response = await client
+              .post(
+                Uri.parse(
+                  resolve(user.preset).imageHttp,
+                ).resolve('/nx_books/conversation'),
+                headers: {'content-type': 'application/json'},
+                body: jsonEncode({
+                  'document_id': identity.id,
+                  'epub': identity.modelType == 'EpubBook',
+                }),
+              )
+              .timeout(const Duration(seconds: 15));
+          if (response.statusCode != 200)
+            throw StateError('Conversation unavailable');
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          return DocumentConversation(
+            transcriptId: data['transcript_id'] as int,
+            context: data['context'] as String,
+          );
+        },
         clientId: 'nx_books',
-        readingMode: identity.modelType == 'EpubBook' ? 'epub' : 'document',
         authHeaders: (refresh) =>
             nexusAuthHeaders(
               user.preset,
@@ -181,7 +206,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
             ).then(
               (headers) => {
                 ...headers,
-                'x-nexus-domain-id': '${user.requiredDomainId}',
+                'x-domain-id': '${user.requiredDomainId}',
               },
             ),
       ),

@@ -49,7 +49,7 @@ class PeopleAssets {
     final request =
         http.MultipartRequest(
             'POST',
-            remote.reads.origin.resolve('/apps/people/assets'),
+            remote.reads.origin.resolve('/nx_people/assets'),
           )
           ..fields['domain_id'] = '$domain'
           ..files.add(

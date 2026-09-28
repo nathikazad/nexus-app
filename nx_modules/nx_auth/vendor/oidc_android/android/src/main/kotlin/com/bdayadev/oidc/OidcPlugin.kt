@@ -184,22 +184,13 @@ class OidcPlugin :
         finishWithCancel()
 
         val preferred = (options["preferredBrowserPackages"] as? List<*>)?.filterIsInstance<String>().orEmpty()
-        browserPackage = if (preferred.isEmpty()) null else
-            CustomTabsClient.getPackageName(host, preferred, true)
-        if (preferred.isNotEmpty() && browserPackage == null) {
-            callback(Result.failure(FlutterError("BROWSER_UNAVAILABLE",
-                "Install or update Google Chrome to sign in with passwords or passkeys.", null)))
-            return
-        }
-        if (browserPackage == "com.android.chrome") {
-            val major = runCatching { host.packageManager.getPackageInfo(browserPackage!!, 0)
-                .versionName?.substringBefore('.')?.toIntOrNull() ?: 0 }.getOrDefault(0)
-            if (major < 137) {
-                callback(Result.failure(FlutterError("BROWSER_UNAVAILABLE",
-                    "Update Google Chrome to finish sign-in automatically.", null)))
-                return
-            }
-        }
+        // Preferences are not requirements. Prefer a requested Custom Tabs
+        // provider, then the default browser if it supports Custom Tabs.
+        // Otherwise a plain browser handles the VIEW intent and our receiver
+        // captures the return.
+        browserPackage = (if (preferred.isEmpty()) null else
+            CustomTabsClient.getPackageName(host, preferred, true))
+            ?: CustomTabsClient.getPackageName(host, emptyList())
         pendingCallback = callback
         expectedRedirect = redirectUri?.let(Uri::parse)
         expectedState = Uri.parse(url).getQueryParameter("state")
@@ -218,14 +209,14 @@ class OidcPlugin :
         // so open a Custom Tab directly and rely on the intent-filter.
         val launcher = authLauncher
         try {
-            if (launcher != null) {
+            if (launcher != null && browserPackage != null) {
                 launchAuthTab(launcher, url, ephemeral)
             } else {
                 launchCustomTab(host, url, ephemeral)
             }
         } catch (error: Exception) {
             finishPending(Result.failure(FlutterError("BROWSER_UNAVAILABLE",
-                "Could not open the sign-in browser. Update Chrome and try again.", null)))
+                "Could not open the sign-in browser. Install or enable a web browser and try again.", null)))
             return
         }
         scheduleFlowTimeout(options)

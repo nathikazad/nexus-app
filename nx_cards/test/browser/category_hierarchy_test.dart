@@ -82,14 +82,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      const priority = [
-        'total',
-        'learning',
-        'due',
-        'practice',
-        'learnt',
-        'future',
-      ];
+      const priority = ['total', 'weak', 'due', 'practice', 'strong', 'future'];
       int visible() {
         var count = 0;
         for (final label in priority) {

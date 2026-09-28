@@ -30,14 +30,14 @@ void main() {
           'ws://127.0.0.1:${server.port}',
           authHeaders: (_) async => {
             'authorization': 'Bearer test-token',
-            'x-nexus-domain-id': '1',
+            'x-domain-id': '1',
           },
-          headers: {'X-Nexus-Domain-Id': '2', 'X-Client-Id': 'nx_books'},
+          headers: {'X-Domain-Id': '2', 'X-Client-Id': 'nx_books'},
         ),
         isTrue,
       );
       final headers = await received.future;
-      expect(headers['x-nexus-domain-id'], ['2']);
+      expect(headers['x-domain-id'], ['2']);
       expect(headers.value('authorization'), 'Bearer test-token');
       expect(headers.value('x-client-id'), 'nx_books');
     },

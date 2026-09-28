@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/io.dart';
@@ -9,7 +10,7 @@ import 'packet_codec.dart';
 class NxVoiceQueuedPacket {
   const NxVoiceQueuedPacket(this.bytes);
 
-  final Uint8List bytes;
+  final Object bytes;
 }
 
 class NxVoiceSocketClient {
@@ -181,7 +182,9 @@ class NxVoiceSocketClient {
     );
   }
 
-  void sendRaw(Uint8List bytes) {
+  void sendEvent(Map<String, Object> event) => sendRaw(jsonEncode(event));
+
+  void sendRaw(Object bytes) {
     if (!_isConnected || _channel == null) {
       _queuePacket(bytes);
       return;
@@ -269,11 +272,12 @@ class NxVoiceSocketClient {
     }
   }
 
-  void _queuePacket(Uint8List bytes) {
+  void _queuePacket(Object bytes) {
     if (_queue.length >= maxQueueSize) {
       _queue.removeAt(0);
     }
-    _queue.add(NxVoiceQueuedPacket(Uint8List.fromList(bytes)));
+    _queue.add(NxVoiceQueuedPacket(
+        bytes is Uint8List ? Uint8List.fromList(bytes) : bytes));
   }
 
   void _flushQueue() {

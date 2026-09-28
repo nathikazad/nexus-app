@@ -56,7 +56,7 @@ void main() {
       of: find.byKey(ValueKey('language-category-word-$name')),
       matching: find.text(count),
     );
-    expect(metric('learnt', '1'), findsOneWidget);
+    expect(metric('strong', '1'), findsOneWidget);
     expect(find.text('EN → 中'), findsOneWidget);
     expect(find.byTooltip('All cards'), findsNothing);
     expect(metric('practice', '0'), findsOneWidget);
@@ -64,24 +64,24 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Chinese → English'));
     await tester.pumpAndSettle();
-    expect(metric('learnt', '0'), findsOneWidget);
+    expect(metric('strong', '0'), findsOneWidget);
     expect(find.text('中 → EN'), findsOneWidget);
-    expect(metric('learning', '1'), findsOneWidget);
+    expect(metric('weak', '1'), findsOneWidget);
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
-    expect(find.text('Learning  1'), findsOneWidget);
-    expect(find.text('Learnt  0'), findsOneWidget);
-    await tester.tap(find.text('Learning  1'));
+    expect(find.text('Weak  1'), findsOneWidget);
+    expect(find.text('Strong  0'), findsOneWidget);
+    await tester.tap(find.text('Weak  1'));
     await tester.pumpAndSettle();
     expect(find.text('word 1'), findsOneWidget);
     await tester.tap(find.byTooltip('Recall direction: Chinese → English'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('English → Chinese'));
     await tester.pumpAndSettle();
-    expect(find.text('Learnt  1'), findsOneWidget);
+    expect(find.text('Strong  1'), findsOneWidget);
     expect(find.text('EN → 中'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(metric('learnt', '1'), findsOneWidget);
+    expect(metric('strong', '1'), findsOneWidget);
   });
 }

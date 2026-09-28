@@ -5253,7 +5253,7 @@ String? _resolvePersonImageUrl(String rawUrl, String? baseUrl) {
     return base?.resolve(trimmed).toString();
   }
 
-  if (base != null && parsed.path.startsWith('/person_image_files/')) {
+  if (base != null && parsed.path.startsWith('/nx_people/profile_files/')) {
     return parsed
         .replace(
           scheme: base.scheme,

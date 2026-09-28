@@ -35,7 +35,7 @@ class ConversationAttachmentService {
     final request =
         http.MultipartRequest(
             'POST',
-            Uri.parse('$_baseUrl/people/assets/attachments'),
+            Uri.parse('$_baseUrl/nx_people/attachments'),
           )
           ..fields['provider'] = provider
           ..fields['external_account_id'] = externalAccountId

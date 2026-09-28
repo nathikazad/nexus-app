@@ -151,6 +151,10 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                         style: monoLabel,
                       ),
                     ),
+                    if (card.learningStatus == LearningStatus.recall) ...[
+                      const SizedBox(width: 12),
+                      _RecallStrengthPill(card: card, cue: visibleCue),
+                    ],
                     if (card.suspended)
                       const _StatusPill(
                         label: 'Suspended',
@@ -325,6 +329,39 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecallStrengthPill extends ConsumerWidget {
+  const _RecallStrengthPill({required this.card, required this.cue});
+
+  final StudyCard card;
+  final StudyCue cue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final window =
+        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
+    final recalled = recalledAnswers(card, cue, window);
+    final strong = recalled * 100 >= window * 80;
+    final percentage = (recalled * 100 / window).round();
+    return Container(
+      key: const ValueKey('card-detail-recall-strength'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: strong ? const Color(0xffecfdf5) : const Color(0xfffff1f2),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        '$percentage% ${strong ? 'Strong' : 'Weak'}',
+        maxLines: 1,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: strong ? RecallColors.emerald : RecallColors.rose,
         ),
       ),
     );

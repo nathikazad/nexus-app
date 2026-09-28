@@ -81,7 +81,7 @@ class RemoteCollection extends HypnosisCollection {
 
   Future<void> refreshVisible() => _serialize(() async {
     final response = await client
-        .get(endpoint('/apps/hypnosis/initial'))
+        .get(endpoint('/nx_hypnosis/data/initial'))
         .timeout(const Duration(seconds: 30));
     await _persist(response.statusCode, response.body);
   });
@@ -114,7 +114,7 @@ class RemoteCollection extends HypnosisCollection {
         return;
       }
       final response = await client
-          .get(endpoint('/apps/hypnosis/initial'))
+          .get(endpoint('/nx_hypnosis/data/initial'))
           .timeout(const Duration(seconds: 30));
       await _persist(response.statusCode, response.body);
     });
@@ -187,7 +187,7 @@ class RemoteCollection extends HypnosisCollection {
       _serialize(() async {
         final response = await client
             .post(
-              endpoint('/hypnosis/$kind'),
+              endpoint('/nx_hypnosis/$kind'),
               headers: {'content-type': 'application/json'},
               body: jsonEncode(body),
             )
@@ -221,7 +221,7 @@ class RemoteCollection extends HypnosisCollection {
       _serialize(() async {
         final response = await client
             .delete(
-              endpoint('/hypnosis/desires'),
+              endpoint('/nx_hypnosis/desires'),
               headers: {'content-type': 'application/json'},
               body: jsonEncode({'id': item.id, 'move_to': ?moveTo}),
             )

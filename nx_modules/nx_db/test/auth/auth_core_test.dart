@@ -155,35 +155,40 @@ void main() {
       expect(container.read(userIdProvider), '88');
     });
 
-    test('CR11.8 appStatusProvider initializing then authenticated', () async {
-      SharedPreferences.setMockInitialValues({});
-      final container = ProviderContainer(
-        overrides: [
-          domainLoaderProvider.overrideWithValue(
-            (_) async => const [
-              DomainMembership(id: 1, name: 'Personal', role: 'owner'),
-            ],
-          ),
-          authProvider.overrideWith(
-            () => AuthController(
-              initialDelay: Duration.zero,
-              skipBackendPing: true,
+    test(
+      'CR11.8 appStatusProvider authenticates after domain selection',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final container = ProviderContainer(
+          overrides: [
+            domainLoaderProvider.overrideWithValue(
+              (_) async => const [
+                DomainMembership(id: 1, name: 'Personal', role: 'owner'),
+              ],
             ),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+            authProvider.overrideWith(
+              () => AuthController(
+                initialDelay: Duration.zero,
+                skipBackendPing: true,
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      expect(container.read(appStatusProvider), AppStatus.initializing);
+        expect(container.read(appStatusProvider), AppStatus.initializing);
 
-      await container.read(authProvider.future);
-      expect(container.read(appStatusProvider), AppStatus.unauthenticated);
+        await container.read(authProvider.future);
+        expect(container.read(appStatusProvider), AppStatus.unauthenticated);
 
-      await container
-          .read(authProvider.notifier)
-          .login('1', BackendPreset.laptop);
-      expect(container.read(appStatusProvider), AppStatus.authenticated);
-    });
+        await container
+            .read(authProvider.notifier)
+            .login('1', BackendPreset.laptop);
+        expect(container.read(appStatusProvider), AppStatus.selectingDomain);
+        await container.read(authProvider.notifier).selectDomain(1);
+        expect(container.read(appStatusProvider), AppStatus.authenticated);
+      },
+    );
 
     test('CR11.9 restore does not require domain prefs', () async {
       SharedPreferences.setMockInitialValues({
