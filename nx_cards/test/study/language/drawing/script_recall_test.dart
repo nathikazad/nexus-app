@@ -139,17 +139,44 @@ void main() {
           final answer = tester.widget<Text>(
             find.byKey(const ValueKey('writing-recall-answer')),
           );
+          expect(answer.data, '学生');
+          expect(find.text('student'), findsOneWidget);
+          expect(find.text('xuésheng'), findsOneWidget);
           expect(
-            answer.data,
-            (cue == StudyCue.fromLanguage || cue == StudyCue.fromAudio)
-                ? '学生'
-                : 'student',
+            tester.getTopLeft(find.text('学生')).dy,
+            lessThan(tester.getTopLeft(find.text('student')).dy),
+          );
+          expect(
+            tester.getTopLeft(find.text('student')).dy,
+            lessThan(tester.getTopLeft(find.text('xuésheng')).dy),
           );
           expect(find.text('Yes'), findsOneWidget);
           expect(find.text('No'), findsOneWidget);
         });
       }
     }
+  }
+
+  for (final cue in StudyCue.values) {
+    testWidgets(
+      'standard reveal shows all three forms in order for ${cue.name}',
+      (tester) async {
+        await _pumpRecall(tester, _scriptCard(), cue);
+        await tester.tap(find.text('Show answer'));
+        await tester.pumpAndSettle();
+        expect(find.text('ക'), findsOneWidget);
+        expect(find.text('Letter ka'), findsOneWidget);
+        expect(find.text('ka'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('ക')).dy,
+          lessThan(tester.getTopLeft(find.text('Letter ka')).dy),
+        );
+        expect(
+          tester.getTopLeft(find.text('Letter ka')).dy,
+          lessThan(tester.getTopLeft(find.text('ka')).dy),
+        );
+      },
+    );
   }
 
   testWidgets('Malayalam Script recall keeps the standard reveal flow', (

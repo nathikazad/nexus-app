@@ -70,7 +70,7 @@ void main() {
       StudyPrompt(card: card, cue: StudyCue.toLanguage),
     );
     expect(to['prompt'], '很长的句子');
-    expect(to['answer'], 'a long sentence');
+    expect(to['answer'], '很长的句子');
     expect(NativeDrawingSession.practiceCard(card)['audio'], isTrue);
   });
   test(
@@ -82,9 +82,18 @@ void main() {
       expect(payload['prompt'], 'Listen');
       expect(payload['listening'], isTrue);
       expect(payload['answer'], '很长的句子');
-      expect(payload['subtitle'], 'a long sentence');
+      expect(payload['subtitle'], 'a long sentence\nhěn cháng de jùzi');
     },
   );
+  test('native reveal always contains script, meaning, and pronunciation', () {
+    for (final cue in StudyCue.values) {
+      final payload = NativeDrawingSession.recallCard(
+        StudyPrompt(card: card, cue: cue),
+      );
+      expect(payload['answer'], '很长的句子');
+      expect(payload['subtitle'], 'a long sentence\nhěn cháng de jùzi');
+    }
+  });
   test('Android opens a native session with its complete queue', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     final calls = <MethodCall>[];

@@ -385,9 +385,8 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                               const SizedBox(
                                                                 height: 8,
                                                               ),
-                                                              if (_prompt.cue !=
-                                                                  StudyCue
-                                                                      .transliteration) ...[
+                                                              if (transliteration
+                                                                  .isNotEmpty) ...[
                                                                 const SizedBox(
                                                                   height: 10,
                                                                 ),
