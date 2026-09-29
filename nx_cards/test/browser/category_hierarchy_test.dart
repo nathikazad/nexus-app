@@ -82,7 +82,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      const priority = ['total', 'weak', 'due', 'practice', 'strong', 'future'];
+      const priority = ['total', 'current', 'upcoming', 'backlog'];
       int visible() {
         var count = 0;
         for (final label in priority) {
@@ -101,7 +101,7 @@ void main() {
       }
 
       await show(1500, 1);
-      expect(visible(), 6);
+      expect(visible(), 4);
       expect(
         tester.getTopLeft(find.text('Words')).dx,
         tester.getTopLeft(find.text('Phrases')).dx,
@@ -277,7 +277,7 @@ void main() {
             .allCards,
         isTrue,
       );
-      expect(find.text('Future  2'), findsOneWidget);
+      expect(find.text('Backlog  2'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('Words'), findsOneWidget);
@@ -303,7 +303,7 @@ void main() {
       await tester.tap(find.text('Words'));
       await tester.pumpAndSettle();
       expect(find.byType(LanguageCategoryPage), findsOneWidget);
-      expect(find.text('Future  1'), findsOneWidget);
+      expect(find.text('Backlog  1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

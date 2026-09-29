@@ -161,14 +161,16 @@ void main() {
     ]);
     await tester.tap(find.text('Travel'));
     await tester.pumpAndSettle();
-    expect(find.text('2 cards · 0 weak'), findsOneWidget);
+    expect(find.text('2 cards · 0 current'), findsOneWidget);
+    await tester.tap(find.textContaining('Upcoming  '));
+    await tester.pumpAndSettle();
     expect(find.text('item 1'), findsOneWidget);
     expect(find.text('item 3'), findsNothing);
     expect(find.text('item 4'), findsNothing);
     final launcher = tester.widget<StudyLauncher>(find.byType(StudyLauncher));
     expect(launcher.studyCards.map((c) => c.id), [1]);
     expect(launcher.prompts, isEmpty);
-    await tester.tap(find.text('Future  1'));
+    await tester.tap(find.text('Backlog  1'));
     await tester.pumpAndSettle();
     expect(find.text('item 2'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -196,7 +198,7 @@ void main() {
       ]);
       await tester.tap(find.text('Husband Conversations 1'));
       await tester.pumpAndSettle();
-      expect(find.text('1 cards · 0 weak'), findsOneWidget);
+      expect(find.text('1 cards · 0 current'), findsOneWidget);
       expect(
         tester
             .widget<StudyLauncher>(find.byType(StudyLauncher))

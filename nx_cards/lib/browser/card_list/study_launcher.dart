@@ -55,10 +55,10 @@ class StudyLauncher extends StatelessWidget {
     return AnimatedBuilder(
       animation: tabs,
       builder: (context, _) {
-        if (tabs.index == 3) return const SizedBox.shrink();
+        if (tabs.index == 2) return const SizedBox.shrink();
         return _build(
           context,
-          tabs.index == 0 ? StudySetupFlow.practice : StudySetupFlow.recall,
+          tabs.index == 1 ? StudySetupFlow.practice : StudySetupFlow.recall,
         );
       },
     );

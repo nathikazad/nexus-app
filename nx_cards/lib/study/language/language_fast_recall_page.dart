@@ -34,7 +34,7 @@ class LanguageFastRecallPage extends ConsumerStatefulWidget {
 class _LanguageFastRecallPageState
     extends ConsumerState<LanguageFastRecallPage> {
   final Map<int, StudyCard> _latestCards = <int, StudyCard>{};
-  final Map<int, CardRating> _ratings = <int, CardRating>{};
+  final Map<(int, StudyCue), CardRating> _ratings = {};
   final Set<int> _saving = <int>{};
 
   late List<StudyPrompt> _prompts;
@@ -42,7 +42,7 @@ class _LanguageFastRecallPageState
   void _repeatIncorrect() {
     final missed = retryRecallPrompts(_prompts, {
       for (var i = 0; i < _prompts.length; i++)
-        i: ?_ratings[_prompts[i].cardId],
+        i: ?_ratings[(_prompts[i].cardId, _prompts[i].cue)],
     }, _latestCards);
     if (missed.isEmpty) return;
     setState(() {
@@ -65,7 +65,7 @@ class _LanguageFastRecallPageState
 
   Future<void> _rate(StudyPrompt queued, CardRating rating) async {
     if (_saving.contains(queued.cardId) ||
-        _ratings.containsKey(queued.cardId)) {
+        _ratings.containsKey((queued.cardId, queued.cue))) {
       return;
     }
     final prompt = _latestPrompt(queued);
@@ -76,7 +76,7 @@ class _LanguageFastRecallPageState
     setState(() {
       _saving.add(queued.cardId);
       _latestCards[queued.cardId] = outcome.card;
-      _ratings[queued.cardId] = rating;
+      _ratings[(queued.cardId, queued.cue)] = rating;
     });
     try {
       await ref
@@ -88,7 +88,7 @@ class _LanguageFastRecallPageState
       if (mounted) {
         setState(() {
           _latestCards[queued.cardId] = previousCard;
-          _ratings.remove(queued.cardId);
+          _ratings.remove((queued.cardId, queued.cue));
         });
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
@@ -134,7 +134,7 @@ class _LanguageFastRecallPageState
           for (final prompt in _prompts)
             RecallRecapEntry(
               card: _latestCards[prompt.cardId] ?? prompt.card,
-              rating: _ratings[prompt.cardId],
+              rating: _ratings[(prompt.cardId, prompt.cue)],
             ),
         ],
       );
@@ -165,11 +165,13 @@ class _LanguageFastRecallPageState
                 return const SizedBox.shrink();
               }
               return _FastRecallRow(
-                key: ValueKey<String>('fast-row-${prompt.cardId}'),
+                key: ValueKey<String>(
+                  'fast-row-${prompt.cardId}-${prompt.cue.storageKey}',
+                ),
                 number: index,
                 prompt: prompt,
                 content: content,
-                rating: _ratings[prompt.cardId],
+                rating: _ratings[(prompt.cardId, prompt.cue)],
                 saving: _saving.contains(prompt.cardId),
                 onNo: () => _rate(queued, CardRating.again),
                 onYes: () => _rate(queued, CardRating.good),

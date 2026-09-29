@@ -24,7 +24,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Weak');
+    expect(status?.label, 'Current');
     expect(status?.isDue, isFalse);
   });
 
@@ -45,7 +45,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Weak');
+    expect(status?.label, 'Current');
     expect(status?.isDue, isFalse);
   });
 
@@ -58,25 +58,28 @@ void main() {
 
     final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.label, 'Weak');
+    expect(status?.label, 'Current');
     expect(status?.isDue, isFalse);
   });
 
-  test('recall percentage uses actual attempts once there are at least five', () {
-    final card = _card(
-      schedules: {
-        StudyCue.fromLanguage: _schedule(
-          state: 'review',
-          dueAt: DateTime.utc(2026, 8, 12),
-        ),
-      },
-      recallRatings: const [4, 1, 1, 1, 3, 3],
-    );
+  test(
+    'recall percentage uses actual attempts once there are at least five',
+    () {
+      final card = _card(
+        schedules: {
+          StudyCue.fromLanguage: _schedule(
+            state: 'review',
+            dueAt: DateTime.utc(2026, 8, 12),
+          ),
+        },
+        recallRatings: const [4, 1, 1, 1, 3, 3],
+      );
 
-    final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
+      final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.recallPercentage, 50);
-  });
+      expect(status?.recallPercentage, 50);
+    },
+  );
 
   test('recall percentage ignores the legacy fixed-window setting', () {
     final card = _card(
