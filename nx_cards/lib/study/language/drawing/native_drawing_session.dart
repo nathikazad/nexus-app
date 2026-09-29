@@ -165,10 +165,8 @@ class NativeDrawingSession {
       ...practiceCard(prompt.card, characters: characters, derived: derived),
       'prompt': prompt.prompt,
       'listening': prompt.isListening,
-      'answer': prompt.recallsTarget ? content.originalScript : content.english,
-      'subtitle': prompt.recallsTarget
-          ? content.english
-          : content.originalScript,
+      'answer': content.originalScript,
+      'subtitle': '${content.english}\n${content.transliteration}',
       'audio': content.audioUrl?.isNotEmpty == true,
     };
   }
