@@ -45,9 +45,7 @@ int cueRecallPercentage(
   StudyCard card,
   StudyCue cue, {
   int historyWindow = 10,
-}) => historyWindow <= 0
-    ? 0
-    : (recalledAnswers(card, cue, historyWindow) * 100 / historyWindow).round();
+}) => recallScore(card, cue).percentage;
 typedef WordScheduleStatus = CardScheduleStatus;
 CardScheduleStatus? wordScheduleStatus(
   StudyCard card,
@@ -69,11 +67,10 @@ List<StudyCard> sortCardsByScheduleState(
       window: historyWindow,
     ).index.compareTo(learningStage(b, cue, window: historyWindow).index);
     if (byStage != 0) return byStage;
-    final byRecall = recalledAnswers(
+    final byRecall = recallScore(
       a,
       cue,
-      historyWindow,
-    ).compareTo(recalledAnswers(b, cue, historyWindow));
+    ).fraction.compareTo(recallScore(b, cue).fraction);
     return byRecall != 0
         ? byRecall
         : a.front.toLowerCase().compareTo(b.front.toLowerCase());

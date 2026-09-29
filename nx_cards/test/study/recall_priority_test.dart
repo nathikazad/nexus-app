@@ -31,7 +31,28 @@ void main() {
 
   test('80 percent accuracy gives a 20 percent boost at equal FSRS risk', () {
     final perfect = pastRecallPriority(past(1, 10), now, historyWindow: 10);
-    final weaker = pastRecallPriority(past(2, 8), now, historyWindow: 10);
+    final base = past(2, 8);
+    final weakerCard = base.card.copyWith(
+      reviewHistory: {
+        ...base.card.reviewHistory,
+        StudyCue.fromLanguage: [
+          ...base.reviewHistory,
+          for (var i = 0; i < 2; i++)
+            CardReview(
+              id: 'miss-$i',
+              reviewedAt: DateTime.utc(2026, 2, i + 1),
+              rating: 1,
+              elapsedSeconds: 0,
+              scheduledSeconds: 0,
+            ),
+        ],
+      },
+    );
+    final weaker = pastRecallPriority(
+      base.withCard(weakerCard),
+      now,
+      historyWindow: 10,
+    );
     expect(perfect, greaterThan(0));
     expect(weaker, closeTo(perfect * 1.2, 0.000001));
     expect(

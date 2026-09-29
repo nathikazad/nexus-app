@@ -343,11 +343,9 @@ class _RecallStrengthPill extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final window =
-        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
-    final recalled = recalledAnswers(card, cue, window);
-    final strong = recalled * 100 >= window * 80;
-    final percentage = (recalled * 100 / window).round();
+    final score = recallScore(card, cue);
+    final strong = score.strong;
+    final percentage = score.percentage;
     return Container(
       key: const ValueKey('card-detail-recall-strength'),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -479,7 +477,7 @@ class _RecallSummary extends ConsumerWidget {
     final window =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
     final stage = learningStage(card, cue, window: window);
-    final recalled = recalledAnswers(card, cue, window);
+    final score = recallScore(card, cue);
     final due = schedule.dueAt;
 
     return Column(
@@ -488,8 +486,9 @@ class _RecallSummary extends ConsumerWidget {
         _KnowledgeBanner(
           status: stage.label,
           progress: null,
-          metricValue: '${(recalled * 100 / window).round()}%',
-          metricLabel: '$recalled of last $window recalled',
+          metricValue: '${score.percentage}%',
+          metricLabel:
+              '${score.recalled}/${score.denominator} · ${score.attempts} recent attempts',
           due: due,
           now: now,
         ),

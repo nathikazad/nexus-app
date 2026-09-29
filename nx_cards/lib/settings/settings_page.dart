@@ -65,7 +65,7 @@ class _SettingsForm extends ConsumerStatefulWidget {
 
 class _SettingsFormState extends ConsumerState<_SettingsForm> {
   late AppAppearance _appearance = widget.initialAppearance;
-  late int _historyWindow = widget.initial.historyWindow;
+  final int _historyWindow = 10;
   bool _saving = false;
   bool _syncing = false;
   String? _syncMessage;
@@ -199,31 +199,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               ),
               const SizedBox(height: 7),
               const Text(
-                'Saved to your account. Practice cards are for preparation. Recall cards below 80% are Weak; 80% or more are Strong. Missing answers count toward the window.',
+                'Recall scores use your latest 10 attempts, with a minimum denominator of 5. One correct answer out of one attempt scores 1/5 (20%). Recall cards below 80% are Weak; 80% or more are Strong.',
                 style: TextStyle(color: RecallColors.muted, height: 1.4),
               ),
               const SizedBox(height: 18),
-              _SettingsCard(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _historyWindow,
-                  decoration: const InputDecoration(
-                    labelText: 'Recent answers to consider',
-                  ),
-                  items: const [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text('Last $value answers'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _historyWindow = value);
-                    }
-                  },
-                ),
-              ),
               const SizedBox(height: 22),
               const Divider(),
               const SizedBox(height: 18),

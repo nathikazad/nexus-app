@@ -26,8 +26,7 @@ double pastRecallPriority(
 }) {
   final schedule = prompt.schedule;
   final stability = schedule.stability;
-  final accuracy =
-      recalledAnswers(prompt.card, prompt.cue, historyWindow) / historyWindow;
+  final accuracy = recallScore(prompt.card, prompt.cue).fraction;
   var forgetting = 1.0;
   if (stability != null &&
       stability.isFinite &&
