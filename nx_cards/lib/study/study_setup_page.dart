@@ -645,13 +645,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       preparations.close();
     }
     if (handled && recall && mounted) {
-      var missed = incorrectRecallPrompts(prompts, ratings, latest);
+      var missed = retryRecallPrompts(prompts, ratings, latest);
       final action = await Navigator.of(context).push<Object?>(
         MaterialPageRoute<Object?>(
           builder: (recapContext) => RecallRecapPage(
             studyScope: widget.studyScope,
             onRepeatIncorrect: () {
-              missed = incorrectRecallPrompts(prompts, ratings, latest);
+              missed = retryRecallPrompts(prompts, ratings, latest);
               Navigator.pop(recapContext, RecallRecapAction.repeatIncorrect);
             },
             reviewedCount: ratings.length,

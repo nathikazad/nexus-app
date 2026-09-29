@@ -124,7 +124,7 @@ void main() {
     expect(find.text('relief'), findsOneWidget);
     expect(find.text('ആശ്വാസം'), findsOneWidget);
     expect(find.text('āśvāsaṃ'), findsOneWidget);
-    await tester.tap(find.byTooltip('Repeat incorrect cards'));
+    await tester.tap(find.byTooltip('Retry missed and untried cards'));
     await tester.pumpAndSettle();
     expect(find.text('Session complete'), findsNothing);
     expect(find.text('Tap to reveal'), findsOneWidget);

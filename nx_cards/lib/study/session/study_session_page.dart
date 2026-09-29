@@ -55,7 +55,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
   late List<StudyPrompt> _prompts;
 
   void _repeatIncorrect() {
-    final missed = incorrectRecallPrompts(_prompts, _ratings, _latestCards);
+    final missed = retryRecallPrompts(_prompts, _ratings, _latestCards);
     if (missed.isEmpty) return;
     setState(() {
       _prompts = missed;
