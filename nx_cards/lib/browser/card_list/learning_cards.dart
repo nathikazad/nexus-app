@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/card_list/bulk_card_selection.dart';
 import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:flutter/material.dart';
@@ -79,20 +80,23 @@ class LearningCardsTab extends ConsumerWidget {
                             Expanded(
                               child: row * columns + column >= cards.length
                                   ? const SizedBox.shrink()
-                                  : _LearningStatusRow(
-                                      key: ValueKey(
-                                        '${cards[row * columns + column].learningStatus.storageValue}:${cards[row * columns + column].id}',
-                                      ),
+                                  : SelectableCard(
                                       card: cards[row * columns + column],
-                                      scoreDirections: scoreDirections,
-                                      priorityScore:
-                                          priorityScores[cards[row * columns +
-                                                  column]
-                                              .id],
-                                      showScheduleStatus: showScheduleStatus,
-                                      showLearningStatus: showLearningStatus,
-                                      nextStatus: nextStatus,
-                                      actionLabel: actionLabel,
+                                      child: _LearningStatusRow(
+                                        key: ValueKey(
+                                          '${cards[row * columns + column].learningStatus.storageValue}:${cards[row * columns + column].id}',
+                                        ),
+                                        card: cards[row * columns + column],
+                                        scoreDirections: scoreDirections,
+                                        priorityScore:
+                                            priorityScores[cards[row * columns +
+                                                    column]
+                                                .id],
+                                        showScheduleStatus: showScheduleStatus,
+                                        showLearningStatus: showLearningStatus,
+                                        nextStatus: nextStatus,
+                                        actionLabel: actionLabel,
+                                      ),
                                     ),
                             ),
                           ],
