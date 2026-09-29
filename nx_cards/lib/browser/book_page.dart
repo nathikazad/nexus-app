@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/card_list/current_cards_tab.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
@@ -79,8 +80,8 @@ class BookPage extends ConsumerWidget {
             historyWindow: historyWindow,
           );
           return DefaultTabController(
-            length: LearningStage.values.length,
-            initialIndex: learning.isNotEmpty ? 1 : 0,
+            length: 3,
+            initialIndex: 0,
             child: Column(
               children: [
                 Padding(
@@ -92,7 +93,7 @@ class BookPage extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              '${cards.length} cards · ${learning.length} current',
+                              '${cards.length} cards · ${learning.length + learnt.length} current',
                               style: const TextStyle(color: RecallColors.muted),
                             ),
                           ),
@@ -127,10 +128,11 @@ class BookPage extends ConsumerWidget {
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
                       tabs: [
-                        Tab(text: 'Practice  ${upcoming.length}'),
-                        Tab(text: 'Weak  ${learning.length}'),
-                        Tab(text: 'Strong  ${learnt.length}'),
-                        Tab(text: 'Future  ${notStarted.length}'),
+                        Tab(
+                          text: 'Current  ${learning.length + learnt.length}',
+                        ),
+                        Tab(text: 'Upcoming  ${upcoming.length}'),
+                        Tab(text: 'Backlog  ${notStarted.length}'),
                       ],
                     ),
                   ),
@@ -138,22 +140,15 @@ class BookPage extends ConsumerWidget {
                 Expanded(
                   child: TabBarView(
                     children: [
+                      CurrentCardsTab(
+                        cards: [...learning, ...learnt],
+                        dashboard: data,
+                      ),
                       LearningCardsTab(
                         cards: upcoming,
                         nextStatus: LearningStatus.recall,
                         actionLabel: 'Activate',
-                        emptyText: 'Move Future cards here to practice.',
-                        dashboard: data,
-                      ),
-                      LearningCardsTab(
-                        cards: learning,
-                        showScheduleStatus: true,
-                        emptyText: 'No cards are currently weak.',
-                        dashboard: data,
-                      ),
-                      LearningCardsTab(
-                        cards: learnt,
-                        emptyText: 'No cards have reached Strong yet.',
+                        emptyText: 'Move Backlog cards here to practice.',
                         dashboard: data,
                       ),
                       LearningCardsTab(

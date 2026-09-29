@@ -82,7 +82,7 @@ void main() {
         );
         await tester.tap(find.text('All'));
         await tester.pumpAndSettle();
-        expect(find.text('4 cards · 4 weak'), findsOneWidget);
+        expect(find.text('4 cards · 4 current'), findsOneWidget);
         for (var id = 1; id <= 4; id++) {
           expect(find.text('item $id'), findsOneWidget);
         }
@@ -172,34 +172,15 @@ void main() {
     );
     await tester.binding.setSurfaceSize(const Size(1100, 844));
     await tester.pumpAndSettle();
-    final nounLearnt = find.byKey(
-      const ValueKey('language-category-noun-strong'),
+    final nounCurrent = find.byKey(
+      const ValueKey('language-category-noun-current'),
     );
-    final nounLearning = find.byKey(
-      const ValueKey('language-category-noun-weak'),
-    );
-    expect(find.descendant(of: nounLearnt, matching: find.text('1')), findsOne);
     expect(
-      find.descendant(of: nounLearning, matching: find.text('0')),
+      find.descendant(of: nounCurrent, matching: find.text('1')),
       findsOne,
     );
     expect(
-      tester.getCenter(nounLearnt).dx,
-      greaterThan(tester.getCenter(nounLearning).dx),
-    );
-    expect(
-      find.byKey(const ValueKey('language-category-noun-future')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('language-category-noun-due')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('language-category-noun-due')),
-        matching: find.text('0'),
-      ),
+      find.byKey(const ValueKey('language-category-noun-backlog')),
       findsOneWidget,
     );
     await tester.binding.setSurfaceSize(const Size(280, 844));
@@ -215,7 +196,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1100, 844));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('language-category-noun-future')),
+      find.byKey(const ValueKey('language-category-noun-backlog')),
       findsOneWidget,
     );
     expect(find.byType(AppBar), findsOneWidget);
@@ -267,14 +248,13 @@ void main() {
     expect(find.text('The Four Steps to the Epiphany'), findsOneWidget);
     await tester.tap(find.text('The Four Steps to the Epiphany'));
     await tester.pumpAndSettle();
-    expect(find.text('Weak  0'), findsOneWidget);
-    expect(find.text('Strong  0'), findsOneWidget);
-    expect(find.text('Future  1'), findsOneWidget);
-    await tester.ensureVisible(find.text('Future  1'));
-    await tester.tap(find.text('Future  1'));
+    expect(find.text('Current  0'), findsOneWidget);
+    expect(find.text('Backlog  1'), findsOneWidget);
+    await tester.ensureVisible(find.text('Backlog  1'));
+    await tester.tap(find.text('Backlog  1'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Future  1'));
-    await tester.tap(find.text('Future  1'));
+    await tester.ensureVisible(find.text('Backlog  1'));
+    await tester.tap(find.text('Backlog  1'));
     await tester.pumpAndSettle();
     expect(find.text('Why validate demand?'), findsOneWidget);
     expect(find.text('To avoid scaling an unproven model.'), findsOneWidget);
@@ -331,15 +311,11 @@ void main() {
     expect(find.text('0%'), findsOneWidget);
     expect(find.text('DUE'), findsNothing);
     expect(find.byKey(const ValueKey('word-schedule-due')), findsNothing);
-    expect(find.text('Weak  1'), findsOneWidget);
-    expect(find.text('Strong  1'), findsOneWidget);
-    expect(find.text('Future  1'), findsOneWidget);
-    await tester.tap(find.text('Strong  1'));
+    expect(find.text('Current  2'), findsOneWidget);
+    expect(find.text('Backlog  1'), findsOneWidget);
+    await tester.tap(find.text('Current  2'));
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey<String>('word-state-weak')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey<String>('word-state-weak')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -406,7 +382,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.changes, isEmpty);
 
-    await tester.tap(find.text('Strong  1'));
+    await tester.tap(find.text('Current  2'));
     await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const ValueKey('recall:3')),
@@ -414,7 +390,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(repository.changes, isEmpty);
-    await tester.tap(find.text('Practice  1'));
+    await tester.tap(find.text('Upcoming  1'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'Practice'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Recall'), findsNothing);
@@ -424,7 +400,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(repository.changes, [(4, LearningStatus.recall)]);
-    await tester.tap(find.text('Future  1'));
+    await tester.tap(find.text('Backlog  1'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'Practice'), findsNothing);
     expect(find.widgetWithText(FilledButton, 'Recall'), findsNothing);
@@ -496,19 +472,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('0%'), findsNWidgets(2));
-    expect(find.text('20%'), findsOneWidget);
-    expect(find.text('word 3'), findsNothing);
+    expect(find.text('7%'), findsOneWidget);
+    expect(find.text('word 3'), findsOneWidget);
     final order = [
       'word 1',
       'word 2',
       'word 5',
     ].map((label) => tester.getCenter(find.text(label)).dy).toList();
     expect(order, orderedEquals([...order]..sort()));
-    await tester.tap(find.text('Strong  1'));
+    await tester.tap(find.text('Current  4'));
     await tester.pumpAndSettle();
-    expect(find.text('80%'), findsOneWidget);
+    expect(find.text('27%'), findsOneWidget);
     expect(find.text('word 3'), findsOneWidget);
-    await tester.tap(find.text('Practice  1'));
+    await tester.tap(find.text('Upcoming  1'));
     await tester.pumpAndSettle();
     expect(find.text('word 4'), findsOneWidget);
     expect(find.text('UPCOMING'), findsNothing);
@@ -580,7 +556,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Future  3'));
+      await tester.tap(find.text('Backlog  3'));
       await tester.pumpAndSettle();
 
       for (final id in [101, 102, 103]) {

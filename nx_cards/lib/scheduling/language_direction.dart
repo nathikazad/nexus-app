@@ -77,3 +77,64 @@ class LanguageDirectionButton extends ConsumerWidget {
     );
   }
 }
+
+/// Session-only view selection; never changes stored schedules or history.
+final selectedDirectionsProvider = StateProvider.family<Set<StudyCue>, String?>(
+  (ref, language) {
+    if (ref.exists(authProvider)) {
+      ref.watch(
+        authProvider.select(
+          (state) => '${state.value?.preset.serverId}:${state.value?.userId}',
+        ),
+      );
+    }
+    return StudyCue.activeDirections.toSet();
+  },
+);
+
+class DirectionChoices extends StatelessWidget {
+  const DirectionChoices({
+    super.key,
+    required this.language,
+    required this.selected,
+    required this.onChanged,
+  });
+  final String language;
+  final Set<StudyCue> selected;
+  final ValueChanged<Set<StudyCue>> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (final cue in StudyCue.activeDirections)
+        FilterChip(
+          key: ValueKey('direction-${cue.storageKey}'),
+          avatar: cue == StudyCue.fromAudio
+              ? const Icon(Icons.volume_up_outlined, size: 18)
+              : null,
+          label: Text(switch (cue) {
+            StudyCue.fromLanguage => 'EN → ${compactLanguageLabel(language)}',
+            StudyCue.fromAudio => '→ ${compactLanguageLabel(language)}',
+            _ => '${compactLanguageLabel(language)} → EN',
+          }),
+          tooltip: switch (cue) {
+            StudyCue.fromLanguage => 'English text to $language',
+            StudyCue.fromAudio => '$language audio to $language',
+            _ => '$language text to English',
+          },
+          selected: selected.contains(cue),
+          onSelected: (enabled) {
+            final next = {...selected};
+            if (enabled) {
+              next.add(cue);
+            } else {
+              next.remove(cue);
+            }
+            if (next.isNotEmpty) onChanged(next);
+          },
+        ),
+    ],
+  );
+}

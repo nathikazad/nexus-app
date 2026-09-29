@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/card_list/current_cards_tab.dart';
 import 'package:nx_cards/scheduling/future_card_rank.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
@@ -26,10 +27,7 @@ class LanguagePage extends ConsumerWidget {
       cardsCollectionProvider((language: language, bookId: null)),
     );
     return Scaffold(
-      appBar: AppBar(
-        title: Text(language),
-        actions: [LanguageDirectionButton(language: language)],
-      ),
+      appBar: AppBar(title: Text(language)),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => BrowserLoadError(
@@ -201,14 +199,6 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
     final upcoming = count(LearningStage.upcoming);
     final learnt = count(LearningStage.past);
     final remaining = count(LearningStage.future);
-    final due = cards
-        .where(
-          (card) =>
-              learningStage(card, cue, window: window) == LearningStage.past &&
-              !card.suspended &&
-              card.scheduleFor(cue).isDueAt(DateTime.now()),
-        )
-        .length;
     final labelStyle = TextStyle(
       fontSize: 10,
       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -233,11 +223,9 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
 
     final metrics = <(int, String)>[
       (cards.length, 'Total'),
-      (current, 'Weak'),
-      (due, 'Due'),
-      (upcoming, 'Practice'),
-      (learnt, 'Strong'),
-      (remaining, 'Future'),
+      (current + learnt, 'Current'),
+      (upcoming, 'Upcoming'),
+      (remaining, 'Backlog'),
     ];
     final widths = metrics.map((entry) {
       final labelWidth = textWidth(entry.$2, labelStyle);
@@ -468,9 +456,6 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
               ? '$category (${widget.tagSystem ?? 'Type'})'
               : category,
         ),
-        actions: [
-          if (language != null) LanguageDirectionButton(language: language!),
-        ],
       ),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -532,8 +517,8 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
             for (final card in cards.where((c) => c.active)) ...card.prompts,
           ];
           return DefaultTabController(
-            length: LearningStage.values.length,
-            initialIndex: learning.isNotEmpty ? 1 : 0,
+            length: 3,
+            initialIndex: 0,
             child: Column(
               children: [
                 Padding(
@@ -549,7 +534,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                   ? 'cards'
                                   : category == 'Script'
                                   ? 'letters'
-                                  : 'words'} · ${learning.length} weak',
+                                  : 'words'} · ${learning.length + learnt.length} current',
                               style: const TextStyle(color: RecallColors.muted),
                             ),
                           ),
@@ -622,10 +607,12 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                     fontWeight: FontWeight.w400,
                                   ),
                                   tabs: [
-                                    Tab(text: 'Practice  ${upcoming.length}'),
-                                    Tab(text: 'Weak  ${learning.length}'),
-                                    Tab(text: 'Strong  ${learnt.length}'),
-                                    Tab(text: 'Future  ${notStarted.length}'),
+                                    Tab(
+                                      text:
+                                          'Current  ${learning.length + learnt.length}',
+                                    ),
+                                    Tab(text: 'Upcoming  ${upcoming.length}'),
+                                    Tab(text: 'Backlog  ${notStarted.length}'),
                                   ],
                                 ),
                               ),
@@ -645,33 +632,16 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                     children: [
                       TabBarView(
                         children: [
+                          CurrentCardsTab(
+                            cards: [...learning, ...learnt],
+                            dashboard: data,
+                            language: language,
+                          ),
                           LearningCardsTab(
                             cards: upcoming,
                             nextStatus: LearningStatus.recall,
                             actionLabel: 'Activate',
-                            emptyText: 'Move Future cards here to practice.',
-                            dashboard: data,
-                            showScheduleStatus: true,
-                          ),
-                          LearningCardsTab(
-                            cards: learning,
-                            showScheduleStatus: true,
-                            emptyText: category == 'Script'
-                                ? 'No letters are currently weak.'
-                                : widget.allCards || widget.tagSystem != null
-                                ? 'No cards are currently weak.'
-                                : 'No words are currently weak.',
-
-                            dashboard: data,
-                          ),
-                          LearningCardsTab(
-                            cards: learnt,
-                            showScheduleStatus: true,
-                            emptyText: category == 'Script'
-                                ? 'No letters have reached 80% yet.'
-                                : widget.allCards || widget.tagSystem != null
-                                ? 'No cards have reached 80% yet.'
-                                : 'No words have reached 80% yet.',
+                            emptyText: 'Move Backlog cards here to practice.',
                             dashboard: data,
                           ),
                           LearningCardsTab(

@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ class LearningCardsTab extends ConsumerWidget {
     required this.emptyText,
     required this.dashboard,
     this.priorityScores = const {},
+    this.scoreDirections,
     this.showScheduleStatus = false,
     this.showLearningStatus = false,
     this.nextStatus,
@@ -26,6 +28,7 @@ class LearningCardsTab extends ConsumerWidget {
 
   final List<StudyCard> cards;
   final Map<int, double> priorityScores;
+  final Set<StudyCue>? scoreDirections;
   final String emptyText;
   final CardsDashboard dashboard;
   final bool showScheduleStatus;
@@ -69,6 +72,7 @@ class LearningCardsTab extends ConsumerWidget {
                               '${card.learningStatus.storageValue}:${card.id}',
                             ),
                             card: card,
+                            scoreDirections: scoreDirections,
                             priorityScore: priorityScores[card.id],
                             showScheduleStatus: showScheduleStatus,
                             showLearningStatus: showLearningStatus,
@@ -90,6 +94,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
     super.key,
     required this.card,
     this.priorityScore,
+    this.scoreDirections,
     required this.showScheduleStatus,
     required this.showLearningStatus,
     this.nextStatus,
@@ -98,6 +103,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
 
   final StudyCard card;
   final double? priorityScore;
+  final Set<StudyCue>? scoreDirections;
   final bool showScheduleStatus;
   final bool showLearningStatus;
   final LearningStatus? nextStatus;
@@ -184,7 +190,7 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final audio = audioUrl?.isNotEmpty == true
         ? ref.watch(cardAudioRepositoryProvider)
         : null;
-    final scheduleStatus = cardScheduleStatus(
+    final originalStatus = cardScheduleStatus(
       widget.card,
       DateTime.now().toUtc(),
       cue: ref.watch(languageDirectionProvider(widget.card.language)),
@@ -192,6 +198,22 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
           ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
           10,
     );
+    final directions =
+        widget.scoreDirections ??
+        ref.watch<Set<StudyCue>>(
+          selectedDirectionsProvider(widget.card.language),
+        );
+    final scheduleStatus = originalStatus == null
+        ? null
+        : CardScheduleStatus(
+            label: widget.card.suspended
+                ? 'Suspended'
+                : widget.card.learningStatus.label,
+            isDue: false,
+            sortPriority: originalStatus.sortPriority,
+            recallPercentage: (averageRetention(widget.card, directions) * 100)
+                .round(),
+          );
     return ClipRRect(
       borderRadius: BorderRadius.circular(13),
       child: Stack(
@@ -271,7 +293,8 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                               ],
                               if (widget.showScheduleStatus &&
                                   scheduleStatus != null &&
-                                  scheduleStatus.label != 'Practice') ...[
+                                  widget.card.learningStatus ==
+                                      LearningStatus.recall) ...[
                                 const SizedBox(width: 9),
                                 _ScheduleStatePill(status: scheduleStatus),
                               ],

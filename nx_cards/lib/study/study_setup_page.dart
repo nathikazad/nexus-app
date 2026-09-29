@@ -1,4 +1,4 @@
-import 'package:nx_cards/scheduling/learning_stage.dart';
+import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/lazy_study_queue.dart';
@@ -21,7 +21,6 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
-import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/study/language/language_study_page.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
 import 'package:nx_cards/study/language/drawing/script_draw_practice_page.dart';
@@ -78,20 +77,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   late StudyMode _mode;
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
   RecallPresentation _recallPresentation = RecallPresentation.standard;
-  bool get _reverseLanguageRecall =>
-      !_isBookStudy && _cue == StudyCue.toLanguage;
-  bool get _allowsWriting => !_reverseLanguageRecall;
+  late Set<StudyCue> _directions;
+  bool get _allowsWriting =>
+      !_isBookStudy && !_directions.contains(StudyCue.toLanguage);
   RecallPresentation get _effectiveRecallPresentation =>
       !_allowsWriting && _recallPresentation == RecallPresentation.write
       ? RecallPresentation.standard
       : _recallPresentation;
-  StudyCue? get _cue => _isBookStudy
-      ? StudyCue.fromLanguage
-      : ref.read(
-          languageDirectionProvider(
-            widget.studyScope?.language ?? widget.toLanguage,
-          ),
-        );
+  StudyCue? get _cue => _directions.firstOrNull;
   final bool _combinedPrompt = false;
 
   List<StudyCard> get _studyCards {
@@ -101,10 +94,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return latest.where((card) => ids.contains(card.id)).toList();
   }
 
-  final Set<LearningStage> _learningStatuses = <LearningStage>{
-    LearningStage.current,
-    LearningStage.past,
-  };
+  int _retainedMinPercentage = 0;
+  bool _weakOnly = false;
   int _retainedMaxPercentage = 100;
   StudyOrder _order = StudyOrder.normal;
   int _count = 10;
@@ -117,6 +108,15 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   @override
   void initState() {
     super.initState();
+    _directions = _isBookStudy
+        ? {StudyCue.fromLanguage}
+        : {
+            ...ref.read(
+              selectedDirectionsProvider(
+                widget.studyScope?.language ?? widget.toLanguage,
+              ),
+            ),
+          };
     _mode = widget.flow == StudySetupFlow.practice
         ? StudyMode.study
         : StudyMode.recall;
@@ -147,15 +147,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       );
       final order = _enumByName(StudyOrder.values, saved['order']);
       final retainedMaxPercentage = saved['retainedMaxPercentage'];
-      final statuses = saved['learningStatuses'] is List
-          ? (saved['learningStatuses'] as List)
-                .map((value) => _enumByName(LearningStage.values, value))
-                .whereType<LearningStage>()
-                .where(
-                  (s) => s == LearningStage.current || s == LearningStage.past,
-                )
-                .toSet()
-          : const <LearningStage>{};
       setState(() {
         if (widget.flow == StudySetupFlow.recall &&
             (mode == StudyMode.recall || mode == StudyMode.ai)) {
@@ -169,14 +160,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         }
 
         if (order != null) _order = order;
-        if (statuses.isNotEmpty) {
-          _learningStatuses
-            ..clear()
-            ..addAll(statuses);
-        }
         if (retainedMaxPercentage is int) {
           _retainedMaxPercentage = retainedMaxPercentage.clamp(0, 100);
         }
+        _retainedMinPercentage = (saved['retainedMinPercentage'] as int? ?? 0)
+            .clamp(0, _retainedMaxPercentage);
+        _weakOnly = saved['weakOnly'] == true;
         final savedCount = saved['count'];
         _count = savedCount is int ? max(1, savedCount) : 10;
         _clampCount();
@@ -201,10 +190,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'recallPresentation': _recallPresentation.name,
         'cue': _cue?.name,
         'combinedPrompt': _combinedPrompt,
-        'learningStatuses': [
-          for (final status in _learningStatuses) status.name,
-        ],
         'retainedMaxPercentage': _retainedMaxPercentage,
+        'retainedMinPercentage': _retainedMinPercentage,
+        'weakOnly': _weakOnly,
         'order': _order.name,
         'count': _count,
       }),
@@ -225,47 +213,24 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return _recallBaseCandidates;
   }
 
-  List<StudyPrompt> get _recallBaseCandidates {
-    final cue = _cue;
-    if (cue == null) return const <StudyPrompt>[];
-    final sorted = sortCardsByScheduleState(
-      _studyCards,
-      DateTime.now(),
-      historyWindow: _reviewHistoryWindow,
-      cue: cue,
-    );
-    return <StudyPrompt>[
-      for (final card in sorted)
-        if (!card.suspended &&
-            card.supportsCue(cue) &&
-            card.scheduleFor(cue).enabled &&
-            _matchesRecallBaseFilters(card))
-          StudyPrompt(card: card, cue: cue),
-    ];
-  }
+  List<StudyPrompt> get _recallBaseCandidates => retentionPrompts(
+    _studyCards,
+    _directions,
+    minimum: _retainedMinPercentage / 100,
+    maximum: _retainedMaxPercentage / 100,
+    weakOnly: _weakOnly,
+  );
 
   bool _matchesRecallBaseFilters(StudyCard card) {
     if (_mode == StudyMode.study) {
       return card.learningStatus == LearningStatus.practice;
     }
-    final cue = _cue;
-    if (cue == null) return false;
+    final score = averageRetention(card, _directions);
     return card.active &&
-        _learningStatuses.contains(
-          learningStage(card, cue, window: _reviewHistoryWindow),
-        ) &&
-        cueRecallPercentage(card, cue, historyWindow: _reviewHistoryWindow) <=
-            _retainedMaxPercentage;
-  }
-
-  int get _pastDueCount {
-    final now = DateTime.now().toUtc();
-    return _recallBaseCandidates
-        .where(
-          (prompt) =>
-              isPastDue(prompt, now, historyWindow: _reviewHistoryWindow),
-        )
-        .length;
+        card.learningStatus == LearningStatus.recall &&
+        score + 1e-9 >= _retainedMinPercentage / 100 &&
+        score <= _retainedMaxPercentage / 100 + 1e-9 &&
+        (!_weakOnly || score < .8 - 1e-9);
   }
 
   List<StudyCard> get _drawCandidates => _studyCards
@@ -286,7 +251,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       )
       .toList(growable: false);
 
-  List<StudyPrompt> get _bookCandidates => _recallBaseCandidates;
+  List<StudyPrompt> get _bookCandidates => _mode == StudyMode.study
+      ? [
+          for (final card in _studyCards)
+            if (!card.suspended && _matchesRecallBaseFilters(card))
+              StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+        ]
+      : _recallBaseCandidates;
 
   int get _availableCount => _isBookStudy
       ? _bookCandidates.length
@@ -311,21 +282,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
-  void _toggleLearningStatus(LearningStage status) {
-    setState(() {
-      if (_learningStatuses.contains(status)) {
-        if (_learningStatuses.length > 1) _learningStatuses.remove(status);
-      } else {
-        _learningStatuses.add(status);
-      }
-      _clampCount();
-    });
-    _rememberPreferences();
-  }
-
   void _selectRetainedMaxPercentage(double percentage) {
     setState(() {
       _retainedMaxPercentage = percentage.round();
+      _retainedMinPercentage = 0;
+      _weakOnly = false;
       _clampCount();
     });
     _rememberPreferences();
@@ -740,9 +701,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         return null;
       }
 
-      if ((_isBookStudy && _mode != StudyMode.study) ||
-          _usesRecallFilters ||
-          _order == StudyOrder.shuffle) {
+      if (!_usesRecallFilters &&
+          ((_isBookStudy && _mode != StudyMode.study) ||
+              _order == StudyOrder.shuffle)) {
         selected.shuffle(Random.secure());
       }
       if (_usesRecallFilters) {
@@ -1083,7 +1044,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: '03',
-                      title: 'How many cards?',
+                      title: 'How many recall items?',
                       child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 22),
@@ -1109,7 +1070,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     const SizedBox(height: 14),
                     _SetupCard(
                       number: '02',
-                      title: 'How many cards?',
+                      title: 'How many recall items?',
                       child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 22),
@@ -1133,35 +1094,55 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     );
   }
 
-  Widget _learningStatusChoices() => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      for (final stage in [LearningStage.current, LearningStage.past])
-        FilterChip(
-          label: Text(stage.label),
-          selected: _learningStatuses.contains(stage),
-          onSelected: (_) => _toggleLearningStatus(stage),
-        ),
-    ],
-  );
-
   Widget _recallFilterChoices() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _learningStatusChoices(),
-      const SizedBox(height: 16),
-      Text('Recall score: 0–$_retainedMaxPercentage%'),
-      Slider(
-        value: _retainedMaxPercentage.toDouble(),
-        min: 0,
-        max: 100,
-        divisions: 10,
-        onChanged: _selectRetainedMaxPercentage,
+      if (!_isBookStudy) ...[
+        DirectionChoices(
+          language: widget.toLanguage,
+          selected: _directions,
+          onChanged: (value) => setState(() {
+            _directions = value;
+            _clampCount();
+          }),
+        ),
+        const SizedBox(height: 16),
+      ],
+      Text('Retention: $_retainedMinPercentage–$_retainedMaxPercentage%'),
+      Row(
+        children: [
+          Expanded(
+            child: Slider(
+              value: _retainedMaxPercentage.toDouble(),
+              min: 0,
+              max: 100,
+              divisions: 100,
+              onChanged: _selectRetainedMaxPercentage,
+            ),
+          ),
+          TextButton(
+            onPressed: () => setState(() {
+              _retainedMinPercentage = 0;
+              _retainedMaxPercentage = 80;
+              _weakOnly = true;
+              _clampCount();
+            }),
+            child: const Text('Weak'),
+          ),
+          TextButton(
+            onPressed: () => setState(() {
+              _retainedMinPercentage = 80;
+              _retainedMaxPercentage = 100;
+              _weakOnly = false;
+              _clampCount();
+            }),
+            child: const Text('Strong'),
+          ),
+        ],
       ),
-      if (_mode == StudyMode.recall &&
-          _learningStatuses.contains(LearningStage.past))
-        Text('Strong cards due: $_pastDueCount'),
+      const Text(
+        'One recall item per card and selected direction. Weakest first.',
+      ),
     ],
   );
 
@@ -1183,7 +1164,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 ),
                 const Spacer(),
                 Text(
-                  '$maxCount available',
+                  '$maxCount ${_usesRecallFilters ? 'recall items' : 'cards'} available',
                   style: const TextStyle(color: RecallColors.muted),
                 ),
               ],
