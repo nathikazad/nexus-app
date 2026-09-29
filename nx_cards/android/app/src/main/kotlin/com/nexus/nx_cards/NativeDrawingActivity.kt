@@ -28,6 +28,7 @@ class NativeDrawingActivity : Activity() {
     private lateinit var hint: TextView
     private lateinit var controls: LinearLayout
     private lateinit var end: Button
+    private var examplesHeading: TextView? = null
     private var examplesList: LinearLayout? = null
     private var examplesScroll: ScrollView? = null
     private var examplesCardIndex = -1
@@ -101,10 +102,11 @@ class NativeDrawingActivity : Activity() {
             if (resources.configuration.smallestScreenWidthDp >= 600) {
                 val headings = LinearLayout(this)
                 contextHeadings = headings
-                headings.addView(label(13f).apply {
+                examplesHeading = label(13f).apply {
                     text = "USED IN · EXAMPLES"
                     gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                }, LinearLayout.LayoutParams(0, dp(36), 7f))
+                }
+                headings.addView(examplesHeading, LinearLayout.LayoutParams(0, dp(36), 7f))
                 characterHeading = label(13f).apply {
                     text = "CHARACTERS"
                     gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -158,8 +160,12 @@ class NativeDrawingActivity : Activity() {
         // the answer appears; the firmware can discard pen records during that
         // resize before our layout listener captures them. INVISIBLE keeps the
         // ink surface and existing strokes in place without exposing answers.
-        contextHeadings?.visibility = if (showContext) View.VISIBLE else View.INVISIBLE
-        contextColumns?.visibility = if (showContext) View.VISIBLE else View.INVISIBLE
+        val hasContext = listOf("examples", "derivedExamples", "characters").any {
+            (card[it] as? List<*>)?.isNotEmpty() == true
+        }
+        val contextVisibility = if (!hasContext) View.GONE else if (showContext) View.VISIBLE else View.INVISIBLE
+        contextHeadings?.visibility = contextVisibility
+        contextColumns?.visibility = contextVisibility
         if (showContext) updateExamples()
         controls.removeAllViews()
         control("Refresh screen", "refresh") { refreshScreen() }
@@ -218,14 +224,15 @@ class NativeDrawingActivity : Activity() {
         examplesScroll?.scrollTo(0, 0)
         updateCharacters()
         val examples = card["examples"] as? List<*> ?: emptyList<Any>()
-        if (examples.isEmpty()) {
-            list.addView(label(16f).apply {
-                text = "No linked examples for this card yet."
-                gravity = Gravity.START
-                setPadding(dp(12), dp(12), dp(12), dp(12))
-            })
-        }
         val derived = card["derivedExamples"] as? List<*> ?: emptyList<Any>()
+        val hasExamples = examples.isNotEmpty() || derived.isNotEmpty()
+        examplesHeading?.visibility = if (hasExamples) View.VISIBLE else View.GONE
+        examplesScroll?.visibility = if (hasExamples) View.VISIBLE else View.GONE
+        listOf(characterHeading, characterColumn).forEach { view ->
+            view?.layoutParams = (view?.layoutParams as? LinearLayout.LayoutParams)?.apply {
+                leftMargin = if (hasExamples) dp(16) else 0
+            }
+        }
         (examples + derived).forEachIndexed { exampleIndex, item ->
             val isDerived = exampleIndex >= examples.size
             if (isDerived && exampleIndex == examples.size) list.addView(label(14f).apply {
@@ -296,18 +303,13 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCharacters() {
         val list = charactersList ?: return
-        val show = card["multiCharacter"] == true
+        val characters = card["characters"] as? List<*> ?: emptyList<Any>()
+        val show = characters.isNotEmpty()
         characterColumn?.visibility = if (show) View.VISIBLE else View.GONE
         characterHeading?.visibility = if (show) View.VISIBLE else View.GONE
         list.removeAllViews()
         charactersScroll?.scrollTo(0, 0)
         if (!show) return
-        val characters = card["characters"] as? List<*> ?: emptyList<Any>()
-        if (characters.isEmpty()) list.addView(label(15f).apply {
-            text = "No linked characters yet."
-            gravity = Gravity.START
-            setPadding(0, dp(12), 0, dp(12))
-        })
         characters.forEachIndexed { characterIndex, item ->
             val part = item as? Map<*, *> ?: return@forEachIndexed
             val entry = LinearLayout(this).apply {
