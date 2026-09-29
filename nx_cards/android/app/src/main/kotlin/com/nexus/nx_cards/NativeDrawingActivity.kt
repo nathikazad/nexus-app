@@ -145,15 +145,15 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCard() {
         progress.text = "${index + 1} of ${cards.size}"
-        if (recall && !revealed && card["listening"] == true && listeningIndex != index) {
+        if ((recall && !revealed || !recall && card["practiceDirection"] == true) && card["listening"] == true && listeningIndex != index) {
             listeningIndex = index
             val expectedIndex = index
             prompt.post { if (index == expectedIndex && !revealed && !isFinishing && card["audio"] == true) play() }
         }
         prompt.text = if (recall && revealed) value("answer") else value("prompt")
-        prompt.visibility = if (!recall && !visibleAnswer) View.INVISIBLE else View.VISIBLE
-        prompt.textSize = if (!recall && card["multiCharacter"] == false) 64f else 32f
-        subtitle.text = if (recall && !revealed) "" else value("subtitle")
+        prompt.visibility = if (!recall && !visibleAnswer && card["practiceDirection"] != true) View.INVISIBLE else View.VISIBLE
+        prompt.textSize = if (!recall && card["practiceDirection"] != true && card["multiCharacter"] == false) 64f else 32f
+        subtitle.text = if (recall && !revealed || !recall && card["practiceDirection"] == true && !visibleAnswer) "" else value("subtitle")
         hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
         val showContext = !recall || revealed
         // Reserve the context area before reveal. GONE resizes NoteView when

@@ -15,11 +15,13 @@ class LanguageStudyPage extends ConsumerStatefulWidget {
     required this.title,
     required this.cards,
     this.itemLabel,
+    this.cues,
   });
 
   final String title;
   final List<StudyCard> cards;
   final String? itemLabel;
+  final List<StudyCue>? cues;
 
   @override
   ConsumerState<LanguageStudyPage> createState() => _LanguageStudyPageState();
@@ -121,6 +123,7 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
               final content = card.content;
               return _StudySheetRow(
                 number: index,
+                cue: widget.cues?[index - 1],
                 card: card,
                 content: content,
                 audioRepository: audioRepository,
@@ -173,6 +176,7 @@ class _StudySheetHeader extends StatelessWidget {
 class _StudySheetRow extends StatelessWidget {
   const _StudySheetRow({
     required this.number,
+    this.cue,
     required this.card,
     required this.content,
     required this.audioRepository,
@@ -182,6 +186,7 @@ class _StudySheetRow extends StatelessWidget {
   });
 
   final int number;
+  final StudyCue? cue;
   final StudyCard card;
   final CardContent content;
   final CardAudioRepository? audioRepository;
@@ -206,7 +211,11 @@ class _StudySheetRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              content.front,
+              cue == StudyCue.fromAudio
+                  ? 'Listen'
+                  : cue == StudyCue.toLanguage
+                  ? content.back
+                  : content.front,
               style: const TextStyle(
                 fontSize: 16,
                 height: 1.35,
@@ -222,7 +231,7 @@ class _StudySheetRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                content.back,
+                cue == StudyCue.toLanguage ? content.front : content.back,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

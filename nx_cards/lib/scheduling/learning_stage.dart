@@ -24,7 +24,14 @@ class RecallScore {
   bool get strong => recalled * 100 >= denominator * 80;
 }
 
+// Cards and their review lists are immutable. A reviewed card is a new object,
+// so cached scores cannot survive a history update; Expando does not retain cards.
+final _scoreCache = Expando<Map<StudyCue, RecallScore>>('recall scores');
+
 RecallScore recallScore(StudyCard card, StudyCue cue) {
+  final scores = _scoreCache[card] ??= {};
+  final cached = scores[cue];
+  if (cached != null) return cached;
   final byId = {
     for (final review in card.reviewHistoryFor(cue)) review.id: review,
   };
@@ -34,7 +41,7 @@ RecallScore recallScore(StudyCard card, StudyCue cue) {
       return byTime != 0 ? byTime : b.id.compareTo(a.id);
     });
   final recent = reviews.take(10).toList();
-  return RecallScore(
+  return scores[cue] = RecallScore(
     recalled: recent.where((r) => r.rating >= 3).length,
     attempts: recent.length,
   );

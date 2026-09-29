@@ -112,14 +112,21 @@ class NativeDrawingSession {
 
   static Map<String, Object?> practiceCard(
     StudyCard card, {
+    StudyCue? cue,
     List<LanguageCardContent> characters = const [],
     List<DerivedLanguageExample> derived = const [],
   }) {
     final content = card.content as LanguageCardContent;
     return {
-      'prompt': content.originalScript,
+      'practiceDirection': cue != null,
+      'listening': cue == StudyCue.fromAudio,
+      'prompt': cue == null
+          ? content.originalScript
+          : StudyPrompt(card: card, cue: cue).prompt,
       'answer': content.originalScript,
-      'subtitle': '${content.transliteration} · ${content.english}',
+      'subtitle': cue == null
+          ? '${content.transliteration} · ${content.english}'
+          : '${content.originalScript}\n${content.english} · ${content.transliteration}',
       'audio': content.audioUrl?.isNotEmpty == true,
       'multiCharacter': content.originalScript.trim().characters.length > 1,
       'characters': [

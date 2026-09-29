@@ -10,11 +10,13 @@ class ScriptDrawPracticePage extends StatefulWidget {
     required this.title,
     required this.cards,
     this.audioRepository,
+    this.cues,
   }) : assert(cards.length > 0);
 
   final String title;
   final List<StudyCard> cards;
   final CardAudioRepository? audioRepository;
+  final List<StudyCue>? cues;
 
   @override
   State<ScriptDrawPracticePage> createState() => _ScriptDrawPracticePageState();
@@ -27,7 +29,10 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
 
   StudyCard get _card => widget.cards[_index];
 
+  StudyCue? get _cue => widget.cues?[_index];
+
   String get _letter {
+    if (_cue != null) return StudyPrompt(card: _card, cue: _cue!).prompt;
     final content = _card.content;
     return content is LanguageCardContent ? content.originalScript : _card.back;
   }
@@ -35,7 +40,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
   String get _sound {
     final content = _card.content;
     return content is LanguageCardContent
-        ? '${content.transliteration} · ${content.english}'
+        ? '${_cue == null ? '' : '${content.originalScript} · '}${content.transliteration} · ${content.english}'
         : _card.front;
   }
 
@@ -96,7 +101,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                     children: [
                       Flexible(
                         child: Visibility(
-                          visible: _letterVisible,
+                          visible: _cue != null || _letterVisible,
                           maintainSize: true,
                           maintainAnimation: true,
                           maintainState: true,
@@ -119,7 +124,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        _sound,
+                        _cue != null && !_letterVisible ? '' : _sound,
                         key: const ValueKey<String>('draw-practice-sound'),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -214,8 +219,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                     when widget.audioRepository != null) ...[
                                   PronunciationButton(
                                     key: ValueKey<String>(
-                                      'draw-practice-audio-${_card.id}',
+                                      'draw-practice-audio-${_card.id}-${_cue?.storageKey}',
                                     ),
+                                    autoPlay: _cue == StudyCue.fromAudio,
                                     audioUrl: audioUrl,
                                     repository: widget.audioRepository!,
                                   ),
