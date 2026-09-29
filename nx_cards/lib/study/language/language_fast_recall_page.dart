@@ -40,7 +40,7 @@ class _LanguageFastRecallPageState
   late List<StudyPrompt> _prompts;
 
   void _repeatIncorrect() {
-    final missed = incorrectRecallPrompts(_prompts, {
+    final missed = retryRecallPrompts(_prompts, {
       for (var i = 0; i < _prompts.length; i++)
         i: ?_ratings[_prompts[i].cardId],
     }, _latestCards);
