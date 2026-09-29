@@ -19,7 +19,9 @@ strength, and FSRS state. Study is ungraded. Recall writes one attempt for the
 selected direction regardless of presentation.
 
 `learning_stage.dart` derives Practice/Weak/Strong from activation and the
-account's recent-answer window (default 10, threshold 80%). Future means inactive.
+latest ten attempts per direction, using a denominator of at least five and an
+80% Strong threshold. The old account window setting no longer controls scoring.
+Future means inactive.
 Do not manually persist Weak/Strong or activate replacement cards after recall.
 Cards store Future, Practice, or Recall. Weak/Strong are calculated from recall history; session completion does not run a separate progression service.
 
@@ -27,10 +29,7 @@ Language recall includes all cards matching the selected stages and score range,
 just like Practice. When Strong is selected, recall setup shows its due count.
 Due Strong cards are queued first (weaker scores first), then the remaining matching
 cards fill the requested session size. Future-due Strong cards remain selectable.
-Settings are stored in
-`users.preferences.nx_cards.history_window` and refreshed with library sync;
-saving requires connectivity. Server migration and verification are documented
-in `servers/nexus/apps/nx_cards/maintenance/learning-workflow.md`.
+Scoring is derived from existing history; no history migration or FSRS reset is needed.
 
 English and audio recall offer Standard, Fast and Write. Target script → English
 offers Standard and Fast. Standard/Fast imply a spoken response; there is no

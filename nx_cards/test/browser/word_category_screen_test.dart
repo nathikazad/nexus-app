@@ -493,15 +493,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('0%'), findsNWidgets(2));
-    expect(find.text('10%'), findsOneWidget);
-    expect(find.text('40%'), findsOneWidget);
+    expect(find.text('20%'), findsOneWidget);
+    expect(find.text('word 3'), findsNothing);
     final order = [
       'word 1',
       'word 2',
       'word 5',
-      'word 3',
     ].map((label) => tester.getCenter(find.text(label)).dy).toList();
     expect(order, orderedEquals([...order]..sort()));
+    await tester.tap(find.text('Strong  1'));
+    await tester.pumpAndSettle();
+    expect(find.text('80%'), findsOneWidget);
+    expect(find.text('word 3'), findsOneWidget);
     await tester.tap(find.text('Practice  1'));
     await tester.pumpAndSettle();
     expect(find.text('word 4'), findsOneWidget);

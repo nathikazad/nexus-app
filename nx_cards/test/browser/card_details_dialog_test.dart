@@ -387,7 +387,7 @@ void main() {
     expect(find.text('Future'), findsOneWidget);
     expect(find.text('Learning step 2 of 2'), findsNothing);
     expect(find.text('0%'), findsOneWidget);
-    expect(find.text('0 of last 10 recalled'), findsOneWidget);
+    expect(find.text('0/5 · 4 recent attempts'), findsOneWidget);
     expect(find.text('estimated recall'), findsNothing);
   });
 }

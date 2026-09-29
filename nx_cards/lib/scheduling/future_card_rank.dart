@@ -44,10 +44,7 @@ Map<int, double> futureCardScores(
         LearningStage.future => 0,
         LearningStage.upcoming => .1,
         LearningStage.past => 1,
-        LearningStage.current =>
-          .1 +
-              .9 *
-                  (recalledAnswers(c, cue, historyWindow) / historyWindow / .8),
+        LearningStage.current => .1 + .9 * (recallScore(c, cue).fraction / .8),
       };
     }
     for (final c in collection) {

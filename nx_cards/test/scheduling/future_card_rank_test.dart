@@ -57,7 +57,7 @@ void main() {
     expect(scores[3], closeTo(60, 1e-9));
     expect(scores[4], closeTo(60, 1e-9));
   });
-  test('approved formula responds to mastery, direction, and window', () {
+  test('formula responds to adaptive mastery and direction', () {
     final cards = [
       item(1, active: true, successes: 4),
       item(2, active: true, successes: 8),
@@ -67,7 +67,7 @@ void main() {
     final u = (math.log(2) / math.log(3) + 1) / 2;
     expect(
       score(cards)[3],
-      closeTo(100 * u * (.6 + .4 * ((.55 + 1) / 2)), 1e-9),
+      closeTo(100 * u, 1e-9),
     );
     expect(score(cards, window: 5)[3], closeTo(100 * u, 1e-9));
     expect(
