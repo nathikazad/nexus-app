@@ -1,6 +1,5 @@
 import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
-import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -37,55 +36,74 @@ class LearningCardsTab extends ConsumerWidget {
   final String? actionLabel;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => RefreshIndicator(
-    onRefresh: ref.read(cardsLibrarySyncProvider),
-    child: ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-      children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1200),
-            child: cards.isEmpty
-                ? Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: RecallPalette.of(context).soft,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: RecallPalette.of(context).line),
-                    ),
-                    child: Text(
-                      emptyText,
-                      style: const TextStyle(color: RecallColors.muted),
-                    ),
-                  )
-                : AdaptiveCardGrid(
-                    minimumCardWidth: 430,
-                    maxColumns: 2,
-                    spacing: 10,
-                    children: [
-                      for (final card in cards)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 9),
-                          child: _LearningStatusRow(
-                            key: ValueKey(
-                              '${card.learningStatus.storageValue}:${card.id}',
-                            ),
-                            card: card,
-                            scoreDirections: scoreDirections,
-                            priorityScore: priorityScores[card.id],
-                            showScheduleStatus: showScheduleStatus,
-                            showLearningStatus: showLearningStatus,
-                            nextStatus: nextStatus,
-                            actionLabel: actionLabel,
-                          ),
+  Widget build(BuildContext context, WidgetRef ref) => LayoutBuilder(
+    builder: (context, constraints) {
+      final width = (constraints.maxWidth - 48).clamp(0.0, 1200.0);
+      final scale = (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(
+        1.0,
+        2.0,
+      );
+      final columns = ((width + 10) / (430 * scale + 10)).floor().clamp(1, 2);
+      final rows = (cards.length / columns).ceil();
+      return RefreshIndicator(
+        onRefresh: ref.read(cardsLibrarySyncProvider),
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+          itemCount: cards.isEmpty ? 1 : rows,
+          itemBuilder: (context, row) => Center(
+            child: SizedBox(
+              width: width,
+              child: cards.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: RecallPalette.of(context).soft,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: RecallPalette.of(context).line,
                         ),
-                    ],
-                  ),
+                      ),
+                      child: Text(
+                        emptyText,
+                        style: const TextStyle(color: RecallColors.muted),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(bottom: 19),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var column = 0; column < columns; column++) ...[
+                            if (column > 0) const SizedBox(width: 10),
+                            Expanded(
+                              child: row * columns + column >= cards.length
+                                  ? const SizedBox.shrink()
+                                  : _LearningStatusRow(
+                                      key: ValueKey(
+                                        '${cards[row * columns + column].learningStatus.storageValue}:${cards[row * columns + column].id}',
+                                      ),
+                                      card: cards[row * columns + column],
+                                      scoreDirections: scoreDirections,
+                                      priorityScore:
+                                          priorityScores[cards[row * columns +
+                                                  column]
+                                              .id],
+                                      showScheduleStatus: showScheduleStatus,
+                                      showLearningStatus: showLearningStatus,
+                                      nextStatus: nextStatus,
+                                      actionLabel: actionLabel,
+                                    ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+            ),
           ),
         ),
-      ],
-    ),
+      );
+    },
   );
 }
 

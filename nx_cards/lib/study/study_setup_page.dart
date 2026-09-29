@@ -78,8 +78,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
   RecallPresentation _recallPresentation = RecallPresentation.standard;
   late Set<StudyCue> _directions;
-  bool get _allowsWriting =>
-      !_isBookStudy && !_directions.contains(StudyCue.toLanguage);
+  bool get _allowsWriting => _supportsDrawing;
+  Set<StudyCue>? _regularDirections;
   RecallPresentation get _effectiveRecallPresentation =>
       !_allowsWriting && _recallPresentation == RecallPresentation.write
       ? RecallPresentation.standard
@@ -168,6 +168,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         _weakOnly = saved['weakOnly'] == true;
         final savedCount = saved['count'];
         _count = savedCount is int ? max(1, savedCount) : 10;
+        _normalizeAiDirections();
         _clampCount();
       });
     } on Object {
@@ -233,38 +234,15 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         (!_weakOnly || score < .8 - 1e-9);
   }
 
-  List<StudyCard> get _drawCandidates => _studyCards
-      .where(
-        (card) =>
-            card.content is LanguageCardContent &&
-            !card.suspended &&
-            _matchesRecallBaseFilters(card),
-      )
-      .toList(growable: false);
-
-  List<StudyCard> get _studySheetCandidates => _studyCards
-      .where(
-        (card) =>
-            card.content is LanguageCardContent &&
-            !card.suspended &&
-            _matchesRecallBaseFilters(card),
-      )
-      .toList(growable: false);
-
-  List<StudyPrompt> get _bookCandidates => _mode == StudyMode.study
-      ? [
-          for (final card in _studyCards)
-            if (!card.suspended && _matchesRecallBaseFilters(card))
-              StudyPrompt(card: card, cue: StudyCue.fromLanguage),
-        ]
-      : _recallBaseCandidates;
-
-  int get _availableCount => _isBookStudy
-      ? _bookCandidates.length
-      : _mode == StudyMode.study && _studyPresentation == StudyPresentation.draw
-      ? _drawCandidates.length
-      : _mode == StudyMode.study
-      ? _studySheetCandidates.length
+  List<StudyPrompt> get _practiceCandidates => [
+    for (final card in _studyCards)
+      if (!card.suspended && _matchesRecallBaseFilters(card))
+        for (final cue
+            in (_isBookStudy ? {StudyCue.fromLanguage} : _directions))
+          if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
+  ];
+  int get _availableCount => _mode == StudyMode.study
+      ? _practiceCandidates.length
       : _candidates.length;
 
   bool get _usesRecallFilters =>
@@ -297,9 +275,27 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     if (available > 0) _count = _count.clamp(1, available);
   }
 
+  void _normalizeAiDirections() {
+    if (_mode != StudyMode.ai || _isBookStudy) return;
+    _directions = _directions
+        .where((cue) => cue != StudyCue.toLanguage)
+        .toSet();
+    if (_directions.isEmpty) {
+      _directions = {StudyCue.fromLanguage, StudyCue.fromAudio};
+    }
+  }
+
   void _selectMode(StudyMode mode) {
     setState(() {
+      if (mode == StudyMode.ai && _mode != StudyMode.ai) {
+        _regularDirections = {..._directions};
+      } else if (_mode == StudyMode.ai &&
+          mode == StudyMode.recall &&
+          _regularDirections != null) {
+        _directions = _regularDirections!;
+      }
       _mode = mode;
+      _normalizeAiDirections();
       _clampCount();
     });
     _rememberPreferences();
@@ -402,6 +398,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   Future<bool> _openNativeDrawing({
     List<StudyCard>? cards,
     List<StudyPrompt>? prompts,
+    List<StudyPrompt>? practicePrompts,
   }) async {
     if (!await NativeDrawingSession.isAvailable() || !mounted) return false;
     _startupStep('native_available');
@@ -471,6 +468,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             )
           : NativeDrawingSession.practiceCard(
               full,
+              cue: practicePrompts?[index].cue,
               characters: characters[index],
               derived: derived[index],
             );
@@ -744,15 +742,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   }
 
   Future<void> _openStudySheet() async {
-    final cards =
-        (_isBookStudy
-                ? _bookCandidates.map((prompt) => prompt.card)
-                : _studySheetCandidates)
-            .toList(growable: true);
-    if (_order == StudyOrder.shuffle) cards.shuffle(Random.secure());
-    final selected = cards
-        .take(min(_count, cards.length))
-        .toList(growable: false);
+    final prompts = _practiceCandidates.toList();
+    if (_order == StudyOrder.shuffle) prompts.shuffle(Random.secure());
+    final chosen = prompts.take(min(_count, prompts.length)).toList();
+    final selected = chosen.map((p) => p.card).toList();
     final hydrated = <StudyCard>[];
     try {
       for (final card in selected) {
@@ -772,6 +765,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         builder: (_) => LanguageStudyPage(
           title: widget.title,
           cards: hydrated,
+          cues: _isBookStudy ? null : chosen.map((p) => p.cue).toList(),
           itemLabel: _isBookStudy ? 'cards' : null,
         ),
       ),
@@ -785,20 +779,18 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     try {
       final dashboard = await ref.read(cardsDashboardProvider.future);
       _startupStep('dashboard_ready');
-      final eligibleIds = _studyCards.map((card) => card.id).toSet();
-      final cards = dashboard.cards
-          .where(
-            (card) =>
-                eligibleIds.contains(card.id) &&
-                card.content is LanguageCardContent &&
-                !card.suspended &&
-                _matchesRecallBaseFilters(card),
-          )
-          .toList(growable: true);
-      cards.shuffle(Random.secure());
-      final selected = cards
-          .take(min(_count, cards.length))
-          .toList(growable: false);
+      final ids = _studyCards.map((card) => card.id).toSet();
+      final candidates = [
+        for (final card in dashboard.cards)
+          if (ids.contains(card.id) &&
+              card.isLanguageCard &&
+              !card.suspended &&
+              _matchesRecallBaseFilters(card))
+            for (final cue in _directions)
+              if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
+      ]..shuffle(Random.secure());
+      final chosen = candidates.take(min(_count, candidates.length)).toList();
+      final selected = chosen.map((p) => p.card).toList();
       if (selected.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -808,7 +800,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         return;
       }
       _startupStep('selection_ready');
-      if (await _openNativeDrawing(cards: selected)) {
+      if (await _openNativeDrawing(cards: selected, practicePrompts: chosen)) {
         await _refreshSetup();
         return;
       }
@@ -822,6 +814,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           builder: (_) => ScriptDrawPracticePage(
             title: widget.title,
             cards: hydrated,
+            cues: chosen.map((p) => p.cue).toList(),
             audioRepository: ref.read(cardAudioRepositoryProvider),
           ),
         ),
@@ -884,7 +877,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         ? 'How do you want to practice?'
                         : 'How do you want to recall?',
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: 26,
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.8,
                     ),
@@ -918,11 +911,18 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       selected: {_mode},
                       onSelectionChanged: (value) => _selectMode(value.single),
                     ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
                   if (_mode == StudyMode.study) ...[
+                    if (!_isBookStudy) ...[
+                      _SetupCard(
+                        title: _selectionTitle,
+                        child: _directionChoices(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
                     if (_supportsDrawing) ...[
                       _SetupCard(
-                        number: '01',
                         title: 'Study format',
                         child: SegmentedButton<StudyPresentation>(
                           style: const ButtonStyle(
@@ -952,12 +952,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                               _selectStudyPresentation(value.single),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                     ],
                     if (!_supportsDrawing ||
                         _studyPresentation == StudyPresentation.sheet) ...[
                       _SetupCard(
-                        number: _supportsDrawing ? '02' : '01',
                         title: 'How many cards?',
                         child: _countControl(maxCount),
                       ),
@@ -972,7 +971,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                     ] else ...[
                       _SetupCard(
-                        number: '02',
                         title: 'How many cards?',
                         child: _countControl(maxCount),
                       ),
@@ -989,9 +987,16 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                     ],
                   ] else if (_mode == StudyMode.recall) ...[
+                    if (!_isBookStudy) ...[
+                      _SetupCard(
+                        title: _selectionTitle,
+                        child: _directionChoices(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
                     ...[
                       _SetupCard(
-                        number: '01',
                         title: 'Recall format',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1034,16 +1039,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                     ],
                     _SetupCard(
-                      number: '02',
-                      title: _selectionTitle,
+                      title: 'Retention',
                       child: _recallFilterChoices(),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     _SetupCard(
-                      number: '03',
                       title: 'How many recall items?',
                       child: _countControl(maxCount),
                     ),
@@ -1062,14 +1065,20 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                     ),
                   ] else ...[
+                    if (!_isBookStudy) ...[
+                      _SetupCard(
+                        title: _selectionTitle,
+                        child: _directionChoices(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
                     _SetupCard(
-                      number: '01',
-                      title: _selectionTitle,
+                      title: 'Retention',
                       child: _recallFilterChoices(),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     _SetupCard(
-                      number: '02',
                       title: 'How many recall items?',
                       child: _countControl(maxCount),
                     ),
@@ -1094,21 +1103,26 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     );
   }
 
+  Widget _directionChoices() => DirectionChoices(
+    language: widget.toLanguage,
+    selected: _directions,
+    allowed: _mode == StudyMode.ai
+        ? const [StudyCue.fromLanguage, StudyCue.fromAudio]
+        : StudyCue.activeDirections,
+    onChanged: (value) => setState(() {
+      _directions = value;
+      _clampCount();
+    }),
+  );
+
   Widget _recallFilterChoices() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      if (!_isBookStudy) ...[
-        DirectionChoices(
-          language: widget.toLanguage,
-          selected: _directions,
-          onChanged: (value) => setState(() {
-            _directions = value;
-            _clampCount();
-          }),
-        ),
-        const SizedBox(height: 16),
-      ],
-      Text('Retention: $_retainedMinPercentage–$_retainedMaxPercentage%'),
+      Text(
+        _weakOnly
+            ? 'Below 80%'
+            : '$_retainedMinPercentage–$_retainedMaxPercentage%',
+      ),
       Row(
         children: [
           Expanded(
@@ -1139,9 +1153,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             child: const Text('Strong'),
           ),
         ],
-      ),
-      const Text(
-        'One recall item per card and selected direction. Weakest first.',
       ),
     ],
   );
@@ -1182,30 +1193,29 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 }
 
 class _SetupCard extends StatelessWidget {
-  const _SetupCard({
-    required this.number,
-    required this.title,
-    required this.child,
-  });
+  const _SetupCard({required this.title, required this.child});
 
-  final String number;
   final String title;
   final Widget child;
 
   @override
   Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
     child: Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(number, style: monoLabel),
-          const SizedBox(height: 5),
           Text(
             title,
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           child,
         ],
       ),

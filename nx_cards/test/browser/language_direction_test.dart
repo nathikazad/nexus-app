@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../study/study_setup_page_test.dart' show sample;
 import 'category_hierarchy_test.dart' as hierarchy;
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   test(
     'direction labels identify both languages, with a readable fallback',
     () {
@@ -86,19 +88,40 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Current  1'), findsOneWidget);
       expect(find.text('33%'), findsOneWidget);
-      expect(find.byKey(const ValueKey('current-retention')), findsOneWidget);
+      expect(find.byKey(const ValueKey('current-retention')), findsNothing);
+      expect(find.text('Weak · All directions'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('current-filter-toggle')));
+      await tester.pumpAndSettle();
+      final slider = tester.widget<Slider>(
+        find.byKey(const ValueKey('current-retention')),
+      );
+      expect(slider.value, .8);
+      slider.onChanged!(1);
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('direction-from_audio')));
       await tester.pumpAndSettle();
       expect(find.text('50%'), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('direction-to_language')),
+      );
       await tester.tap(find.byKey(const ValueKey('direction-to_language')));
       await tester.pumpAndSettle();
       expect(find.text('100%'), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('direction-from_language')),
+      );
       await tester.tap(find.byKey(const ValueKey('direction-from_language')));
       await tester.pumpAndSettle();
       expect(
         find.text('100%'),
         findsOneWidget,
       ); // Last direction cannot be cleared.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.byKey(const ValueKey('current-retention')), findsNothing);
       await tester.tap(find.text('Upcoming  0'));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);

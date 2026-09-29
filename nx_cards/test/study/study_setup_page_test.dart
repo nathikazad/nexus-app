@@ -128,6 +128,25 @@ void main() {
         directions: StudyCue.activeDirections.toSet(),
       );
       expect(find.text('81 recall items available'), findsOneWidget);
+      expect(find.text('Write'), findsOneWidget);
+      final titles = [
+        'Which cards?',
+        'Recall format',
+        'Retention',
+        'How many recall items?',
+      ];
+      final positions = titles
+          .map((title) => tester.getTopLeft(find.text(title)).dy)
+          .toList();
+      expect(positions, orderedEquals([...positions]..sort()));
+      await tester.tap(find.text('AI').first);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('direction-to_language')), findsNothing);
+      expect(find.text('54 recall items available'), findsOneWidget);
+      await tester.tap(find.text('Recall').first);
+      await tester.pumpAndSettle();
+      expect(find.text('81 recall items available'), findsOneWidget);
+
       await tester.tap(find.byKey(const ValueKey('direction-from_audio')));
       await tester.pumpAndSettle();
       expect(find.text('54 recall items available'), findsOneWidget);
@@ -137,7 +156,7 @@ void main() {
     },
   );
 
-  testWidgets('a saved Write format becomes Standard for reverse recall', (
+  testWidgets('Write remains available when reverse recall is selected', (
     tester,
   ) async {
     await showSetup(
@@ -150,9 +169,10 @@ void main() {
     final formats = tester.widget<SegmentedButton<RecallPresentation>>(
       find.byType(SegmentedButton<RecallPresentation>),
     );
-    expect(formats.selected, {RecallPresentation.standard});
+    expect(formats.selected, {RecallPresentation.write});
     expect(formats.segments.map((s) => s.value), [
       RecallPresentation.standard,
+      RecallPresentation.write,
       RecallPresentation.fast,
     ]);
   });
@@ -193,20 +213,26 @@ void main() {
     expect(find.text('Start recall'), findsOneWidget);
     expect(find.text('Practice'), findsNothing);
   });
-  testWidgets('Practice only offers format and count, and only Prep cards', (
-    tester,
-  ) async {
-    await showSetup(tester, flow: StudySetupFlow.practice);
-    expect(find.text('Study format'), findsOneWidget);
-    expect(find.text('Study sheet'), findsOneWidget);
-    expect(find.text('Draw'), findsOneWidget);
-    expect(find.text('1 cards available'), findsOneWidget);
-    expect(find.text('Which cards'), findsNothing);
-    expect(find.text('Recall score'), findsNothing);
-    expect(find.textContaining('Strong cards due'), findsNothing);
-    expect(find.byType(FilterChip), findsNothing);
-    expect(find.text('AI'), findsNothing);
-  });
+  testWidgets(
+    'Practice offers directions, format, and count, and only Upcoming cards',
+    (tester) async {
+      await showSetup(tester, flow: StudySetupFlow.practice);
+      expect(find.text('Study format'), findsOneWidget);
+      expect(find.text('Study sheet'), findsOneWidget);
+      expect(find.text('Draw'), findsOneWidget);
+      expect(find.text('1 cards available'), findsOneWidget);
+      expect(find.text('Which cards?'), findsOneWidget);
+      expect(find.text('Recall score'), findsNothing);
+      expect(find.textContaining('Strong cards due'), findsNothing);
+      expect(find.byType(FilterChip), findsNWidgets(3));
+      final sections = ['Which cards?', 'Study format', 'How many cards?'];
+      final positions = sections
+          .map((title) => tester.getTopLeft(find.text(title)).dy)
+          .toList();
+      expect(positions, orderedEquals([...positions]..sort()));
+      expect(find.text('AI'), findsNothing);
+    },
+  );
   testWidgets('retention shortcuts replace due and stage filters', (
     tester,
   ) async {

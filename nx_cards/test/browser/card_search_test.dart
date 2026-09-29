@@ -126,7 +126,10 @@ void main() {
       expect(find.text('after 3'), findsOneWidget);
       expect(find.text('after 99'), findsNothing);
       expect(find.text('Current'), findsNWidgets(2));
-      expect(find.text('Backlog'), findsNWidgets(18));
+      expect(
+        find.text('Backlog').evaluate().length,
+        inExclusiveRange(0, 18),
+      ); // Offscreen rows are built lazily.
       await tester.enterText(input, '之后2');
       await tester.pumpAndSettle();
       expect(find.text('after 2'), findsOneWidget);
