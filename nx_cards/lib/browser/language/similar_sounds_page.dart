@@ -111,7 +111,7 @@ class SimilarWordGroupPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
+              Flexible(
                 child: Text(
                   group.title,
                   style: Theme.of(context).textTheme.titleMedium,
@@ -207,17 +207,20 @@ class SimilarSoundWord extends ConsumerWidget {
                     ),
                 ],
               ),
-              if (retention != null) ...[
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: SimilarRetentionPill(fraction: retention!),
-                ),
-              ],
               const SizedBox(height: 6),
-              Text(
-                content.transliteration,
-                style: Theme.of(context).textTheme.titleMedium,
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      content.transliteration,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (retention != null) ...[
+                    const SizedBox(width: 8),
+                    SimilarRetentionPill(fraction: retention!),
+                  ],
+                ],
               ),
               const SizedBox(height: 4),
               Text(content.english),
