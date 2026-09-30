@@ -191,6 +191,7 @@ class NativeDrawingSession {
     required String title,
     required List<Map<String, Object?>> cards,
     required bool recall,
+    bool grouped = false,
     required Future<Object?> Function(MethodCall) onAction,
   }) async {
     debugPrint(
@@ -205,6 +206,7 @@ class NativeDrawingSession {
       await channel.invokeMethod<void>('open', {
         'title': title,
         'recall': recall,
+        if (grouped) 'grouped': true,
         'cards': cards,
       });
       return true;

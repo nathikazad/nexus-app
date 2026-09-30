@@ -61,6 +61,7 @@ StudyCard sample(
 Future<void> showSetup(
   WidgetTester tester, {
   StudyCue cue = StudyCue.fromLanguage,
+  String language = 'Chinese',
   List<StudyCard>? studyCards,
   Set<StudyCue>? directions,
   StudySetupFlow flow = StudySetupFlow.recall,
@@ -88,18 +89,18 @@ Future<void> showSetup(
           (ref) async => const ReviewProgressionSettings(),
         ),
         selectedDirectionsProvider(
-          'Chinese',
+          language,
         ).overrideWith((ref) => directions ?? {cue}),
       ],
       child: MaterialApp(
         home: StudySetupPage(
-          title: 'Chinese',
+          title: language,
           flow: flow,
-          studyScope: const StudyScope(language: 'Chinese'),
+          studyScope: StudyScope(language: language),
           prompts: [],
           studyCards: cards,
           fromLanguage: 'English',
-          toLanguage: 'Chinese',
+          toLanguage: language,
         ),
       ),
     ),
@@ -108,6 +109,47 @@ Future<void> showSetup(
 }
 
 void main() {
+  testWidgets(
+    'similar sounds toggle is only available for a single Chinese recall direction',
+    (tester) async {
+      for (final cue in StudyCue.activeDirections) {
+        await showSetup(tester, cue: cue);
+        expect(
+          find.byKey(const ValueKey('group-similar-sounds')),
+          findsOneWidget,
+        );
+        expect(
+          tester.getTopLeft(find.text('Similar sounds')).dy,
+          greaterThan(
+            tester.getTopLeft(find.text('How many recall items?')).dy,
+          ),
+        );
+        await tester.pumpWidget(const SizedBox());
+      }
+      for (final directions in [
+        {StudyCue.fromLanguage, StudyCue.fromAudio},
+        StudyCue.activeDirections.toSet(),
+      ]) {
+        await showSetup(tester, directions: directions);
+        expect(
+          find.byKey(const ValueKey('group-similar-sounds')),
+          findsNothing,
+        );
+        await tester.pumpWidget(const SizedBox());
+      }
+      await showSetup(tester, language: 'Tamil');
+      expect(find.byKey(const ValueKey('group-similar-sounds')), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await showSetup(tester, flow: StudySetupFlow.practice);
+      expect(find.byKey(const ValueKey('group-similar-sounds')), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await showSetup(tester);
+      await tester.tap(find.text('AI'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('group-similar-sounds')), findsNothing);
+    },
+  );
+
   testWidgets(
     'all three directions offer 81 items and changing selection updates the count',
     (tester) async {

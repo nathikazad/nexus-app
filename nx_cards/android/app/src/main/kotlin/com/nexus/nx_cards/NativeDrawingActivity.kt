@@ -41,6 +41,7 @@ class NativeDrawingActivity : Activity() {
     private var ink: DrawingInkPanel? = null
     private var index = 0
     private var recall = false
+    private var grouped = false
     private var revealed = false
     private var visibleAnswer = true
     private var busy = false
@@ -72,6 +73,7 @@ class NativeDrawingActivity : Activity() {
             NativeDrawingBridge.activity = WeakReference(this)
             require(cards.isNotEmpty())
             recall = input["recall"] == true
+            grouped = input["grouped"] == true
             val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(16), dp(8), dp(16), dp(8)) }
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
             end = button(if (recall) "End" else "Back") { finish() }
@@ -178,6 +180,8 @@ class NativeDrawingActivity : Activity() {
             control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
             control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard(); if (card["audio"] == true) play() }
+        } else if (grouped) {
+            control(if (index == cards.lastIndex) "Compare group" else "Next word", "next") { groupNext() }
         } else {
             control("No", "no") { rate(false) }
             control("Yes", "yes") { rate(true) }
@@ -395,6 +399,23 @@ class NativeDrawingActivity : Activity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() { if (!busy || loadingCard) super.onBackPressed() }
 
+    // Grouped recall only records completion here. Its separate Flutter screen
+    // accepts one group decision and writes retention after comparing the group.
+    private fun groupNext() {
+        if (busy || !revealed) return
+        setBusy(true)
+        val channel = NativeDrawingBridge.channel
+        if (channel == null) { setBusy(false); report("Session ended"); return }
+        channel.invokeMethod("groupNext", mapOf("index" to index), object : MethodChannel.Result {
+            override fun success(result: Any?) {
+                if (!isFinishing && !isDestroyed) { setBusy(false); advance() }
+            }
+            override fun error(code: String, message: String?, details: Any?) {
+                if (!isDestroyed) { setBusy(false); report(message ?: "Could not continue. Try again.") }
+            }
+            override fun notImplemented() { setBusy(false); report("Group session unavailable") }
+        })
+    }
     private fun advance() {
         if (index == cards.lastIndex) { stopAudio(); finish(); return }
         moveTo(index + 1)

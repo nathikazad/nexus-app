@@ -1,3 +1,5 @@
+import 'package:nx_cards/study/language/similar_sounds.dart';
+import 'package:nx_cards/browser/language/similar_sounds_page.dart';
 import 'package:nx_cards/browser/card_list/bulk_card_selection.dart';
 import 'package:nx_cards/browser/card_list/current_cards_tab.dart';
 import 'package:nx_cards/scheduling/future_card_rank.dart';
@@ -127,6 +129,28 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                             language: language,
                           ),
                       ],
+                    ),
+                  ],
+                  if (isChineseLanguage(language)) ...[
+                    const SizedBox(height: 28),
+                    Text(
+                      'Explore',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: ListTile(
+                        key: const ValueKey('explore-similar-sounds'),
+                        leading: const Icon(Icons.graphic_eq_rounded),
+                        title: const Text('Similar sounding words'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                SimilarSoundsPage(language: language!),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ],

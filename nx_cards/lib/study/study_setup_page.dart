@@ -1,3 +1,5 @@
+import 'package:nx_cards/study/language/similar_sounds.dart';
+import 'package:nx_cards/study/language/grouped_recall_page.dart';
 import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
@@ -6,6 +8,7 @@ import 'package:nx_cards/study/recall_priority.dart';
 import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:nx_cards/account/account_session.dart';
 import 'package:nx_cards/scheduling/scheduling.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
@@ -100,6 +103,24 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   StudyOrder _order = StudyOrder.normal;
   int _count = 10;
   bool _starting = false;
+  bool _groupSimilarSounds = false;
+  List<StudyCard>? _similarGroupSource;
+  List<SimilarSoundGroup> _similarGroupCache = [];
+  List<SimilarSoundGroup> get _matchingSimilarGroups {
+    final cards = _recallBaseCandidates.map((p) => p.card).toList();
+    if (!listEquals(cards, _similarGroupSource)) {
+      _similarGroupSource = cards;
+      _similarGroupCache = similarSoundGroups(cards);
+    }
+    return _similarGroupCache;
+  }
+
+  bool get _allowsSimilarSounds =>
+      _mode == StudyMode.recall &&
+      !_isBookStudy &&
+      isChineseLanguage(widget.studyScope?.language ?? widget.toLanguage) &&
+      _directions.length == 1;
+  bool get _usesSimilarSounds => _allowsSimilarSounds && _groupSimilarSounds;
   int _preferenceRevision = 0;
 
   String get _storedPreferenceKey =>
@@ -166,6 +187,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         _retainedMinPercentage = (saved['retainedMinPercentage'] as int? ?? 0)
             .clamp(0, _retainedMaxPercentage);
         _weakOnly = saved['weakOnly'] == true;
+        _groupSimilarSounds = saved['groupSimilarSounds'] == true;
         final savedCount = saved['count'];
         _count = savedCount is int ? max(1, savedCount) : 10;
         _normalizeAiDirections();
@@ -194,6 +216,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'retainedMaxPercentage': _retainedMaxPercentage,
         'retainedMinPercentage': _retainedMinPercentage,
         'weakOnly': _weakOnly,
+        'groupSimilarSounds': _groupSimilarSounds,
         'order': _order.name,
         'count': _count,
       }),
@@ -243,6 +266,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   ];
   int get _availableCount => _mode == StudyMode.study
       ? _practiceCandidates.length
+      : _usesSimilarSounds
+      ? _matchingSimilarGroups.fold<int>(
+          0,
+          (sum, group) => sum + group.cards.length,
+        )
       : _candidates.length;
 
   bool get _usesRecallFilters =>
@@ -353,6 +381,77 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     // Keep diagnostic timings visible in release-device logcat too.
     debugPrint(message);
     _startupLast = elapsed;
+  }
+
+  Future<void> _startGroupedRecall() async {
+    if (_starting || !_usesSimilarSounds) return;
+    setState(() => _starting = true);
+    final library = ref.read(cardLibraryProvider);
+    try {
+      final dashboard = await ref.read(cardsDashboardProvider.future);
+      if (!mounted || !identical(library, ref.read(cardLibraryProvider))) {
+        return;
+      }
+      final ids = widget.studyCards.map((c) => c.id).toSet();
+      final candidates = retentionPrompts(
+        dashboard.cards.where((c) => ids.contains(c.id)).toList(),
+        _directions,
+        minimum: _retainedMinPercentage / 100,
+        maximum: _retainedMaxPercentage / 100,
+        weakOnly: _weakOnly,
+      );
+      final groups = similarSoundRecallGroups(candidates, limit: _count);
+      if (groups.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No similar groups match these filters'),
+          ),
+        );
+        return;
+      }
+      final full = await hydrateStudyQueue(
+        groups.expand((g) => g.comparisonCards).toList(),
+        (card) => hydrateStudyCard(ref, card),
+      );
+      if (!mounted || !identical(library, ref.read(cardLibraryProvider))) {
+        return;
+      }
+      final byId = {for (final card in full) card.id: card};
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => GroupedRecallPage(
+            format: switch (_effectiveRecallPresentation) {
+              RecallPresentation.standard => GroupedRecallFormat.standard,
+              RecallPresentation.write => GroupedRecallFormat.write,
+              RecallPresentation.fast => GroupedRecallFormat.fast,
+            },
+            groups: [
+              for (final group in groups)
+                SimilarRecallGroup(
+                  label: group.label,
+                  prompts: [
+                    for (final p in group.prompts) p.withCard(byId[p.cardId]!),
+                  ],
+                  comparisonCards: [
+                    for (final c in group.comparisonCards) byId[c.id]!,
+                  ],
+                ),
+            ],
+          ),
+        ),
+      );
+      if (mounted && identical(library, ref.read(cardLibraryProvider))) {
+        await _refreshSetup();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start grouped recall: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
   }
 
   Future<void> _start() async {
@@ -1050,10 +1149,31 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       title: 'How many recall items?',
                       child: _countControl(maxCount),
                     ),
+                    if (_allowsSimilarSounds) ...[
+                      const SizedBox(height: 16),
+                      _SetupCard(
+                        title: 'Similar sounds',
+                        child: SwitchListTile.adaptive(
+                          key: const ValueKey('group-similar-sounds'),
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Group by similar sounds'),
+                          value: _groupSimilarSounds,
+                          onChanged: (value) {
+                            setState(() {
+                              _groupSimilarSounds = value;
+                              _clampCount();
+                            });
+                            _rememberPreferences();
+                          },
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 22),
                     FilledButton.icon(
                       onPressed: _cue == null || maxCount == 0 || _starting
                           ? null
+                          : _usesSimilarSounds
+                          ? _startGroupedRecall
                           : _effectiveRecallPresentation ==
                                 RecallPresentation.fast
                           ? _startFastRecall
