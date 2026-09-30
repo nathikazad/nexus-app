@@ -1,6 +1,7 @@
 @Tags(['unit'])
 library;
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql_exec/gql_exec.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -8,6 +9,36 @@ import 'package:nx_db/kgql.dart';
 import 'package:nx_db/src/core/client/graphql_client.dart' as graphql_client;
 
 void main() {
+  test(
+    'GraphQL sends the selected domain using the server contract header',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final received = server.first.then((request) async {
+        final domain = request.headers.value('x-domain-id');
+        request.response.headers.contentType = ContentType.json;
+        request.response.write('{"data":{"ok":true}}');
+        await request.response.close();
+        return domain;
+      });
+      final client = createClient(
+        'http://127.0.0.1:${server.port}/graphql',
+        '1',
+        domainId: 2,
+      );
+      addTearDown(client.link.dispose);
+      final response = await client.query(
+        QueryOptions(
+          document: gql('query DomainCheck { ok }'),
+          fetchPolicy: FetchPolicy.noCache,
+        ),
+      );
+      expect(response.hasException, isFalse);
+      expect(await received, '2');
+    },
+  );
+
+
   test('createClient allows large initial synchronization responses', () {
     final c = createClient('http://127.0.0.1:5001/graphql', '1', domainId: 1);
     expect(
