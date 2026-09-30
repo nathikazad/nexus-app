@@ -64,7 +64,12 @@ class SimilarSoundsPage extends ConsumerWidget {
                               key: PageStorageKey('similar-${kind.name}'),
                               controller: controller,
                               primary: false,
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                20,
+                                16,
+                                24,
+                              ),
                               itemCount: selected.isEmpty ? 1 : selected.length,
                               itemBuilder: (context, index) => selected.isEmpty
                                   ? const Padding(
@@ -103,30 +108,38 @@ class SimilarWordGroupPanel extends StatelessWidget {
   const SimilarWordGroupPanel({super.key, required this.group});
   final SimilarSoundGroup group;
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(12),
+  Widget build(BuildContext context) {
+    final palette = RecallPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Flexible(
-                child: Text(
-                  group.title,
-                  style: Theme.of(context).textTheme.titleMedium,
+          Padding(
+            padding: const EdgeInsets.only(left: 2, right: 2, bottom: 12),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    group.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: palette.ink,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              SimilarRetentionPill(fraction: similarGroupRetention(group)),
-            ],
+                const SizedBox(width: 8),
+                SimilarRetentionPill(fraction: similarGroupRetention(group)),
+                const SizedBox(width: 16),
+                Expanded(child: Divider(color: palette.line, height: 1)),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
           SimilarSoundGrid(cards: group.cards, retentionKind: group.kind),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 class SimilarSoundGrid extends StatelessWidget {
@@ -185,19 +198,21 @@ class SimilarSoundWord extends ConsumerWidget {
     final content = card.content as LanguageCardContent;
     final audio = ref.watch(cardAudioRepositoryProvider);
     final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
+    final palette = RecallPalette.of(context);
+    return Material(
+      color: palette.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(13),
+        side: BorderSide(color: palette.line),
       ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(13),
         onTap: () => Navigator.of(context).push<void>(
           MaterialPageRoute(builder: (_) => CardDetailsPage(card: card)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -207,7 +222,12 @@ class SimilarSoundWord extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       content.originalScript,
-                      style: const TextStyle(fontSize: 28),
+                      style: TextStyle(
+                        fontSize: 28,
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
+                        color: palette.ink,
+                      ),
                     ),
                   ),
                   if (audio != null && content.audioUrl?.isNotEmpty == true)
@@ -218,13 +238,17 @@ class SimilarSoundWord extends ConsumerWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Flexible(
                     child: Text(
                       content.transliteration,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.4,
+                        color: palette.muted,
+                      ),
                     ),
                   ),
                   if (retention != null) ...[
@@ -233,8 +257,15 @@ class SimilarSoundWord extends ConsumerWidget {
                   ],
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(content.english),
+              const SizedBox(height: 6),
+              Text(
+                content.english,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: palette.ink,
+                ),
+              ),
               if (resultLabel != null) ...[
                 const SizedBox(height: 8),
                 Text(resultLabel!),
