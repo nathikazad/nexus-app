@@ -155,16 +155,21 @@ class NativeDrawingActivity : Activity() {
         // the answer appears; the firmware can discard pen records during that
         // resize before our layout listener captures them. INVISIBLE keeps the
         // ink surface and existing strokes in place without exposing answers.
-        val hasContext = listOf("examples", "derivedExamples", "characters", "similar").any {
-            (card[it] as? List<*>)?.isNotEmpty() == true
+        fun hasItems(key: String) = (card[key] as? List<*>)?.isNotEmpty() == true
+        val sectionCount = listOf(
+            hasItems("examples") || hasItems("derivedExamples"),
+            hasItems("characters"),
+            hasItems("similar"),
+        ).count { it }
+        val contextVisibility = if (sectionCount == 0) View.GONE else if (showContext) View.VISIBLE else View.INVISIBLE
+        // The tab buttons are populated only after reveal, but their height must
+        // already be reserved while drawing. Bigme clears ink if NoteView resizes.
+        contextHeadings?.layoutParams = contextHeadings?.layoutParams?.apply {
+            height = if (sectionCount > 1) dp(48) else 0
         }
-        val contextVisibility = if (!hasContext) View.GONE else if (showContext) View.VISIBLE else View.INVISIBLE
-        contextHeadings?.visibility = contextVisibility
+        contextHeadings?.visibility = if (sectionCount > 1) contextVisibility else View.GONE
         contextColumns?.visibility = contextVisibility
-        if (showContext) {
-            updateExamples()
-            if ((contextTabs?.childCount ?: 0) < 2) contextHeadings?.visibility = View.GONE
-        }
+        if (showContext) updateExamples()
         controls.removeAllViews()
         control("Refresh screen", "refresh") { refreshScreen() }
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
