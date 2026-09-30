@@ -21,7 +21,7 @@ class AgentRoute {
   Map<String, String> headers(int domainId) {
     if (domainId <= 0) throw StateError('A selected domain is required.');
     return {
-      'X-Nexus-Domain-Id': '$domainId',
+      'X-Domain-Id': '$domainId',
       'X-Client-App': clientApp,
       'X-Agent-Id': agentId,
       if (source != null) 'X-Device-Source': source!,

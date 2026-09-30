@@ -117,7 +117,7 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
         ).then(
           (headers) => {
             ...headers,
-            'x-nexus-domain-id': '${user.requiredDomainId}',
+            'x-domain-id': '${user.requiredDomainId}',
           },
         );
       },

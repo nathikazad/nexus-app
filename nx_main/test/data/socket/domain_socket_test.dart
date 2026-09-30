@@ -18,7 +18,7 @@ void main() {
     final auth = Completer<Map<String, String>>();
     final client = SocketClient();
     final connecting = client.connect('ws://127.0.0.1:1',
-        headers: {'X-Nexus-Domain-Id': '7'}, authHeaders: (_) => auth.future);
+        headers: {'X-Domain-Id': '7'}, authHeaders: (_) => auth.future);
     await Future<void>.delayed(Duration.zero);
     client.sendPacket(Uint8List.fromList([1, 2]));
     expect(client.queuedPacketCount, 1);
@@ -37,7 +37,7 @@ void main() {
     final sources = <String?>[];
     final sockets = <WebSocket>[];
     server.listen((request) async {
-      domains.add(request.headers.value('x-nexus-domain-id'));
+      domains.add(request.headers.value('x-domain-id'));
       agents.add(request.headers.value('x-agent-id'));
       sources.add(request.headers.value('x-device-source'));
       final socket = await WebSocketTransformer.upgrade(request);
@@ -55,9 +55,9 @@ void main() {
       }
       await server.close(force: true);
     });
-    expect(await wearable.connect(url, headers: {'X-Nexus-Domain-Id': '7'}),
+    expect(await wearable.connect(url, headers: {'X-Domain-Id': '7'}),
         isTrue);
-    expect(await wearable.connect(url, headers: {'X-Nexus-Domain-Id': '9'}),
+    expect(await wearable.connect(url, headers: {'X-Domain-Id': '9'}),
         isTrue);
     for (final domain in [7, 9]) {
       await voice.connect(VoiceSocketSessionConfig(

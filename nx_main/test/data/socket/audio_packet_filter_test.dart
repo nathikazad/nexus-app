@@ -70,7 +70,7 @@ void main() {
       await server.close(force: true);
     });
     await client.connect('ws://127.0.0.1:${server.port}',
-        headers: {'X-Nexus-Domain-Id': '1'});
+        headers: {'X-Domain-Id': '1'});
     final socket = await peer.future;
     socket.add(deviceRequest('get_battery'));
     final reply = await response.future.timeout(const Duration(seconds: 3));

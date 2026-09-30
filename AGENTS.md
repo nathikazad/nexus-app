@@ -43,7 +43,7 @@
 
 - Hypnosis, Cards, Docs and Books use NX Auth's selected domain. Identity alone
   is not data readiness: wait for `User.domainId` / `domainReadyProvider`.
-- Send `X-Nexus-Domain-Id` on every data transport, including voice and GraphQL
+- Send `X-Domain-Id` on every data transport, including voice and GraphQL
   WebSocket connection payloads. Never infer a domain from a model type.
 - Storage identity is logical server + user + domain + app. Preserve pending
   edits in their original partition; never adopt an old unscoped queue by guess.

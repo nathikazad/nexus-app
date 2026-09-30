@@ -63,9 +63,9 @@ class SocketClient implements NecklaceSocketPort {
         entry.key.toLowerCase(): entry.value
     };
     final ambient = metadata['x-nexus-session-mode'] == 'ambient';
-    final domain = int.tryParse(metadata['x-nexus-domain-id'] ?? '');
+    final domain = int.tryParse(metadata['x-domain-id'] ?? '');
     if (ambient
-        ? metadata.containsKey('x-nexus-domain-id') ||
+        ? metadata.containsKey('x-domain-id') ||
             metadata['x-agent-id'] != 'personal_assistant' ||
             metadata['x-device-source'] != 'necklace'
         : domain == null || domain <= 0) {

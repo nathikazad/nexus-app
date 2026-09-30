@@ -183,7 +183,7 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
             ).then(
               (headers) => {
                 ...headers,
-                'x-nexus-domain-id': '${user.requiredDomainId}',
+                'x-domain-id': '${user.requiredDomainId}',
               },
             ),
       ),

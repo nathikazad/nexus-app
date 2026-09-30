@@ -40,7 +40,7 @@ class DocumentAiSessionConfig {
       );
 
   Map<String, String> get headers => <String, String>{
-        'X-Nexus-Domain-Id': '$domainId',
+        'X-Domain-Id': '$domainId',
         'X-Client-App': clientApp,
         'X-Agent-Id': agentId,
         'X-Document-Id': documentId.toString(),

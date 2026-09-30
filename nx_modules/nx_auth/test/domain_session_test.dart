@@ -96,7 +96,7 @@ void main() {
         domainId: 2,
         authHeaders: (_) async => {'authorization': 'Bearer test'},
         inner: MockClient((request) async {
-          expect(request.headers['x-nexus-domain-id'], '2');
+          expect(request.headers['x-domain-id'], '2');
           return http.Response('', ++requests == 1 ? 401 : 200);
         }),
       );
@@ -104,7 +104,7 @@ void main() {
       expect(
         (await client.get(
           Uri.parse('https://example.invalid/data'),
-          headers: {'x-nexus-domain-id': '1'},
+          headers: {'x-domain-id': '1'},
         )).statusCode,
         200,
       );

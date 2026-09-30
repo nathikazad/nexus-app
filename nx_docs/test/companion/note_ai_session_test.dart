@@ -93,7 +93,7 @@ void main() {
     );
 
     expect(socket.headers, <String, String>{
-      'X-Nexus-Domain-Id': '1',
+      'X-Domain-Id': '1',
       'X-Client-App': 'nx_notes',
       'X-Agent-Id': 'nx_notes',
       'X-Document-Id': '4209',

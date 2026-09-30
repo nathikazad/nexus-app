@@ -34,7 +34,7 @@ void main() {
   Future<void> connect() async {
     expect(
         await client.connect('ws://127.0.0.1:${server.port}',
-            headers: {'X-Nexus-Domain-Id': '7'}),
+            headers: {'X-Domain-Id': '7'}),
         isTrue);
     await peer.future;
   }
@@ -67,7 +67,7 @@ void main() {
       () async {
     final auth = Completer<Map<String, String>>();
     final connecting = client.connect('ws://127.0.0.1:${server.port}',
-        headers: {'X-Nexus-Domain-Id': '7'}, authHeaders: (_) => auth.future);
+        headers: {'X-Domain-Id': '7'}, authHeaders: (_) => auth.future);
     await Future<void>.delayed(Duration.zero);
     final source = Uint8List.fromList([7, 8]);
     client.sendPacket(source, index: 1);

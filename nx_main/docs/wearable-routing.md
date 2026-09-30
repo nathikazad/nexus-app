@@ -43,7 +43,7 @@ not another runtime. `main.dart` uses the dedicated entrypoint file.
   `X-Device-Source=necklace`.
 - Watch: `X-Client-App=nx_watch`, `X-Agent-Id=personal_assistant`,
   `X-Device-Source=nx_watch`.
-- All three carry `X-Nexus-Domain-Id`. No fallback domain exists.
+- All three carry `X-Domain-Id`. No fallback domain exists.
 - Session switches retire old sockets/queues; async completions are guarded by
   generation. Device results from retired sessions must not reach a new session.
 - Necklace uplink preserves the original NRF bytes, including meta/EOF, inside

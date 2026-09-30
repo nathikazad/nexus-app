@@ -27,7 +27,7 @@ void main() {
       'X-Agent-Id': 'personal_assistant',
       'X-Device-Source': 'necklace'
     });
-    expect(AgentRoutes.app.headers(7)['X-Nexus-Domain-Id'], '7');
+    expect(AgentRoutes.app.headers(7)['X-Domain-Id'], '7');
     expect(() => AgentRoutes.app.ambientHeaders(), throwsStateError);
   });
 }

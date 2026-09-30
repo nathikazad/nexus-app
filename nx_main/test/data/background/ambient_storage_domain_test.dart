@@ -7,7 +7,7 @@ import 'package:nexus_voice_assistant/data/background/ambient_storage_domain.dar
 void main() {
   test('storage resolves personal even when shared domain is first', () async {
     final client = MockClient((request) async {
-      expect(request.headers.containsKey('x-nexus-domain-id'), isFalse);
+      expect(request.headers.containsKey('x-domain-id'), isFalse);
       return http.Response(
           jsonEncode({
             'domains': [
