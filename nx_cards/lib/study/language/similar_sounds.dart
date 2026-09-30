@@ -48,7 +48,7 @@ List<SimilarSoundGroup> manualSimilarSoundGroups(
   });
 }
 
-/// Select complete manual groups, with all selected directions inside each group.
+/// Select complete rounds, each with one front type and its own average score.
 /// Retention orders groups but never filters membership or truncates a group.
 List<SimilarRecallGroup> manualRecallSession(
   Iterable<StudyCard> cards, {
@@ -89,11 +89,25 @@ List<SimilarRecallGroup> manualRecallSession(
         (sum, p) => sum + recallScore(p.card, p.cue).fraction,
       ) /
       g.prompts.length;
+  sessions.shuffle(random);
+  final tieOrder = {for (var i = 0; i < sessions.length; i++) sessions[i]: i};
   sessions.sort((a, b) {
     final order = score(a).compareTo(score(b));
-    return order == 0 ? a.label.compareTo(b.label) : order;
+    return order == 0 ? tieOrder[a]!.compareTo(tieOrder[b]!) : order;
   });
-  return sessions.take(groupLimit).toList()..shuffle(random);
+  final selected = sessions.take(groupLimit).toList()..shuffle(random);
+  for (var i = 1; i < selected.length; i++) {
+    if (selected[i].label != selected[i - 1].label) continue;
+    final next = selected.indexWhere(
+      (g) => g.label != selected[i - 1].label,
+      i + 1,
+    );
+    if (next < 0) continue;
+    final swap = selected[i];
+    selected[i] = selected[next];
+    selected[next] = swap;
+  }
+  return selected;
 }
 
 enum SimilarGroupKind { sound, written, other }

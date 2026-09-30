@@ -51,6 +51,8 @@ class RecallRecapPage extends ConsumerStatefulWidget {
     required this.missCount,
     required this.entries,
     this.onRepeatIncorrect,
+    this.wordRecap,
+    this.wordRecapTitle = 'WORDS',
   });
 
   final StudyScope? studyScope;
@@ -59,6 +61,8 @@ class RecallRecapPage extends ConsumerStatefulWidget {
   final int missCount;
   final List<RecallRecapEntry> entries;
   final VoidCallback? onRepeatIncorrect;
+  final Widget? wordRecap;
+  final String wordRecapTitle;
 
   @override
   ConsumerState<RecallRecapPage> createState() => _RecallRecapPageState();
@@ -160,9 +164,9 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  Text('WORDS', style: monoLabel),
+                  Text(widget.wordRecapTitle, style: monoLabel),
                   const SizedBox(height: 9),
-                  _RecallWordRecap(entries: widget.entries),
+                  widget.wordRecap ?? _RecallWordRecap(entries: widget.entries),
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: () => Navigator.pop(context, true),

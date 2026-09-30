@@ -73,30 +73,62 @@ void main() {
     );
   });
 
-  test('equal retention preserves order regardless of FSRS urgency', () {
-    final urgent = past(1, 10, days: 100);
-    final recent = past(2, 8, days: 1);
-    final prompts = [recent, urgent];
-    prioritizeRecallPrompts(prompts, now, historyWindow: 10);
-    expect(prompts.first.cardId, 2);
-  });
+  test(
+    'equal scores use a shuffled tie order, independent of ID and urgency',
+    () {
+      final prompts = [
+        for (var id = 1; id <= 30; id++) past(id, 10, stability: id.toDouble()),
+      ];
+      final expected = List<StudyPrompt>.of(prompts)..shuffle(Random(17));
+      prioritizeRecallPrompts(
+        prompts,
+        now,
+        historyWindow: 10,
+        random: Random(17),
+      );
+      expect(prompts, orderedEquals(expected));
+      expect(
+        prompts.take(7).map((p) => p.cardId).toList(),
+        isNot([1, 2, 3, 4, 5, 6, 7]),
+      );
+    },
+  );
 
-  test('equal retention does not reorder by forgetting risk', () {
-    final prompts = [
-      for (var id = 100; id >= 1; id--) past(id, 10, stability: id.toDouble()),
-    ];
-    prioritizeRecallPrompts(prompts, now, historyWindow: 10);
-    expect(
-      prompts.take(10).map((p) => p.cardId),
-      List.generate(10, (i) => 100 - i),
-    );
-  });
-
-  test('equal scores preserve caller order', () {
-    final prompts = [past(3, 8), past(1, 8), past(2, 8)];
-    prioritizeRecallPrompts(prompts, now, historyWindow: 10);
-    expect(prompts.map((p) => p.cardId), [3, 1, 2]);
-  });
+  test(
+    'tied front types are sampled across the pool before the round limit',
+    () {
+      final original = [
+        for (var id = 1; id <= 30; id++)
+          for (final cue in StudyCue.activeDirections)
+            StudyPrompt(card: sample(id, 0), cue: cue),
+      ];
+      final selections = <String>{};
+      for (var seed = 0; seed < 10; seed++) {
+        final prompts = List<StudyPrompt>.of(original);
+        prioritizeRecallPrompts(
+          prompts,
+          now,
+          historyWindow: 10,
+          random: Random(seed),
+        );
+        final chosen = shuffledRecallSelection(
+          prompts,
+          7,
+          random: Random(seed),
+        );
+        expect(chosen, hasLength(7));
+        expect(
+          chosen.map((p) => '${p.cardId}:${p.cue.name}').toSet(),
+          hasLength(7),
+        );
+        selections.add(
+          chosen.map((p) => '${p.cardId}:${p.cue.name}').join(','),
+        );
+        expect(chosen.any((p) => p.cardId > 3), isTrue);
+      }
+      expect(selections, hasLength(10));
+    },
+  );
 
   test('weakest cards precede stronger due cards', () {
     final prompts = [
@@ -111,7 +143,7 @@ void main() {
     ];
     prioritizeRecallPrompts(prompts, DateTime.now(), historyWindow: 10);
     expect(prompts.length, 17);
-    expect(prompts.take(4).map((p) => p.cardId).toSet(), {1, 2, 3, 4});
+    expect(prompts.take(6).map((p) => p.cardId).toSet(), {1, 2, 3, 4, 5, 6});
     expect(prompts.take(10).length, 10);
     expect(
       prompts

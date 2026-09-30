@@ -52,12 +52,14 @@ double pastRecallPriority(
   return 100 * forgetting * (2 - accuracy);
 }
 
-/// Weakest card-direction scores first, preserving order for ties.
+/// Weakest card-direction scores first, with randomized selection among ties.
 void prioritizeRecallPrompts(
   List<StudyPrompt> prompts,
   DateTime now, {
   required int historyWindow,
+  Random? random,
 }) {
+  prompts.shuffle(random ?? Random.secure());
   final order = {for (var i = 0; i < prompts.length; i++) prompts[i]: i};
   prompts.sort((a, b) {
     final score = recallScore(

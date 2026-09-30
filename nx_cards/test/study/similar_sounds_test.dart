@@ -47,6 +47,42 @@ StudyCard soundCard(
   },
 );
 void main() {
+  test(
+    'tied group rounds are sampled before the limit with independent front scores',
+    () {
+      final cards = [
+        for (var i = 1; i <= 20; i++)
+          soundCard(i, 'word', groups: ['group-$i-write']),
+      ];
+      final selections = <String>{};
+      for (var seed = 0; seed < 8; seed++) {
+        final rounds = manualRecallSession(
+          cards,
+          sound: false,
+          directions: {StudyCue.fromLanguage, StudyCue.toLanguage},
+          groupLimit: 3,
+          random: Random(seed),
+        );
+        expect(rounds, hasLength(3));
+        selections.add(
+          rounds
+              .map((g) => '${g.label}:${g.prompts.single.cue.name}')
+              .join(','),
+        );
+      }
+      expect(selections, hasLength(8));
+      final one = soundCard(100, 'a', englishScore: 5, groups: ['one-write']);
+      final weakest = manualRecallSession(
+        [one],
+        sound: false,
+        directions: {StudyCue.fromLanguage, StudyCue.toLanguage},
+        groupLimit: 1,
+        random: Random(1),
+      );
+      expect(weakest.single.prompts.single.cue, StudyCue.toLanguage);
+    },
+  );
+
   test('Written averages both text fronts for words, groups and sorting', () {
     final english = soundCard(1, 'a', englishScore: 5);
     final chinese = soundCard(2, 'b', englishScore: 3);

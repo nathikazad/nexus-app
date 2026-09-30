@@ -135,10 +135,12 @@ class SimilarSoundGrid extends StatelessWidget {
     required this.cards,
     this.testedIds,
     this.retentionKind,
+    this.ratings,
   });
   final List<StudyCard> cards;
   final Set<int>? testedIds;
   final SimilarGroupKind? retentionKind;
+  final Map<int, CardRating?>? ratings;
 
   @override
   Widget build(BuildContext context) => AdaptiveCardGrid(
@@ -150,6 +152,13 @@ class SimilarSoundGrid extends StatelessWidget {
         SimilarSoundWord(
           key: ValueKey('similar-word-${card.id}'),
           card: card,
+          resultLabel: ratings == null
+              ? null
+              : switch (ratings![card.id]) {
+                  CardRating.again => 'Not recalled',
+                  null => 'Not tried',
+                  _ => 'Recalled',
+                },
           retention: retentionKind == null
               ? null
               : similarWordRetention(card, retentionKind!),
@@ -165,10 +174,12 @@ class SimilarSoundWord extends ConsumerWidget {
     required this.card,
     this.notAsked = false,
     this.retention,
+    this.resultLabel,
   });
   final StudyCard card;
   final bool notAsked;
   final double? retention;
+  final String? resultLabel;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final content = card.content as LanguageCardContent;
@@ -224,6 +235,10 @@ class SimilarSoundWord extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(content.english),
+              if (resultLabel != null) ...[
+                const SizedBox(height: 8),
+                Text(resultLabel!),
+              ],
               if (notAsked) ...[
                 const SizedBox(height: 12),
                 Text(

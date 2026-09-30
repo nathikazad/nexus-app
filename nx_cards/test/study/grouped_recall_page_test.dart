@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/session/recall_recap_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,19 +93,18 @@ void main() {
           library.saved[1].reviewHistoryFor(StudyCue.fromAudio).single.rating,
           1,
         );
-        expect(find.text('Compare words'), findsOneWidget);
+        expect(find.text('Compare words'), findsNothing);
+        expect(find.text('Session complete'), findsOneWidget);
         expect(find.byKey(const ValueKey('group-recalled')), findsNothing);
-        expect(find.text('Not asked'), findsOneWidget);
-        await tester.tap(find.text('Retry group'));
-        await tester.pumpAndSettle();
-        await answerWord(tester);
-        await answerWord(tester);
+        expect(find.text('GROUPS'), findsOneWidget);
+        expect(find.text('Retry group'), findsNothing);
         expect(library.saved, hasLength(2));
-        await tester.tap(find.text('Finish'));
-        await tester.pumpAndSettle();
-        expect(find.text('1 recalled'), findsOneWidget);
-        expect(find.text('1 not recalled'), findsOneWidget);
-        expect(find.text('1 not tried'), findsNothing);
+        final recap = tester.widget<RecallRecapPage>(
+          find.byType(RecallRecapPage),
+        );
+        expect(recap.reviewedCount, 2);
+        expect(recap.missCount, 1);
+        expect(recap.totalCount, 2);
       },
     );
   }
@@ -127,8 +127,8 @@ void main() {
       await tester.tap(find.text('Retry saving'));
       await tester.pumpAndSettle();
       expect(library.saved, hasLength(1));
-      await tester.tap(find.text('Next group'));
-      await tester.pumpAndSettle();
+      expect(find.text('Next group'), findsNothing);
+      expect(find.text('Session complete'), findsNothing);
       await answerWord(tester, correct: false);
       expect(library.saved, hasLength(2));
       expect(
@@ -163,9 +163,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('End'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Finish'));
-    await tester.pumpAndSettle();
     expect(library.saved, hasLength(1));
-    expect(find.text('1 not tried'), findsOneWidget);
+    final recap = tester.widget<RecallRecapPage>(find.byType(RecallRecapPage));
+    expect(recap.totalCount - recap.reviewedCount, 1);
   });
 }
