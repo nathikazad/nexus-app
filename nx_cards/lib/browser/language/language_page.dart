@@ -131,7 +131,8 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                       ],
                     ),
                   ],
-                  if (isChineseLanguage(language)) ...[
+                  if (language != null &&
+                      manualSimilarSoundGroups(sourceCards).isNotEmpty) ...[
                     const SizedBox(height: 28),
                     Text(
                       'Explore',

@@ -5,6 +5,25 @@ import 'package:nx_cards/study/language/group_grade_batch.dart';
 import 'similar_sounds_test.dart' show soundCard;
 
 void main() {
+  test('both written directions accumulate history on the same word', () async {
+    final card = soundCard(1, 'zi', audioScore: 2);
+    final latest = {1: card};
+    final batch = GroupGradeBatch(
+      prompts: [
+        for (final cue in [StudyCue.fromLanguage, StudyCue.toLanguage])
+          StudyPrompt(card: card, cue: cue),
+      ],
+      latest: latest,
+      scheduler: FsrsCardScheduler(),
+      now: DateTime.utc(2026, 9, 29),
+      rating: CardRating.good,
+    );
+    await batch.save((card) async {}, latest);
+    expect(latest[1]!.reviewHistoryFor(StudyCue.fromLanguage), hasLength(1));
+    expect(latest[1]!.reviewHistoryFor(StudyCue.toLanguage), hasLength(1));
+    expect(latest[1]!.reviewHistoryFor(StudyCue.fromAudio), hasLength(2));
+  });
+
   test(
     'one grade updates all tested words, only this direction, and keeps earlier group history',
     () async {

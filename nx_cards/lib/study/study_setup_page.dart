@@ -8,7 +8,6 @@ import 'package:nx_cards/study/recall_priority.dart';
 import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:nx_cards/account/account_session.dart';
 import 'package:nx_cards/scheduling/scheduling.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
@@ -42,7 +41,9 @@ enum StudySourceKind { language, book }
 
 enum StudyPresentation { sheet, draw }
 
-enum RecallPresentation { standard, write, fast }
+enum RecallPresentation { standard, write, fast, similar }
+
+enum SimilarGroupType { written, sound }
 
 enum RecallCardState { learning, relearning, retained, newCard }
 
@@ -84,7 +85,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   bool get _allowsWriting => _supportsDrawing;
   Set<StudyCue>? _regularDirections;
   RecallPresentation get _effectiveRecallPresentation =>
-      !_allowsWriting && _recallPresentation == RecallPresentation.write
+      ((!_allowsWriting && _recallPresentation == RecallPresentation.write) ||
+          (!_allowsSimilar &&
+              _recallPresentation == RecallPresentation.similar))
       ? RecallPresentation.standard
       : _recallPresentation;
   StudyCue? get _cue => _directions.firstOrNull;
@@ -103,27 +106,34 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   StudyOrder _order = StudyOrder.normal;
   int _count = 10;
   bool _starting = false;
-  bool _groupSimilarSounds = false;
-  List<StudyCard>? _similarGroupSource;
-  List<SimilarSoundGroup> _similarGroupCache = [];
-  List<SimilarSoundGroup> get _matchingSimilarGroups {
-    final cards = _recallBaseCandidates.map((p) => p.card).toList();
-    if (!listEquals(cards, _similarGroupSource)) {
-      _similarGroupSource = cards;
-      _similarGroupCache = manualSimilarSoundGroups(cards);
-    }
-    final suffix = _directions.single == StudyCue.fromAudio
-        ? '-sound'
-        : '-write';
-    return _similarGroupCache.where((g) => g.label.endsWith(suffix)).toList();
-  }
-
-  bool get _allowsSimilarSounds =>
+  SimilarGroupType _similarType = SimilarGroupType.written;
+  Set<StudyCue> _writtenDirections = {StudyCue.fromLanguage};
+  int _groupCount = 5;
+  List<SimilarRecallGroup> _similarSessions(
+    Iterable<StudyCard> cards, {
+    bool? sound,
+    int? limit,
+  }) => manualRecallSession(
+    cards,
+    sound: sound ?? _effectiveSimilarType == SimilarGroupType.sound,
+    directions: _writtenDirections,
+    groupLimit: limit ?? 1000000,
+  );
+  Set<SimilarGroupType> get _similarTypes => {
+    if (_similarSessions(_studyCards, sound: false).isNotEmpty)
+      SimilarGroupType.written,
+    if (_similarSessions(_studyCards, sound: true).isNotEmpty)
+      SimilarGroupType.sound,
+  };
+  SimilarGroupType get _effectiveSimilarType =>
+      _similarTypes.contains(_similarType)
+      ? _similarType
+      : (_similarTypes.firstOrNull ?? SimilarGroupType.written);
+  bool get _allowsSimilar => _similarTypes.isNotEmpty;
+  bool get _usesSimilar =>
       _mode == StudyMode.recall &&
-      !_isBookStudy &&
-      isChineseLanguage(widget.studyScope?.language ?? widget.toLanguage) &&
-      _directions.length == 1;
-  bool get _usesSimilarSounds => _allowsSimilarSounds && _groupSimilarSounds;
+      _effectiveRecallPresentation == RecallPresentation.similar;
+  int get _displayCount => _usesSimilar ? _groupCount : _count;
   int _preferenceRevision = 0;
 
   String get _storedPreferenceKey =>
@@ -190,7 +200,18 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         _retainedMinPercentage = (saved['retainedMinPercentage'] as int? ?? 0)
             .clamp(0, _retainedMaxPercentage);
         _weakOnly = saved['weakOnly'] == true;
-        _groupSimilarSounds = saved['groupSimilarSounds'] == true;
+        _similarType =
+            _enumByName(SimilarGroupType.values, saved['similarType']) ??
+            SimilarGroupType.written;
+        final savedDirections = saved['writtenDirections'];
+        if (savedDirections is List) {
+          final selected = {
+            for (final cue in [StudyCue.fromLanguage, StudyCue.toLanguage])
+              if (savedDirections.contains(cue.name)) cue,
+          };
+          if (selected.isNotEmpty) _writtenDirections = selected;
+        }
+        _groupCount = max(1, saved['groupCount'] as int? ?? 5);
         final savedCount = saved['count'];
         _count = savedCount is int ? max(1, savedCount) : 10;
         _normalizeAiDirections();
@@ -219,7 +240,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'retainedMaxPercentage': _retainedMaxPercentage,
         'retainedMinPercentage': _retainedMinPercentage,
         'weakOnly': _weakOnly,
-        'groupSimilarSounds': _groupSimilarSounds,
+        'similarType': _similarType.name,
+        'writtenDirections': _writtenDirections.map((cue) => cue.name).toList(),
+        'groupCount': _groupCount,
         'order': _order.name,
         'count': _count,
       }),
@@ -269,11 +292,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   ];
   int get _availableCount => _mode == StudyMode.study
       ? _practiceCandidates.length
-      : _usesSimilarSounds
-      ? _matchingSimilarGroups.fold<int>(
-          0,
-          (sum, group) => sum + group.cards.length,
-        )
+      : _usesSimilar
+      ? _similarSessions(_studyCards).length
       : _candidates.length;
 
   bool get _usesRecallFilters =>
@@ -303,7 +323,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   void _clampCount() {
     final available = _availableCount;
-    if (available > 0) _count = _count.clamp(1, available);
+    if (available > 0) {
+      if (_usesSimilar) {
+        _groupCount = _groupCount.clamp(1, available);
+      } else {
+        _count = _count.clamp(1, available);
+      }
+    }
   }
 
   void _normalizeAiDirections() {
@@ -341,12 +367,21 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   }
 
   void _selectRecallPresentation(RecallPresentation presentation) {
-    setState(() => _recallPresentation = presentation);
+    setState(() {
+      _recallPresentation = presentation;
+      _clampCount();
+    });
     _rememberPreferences();
   }
 
   void _selectCount(double count) {
-    setState(() => _count = count.round());
+    setState(() {
+      if (_usesSimilar) {
+        _groupCount = count.round();
+      } else {
+        _count = count.round();
+      }
+    });
     _rememberPreferences();
   }
 
@@ -387,7 +422,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   }
 
   Future<void> _startGroupedRecall() async {
-    if (_starting || !_usesSimilarSounds) return;
+    if (_starting || !_usesSimilar) return;
     setState(() => _starting = true);
     final library = ref.read(cardLibraryProvider);
     try {
@@ -396,14 +431,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         return;
       }
       final ids = widget.studyCards.map((c) => c.id).toSet();
-      final candidates = retentionPrompts(
-        dashboard.cards.where((c) => ids.contains(c.id)).toList(),
-        _directions,
-        minimum: _retainedMinPercentage / 100,
-        maximum: _retainedMaxPercentage / 100,
-        weakOnly: _weakOnly,
+      final groups = _similarSessions(
+        dashboard.cards.where((c) => ids.contains(c.id)),
+        limit: _groupCount,
       );
-      final groups = similarSoundRecallGroups(candidates, limit: _count);
       if (groups.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -423,11 +454,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => GroupedRecallPage(
-            format: switch (_effectiveRecallPresentation) {
-              RecallPresentation.standard => GroupedRecallFormat.standard,
-              RecallPresentation.write => GroupedRecallFormat.write,
-              RecallPresentation.fast => GroupedRecallFormat.fast,
-            },
+            format: GroupedRecallFormat.standard,
             groups: [
               for (final group in groups)
                 SimilarRecallGroup(
@@ -1089,14 +1116,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                     ],
                   ] else if (_mode == StudyMode.recall) ...[
-                    if (!_isBookStudy) ...[
-                      _SetupCard(
-                        title: _selectionTitle,
-                        child: _directionChoices(),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
                     ...[
                       _SetupCard(
                         title: 'Recall format',
@@ -1133,6 +1152,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                     child: Text('Fast', maxLines: 1),
                                   ),
                                 ),
+                                if (_allowsSimilar)
+                                  const ButtonSegment(
+                                    value: RecallPresentation.similar,
+                                    label: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text('Similar', maxLines: 1),
+                                    ),
+                                  ),
                               ],
                               selected: {_effectiveRecallPresentation},
                               onSelectionChanged: (value) =>
@@ -1143,43 +1170,85 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    _SetupCard(
-                      title: 'Retention',
-                      child: _recallFilterChoices(),
-                    ),
-                    const SizedBox(height: 16),
-                    _SetupCard(
-                      title: 'How many recall items?',
-                      child: _countControl(maxCount),
-                    ),
-                    if (_allowsSimilarSounds) ...[
-                      const SizedBox(height: 16),
+                    if (_usesSimilar) ...[
                       _SetupCard(
-                        title: 'Similar words',
-                        child: SwitchListTile.adaptive(
-                          key: const ValueKey('group-similar-sounds'),
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            _directions.single == StudyCue.fromAudio
-                                ? 'Group by similar sounds'
-                                : 'Group by similar writing',
-                          ),
-                          value: _groupSimilarSounds,
-                          onChanged: (value) {
+                        title: 'Which groups?',
+                        child: SegmentedButton<SimilarGroupType>(
+                          showSelectedIcon: false,
+                          segments: [
+                            if (_similarTypes.contains(
+                              SimilarGroupType.written,
+                            ))
+                              const ButtonSegment(
+                                value: SimilarGroupType.written,
+                                label: Text('Written'),
+                              ),
+                            if (_similarTypes.contains(SimilarGroupType.sound))
+                              const ButtonSegment(
+                                value: SimilarGroupType.sound,
+                                label: Text('Sound'),
+                              ),
+                          ],
+                          selected: {_effectiveSimilarType},
+                          onSelectionChanged: (value) {
                             setState(() {
-                              _groupSimilarSounds = value;
+                              _similarType = value.single;
                               _clampCount();
                             });
                             _rememberPreferences();
                           },
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      if (_effectiveSimilarType ==
+                          SimilarGroupType.written) ...[
+                        _SetupCard(
+                          title: _selectionTitle,
+                          child: DirectionChoices(
+                            language: widget.toLanguage,
+                            selected: _writtenDirections,
+                            allowed: const [
+                              StudyCue.fromLanguage,
+                              StudyCue.toLanguage,
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _writtenDirections = value;
+                                _clampCount();
+                              });
+                              _rememberPreferences();
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      _SetupCard(
+                        title: 'How many recall groups?',
+                        child: _countControl(maxCount),
+                      ),
+                    ] else ...[
+                      if (!_isBookStudy) ...[
+                        _SetupCard(
+                          title: _selectionTitle,
+                          child: _directionChoices(),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      _SetupCard(
+                        title: 'Retention',
+                        child: _recallFilterChoices(),
+                      ),
+                      const SizedBox(height: 16),
+                      _SetupCard(
+                        title: 'How many recall items?',
+                        child: _countControl(maxCount),
+                      ),
                     ],
                     const SizedBox(height: 22),
                     FilledButton.icon(
                       onPressed: _cue == null || maxCount == 0 || _starting
                           ? null
-                          : _usesSimilarSounds
+                          : _usesSimilar
                           ? _startGroupedRecall
                           : _effectiveRecallPresentation ==
                                 RecallPresentation.fast
@@ -1294,7 +1363,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             Row(
               children: [
                 Text(
-                  '${_count.clamp(1, maxCount)}',
+                  '${_displayCount.clamp(1, maxCount)}',
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
@@ -1302,14 +1371,18 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 ),
                 const Spacer(),
                 Text(
-                  '$maxCount ${_usesRecallFilters ? 'recall items' : 'cards'} available',
+                  '$maxCount ${_usesSimilar
+                      ? 'recall groups'
+                      : _usesRecallFilters
+                      ? 'recall items'
+                      : 'cards'} available',
                   style: const TextStyle(color: RecallColors.muted),
                 ),
               ],
             ),
             Slider(
               key: const ValueKey('card-count'),
-              value: _count.clamp(1, maxCount).toDouble(),
+              value: _displayCount.clamp(1, maxCount).toDouble(),
               min: 1,
               max: maxCount.toDouble(),
               divisions: maxCount > 1 ? maxCount - 1 : null,

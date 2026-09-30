@@ -8,6 +8,29 @@ import 'package:nx_cards/browser/language/language_page.dart';
 import 'similar_sounds_test.dart' show soundCard;
 
 void main() {
+  testWidgets('a non-Chinese language exposes its assigned groups', (
+    tester,
+  ) async {
+    final cards = [
+      soundCard(1, 'word', language: 'Tamil', groups: ['letters-write']),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardsCollectionProvider.overrideWith(
+            (ref, source) => Stream.value(CardsDashboard(cards: cards)),
+          ),
+          cardAudioRepositoryProvider.overrideWithValue(null),
+        ],
+        child: const MaterialApp(home: LanguagePage(language: 'Tamil')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('explore-similar-sounds')));
+    await tester.pumpAndSettle();
+    expect(find.text('letters-write'), findsOneWidget);
+  });
+
   testWidgets(
     'Chinese Explore opens grouped Current words; absent for other languages',
     (tester) async {
