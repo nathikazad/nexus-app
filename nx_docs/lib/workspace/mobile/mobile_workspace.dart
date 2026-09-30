@@ -1,3 +1,4 @@
+import 'package:nx_docs/documents/browser/document_browser_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -510,6 +511,8 @@ class _MobileEditor extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final documentId = state.activeDocumentId!;
+    final browserOpen =
+        ref.watch(documentBrowserSessionProvider(documentId)) != null;
     final document = ref.watch(offlineDocumentProvider(documentId)).value;
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -521,11 +524,18 @@ class _MobileEditor extends ConsumerWidget {
             onPressed: () => ref.read(mobileWorkspaceProvider.notifier).back(),
             icon: Icon(Icons.arrow_back, size: 20, color: AppColors.muted),
           ),
-          trailing: IconButton(
-            tooltip: 'Document details',
-            onPressed: () => showDocumentInspectorSheet(context, documentId),
-            icon: Icon(Icons.more_horiz, size: 22, color: AppColors.muted),
-          ),
+          trailing: browserOpen
+              ? const SizedBox.shrink()
+              : IconButton(
+                  tooltip: 'Document details',
+                  onPressed: () =>
+                      showDocumentInspectorSheet(context, documentId),
+                  icon: Icon(
+                    Icons.more_horiz,
+                    size: 22,
+                    color: AppColors.muted,
+                  ),
+                ),
         ),
       ),
       body: DocumentEditorView(

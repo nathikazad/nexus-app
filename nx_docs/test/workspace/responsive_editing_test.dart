@@ -1,3 +1,7 @@
+import 'package:nx_db/auth.dart';
+import 'package:nx_docs/documents/browser/document_browser_session.dart';
+import 'package:nx_docs/documents/browser/document_browser.dart';
+import 'package:nx_docs/documents/editor/document_editor_view.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_editor/src/editor/editor_component/service/ime/delta_input_on_insert_impl.dart'
     as ime;
@@ -20,6 +24,67 @@ import 'package:nx_docs/workspace/workspace_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  for (final width in [1100.0, 1440.0]) {
+    testWidgets('browser hides inspector at width $width', (tester) async {
+      await _pumpWorkspace(tester, width);
+      if (width < 1280) {
+        await tester.tap(find.byTooltip('Expand inspector'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('Contents'), findsOneWidget);
+      final host = find.byType(DocumentEditorView);
+      final documentId = tester.widget<DocumentEditorView>(host).documentId;
+      final container = ProviderScope.containerOf(tester.element(host));
+      final browser = container.read(
+        documentBrowserSessionProvider(documentId).notifier,
+      );
+      final before = tester.getSize(host).width;
+      browser.open(Uri.parse('https://example.org/article'));
+      await tester.pumpAndSettle();
+      expect(find.text('Contents'), findsNothing);
+      expect(find.byTooltip('Expand inspector'), findsNothing);
+      expect(tester.getSize(host).width, greaterThan(before));
+      browser.close();
+      await tester.pumpAndSettle();
+      expect(find.text('Contents'), findsOneWidget);
+      expect(tester.getSize(host).width, before);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    });
+  }
+
+  testWidgets('compact inspector overlays without resizing the document', (
+    tester,
+  ) async {
+    await _pumpWorkspace(tester, 1100);
+    expect(find.byTooltip('Expand inspector'), findsOneWidget);
+    expect(find.text('Contents'), findsNothing);
+    final editor = find.byType(AppFlowyEditor);
+    final before = tester.getRect(editor);
+    await tester.tap(find.byTooltip('Expand inspector'));
+    await tester.pumpAndSettle();
+    expect(find.text('Contents'), findsOneWidget);
+    expect(tester.getRect(editor), before);
+    await tester.tap(find.byTooltip('Collapse inspector'));
+    await tester.pumpAndSettle();
+    expect(find.text('Contents'), findsNothing);
+    expect(tester.getRect(editor), before);
+    tester.view.physicalSize = const Size(1440, 1000);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Collapse inspector'), findsOneWidget);
+    final dockedWidth = tester.getSize(editor).width;
+    await tester.tap(find.byTooltip('Collapse inspector'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(editor).width, greaterThan(dockedWidth));
+    tester.view.physicalSize = const Size(1100, 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('Contents'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('wide layout has no Books tab and creates documents directly', (
     tester,
   ) async {
@@ -460,6 +525,12 @@ Future<FakeDocumentRepository> _pumpWorkspace(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        userIdProvider.overrideWithValue(null),
+        sockWsUrlProvider.overrideWithValue(null),
+        imageBaseUrlProvider.overrideWithValue(null),
+        documentBrowserBuilderProvider.overrideWithValue(
+          (_) => const SizedBox.expand(),
+        ),
         documentRepositoryProvider.overrideWithValue(repo),
         documentWorkspaceProvider.overrideWithValue(workspace),
         documentImageAssetServiceProvider.overrideWithValue(null),

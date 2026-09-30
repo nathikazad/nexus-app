@@ -1,3 +1,4 @@
+import 'package:nx_docs/documents/browser/document_browser_session.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -33,12 +34,37 @@ const double _collapsedSidebarWidth = 44;
 const double _inspectorWidth = 288;
 const double _collapsedInspectorWidth = 44;
 
-class DesktopWorkspace extends ConsumerWidget {
+class DesktopWorkspace extends ConsumerStatefulWidget {
   const DesktopWorkspace({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DesktopWorkspace> createState() => _DesktopWorkspaceState();
+}
+
+class _DesktopWorkspaceState extends ConsumerState<DesktopWorkspace> {
+  bool _overlayInspectorOpen = false;
+  bool? _wasCompact;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final compact =
+        MediaQuery.sizeOf(context).width < kDockedInspectorBreakpoint;
+    if (_wasCompact != compact) _overlayInspectorOpen = false;
+    _wasCompact = compact;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final compact =
+        MediaQuery.sizeOf(context).width < kDockedInspectorBreakpoint;
     final workspace = ref.watch(desktopWorkspaceProvider);
+    final browserOpen =
+        workspace.activeDocumentId != null &&
+        ref.watch(
+              documentBrowserSessionProvider(workspace.activeDocumentId!),
+            ) !=
+            null;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -57,7 +83,17 @@ class DesktopWorkspace extends ConsumerWidget {
                     child: _DesktopSidebar(),
                   ),
                 Expanded(child: _DesktopEditorWorkspace(workspace: workspace)),
-                if (workspace.inspectorCollapsed)
+                if (browserOpen)
+                  const SizedBox.shrink()
+                else if (compact)
+                  SizedBox(
+                    width: _collapsedInspectorWidth,
+                    child: _CollapsedInspector(
+                      onExpand: () =>
+                          setState(() => _overlayInspectorOpen = true),
+                    ),
+                  )
+                else if (workspace.inspectorCollapsed)
                   const SizedBox(
                     width: _collapsedInspectorWidth,
                     child: _CollapsedInspector(),
@@ -71,6 +107,21 @@ class DesktopWorkspace extends ConsumerWidget {
                   ),
               ],
             ),
+            if (!browserOpen && compact && _overlayInspectorOpen)
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: _inspectorWidth,
+                child: Material(
+                  elevation: 12,
+                  child: _DesktopInspector(
+                    documentId: workspace.activeDocumentId,
+                    onCollapse: () =>
+                        setState(() => _overlayInspectorOpen = false),
+                  ),
+                ),
+              ),
             if (workspace.hasOverlay)
               _DesktopResultOverlay(workspace: workspace),
           ],

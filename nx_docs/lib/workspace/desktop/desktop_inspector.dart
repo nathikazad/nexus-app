@@ -3,10 +3,15 @@ part of 'desktop_workspace.dart';
 enum _InspectorTab { contents, details }
 
 class _DesktopInspector extends ConsumerStatefulWidget {
-  const _DesktopInspector({required this.documentId, this.onClose});
+  const _DesktopInspector({
+    required this.documentId,
+    this.onClose,
+    this.onCollapse,
+  });
 
   final int? documentId;
   final VoidCallback? onClose;
+  final VoidCallback? onCollapse;
 
   @override
   ConsumerState<_DesktopInspector> createState() => _DesktopInspectorState();
@@ -75,6 +80,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                   ),
                   onPressed:
                       widget.onClose ??
+                      widget.onCollapse ??
                       () => ref
                           .read(desktopWorkspaceProvider.notifier)
                           .toggleInspector(),

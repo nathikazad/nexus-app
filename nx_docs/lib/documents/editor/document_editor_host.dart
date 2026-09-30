@@ -35,18 +35,21 @@ class DocumentEditorView extends ConsumerStatefulWidget {
 }
 
 class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
-  Uri? _browserUrl;
   BrowserArticle? _article;
   Future<BrowserArticle> Function()? _readArticle;
 
   void _openBrowser(Uri url) => setState(() {
-    _browserUrl = url;
+    ref
+        .read(documentBrowserSessionProvider(widget.documentId).notifier)
+        .open(url);
     _article = null;
     _readArticle = null;
   });
 
   void _closeBrowser() => setState(() {
-    _browserUrl = null;
+    ref
+        .read(documentBrowserSessionProvider(widget.documentId).notifier)
+        .close();
     _article = null;
     _readArticle = null;
   });
@@ -55,7 +58,6 @@ class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
   void didUpdateWidget(covariant DocumentEditorView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.documentId != widget.documentId) {
-      _browserUrl = null;
       _article = null;
       _readArticle = null;
     }
@@ -63,6 +65,9 @@ class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
 
   @override
   Widget build(BuildContext context) {
+    final browserUrl = ref.watch(
+      documentBrowserSessionProvider(widget.documentId),
+    );
     if (kDebugMode) {
       debugPrint(
         '[nx_docs editor lifecycle] view-build document=${widget.documentId}',
@@ -109,11 +114,11 @@ class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
                 interactionMode: widget.interactionMode,
               ),
             ),
-            if (_browserUrl != null)
+            if (browserUrl != null)
               Positioned.fill(
                 child: ref.watch(documentBrowserBuilderProvider)(
                   DocumentBrowser(
-                    initialUrl: _browserUrl!,
+                    initialUrl: browserUrl!,
                     sourceTitle: document.title,
                     onReaderReady: (read) => _readArticle = read,
                     onClose: _closeBrowser,
@@ -137,7 +142,7 @@ class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
                   child: NoteCompanion(
                     key: ValueKey('document-companion-${document.id}'),
                     document: document,
-                    browserOpen: _browserUrl != null,
+                    browserOpen: browserUrl != null,
                     article: _article,
                     readArticle: () async {
                       final read = _readArticle;

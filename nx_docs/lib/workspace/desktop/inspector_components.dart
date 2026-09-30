@@ -1,7 +1,9 @@
 part of 'desktop_workspace.dart';
 
 class _CollapsedInspector extends ConsumerWidget {
-  const _CollapsedInspector();
+  const _CollapsedInspector({this.onExpand});
+
+  final VoidCallback? onExpand;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,8 +22,11 @@ class _CollapsedInspector extends ConsumerWidget {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-              onPressed: () =>
-                  ref.read(desktopWorkspaceProvider.notifier).toggleInspector(),
+              onPressed:
+                  onExpand ??
+                  () => ref
+                      .read(desktopWorkspaceProvider.notifier)
+                      .toggleInspector(),
               icon: Icon(Icons.chevron_left, size: 18, color: AppColors.faint),
             ),
             const SizedBox(height: 8),
