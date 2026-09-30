@@ -46,6 +46,19 @@ StudyCard soundCard(
 );
 void main() {
   test(
+    'browsing retains categories that share a group without repeating it in recall',
+    () {
+      final cards = [soundCard(1, 'yī'), soundCard(2, 'yě')];
+      final browse = similarSoundGroups(cards, includeEveryCategory: true);
+      expect(
+        browse.map((g) => g.kind),
+        containsAll([SimilarSoundKind.nearby, SimilarSoundKind.beginning]),
+      );
+      expect(similarSoundGroups(cards), hasLength(1));
+    },
+  );
+
+  test(
     'parses tone marks, numeric tones, joined words and ü without conflating u',
     () {
       expect(parsePinyin('xuéshēng').map((s) => s.key), ['xue2', 'sheng1']);

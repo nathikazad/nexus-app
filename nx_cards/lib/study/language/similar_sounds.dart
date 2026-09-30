@@ -214,7 +214,10 @@ class SimilarSoundGroup {
 
 /// Different contrasts are separate groups. The same word intentionally appears
 /// in more than one group; group membership is derived, never stored in the DB.
-List<SimilarSoundGroup> similarSoundGroups(Iterable<StudyCard> cards) {
+List<SimilarSoundGroup> similarSoundGroups(
+  Iterable<StudyCard> cards, {
+  bool includeEveryCategory = false,
+}) {
   final indexed = <int, (StudyCard, List<PinyinSyllable>)>{};
   for (final card in cards) {
     if (!isChineseLanguage(card.language) ||
@@ -239,8 +242,10 @@ List<SimilarSoundGroup> similarSoundGroups(Iterable<StudyCard> cards) {
       return order != 0 ? order : a.id.compareTo(b.id);
     });
     final ids = members.map((c) => c.id).toList()..sort();
-    // Do not ask an identical set twice merely because two rules found it.
-    if (!seen.add(ids.join(','))) return;
+    // Browsing tabs show every matching category. Recall still avoids asking
+    // an identical set twice merely because two rules found it.
+    final category = includeEveryCategory ? kind.name : '';
+    if (!seen.add('$category:${ids.join(',')}')) return;
     result.add(
       SimilarSoundGroup(members, kind: kind, label: bases.join(' · ')),
     );
