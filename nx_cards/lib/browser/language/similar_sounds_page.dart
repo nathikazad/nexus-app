@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/card_list/scroll_position_indicator.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,53 +17,96 @@ class SimilarSoundsPage extends ConsumerWidget {
     final data = ref.watch(
       cardsCollectionProvider((language: language, bookId: null)),
     );
-    return Scaffold(
-      appBar: AppBar(title: const Text('Similar sounding words')),
-      body: data.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => BrowserLoadError(
-          error: e,
-          onRetry: () => ref.read(cardsInvalidationProvider)(),
+    return DefaultTabController(
+      length: SimilarSoundKind.values.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Similar sounding words'),
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              for (final kind in SimilarSoundKind.values) Tab(text: kind.label),
+            ],
+          ),
         ),
-        data: (dashboard) {
-          final groups = similarSoundGroups(dashboard.cards);
-          if (groups.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'No similar sounds among your Current Chinese words yet.',
-                ),
-              ),
+        body: data.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => BrowserLoadError(
+            error: e,
+            onRetry: () => ref.read(cardsInvalidationProvider)(),
+          ),
+          data: (dashboard) {
+            final groups =
+                similarSoundGroups(dashboard.cards, includeEveryCategory: true)
+                  ..sort((a, b) {
+                    final bySize = b.cards.length.compareTo(a.cards.length);
+                    if (bySize != 0) return bySize;
+                    return a.label.compareTo(b.label);
+                  });
+            return TabBarView(
+              children: [
+                for (final kind in SimilarSoundKind.values)
+                  _SimilarSoundsTab(
+                    key: ValueKey(kind),
+                    kind: kind,
+                    groups: groups.where((g) => g.kind == kind).toList(),
+                  ),
+              ],
             );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: groups.length,
-            itemBuilder: (context, index) {
-              final group = groups[index];
-              return Card(
-                child: ExpansionTile(
-                  key: PageStorageKey(
-                    'sounds-${group.kind.name}-${group.label}',
-                  ),
-                  title: Text(
-                    group.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '${group.kind.label} · ${group.cards.length} words',
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                      child: SimilarSoundGrid(cards: group.cards),
-                    ),
-                  ],
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SimilarSoundsTab extends StatelessWidget {
+  const _SimilarSoundsTab({
+    super.key,
+    required this.kind,
+    required this.groups,
+  });
+  final SimilarSoundKind kind;
+  final List<SimilarSoundGroup> groups;
+
+  @override
+  Widget build(BuildContext context) {
+    if (groups.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('No matching Current words in this category yet.'),
+        ),
+      );
+    }
+    return ScrollPositionIndicator(
+      builder: (controller) => ListView.builder(
+        key: PageStorageKey('similar-sounds-${kind.name}'),
+        controller: controller,
+        primary: false,
+        padding: const EdgeInsets.all(12),
+        itemCount: groups.length,
+        itemBuilder: (context, index) {
+          final group = groups[index];
+          return Card(
+            child: ExpansionTile(
+              key: PageStorageKey('sounds-${group.kind.name}-${group.label}'),
+              title: Text(
+                group.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                '${group.kind.label} · ${group.cards.length} words',
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                  child: SimilarSoundGrid(cards: group.cards),
                 ),
-              );
-            },
+              ],
+            ),
           );
         },
       ),

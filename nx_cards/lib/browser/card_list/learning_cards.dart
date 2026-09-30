@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/card_list/scroll_position_indicator.dart';
 import 'package:nx_cards/browser/card_list/bulk_card_selection.dart';
 import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
@@ -48,61 +49,72 @@ class LearningCardsTab extends ConsumerWidget {
       final rows = (cards.length / columns).ceil();
       return RefreshIndicator(
         onRefresh: ref.read(cardsLibrarySyncProvider),
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-          itemCount: cards.isEmpty ? 1 : rows,
-          itemBuilder: (context, row) => Center(
-            child: SizedBox(
-              width: width,
-              child: cards.isEmpty
-                  ? Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: RecallPalette.of(context).soft,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: RecallPalette.of(context).line,
+        child: ScrollPositionIndicator(
+          builder: (controller) => ListView.builder(
+            controller: controller,
+            primary: false,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+            itemCount: cards.isEmpty ? 1 : rows,
+            itemBuilder: (context, row) => Center(
+              child: SizedBox(
+                width: width,
+                child: cards.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: RecallPalette.of(context).soft,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: RecallPalette.of(context).line,
+                          ),
+                        ),
+                        child: Text(
+                          emptyText,
+                          style: const TextStyle(color: RecallColors.muted),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 19),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (
+                              var column = 0;
+                              column < columns;
+                              column++
+                            ) ...[
+                              if (column > 0) const SizedBox(width: 10),
+                              Expanded(
+                                child: row * columns + column >= cards.length
+                                    ? const SizedBox.shrink()
+                                    : SelectableCard(
+                                        card: cards[row * columns + column],
+                                        child: _LearningStatusRow(
+                                          key: ValueKey(
+                                            '${cards[row * columns + column].learningStatus.storageValue}:${cards[row * columns + column].id}',
+                                          ),
+                                          card: cards[row * columns + column],
+                                          scoreDirections: scoreDirections,
+                                          priorityScore:
+                                              priorityScores[cards[row *
+                                                          columns +
+                                                      column]
+                                                  .id],
+                                          showScheduleStatus:
+                                              showScheduleStatus,
+                                          showLearningStatus:
+                                              showLearningStatus,
+                                          nextStatus: nextStatus,
+                                          actionLabel: actionLabel,
+                                        ),
+                                      ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      child: Text(
-                        emptyText,
-                        style: const TextStyle(color: RecallColors.muted),
-                      ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.only(bottom: 19),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (var column = 0; column < columns; column++) ...[
-                            if (column > 0) const SizedBox(width: 10),
-                            Expanded(
-                              child: row * columns + column >= cards.length
-                                  ? const SizedBox.shrink()
-                                  : SelectableCard(
-                                      card: cards[row * columns + column],
-                                      child: _LearningStatusRow(
-                                        key: ValueKey(
-                                          '${cards[row * columns + column].learningStatus.storageValue}:${cards[row * columns + column].id}',
-                                        ),
-                                        card: cards[row * columns + column],
-                                        scoreDirections: scoreDirections,
-                                        priorityScore:
-                                            priorityScores[cards[row * columns +
-                                                    column]
-                                                .id],
-                                        showScheduleStatus: showScheduleStatus,
-                                        showLearningStatus: showLearningStatus,
-                                        nextStatus: nextStatus,
-                                        actionLabel: actionLabel,
-                                      ),
-                                    ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+              ),
             ),
           ),
         ),
