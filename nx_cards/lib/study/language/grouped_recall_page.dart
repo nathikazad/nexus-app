@@ -432,44 +432,34 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
 
   Widget _comparisonBody() {
     final testedIds = {for (final i in _tested) _questions[i].cardId};
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(_group.label, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            if (_practice)
-              const Text('Practice retry · does not change retention'),
-            if (_graded)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  _practice
-                      ? 'Practice complete'
-                      : _grades[_groupIndex] == CardRating.good
-                      ? 'Group recalled'
-                      : 'Group not recalled',
-                ),
-              ),
-            for (final c in _group.comparisonCards) ...[
-              SimilarSoundWord(card: _latest[c.id]!),
-              if (!testedIds.contains(c.id))
-                const Padding(
-                  padding: EdgeInsets.only(left: 20, bottom: 8),
-                  child: Text('Not asked'),
-                ),
-              const Divider(),
-            ],
-            if (_error != null)
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-          ],
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        Text(_group.label, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        if (_practice) const Text('Practice retry · does not change retention'),
+        if (_graded)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              _practice
+                  ? 'Practice complete'
+                  : _grades[_groupIndex] == CardRating.good
+                  ? 'Group recalled'
+                  : 'Group not recalled',
+            ),
+          ),
+        const SizedBox(height: 12),
+        SimilarSoundGrid(
+          cards: [for (final c in _group.comparisonCards) _latest[c.id]!],
+          testedIds: testedIds,
         ),
-      ),
+        if (_error != null)
+          Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+      ],
     );
   }
 

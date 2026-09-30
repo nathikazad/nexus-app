@@ -1,3 +1,4 @@
+import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
@@ -36,40 +37,29 @@ class SimilarSoundsPage extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: groups.length + 1,
+            padding: const EdgeInsets.all(12),
+            itemCount: groups.length,
             itemBuilder: (context, index) {
-              if (index == 0) {
-                return const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'Current words · A word may appear in more than one group.',
+              final group = groups[index];
+              return Card(
+                child: ExpansionTile(
+                  key: PageStorageKey(
+                    'sounds-${group.kind.name}-${group.label}',
                   ),
-                );
-              }
-              final group = groups[index - 1];
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: Card(
-                    child: ExpansionTile(
-                      key: PageStorageKey(
-                        'sounds-${group.kind.name}-${group.label}',
-                      ),
-                      title: Text(
-                        group.label,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        '${group.kind.label} · ${group.cards.length} words',
-                      ),
-                      children: [
-                        for (final card in group.cards)
-                          SimilarSoundWord(card: card),
-                      ],
+                  title: Text(
+                    group.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    '${group.kind.label} · ${group.cards.length} words',
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                      child: SimilarSoundGrid(cards: group.cards),
                     ),
-                  ),
+                  ],
                 ),
               );
             },
@@ -80,43 +70,84 @@ class SimilarSoundsPage extends ConsumerWidget {
   }
 }
 
+class SimilarSoundGrid extends StatelessWidget {
+  const SimilarSoundGrid({super.key, required this.cards, this.testedIds});
+  final List<StudyCard> cards;
+  final Set<int>? testedIds;
+
+  @override
+  Widget build(BuildContext context) => AdaptiveCardGrid(
+    minimumCardWidth: 220,
+    maxColumns: cards.length.clamp(1, 4),
+    spacing: 12,
+    children: [
+      for (final card in cards)
+        SimilarSoundWord(
+          key: ValueKey('similar-word-${card.id}'),
+          card: card,
+          notAsked: testedIds != null && !testedIds!.contains(card.id),
+        ),
+    ],
+  );
+}
+
 class SimilarSoundWord extends ConsumerWidget {
-  const SimilarSoundWord({super.key, required this.card});
+  const SimilarSoundWord({
+    super.key,
+    required this.card,
+    this.notAsked = false,
+  });
   final StudyCard card;
+  final bool notAsked;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final content = card.content as LanguageCardContent;
     final audio = ref.watch(cardAudioRepositoryProvider);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  content.originalScript,
-                  style: const TextStyle(fontSize: 28),
+                Expanded(
+                  child: Text(
+                    content.originalScript,
+                    style: const TextStyle(fontSize: 28),
+                  ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  content.transliteration,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(content.english),
+                if (audio != null && content.audioUrl?.isNotEmpty == true)
+                  PronunciationButton(
+                    key: ValueKey('compare-audio-${card.id}'),
+                    audioUrl: content.audioUrl!,
+                    repository: audio,
+                  ),
               ],
             ),
-          ),
-          if (audio != null && content.audioUrl?.isNotEmpty == true)
-            PronunciationButton(
-              key: ValueKey('compare-audio-${card.id}'),
-              audioUrl: content.audioUrl!,
-              repository: audio,
+            const SizedBox(height: 6),
+            Text(
+              content.transliteration,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-        ],
+            const SizedBox(height: 4),
+            Text(content.english),
+            if (notAsked) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Not asked',
+                style: TextStyle(color: colors.onSurfaceVariant),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
