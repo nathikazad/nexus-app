@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
@@ -343,11 +344,9 @@ class _RecallStrengthPill extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final window =
-        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
-    final recalled = recalledAnswers(card, cue, window);
-    final strong = recalled * 100 >= window * 80;
-    final percentage = (recalled * 100 / window).round();
+    final average = averageRetention(card, StudyCue.activeDirections);
+    final strong = average >= .8;
+    final percentage = (average * 100).round();
     return Container(
       key: const ValueKey('card-detail-recall-strength'),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -356,7 +355,7 @@ class _RecallStrengthPill extends ConsumerWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        '$percentage% ${strong ? 'Strong' : 'Weak'}',
+        '$percentage% retention',
         maxLines: 1,
         style: TextStyle(
           fontSize: 12,
@@ -479,7 +478,7 @@ class _RecallSummary extends ConsumerWidget {
     final window =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
     final stage = learningStage(card, cue, window: window);
-    final recalled = recalledAnswers(card, cue, window);
+    final score = recallScore(card, cue);
     final due = schedule.dueAt;
 
     return Column(
@@ -488,8 +487,9 @@ class _RecallSummary extends ConsumerWidget {
         _KnowledgeBanner(
           status: stage.label,
           progress: null,
-          metricValue: '${(recalled * 100 / window).round()}%',
-          metricLabel: '$recalled of last $window recalled',
+          metricValue: '${score.percentage}%',
+          metricLabel:
+              '${score.recalled}/${score.denominator} · ${score.attempts} recent attempts',
           due: due,
           now: now,
         ),
@@ -1027,6 +1027,7 @@ String _cueLabel(StudyCue cue, StudyCard card) => switch (cue) {
   StudyCue.fromLanguage => 'Front → ${card.language ?? 'Back'}',
   StudyCue.toLanguage => '${card.language ?? 'Back'} → Front',
   StudyCue.transliteration => 'Transliteration → Front',
+  StudyCue.fromAudio => 'Audio → ${card.language ?? 'Back'}',
 };
 
 String _cardSource(StudyCard card) =>

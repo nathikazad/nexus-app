@@ -93,8 +93,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Future  18'));
-      await tester.tap(find.text('Future  18'));
+      await tester.ensureVisible(find.text('Backlog  18'));
+      await tester.tap(find.text('Backlog  18'));
       await tester.pumpAndSettle();
       final originalScroll = tester.state<ScrollableState>(
         find
@@ -125,9 +125,11 @@ void main() {
       expect(find.text('after 2'), findsOneWidget);
       expect(find.text('after 3'), findsOneWidget);
       expect(find.text('after 99'), findsNothing);
-      expect(find.text('Weak'), findsOneWidget);
-      expect(find.text('Strong'), findsOneWidget);
-      expect(find.text('Future'), findsNWidgets(18));
+      expect(find.text('Current'), findsNWidgets(2));
+      expect(
+        find.text('Backlog').evaluate().length,
+        inExclusiveRange(0, 18),
+      ); // Offscreen rows are built lazily.
       await tester.enterText(input, '之后2');
       await tester.pumpAndSettle();
       expect(find.text('after 2'), findsOneWidget);
@@ -140,7 +142,7 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(tester.widget<TabBar>(find.byType(TabBar)).controller, isNull);
       final context = tester.element(find.byType(TabBar));
-      expect(DefaultTabController.of(context).index, 3);
+      expect(DefaultTabController.of(context).index, 2);
       expect(originalScroll.position.pixels, offset);
       expect(tester.takeException(), isNull);
     },

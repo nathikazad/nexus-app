@@ -10,6 +10,74 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_fast_recall_page.dart';
 
 void main() {
+  testWidgets(
+    'the same word can be graded in three directions without losing earlier history',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final card = _card().copyWith(
+        schedules: {
+          for (final cue in StudyCue.activeDirections)
+            cue: const CardSchedule.initial(enabled: true),
+        },
+      );
+      final repository = _RecordingCardLibrary();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardAudioRepositoryProvider.overrideWithValue(null),
+            cardLibraryProvider.overrideWithValue(repository),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(CardsDashboard(cards: [card])),
+            ),
+          ],
+          child: MaterialApp(
+            home: LanguageFastRecallPage(
+              title: 'Mixed recall',
+              prompts: [
+                for (final cue in StudyCue.activeDirections)
+                  StudyPrompt(card: card, cue: cue),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (final cue in StudyCue.activeDirections) {
+        final row = find.byKey(ValueKey('fast-row-1-${cue.storageKey}'));
+        final reveal = find.descendant(
+          of: row,
+          matching: find.byKey(const ValueKey('fast-hidden-1')),
+        );
+        await tester.ensureVisible(reveal);
+        await tester.tap(reveal);
+        await tester.pumpAndSettle();
+        final yes = find.descendant(
+          of: row,
+          matching: find.byTooltip('Recalled'),
+        );
+        await tester.ensureVisible(yes);
+        await tester.tap(yes);
+        await tester.pumpAndSettle();
+      }
+      expect(repository.saved, hasLength(3));
+      expect(
+        repository.saved.last.reviewHistoryFor(StudyCue.fromLanguage),
+        hasLength(2),
+      );
+      expect(
+        repository.saved.last.reviewHistoryFor(StudyCue.fromAudio),
+        hasLength(1),
+      );
+      expect(
+        repository.saved.last.reviewHistoryFor(StudyCue.toLanguage),
+        hasLength(1),
+      );
+      expect(find.text('3 of 3 cards reviewed'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final width in [320.0, 390.0, 760.0]) {
     testWidgets('listening row keeps playback beside the prompt at $width', (
       tester,
@@ -28,18 +96,14 @@ void main() {
           child: MaterialApp(
             home: LanguageFastRecallPage(
               title: 'Chinese',
-              prompts: [
-                StudyPrompt(
-                  card: card,
-                  cue: StudyCue.toLanguage,
-                  listening: true,
-                ),
-              ],
+              prompts: [StudyPrompt(card: card, cue: StudyCue.fromAudio)],
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('Listen'), findsOneWidget);
+      expect(find.text('relief'), findsNothing);
       final prompt = tester.getRect(
         find.byKey(const ValueKey('fast-prompt-1')),
       );
@@ -128,7 +192,7 @@ void main() {
     expect(find.text('relief'), findsOneWidget);
     expect(find.text('ആശ്വാസം'), findsOneWidget);
     expect(find.text('āśvāsaṃ'), findsOneWidget);
-    await tester.tap(find.byTooltip('Repeat incorrect cards'));
+    await tester.tap(find.byTooltip('Retry missed and untried cards'));
     await tester.pumpAndSettle();
     expect(find.text('Session complete'), findsNothing);
     expect(find.text('Tap to reveal'), findsOneWidget);
@@ -179,7 +243,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final row = find.byKey(const ValueKey<String>('fast-row-1'));
+    final row = find.byKey(const ValueKey<String>('fast-row-1-from_language'));
     await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
     await tester.pumpAndSettle();
     expect(find.text('ആശ്വാസം'), findsOneWidget);
@@ -223,7 +287,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final firstGesture = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey<String>('fast-row-1'))),
+      tester.getCenter(
+        find.byKey(const ValueKey<String>('fast-row-1-from_language')),
+      ),
     );
     await firstGesture.moveBy(const Offset(40, 0));
     await tester.pump();
@@ -242,7 +308,9 @@ void main() {
     );
 
     final secondGesture = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey<String>('fast-row-2'))),
+      tester.getCenter(
+        find.byKey(const ValueKey<String>('fast-row-2-from_language')),
+      ),
     );
     await secondGesture.moveBy(const Offset(-40, 0));
     await tester.pump();
@@ -289,7 +357,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final row = find.byKey(const ValueKey<String>('fast-row-1'));
+    final row = find.byKey(const ValueKey<String>('fast-row-1-from_language'));
     final gesture = await tester.startGesture(tester.getCenter(row));
     await gesture.moveBy(const Offset(40, 0));
     await tester.pump();

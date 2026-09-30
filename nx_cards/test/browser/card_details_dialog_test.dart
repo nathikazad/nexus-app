@@ -92,9 +92,9 @@ void main() {
       final content = find.byKey(const ValueKey('card-content'));
       final contentWidth = tester.getSize(content).width;
       for (final entry in {
-        'Practice': LearningStatus.practice,
-        'Recall': LearningStatus.recall,
-        'Future': LearningStatus.future,
+        'Upcoming': LearningStatus.practice,
+        'Current': LearningStatus.recall,
+        'Backlog': LearningStatus.future,
       }.entries) {
         await tester.tap(find.text(entry.key));
         await tester.pumpAndSettle();
@@ -118,7 +118,7 @@ void main() {
         );
       }
       library.pending = Completer<void>();
-      await tester.tap(find.text('Practice'));
+      await tester.tap(find.text('Upcoming'));
       await tester.pump();
       expect(selector().onSelectionChanged, isNull);
       expect(selector().selected, {LearningStatus.future});
@@ -384,10 +384,10 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, -700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Future'), findsOneWidget);
+    expect(find.text('Backlog'), findsOneWidget);
     expect(find.text('Learning step 2 of 2'), findsNothing);
     expect(find.text('0%'), findsOneWidget);
-    expect(find.text('0 of last 10 recalled'), findsOneWidget);
+    expect(find.text('0/5 · 4 recent attempts'), findsOneWidget);
     expect(find.text('estimated recall'), findsNothing);
   });
 }

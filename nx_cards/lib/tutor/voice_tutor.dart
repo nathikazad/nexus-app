@@ -498,12 +498,13 @@ Keep spoken responses short unless the learner asks for more detail.
   }
 
   String _expectedAnswer(StudyPrompt prompt) => switch (prompt.cue) {
-    StudyCue.fromLanguage => prompt.card.back,
+    StudyCue.fromLanguage || StudyCue.fromAudio => prompt.card.back,
     StudyCue.toLanguage || StudyCue.transliteration => prompt.card.front,
   };
 
   String _pronunciationHint(StudyPrompt prompt) => switch (prompt.cue) {
-    StudyCue.fromLanguage => _languageContent(prompt)?.transliteration ?? '',
+    StudyCue.fromLanguage ||
+    StudyCue.fromAudio => _languageContent(prompt)?.transliteration ?? '',
     StudyCue.toLanguage || StudyCue.transliteration => '',
   };
 
@@ -514,6 +515,8 @@ Keep spoken responses short unless the learner asks for more detail.
     final from = languages?.from;
     final to = languages?.to;
     return switch (prompt.cue) {
+      StudyCue.fromAudio =>
+        'Say the expected answer aloud in the target language, then ask the learner to repeat it. Do not translate it.',
       StudyCue.fromLanguage when to != null =>
         'Ask: How do you say ${prompt.prompt} in $to?',
       StudyCue.toLanguage || StudyCue.transliteration when from != null =>

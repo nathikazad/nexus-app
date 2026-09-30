@@ -24,6 +24,7 @@ const baseCardStruct = <String, dynamic>{
 const languageCardStruct = <String, dynamic>{
   ...baseCardStruct,
   attrLanguageDetails: true,
+  attrSimilarWordGroups: true,
   'relations': {
     'relation_id': true,
     'model_id': true,

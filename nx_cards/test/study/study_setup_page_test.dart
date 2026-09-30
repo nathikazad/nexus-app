@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 StudyCard sample(
   int id,
   int successes, {
+  String language = 'Chinese',
   bool active = true,
   bool due = true,
   bool prep = false,
@@ -28,8 +29,8 @@ StudyCard sample(
       : active
       ? LearningStatus.recall
       : LearningStatus.future,
-  tags: const {
-    'Language': ['Chinese'],
+  tags: {
+    'Language': [language],
   },
   schedules: {
     for (final cue in StudyCue.activeDirections)
@@ -61,7 +62,9 @@ StudyCard sample(
 Future<void> showSetup(
   WidgetTester tester, {
   StudyCue cue = StudyCue.fromLanguage,
+  String language = 'Chinese',
   List<StudyCard>? studyCards,
+  Set<StudyCue>? directions,
   StudySetupFlow flow = StudySetupFlow.recall,
   Map<String, Object> preferences = const {},
 }) async {
@@ -86,17 +89,19 @@ Future<void> showSetup(
         reviewProgressionSettingsProvider.overrideWith(
           (ref) async => const ReviewProgressionSettings(),
         ),
-        languageDirectionProvider('Chinese').overrideWith((ref) => cue),
+        selectedDirectionsProvider(
+          language,
+        ).overrideWith((ref) => directions ?? {cue}),
       ],
       child: MaterialApp(
         home: StudySetupPage(
-          title: 'Chinese',
+          title: language,
           flow: flow,
-          studyScope: const StudyScope(language: 'Chinese'),
+          studyScope: StudyScope(language: language),
           prompts: [],
           studyCards: cards,
           fromLanguage: 'English',
-          toLanguage: 'Chinese',
+          toLanguage: language,
         ),
       ),
     ),
@@ -105,7 +110,157 @@ Future<void> showSetup(
 }
 
 void main() {
-  testWidgets('a saved Write format becomes Standard for reverse recall', (
+  testWidgets(
+    'sound-only groups show only Sound and restore Similar without text directions',
+    (tester) async {
+      final cards = [
+        sample(1, 0, language: 'Tamil').copyWith(
+          content: const LanguageCardContent(
+            english: 'word',
+            originalScript: 'word',
+            transliteration: 'word',
+            audioUrl: '/audio',
+            similarWordGroups: ['pair-sound'],
+          ),
+        ),
+      ];
+      await showSetup(
+        tester,
+        language: 'Tamil',
+        studyCards: cards,
+        preferences: {
+          'study_setup.v3.recall.Tamil':
+              '{"recallPresentation":"similar","similarType":"written","groupCount":3}',
+        },
+      );
+      expect(find.text('Sound'), findsOneWidget);
+      expect(find.text('Written'), findsNothing);
+      expect(find.byType(DirectionChoices), findsNothing);
+      expect(find.text('Retention'), findsNothing);
+      expect(find.text('1 recall groups available'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Similar is dynamic, uses full group count, and hides retention and sound directions',
+    (tester) async {
+      final cards = [
+        for (var id = 1; id <= 3; id++)
+          sample(id, 0, language: 'Tamil').copyWith(
+            content: LanguageCardContent(
+              english: 'word $id',
+              originalScript: 'word$id',
+              transliteration: 'word',
+              audioUrl: '/audio/$id',
+              similarWordGroups: ['all-sound', if (id < 3) 'pair-write'],
+            ),
+          ),
+      ];
+      await showSetup(
+        tester,
+        language: 'Tamil',
+        studyCards: cards,
+        directions: StudyCue.activeDirections.toSet(),
+        preferences: {
+          'study_setup.v3.recall.Tamil': '{"retainedMaxPercentage":0}',
+        },
+      );
+      expect(find.text('Similar'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Recall format')).dy,
+        lessThan(tester.getTopLeft(find.text('Which cards?')).dy),
+      );
+      await tester.tap(find.text('Similar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Retention'), findsNothing);
+      expect(find.byKey(const ValueKey('group-similar-sounds')), findsNothing);
+      expect(find.text('How many recall groups?'), findsOneWidget);
+      expect(find.text('1 recall groups available'), findsOneWidget);
+      expect(find.byKey(const ValueKey('direction-from_audio')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('direction-to_language')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilterChip>(
+              find.byKey(const ValueKey('direction-from_language')),
+            )
+            .selected,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<FilterChip>(
+              find.byKey(const ValueKey('direction-to_language')),
+            )
+            .selected,
+        isTrue,
+      );
+      expect(find.text('1 recall groups available'), findsOneWidget);
+      await tester.tap(find.text('Sound'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DirectionChoices), findsNothing);
+      expect(find.text('Retention'), findsNothing);
+      expect(find.text('1 recall groups available'), findsOneWidget);
+      await tester.tap(find.text('Standard'));
+      await tester.pumpAndSettle();
+      expect(find.text('Retention'), findsOneWidget);
+      expect(find.byType(DirectionChoices), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await showSetup(tester);
+      expect(find.text('Similar'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'all three directions offer 81 items and changing selection updates the count',
+    (tester) async {
+      final cards = [
+        for (var id = 1; id <= 27; id++)
+          sample(id, 0).copyWith(
+            content: LanguageCardContent(
+              english: 'word $id',
+              originalScript: '字',
+              transliteration: 'zi',
+              audioUrl: '/audio/$id.mp3',
+            ),
+          ),
+      ];
+      await showSetup(
+        tester,
+        studyCards: cards,
+        directions: StudyCue.activeDirections.toSet(),
+      );
+      expect(find.text('81 recall items available'), findsOneWidget);
+      expect(find.text('Write'), findsOneWidget);
+      final titles = [
+        'Recall format',
+        'Which cards?',
+        'Retention',
+        'How many recall items?',
+      ];
+      final positions = titles
+          .map((title) => tester.getTopLeft(find.text(title)).dy)
+          .toList();
+      expect(positions, orderedEquals([...positions]..sort()));
+      await tester.tap(find.text('AI').first);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('direction-to_language')), findsNothing);
+      expect(find.text('54 recall items available'), findsOneWidget);
+      await tester.tap(find.text('Recall').first);
+      await tester.pumpAndSettle();
+      expect(find.text('81 recall items available'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('direction-from_audio')));
+      await tester.pumpAndSettle();
+      expect(find.text('54 recall items available'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('direction-to_language')));
+      await tester.pumpAndSettle();
+      expect(find.text('27 recall items available'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Write remains available when reverse recall is selected', (
     tester,
   ) async {
     await showSetup(
@@ -118,105 +273,90 @@ void main() {
     final formats = tester.widget<SegmentedButton<RecallPresentation>>(
       find.byType(SegmentedButton<RecallPresentation>),
     );
-    expect(formats.selected, {RecallPresentation.standard});
+    expect(formats.selected, {RecallPresentation.write});
     expect(formats.segments.map((s) => s.value), [
       RecallPresentation.standard,
+      RecallPresentation.write,
       RecallPresentation.fast,
     ]);
   });
 
-  testWidgets('Listening is a saved reverse-direction presentation only', (
-    tester,
-  ) async {
-    await showSetup(tester, cue: StudyCue.toLanguage);
-    expect(find.text('Read'), findsOneWidget);
-    expect(find.text('Prompt'), findsOneWidget);
-    expect(find.text('01'), findsOneWidget);
-    expect(find.text('02'), findsOneWidget);
-    expect(find.text('03'), findsOneWidget);
-    expect(find.text('Write'), findsNothing);
-    expect(find.text('Standard'), findsOneWidget);
-    expect(find.text('Fast'), findsOneWidget);
-    expect(find.text('Listen'), findsOneWidget);
-    await tester.tap(find.text('Listen'));
-    await tester.pumpAndSettle();
-    expect(find.text('Write'), findsOneWidget);
-    await tester.tap(find.text('Write'));
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<SegmentedButton<RecallPresentation>>(
-            find.byType(SegmentedButton<RecallPresentation>),
-          )
-          .selected,
-      {RecallPresentation.write},
-    );
-    final prefs = await SharedPreferences.getInstance();
-    expect(
-      prefs.getString('study_setup.v3.recall.Chinese'),
-      contains('"listening":true'),
-    );
-    expect(find.text('3 available'), findsOneWidget);
-    await tester.tap(find.text('AI').first);
-    await tester.pumpAndSettle();
-    expect(find.text('Listen'), findsNothing);
-    await showSetup(tester);
-    expect(find.text('Listen'), findsNothing);
-  });
+  testWidgets(
+    'audio direction offers the existing three formats without a prompt toggle',
+    (tester) async {
+      await showSetup(tester, cue: StudyCue.fromAudio);
+      expect(find.text('Read'), findsNothing);
+      expect(find.text('Listen'), findsNothing);
+      expect(find.text('Recall format'), findsOneWidget);
+      expect(find.text('Write'), findsOneWidget);
+      expect(find.text('Standard'), findsOneWidget);
+      expect(find.text('Fast'), findsOneWidget);
+      await tester.tap(find.text('Write'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SegmentedButton<RecallPresentation>>(
+              find.byType(SegmentedButton<RecallPresentation>),
+            )
+            .selected,
+        {RecallPresentation.write},
+      );
+    },
+  );
 
   testWidgets('Recall offers Current and Past including not-due Past', (
     tester,
   ) async {
     await showSetup(tester);
-    expect(find.text('3 available'), findsOneWidget);
+    expect(find.text('3 recall items available'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Practice'), findsNothing);
-    expect(find.widgetWithText(FilterChip, 'Weak'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'Strong'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Weak'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Strong'), findsOneWidget);
     expect(find.text('Recall format'), findsOneWidget);
     expect(find.text('Write'), findsOneWidget);
     expect(find.text('Start recall'), findsOneWidget);
     expect(find.text('Practice'), findsNothing);
   });
-  testWidgets('Practice only offers format and count, and only Prep cards', (
-    tester,
-  ) async {
-    await showSetup(tester, flow: StudySetupFlow.practice);
-    expect(find.text('Study format'), findsOneWidget);
-    expect(find.text('Study sheet'), findsOneWidget);
-    expect(find.text('Draw'), findsOneWidget);
-    expect(find.text('1 available'), findsOneWidget);
-    expect(find.text('Which cards'), findsNothing);
-    expect(find.text('Recall score'), findsNothing);
-    expect(find.textContaining('Strong cards due'), findsNothing);
-    expect(find.byType(FilterChip), findsNothing);
-    expect(find.text('AI'), findsNothing);
-  });
-  testWidgets('Past due only appears in Recall with Past selected', (
+  testWidgets(
+    'Practice offers directions, format, and count, and only Upcoming cards',
+    (tester) async {
+      await showSetup(tester, flow: StudySetupFlow.practice);
+      expect(find.text('Study format'), findsOneWidget);
+      expect(find.text('Study sheet'), findsOneWidget);
+      expect(find.text('Draw'), findsOneWidget);
+      expect(find.text('1 cards available'), findsOneWidget);
+      expect(find.text('Which cards?'), findsOneWidget);
+      expect(find.text('Recall score'), findsNothing);
+      expect(find.textContaining('Strong cards due'), findsNothing);
+      expect(find.byType(FilterChip), findsNWidgets(3));
+      final sections = ['Which cards?', 'Study format', 'How many cards?'];
+      final positions = sections
+          .map((title) => tester.getTopLeft(find.text(title)).dy)
+          .toList();
+      expect(positions, orderedEquals([...positions]..sort()));
+      expect(find.text('AI'), findsNothing);
+    },
+  );
+  testWidgets('retention shortcuts replace due and stage filters', (
     tester,
   ) async {
     await showSetup(tester);
-    expect(find.text('Strong cards due: 1'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
-    await tester.pumpAndSettle();
     expect(find.textContaining('Strong cards due'), findsNothing);
-    await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
+    await tester.tap(find.widgetWithText(TextButton, 'Strong'));
     await tester.pumpAndSettle();
-    tester.widgetList<Slider>(find.byType(Slider)).first.onChanged!(70);
+    expect(find.text('2 recall items available'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Weak'));
     await tester.pumpAndSettle();
-    expect(find.text('Strong cards due: 0'), findsOneWidget);
-    expect(find.text('1 available'), findsOneWidget);
+    expect(find.text('1 recall items available'), findsOneWidget);
     await tester.tap(find.text('AI').first);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Strong cards due'), findsNothing);
-    expect(find.text('Recall format'), findsNothing);
     expect(find.text('Start AI tutor'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'Practice'), findsNothing);
   });
   testWidgets('untried reverse direction of Active cards is Current', (
     tester,
   ) async {
     await showSetup(tester, cue: StudyCue.toLanguage);
-    expect(find.text('3 available'), findsOneWidget);
+    expect(find.text('3 recall items available'), findsOneWidget);
     expect(find.textContaining('Chinese → English'), findsNothing);
     expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
   });
@@ -231,10 +371,10 @@ void main() {
       await tester.tap(find.text('AI').first);
       await tester.pumpAndSettle();
       expect(slider().value, 2);
-      await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
+      await tester.tap(find.widgetWithText(TextButton, 'Weak'));
       await tester.pumpAndSettle();
       expect(slider().value, 1);
-      await tester.tap(find.widgetWithText(FilterChip, 'Strong'));
+      await tester.tap(find.widgetWithText(TextButton, 'Weak'));
       await tester.pumpAndSettle();
       expect(slider().value, 1);
     },
@@ -250,10 +390,10 @@ void main() {
         tester.widget<Slider>(find.byKey(const ValueKey('card-count')));
     slider().onChanged!(17);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilterChip, 'Weak'));
+    await tester.tap(find.widgetWithText(TextButton, 'Strong'));
     await tester.pumpAndSettle();
     expect(find.text('No cards match these filters'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilterChip, 'Weak'));
+    await tester.tap(find.widgetWithText(TextButton, 'Weak'));
     await tester.pumpAndSettle();
     expect(slider().value, 17);
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
@@ -271,9 +411,9 @@ void main() {
               ),
             ),
           ),
-          languageDirectionProvider(
+          selectedDirectionsProvider(
             'Chinese',
-          ).overrideWith((ref) => StudyCue.fromLanguage),
+          ).overrideWith((ref) => {StudyCue.fromLanguage}),
         ],
         child: app,
       ),

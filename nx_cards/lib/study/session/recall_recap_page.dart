@@ -9,15 +9,31 @@ import 'package:nx_cards/browser/card_details_page.dart';
 
 enum RecallRecapAction { repeatIncorrect }
 
-List<StudyPrompt> incorrectRecallPrompts(
+/// Retry only misses and untried prompts, retaining their latest saved state.
+List<StudyPrompt> retryRecallPrompts(
   List<StudyPrompt> prompts,
   Map<int, CardRating> ratings,
   Map<int, StudyCard> latestCards,
-) => [
-  for (var i = 0; i < prompts.length; i++)
-    if (ratings[i] == CardRating.again)
+) {
+  final indices = [
+    for (var i = 0; i < prompts.length; i++)
+      if (ratings[i] == null || ratings[i] == CardRating.again) i,
+  ];
+  final original = List<int>.of(indices);
+  indices.shuffle();
+  // A shuffle can randomly preserve the entire order. Avoid that when possible.
+  if (indices.length > 1 &&
+      List.generate(
+        indices.length,
+        (i) => indices[i] == original[i],
+      ).every((v) => v)) {
+    indices.add(indices.removeAt(0));
+  }
+  return [
+    for (final i in indices)
       prompts[i].withCard(latestCards[prompts[i].cardId] ?? prompts[i].card),
-];
+  ];
+}
 
 class RecallRecapEntry {
   const RecallRecapEntry({required this.card, required this.rating});
@@ -82,45 +98,62 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                   Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 520),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 20,
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: _RecapStat(
-                              value:
-                                  '${widget.reviewedCount - widget.missCount}',
-                              label: 'Recalled',
-                              color: RecallColors.emerald,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: 20,
+                            children: [
+                              Expanded(
+                                child: _RecapStat(
+                                  value:
+                                      '${widget.reviewedCount - widget.missCount}',
+                                  label: 'Recalled',
+                                  color: RecallColors.emerald,
+                                ),
+                              ),
+                              Expanded(
+                                child: _RecapStat(
+                                  value: '${widget.missCount}',
+                                  label: 'Not recalled',
+                                  color: RecallColors.rose,
+                                ),
+                              ),
+                              Expanded(
+                                child: _RecapStat(
+                                  value:
+                                      '${widget.totalCount - widget.reviewedCount}',
+                                  label: 'Not tried',
+                                  color: RecallColors.muted,
+                                ),
+                              ),
+                            ],
                           ),
-                          Expanded(
-                            child: _RecapStat(
-                              value: '${widget.missCount}',
-                              label: 'Not recalled',
-                              color: RecallColors.rose,
-                            ),
-                          ),
-                          Expanded(
-                            child: _RecapAction(
-                              icon: Icons.refresh,
-                              label: 'Retry',
-                              tooltip: 'Repeat incorrect cards',
-                              onPressed:
-                                  widget.entries.any(
-                                    (e) => e.rating == CardRating.again,
-                                  )
-                                  ? widget.onRepeatIncorrect
-                                  : null,
-                            ),
-                          ),
-                          Expanded(
-                            child: _RecapAction(
-                              icon: Icons.arrow_forward,
-                              label: 'Finish',
-                              tooltip: 'Return to study',
-                              onPressed: () => Navigator.pop(context, true),
-                            ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _RecapAction(
+                                  icon: Icons.refresh,
+                                  label: 'Retry',
+                                  tooltip: 'Retry missed and untried cards',
+                                  onPressed:
+                                      widget.missCount > 0 ||
+                                          widget.reviewedCount <
+                                              widget.totalCount
+                                      ? widget.onRepeatIncorrect
+                                      : null,
+                                ),
+                              ),
+                              Expanded(
+                                child: _RecapAction(
+                                  icon: Icons.arrow_forward,
+                                  label: 'Finish',
+                                  tooltip: 'Return to study',
+                                  onPressed: () => Navigator.pop(context, true),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

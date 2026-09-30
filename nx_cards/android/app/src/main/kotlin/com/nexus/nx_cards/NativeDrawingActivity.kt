@@ -28,6 +28,7 @@ class NativeDrawingActivity : Activity() {
     private lateinit var hint: TextView
     private lateinit var controls: LinearLayout
     private lateinit var end: Button
+    private var examplesHeading: TextView? = null
     private var examplesList: LinearLayout? = null
     private var examplesScroll: ScrollView? = null
     private var examplesCardIndex = -1
@@ -40,6 +41,7 @@ class NativeDrawingActivity : Activity() {
     private var ink: DrawingInkPanel? = null
     private var index = 0
     private var recall = false
+    private var grouped = false
     private var revealed = false
     private var visibleAnswer = true
     private var busy = false
@@ -71,6 +73,7 @@ class NativeDrawingActivity : Activity() {
             NativeDrawingBridge.activity = WeakReference(this)
             require(cards.isNotEmpty())
             recall = input["recall"] == true
+            grouped = input["grouped"] == true
             val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(16), dp(8), dp(16), dp(8)) }
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
             end = button(if (recall) "End" else "Back") { finish() }
@@ -101,10 +104,11 @@ class NativeDrawingActivity : Activity() {
             if (resources.configuration.smallestScreenWidthDp >= 600) {
                 val headings = LinearLayout(this)
                 contextHeadings = headings
-                headings.addView(label(13f).apply {
+                examplesHeading = label(13f).apply {
                     text = "USED IN · EXAMPLES"
                     gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                }, LinearLayout.LayoutParams(0, dp(36), 7f))
+                }
+                headings.addView(examplesHeading, LinearLayout.LayoutParams(0, dp(36), 7f))
                 characterHeading = label(13f).apply {
                     text = "CHARACTERS"
                     gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -143,23 +147,27 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCard() {
         progress.text = "${index + 1} of ${cards.size}"
-        if (recall && !revealed && card["listening"] == true && listeningIndex != index) {
+        if ((recall && !revealed || !recall && card["practiceDirection"] == true) && card["listening"] == true && listeningIndex != index) {
             listeningIndex = index
             val expectedIndex = index
             prompt.post { if (index == expectedIndex && !revealed && !isFinishing && card["audio"] == true) play() }
         }
         prompt.text = if (recall && revealed) value("answer") else value("prompt")
-        prompt.visibility = if (!recall && !visibleAnswer) View.INVISIBLE else View.VISIBLE
-        prompt.textSize = if (!recall && card["multiCharacter"] == false) 64f else 32f
-        subtitle.text = if (recall && !revealed) "" else value("subtitle")
+        prompt.visibility = if (!recall && !visibleAnswer && card["practiceDirection"] != true) View.INVISIBLE else View.VISIBLE
+        prompt.textSize = if (!recall && card["practiceDirection"] != true && card["multiCharacter"] == false) 64f else 32f
+        subtitle.text = if (recall && !revealed || !recall && card["practiceDirection"] == true && !visibleAnswer) "" else value("subtitle")
         hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
         val showContext = !recall || revealed
         // Reserve the context area before reveal. GONE resizes NoteView when
         // the answer appears; the firmware can discard pen records during that
         // resize before our layout listener captures them. INVISIBLE keeps the
         // ink surface and existing strokes in place without exposing answers.
-        contextHeadings?.visibility = if (showContext) View.VISIBLE else View.INVISIBLE
-        contextColumns?.visibility = if (showContext) View.VISIBLE else View.INVISIBLE
+        val hasContext = listOf("examples", "derivedExamples", "characters").any {
+            (card[it] as? List<*>)?.isNotEmpty() == true
+        }
+        val contextVisibility = if (!hasContext) View.GONE else if (showContext) View.VISIBLE else View.INVISIBLE
+        contextHeadings?.visibility = contextVisibility
+        contextColumns?.visibility = contextVisibility
         if (showContext) updateExamples()
         controls.removeAllViews()
         control("Refresh screen", "refresh") { refreshScreen() }
@@ -172,6 +180,8 @@ class NativeDrawingActivity : Activity() {
             control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
             control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard(); if (card["audio"] == true) play() }
+        } else if (grouped) {
+            control(if (index == cards.lastIndex) "Compare group" else "Next word", "next") { groupNext() }
         } else {
             control("No", "no") { rate(false) }
             control("Yes", "yes") { rate(true) }
@@ -218,14 +228,15 @@ class NativeDrawingActivity : Activity() {
         examplesScroll?.scrollTo(0, 0)
         updateCharacters()
         val examples = card["examples"] as? List<*> ?: emptyList<Any>()
-        if (examples.isEmpty()) {
-            list.addView(label(16f).apply {
-                text = "No linked examples for this card yet."
-                gravity = Gravity.START
-                setPadding(dp(12), dp(12), dp(12), dp(12))
-            })
-        }
         val derived = card["derivedExamples"] as? List<*> ?: emptyList<Any>()
+        val hasExamples = examples.isNotEmpty() || derived.isNotEmpty()
+        examplesHeading?.visibility = if (hasExamples) View.VISIBLE else View.GONE
+        examplesScroll?.visibility = if (hasExamples) View.VISIBLE else View.GONE
+        listOf(characterHeading, characterColumn).forEach { view ->
+            view?.layoutParams = (view?.layoutParams as? LinearLayout.LayoutParams)?.apply {
+                leftMargin = if (hasExamples) dp(16) else 0
+            }
+        }
         (examples + derived).forEachIndexed { exampleIndex, item ->
             val isDerived = exampleIndex >= examples.size
             if (isDerived && exampleIndex == examples.size) list.addView(label(14f).apply {
@@ -296,18 +307,13 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCharacters() {
         val list = charactersList ?: return
-        val show = card["multiCharacter"] == true
+        val characters = card["characters"] as? List<*> ?: emptyList<Any>()
+        val show = characters.isNotEmpty()
         characterColumn?.visibility = if (show) View.VISIBLE else View.GONE
         characterHeading?.visibility = if (show) View.VISIBLE else View.GONE
         list.removeAllViews()
         charactersScroll?.scrollTo(0, 0)
         if (!show) return
-        val characters = card["characters"] as? List<*> ?: emptyList<Any>()
-        if (characters.isEmpty()) list.addView(label(15f).apply {
-            text = "No linked characters yet."
-            gravity = Gravity.START
-            setPadding(0, dp(12), 0, dp(12))
-        })
         characters.forEachIndexed { characterIndex, item ->
             val part = item as? Map<*, *> ?: return@forEachIndexed
             val entry = LinearLayout(this).apply {
@@ -393,6 +399,23 @@ class NativeDrawingActivity : Activity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() { if (!busy || loadingCard) super.onBackPressed() }
 
+    // Grouped recall only records completion here. Its separate Flutter screen
+    // accepts one group decision and writes retention after comparing the group.
+    private fun groupNext() {
+        if (busy || !revealed) return
+        setBusy(true)
+        val channel = NativeDrawingBridge.channel
+        if (channel == null) { setBusy(false); report("Session ended"); return }
+        channel.invokeMethod("groupNext", mapOf("index" to index), object : MethodChannel.Result {
+            override fun success(result: Any?) {
+                if (!isFinishing && !isDestroyed) { setBusy(false); advance() }
+            }
+            override fun error(code: String, message: String?, details: Any?) {
+                if (!isDestroyed) { setBusy(false); report(message ?: "Could not continue. Try again.") }
+            }
+            override fun notImplemented() { setBusy(false); report("Group session unavailable") }
+        })
+    }
     private fun advance() {
         if (index == cards.lastIndex) { stopAudio(); finish(); return }
         moveTo(index + 1)

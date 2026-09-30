@@ -37,6 +37,38 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
     messenger.setMockMethodCallHandler(NativeDrawingSession.channel, null);
   });
+  test(
+    'grouped writing opts into completion-only controls; ordinary payload stays unchanged',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final opened = <Map<Object?, Object?>>[];
+      messenger.setMockMethodCallHandler(NativeDrawingSession.channel, (
+        call,
+      ) async {
+        if (call.method == 'available') return true;
+        if (call.method == 'open') {
+          opened.add(Map<Object?, Object?>.from(call.arguments as Map));
+        }
+        return null;
+      });
+      for (final grouped in [false, true]) {
+        await NativeDrawingSession.open(
+          title: 'Test',
+          cards: [
+            NativeDrawingSession.recallCard(
+              StudyPrompt(card: card, cue: StudyCue.fromAudio),
+            ),
+          ],
+          recall: true,
+          grouped: grouped,
+          onAction: (_) async => null,
+        );
+      }
+      expect(opened.first.containsKey('grouped'), isFalse);
+      expect(opened.last['grouped'], isTrue);
+      expect(opened.last['recall'], isTrue);
+    },
+  );
   test('recall preserves cue direction and optional transliteration', () {
     final from = NativeDrawingSession.recallCard(
       StudyPrompt(
@@ -70,8 +102,29 @@ void main() {
       StudyPrompt(card: card, cue: StudyCue.toLanguage),
     );
     expect(to['prompt'], '很长的句子');
-    expect(to['answer'], 'a long sentence');
+    expect(to['answer'], '很长的句子');
     expect(NativeDrawingSession.practiceCard(card)['audio'], isTrue);
+  });
+  test(
+    'native audio recall hides hints and reveals target script above English',
+    () {
+      final payload = NativeDrawingSession.recallCard(
+        StudyPrompt(card: card, cue: StudyCue.fromAudio),
+      );
+      expect(payload['prompt'], 'Listen');
+      expect(payload['listening'], isTrue);
+      expect(payload['answer'], '很长的句子');
+      expect(payload['subtitle'], 'a long sentence\nhěn cháng de jùzi');
+    },
+  );
+  test('native reveal always contains script, meaning, and pronunciation', () {
+    for (final cue in StudyCue.values) {
+      final payload = NativeDrawingSession.recallCard(
+        StudyPrompt(card: card, cue: cue),
+      );
+      expect(payload['answer'], '很长的句子');
+      expect(payload['subtitle'], 'a long sentence\nhěn cháng de jùzi');
+    }
   });
   test('Android opens a native session with its complete queue', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;

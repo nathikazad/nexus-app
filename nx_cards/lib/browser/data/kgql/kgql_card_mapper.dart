@@ -22,6 +22,9 @@ StudyCard? studyCardFromModel(
     notes: model.description,
     content: isLanguageCardModelType(modelTypeName)
         ? LanguageCardContent(
+            similarWordGroups: similarWordGroupsFromJson(
+              model.attributes?[attrSimilarWordGroups],
+            ),
             english: front,
             originalScript: back,
             transliteration:
@@ -36,7 +39,9 @@ StudyCard? studyCardFromModel(
         : BasicCardContent(front: front, back: back),
     schedules: <StudyCue, CardSchedule>{
       for (final cue in StudyCue.values)
-        cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
+        if (cue != StudyCue.fromAudio ||
+            _jsonMap(schedule['cues']).containsKey(cue.storageKey))
+          cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
@@ -181,21 +186,23 @@ final class _RelatedModel {
   final String name;
 }
 
-Map<String, dynamic> emptyScheduleJson({required bool languageCard}) =>
-    <String, dynamic>{
-      'version': 3,
-      'algorithm': 'fsrs',
-      'cues': <String, Object?>{
-        for (final cue in StudyCue.values)
-          cue.storageKey: _scheduleNodeJson(
-            CardSchedule.initial(
-              enabled:
-                  cue == StudyCue.fromLanguage ||
-                  (languageCard && cue == StudyCue.toLanguage),
-            ),
-          ),
-      },
-    };
+Map<String, dynamic> emptyScheduleJson({
+  required bool languageCard,
+}) => <String, dynamic>{
+  'version': 3,
+  'algorithm': 'fsrs',
+  'cues': <String, Object?>{
+    for (final cue in StudyCue.values)
+      cue.storageKey: _scheduleNodeJson(
+        CardSchedule.initial(
+          enabled:
+              cue == StudyCue.fromLanguage ||
+              (languageCard &&
+                  (cue == StudyCue.toLanguage || cue == StudyCue.fromAudio)),
+        ),
+      ),
+  },
+};
 
 Map<String, dynamic> scheduleJson(StudyCard card) => <String, dynamic>{
   'version': 3,
@@ -302,4 +309,14 @@ int? _intFrom(Object? raw) {
 double? _doubleFrom(Object? raw) {
   if (raw is num) return raw.toDouble();
   return double.tryParse(raw?.toString() ?? '');
+}
+
+List<String> similarWordGroupsFromJson(Object? raw) {
+  if (raw is! List) return const [];
+  return List.unmodifiable(
+    raw
+        .whereType<String>()
+        .where((id) => id.isNotEmpty && id.trim() == id)
+        .toSet(),
+  );
 }

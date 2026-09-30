@@ -7,15 +7,31 @@ enum LearningStage {
   future;
 
   String get label => switch (this) {
-    upcoming => 'Practice',
-    current => 'Weak',
-    past => 'Strong',
-    future => 'Future',
+    upcoming => 'Upcoming',
+    current => 'Current',
+    past => 'Current',
+    future => 'Backlog',
   };
 }
 
-int recalledAnswers(StudyCard card, StudyCue cue, int window) {
-  if (window <= 0) throw ArgumentError.value(window, 'window');
+class RecallScore {
+  const RecallScore({required this.recalled, required this.attempts});
+  final int recalled;
+  final int attempts;
+  int get denominator => attempts.clamp(5, 10);
+  double get fraction => recalled / denominator;
+  int get percentage => (fraction * 100).round();
+  bool get strong => recalled * 100 >= denominator * 80;
+}
+
+// Cards and their review lists are immutable. A reviewed card is a new object,
+// so cached scores cannot survive a history update; Expando does not retain cards.
+final _scoreCache = Expando<Map<StudyCue, RecallScore>>('recall scores');
+
+RecallScore recallScore(StudyCard card, StudyCue cue) {
+  final scores = _scoreCache[card] ??= {};
+  final cached = scores[cue];
+  if (cached != null) return cached;
   final byId = {
     for (final review in card.reviewHistoryFor(cue)) review.id: review,
   };
@@ -24,7 +40,11 @@ int recalledAnswers(StudyCard card, StudyCue cue, int window) {
       final byTime = b.reviewedAt.compareTo(a.reviewedAt);
       return byTime != 0 ? byTime : b.id.compareTo(a.id);
     });
-  return reviews.take(window).where((r) => r.rating >= 3).length;
+  final recent = reviews.take(10).toList();
+  return scores[cue] = RecallScore(
+    recalled: recent.where((r) => r.rating >= 3).length,
+    attempts: recent.length,
+  );
 }
 
 LearningStage learningStage(StudyCard card, StudyCue cue, {int window = 10}) {
@@ -35,7 +55,7 @@ LearningStage learningStage(StudyCard card, StudyCue cue, {int window = 10}) {
     return LearningStage.upcoming;
   }
   // Compare without rounding: 79.6% must never graduate to Past.
-  return recalledAnswers(card, cue, window) * 100 >= window * 80
+  return recallScore(card, cue).strong
       ? LearningStage.past
       : LearningStage.current;
 }
@@ -48,6 +68,7 @@ bool availableForRecall(
 }) {
   if (card.suspended ||
       !card.active ||
+      !card.supportsCue(cue) ||
       !card.scheduleFor(cue).enabled ||
       !StudyCue.activeDirections.contains(cue)) {
     return false;

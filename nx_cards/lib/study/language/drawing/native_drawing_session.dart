@@ -112,14 +112,21 @@ class NativeDrawingSession {
 
   static Map<String, Object?> practiceCard(
     StudyCard card, {
+    StudyCue? cue,
     List<LanguageCardContent> characters = const [],
     List<DerivedLanguageExample> derived = const [],
   }) {
     final content = card.content as LanguageCardContent;
     return {
-      'prompt': content.originalScript,
+      'practiceDirection': cue != null,
+      'listening': cue == StudyCue.fromAudio,
+      'prompt': cue == null
+          ? content.originalScript
+          : StudyPrompt(card: card, cue: cue).prompt,
       'answer': content.originalScript,
-      'subtitle': '${content.transliteration} · ${content.english}',
+      'subtitle': cue == null
+          ? '${content.transliteration} · ${content.english}'
+          : '${content.originalScript}\n${content.english} · ${content.transliteration}',
       'audio': content.audioUrl?.isNotEmpty == true,
       'multiCharacter': content.originalScript.trim().characters.length > 1,
       'characters': [
@@ -165,11 +172,8 @@ class NativeDrawingSession {
       ...practiceCard(prompt.card, characters: characters, derived: derived),
       'prompt': prompt.prompt,
       'listening': prompt.isListening,
-      'answer': prompt.cue == StudyCue.fromLanguage
-          ? content.originalScript
-          : content.english,
-      'subtitle':
-          '${content.transliteration} · ${prompt.cue == StudyCue.fromLanguage ? content.english : content.originalScript}',
+      'answer': content.originalScript,
+      'subtitle': '${content.english}\n${content.transliteration}',
       'audio': content.audioUrl?.isNotEmpty == true,
     };
   }
@@ -187,6 +191,7 @@ class NativeDrawingSession {
     required String title,
     required List<Map<String, Object?>> cards,
     required bool recall,
+    bool grouped = false,
     required Future<Object?> Function(MethodCall) onAction,
   }) async {
     debugPrint(
@@ -201,6 +206,7 @@ class NativeDrawingSession {
       await channel.invokeMethod<void>('open', {
         'title': title,
         'recall': recall,
+        if (grouped) 'grouped': true,
         'cards': cards,
       });
       return true;

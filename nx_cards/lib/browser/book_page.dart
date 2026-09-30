@@ -1,3 +1,5 @@
+import 'package:nx_cards/browser/card_list/bulk_card_selection.dart';
+import 'package:nx_cards/browser/card_list/current_cards_tab.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
@@ -79,94 +81,93 @@ class BookPage extends ConsumerWidget {
             historyWindow: historyWindow,
           );
           return DefaultTabController(
-            length: LearningStage.values.length,
-            initialIndex: learning.isNotEmpty ? 1 : 0,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
-                  child: Center(
+            length: 3,
+            initialIndex: 0,
+            child: BulkCardSelectionScope(
+              cards: cards,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1200),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${cards.length} cards · ${learning.length + learnt.length} current',
+                                style: const TextStyle(
+                                  color: RecallColors.muted,
+                                ),
+                              ),
+                            ),
+                            StudyLauncher(
+                              followLearningTab: true,
+                              studyScope: StudyScope(bookId: bookId),
+                              title: bookName,
+                              preferenceKey: 'book:$bookId',
+                              prompts: [
+                                for (final card in cards)
+                                  StudyPrompt(
+                                    card: card,
+                                    cue: StudyCue.fromLanguage,
+                                  ),
+                              ],
+                              studyCards: cards,
+                              sourceKind: StudySourceKind.book,
+                              builder: (onPressed) => FilledButton(
+                                onPressed: onPressed,
+                                child: const Text('Study'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${cards.length} cards · ${learning.length} current',
-                              style: const TextStyle(color: RecallColors.muted),
-                            ),
+                      child: TabBar(
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        tabs: [
+                          Tab(
+                            text: 'Current  ${learning.length + learnt.length}',
                           ),
-                          StudyLauncher(
-                            followLearningTab: true,
-                            studyScope: StudyScope(bookId: bookId),
-                            title: bookName,
-                            preferenceKey: 'book:$bookId',
-                            prompts: [
-                              for (final card in cards)
-                                StudyPrompt(
-                                  card: card,
-                                  cue: StudyCue.fromLanguage,
-                                ),
-                            ],
-                            studyCards: cards,
-                            sourceKind: StudySourceKind.book,
-                            builder: (onPressed) => FilledButton(
-                              onPressed: onPressed,
-                              child: const Text('Study'),
-                            ),
-                          ),
+                          Tab(text: 'Upcoming  ${upcoming.length}'),
+                          Tab(text: 'Backlog  ${notStarted.length}'),
                         ],
                       ),
                     ),
                   ),
-                ),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1200),
-                    child: TabBar(
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      tabs: [
-                        Tab(text: 'Practice  ${upcoming.length}'),
-                        Tab(text: 'Weak  ${learning.length}'),
-                        Tab(text: 'Strong  ${learnt.length}'),
-                        Tab(text: 'Future  ${notStarted.length}'),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        CurrentCardsTab(
+                          cards: [...learning, ...learnt],
+                          dashboard: data,
+                        ),
+                        LearningCardsTab(
+                          cards: upcoming,
+                          nextStatus: LearningStatus.recall,
+                          actionLabel: 'Activate',
+                          emptyText: 'Move Backlog cards here to practice.',
+                          dashboard: data,
+                        ),
+                        LearningCardsTab(
+                          cards: notStarted,
+                          emptyText: 'Every card has been started.',
+                          nextStatus: LearningStatus.practice,
+                          actionLabel: '+',
+                          dashboard: data,
+                        ),
                       ],
                     ),
                   ),
-                ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      LearningCardsTab(
-                        cards: upcoming,
-                        nextStatus: LearningStatus.recall,
-                        actionLabel: 'Activate',
-                        emptyText: 'Move Future cards here to practice.',
-                        dashboard: data,
-                      ),
-                      LearningCardsTab(
-                        cards: learning,
-                        showScheduleStatus: true,
-                        emptyText: 'No cards are currently weak.',
-                        dashboard: data,
-                      ),
-                      LearningCardsTab(
-                        cards: learnt,
-                        emptyText: 'No cards have reached Strong yet.',
-                        dashboard: data,
-                      ),
-                      LearningCardsTab(
-                        cards: notStarted,
-                        emptyText: 'Every card has been started.',
-                        nextStatus: LearningStatus.practice,
-                        actionLabel: '+',
-                        dashboard: data,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

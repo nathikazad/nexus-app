@@ -26,8 +26,7 @@ double pastRecallPriority(
 }) {
   final schedule = prompt.schedule;
   final stability = schedule.stability;
-  final accuracy =
-      recalledAnswers(prompt.card, prompt.cue, historyWindow) / historyWindow;
+  final accuracy = recallScore(prompt.card, prompt.cue).fraction;
   var forgetting = 1.0;
   if (stability != null &&
       stability.isFinite &&
@@ -52,33 +51,18 @@ double pastRecallPriority(
   return 100 * forgetting * (2 - accuracy);
 }
 
-/// Due Past cards first; retain other stage selection and fill remaining slots.
-/// Preserve the caller's shuffled order for equal priorities.
+/// Weakest card-direction scores first, preserving order for ties.
 void prioritizeRecallPrompts(
   List<StudyPrompt> prompts,
   DateTime now, {
   required int historyWindow,
 }) {
   final order = {for (var i = 0; i < prompts.length; i++) prompts[i]: i};
-  final stages = {
-    for (final p in prompts)
-      p: learningStage(p.card, p.cue, window: historyWindow),
-  };
-  final scores = {
-    for (final p in prompts)
-      if (stages[p] == LearningStage.past)
-        p: pastRecallPriority(p, now, historyWindow: historyWindow),
-  };
   prompts.sort((a, b) {
-    final aDue = isPastDue(a, now, historyWindow: historyWindow);
-    final bDue = isPastDue(b, now, historyWindow: historyWindow);
-    if (aDue != bDue) return aDue ? -1 : 1;
-    final byStage = stages[a]!.index.compareTo(stages[b]!.index);
-    if (byStage != 0) return byStage;
-    if (stages[a] == LearningStage.past) {
-      final byScore = scores[b]!.compareTo(scores[a]!);
-      if (byScore != 0) return byScore;
-    }
-    return order[a]!.compareTo(order[b]!);
+    final score = recallScore(
+      a.card,
+      a.cue,
+    ).fraction.compareTo(recallScore(b.card, b.cue).fraction);
+    return score != 0 ? score : order[a]!.compareTo(order[b]!);
   });
 }

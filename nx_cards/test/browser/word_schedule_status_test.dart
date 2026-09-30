@@ -24,7 +24,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Weak');
+    expect(status?.label, 'Current');
     expect(status?.isDue, isFalse);
   });
 
@@ -45,7 +45,7 @@ void main() {
 
     final status = wordScheduleStatus(card, now);
 
-    expect(status?.label, 'Weak');
+    expect(status?.label, 'Current');
     expect(status?.isDue, isFalse);
   });
 
@@ -58,27 +58,30 @@ void main() {
 
     final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.label, 'Weak');
+    expect(status?.label, 'Current');
     expect(status?.isDue, isFalse);
   });
 
-  test('recall percentage uses the configured ten-answer window', () {
-    final card = _card(
-      schedules: {
-        StudyCue.fromLanguage: _schedule(
-          state: 'review',
-          dueAt: DateTime.utc(2026, 8, 12),
-        ),
-      },
-      recallRatings: const [4, 1, 1, 1, 3, 3],
-    );
+  test(
+    'recall percentage uses actual attempts once there are at least five',
+    () {
+      final card = _card(
+        schedules: {
+          StudyCue.fromLanguage: _schedule(
+            state: 'review',
+            dueAt: DateTime.utc(2026, 8, 12),
+          ),
+        },
+        recallRatings: const [4, 1, 1, 1, 3, 3],
+      );
 
-    final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
+      final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.recallPercentage, 30);
-  });
+      expect(status?.recallPercentage, 50);
+    },
+  );
 
-  test('recall percentage honors the configured history window', () {
+  test('recall percentage ignores the legacy fixed-window setting', () {
     final card = _card(
       schedules: {
         StudyCue.fromLanguage: _schedule(
@@ -95,10 +98,10 @@ void main() {
       historyWindow: 3,
     );
 
-    expect(status?.recallPercentage, 33);
+    expect(status?.recallPercentage, 60);
   });
 
-  test('recall percentage keeps the full window as denominator', () {
+  test('recall percentage uses a five-attempt minimum denominator', () {
     final oneOfTwo = _card(
       schedules: {
         StudyCue.fromLanguage: _schedule(
@@ -114,7 +117,7 @@ void main() {
       },
     );
 
-    expect(frontToBackRecallPercentage(oneOfTwo), 10);
+    expect(frontToBackRecallPercentage(oneOfTwo), 20);
     expect(frontToBackRecallPercentage(neverReviewed), 0);
   });
 }

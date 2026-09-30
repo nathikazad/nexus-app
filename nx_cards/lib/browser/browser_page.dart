@@ -333,11 +333,6 @@ class _SourceCard extends StatelessWidget {
                         value: due,
                         label: 'Due',
                       ),
-                      CardMetric(
-                        icon: Icons.school_outlined,
-                        value: current,
-                        label: 'Weak',
-                      ),
                     ],
                   ),
                 ],

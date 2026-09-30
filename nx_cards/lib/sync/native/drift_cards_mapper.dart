@@ -37,6 +37,13 @@ final class DriftCardsMapper {
       audioBytes: Value(
         content is LanguageCardContent ? content.audioBytes : null,
       ),
+      similarWordGroupsJson: Value(
+        jsonEncode(
+          content is LanguageCardContent
+              ? content.similarWordGroups
+              : const <String>[],
+        ),
+      ),
       examplesJson: Value(
         jsonEncode(
           content is LanguageCardContent
@@ -70,6 +77,9 @@ final class DriftCardsMapper {
       notes: row.notes,
       content: isLanguageCardModelType(row.modelType)
           ? LanguageCardContent(
+              similarWordGroups: similarWordGroupsFromJson(
+                jsonDecode(row.similarWordGroupsJson),
+              ),
               english: row.front,
               originalScript: row.back,
               transliteration: row.transliteration ?? '',
@@ -81,7 +91,8 @@ final class DriftCardsMapper {
           : BasicCardContent(front: row.front, back: row.back),
       schedules: <StudyCue, CardSchedule>{
         for (final cue in StudyCue.values)
-          cue: _scheduleFrom(_cueNode(schedule, cue)),
+          if (cue != StudyCue.fromAudio || _cueNode(schedule, cue) != null)
+            cue: _scheduleFrom(_cueNode(schedule, cue)),
       },
       reviewHistory: <StudyCue, List<CardReview>>{
         for (final cue in StudyCue.values) cue: _historyForCue(history, cue),

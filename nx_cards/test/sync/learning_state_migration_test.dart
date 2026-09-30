@@ -55,6 +55,9 @@ void main() {
     await db.customStatement(
       'ALTER TABLE local_study_cards DROP COLUMN audio_bytes',
     );
+    await db.customStatement(
+      'ALTER TABLE local_study_cards DROP COLUMN similar_word_groups_json',
+    );
     await db.customStatement('PRAGMA user_version=13');
     await db.close();
     db = CardsDatabase(NativeDatabase(file));
@@ -140,6 +143,9 @@ void main() {
       );
       await db.customStatement(
         'ALTER TABLE local_study_cards DROP COLUMN audio_bytes',
+      );
+      await db.customStatement(
+        'ALTER TABLE local_study_cards DROP COLUMN similar_word_groups_json',
       );
       await db.customStatement('PRAGMA user_version=12');
       await db.close();

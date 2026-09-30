@@ -55,7 +55,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
   late List<StudyPrompt> _prompts;
 
   void _repeatIncorrect() {
-    final missed = incorrectRecallPrompts(_prompts, _ratings, _latestCards);
+    final missed = retryRecallPrompts(_prompts, _ratings, _latestCards);
     if (missed.isEmpty) return;
     setState(() {
       _prompts = missed;
@@ -291,7 +291,14 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                 .center,
                                                         children: [
                                                           Text(
-                                                            _prompt.prompt,
+                                                            _revealed &&
+                                                                    _card.content
+                                                                        is LanguageCardContent
+                                                                ? (_card.content
+                                                                          as LanguageCardContent)
+                                                                      .originalScript
+                                                                : _prompt
+                                                                      .prompt,
                                                             textAlign: TextAlign
                                                                 .center,
                                                             style: TextStyle(
@@ -360,54 +367,26 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                             if (_card.content
                                                                 case LanguageCardContent(
                                                                   :final english,
-                                                                  :final originalScript,
                                                                   :final transliteration,
                                                                 )) ...[
-                                                              if (_prompt.cue !=
-                                                                  StudyCue
-                                                                      .fromLanguage) ...[
-                                                                Text(
-                                                                  english,
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                  style: const TextStyle(
-                                                                    fontSize:
-                                                                        21,
-                                                                    height:
-                                                                        1.45,
-                                                                    color:
-                                                                        RecallColors
-                                                                            .ink,
-                                                                  ),
+                                                              Text(
+                                                                english,
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style: const TextStyle(
+                                                                  fontSize: 21,
+                                                                  height: 1.45,
+                                                                  color:
+                                                                      RecallColors
+                                                                          .ink,
                                                                 ),
-                                                                const SizedBox(
-                                                                  height: 8,
-                                                                ),
-                                                              ],
-                                                              if (_prompt
-                                                                      .isListening ||
-                                                                  _prompt.cue !=
-                                                                      StudyCue
-                                                                          .toLanguage)
-                                                                Text(
-                                                                  originalScript,
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                  style: const TextStyle(
-                                                                    fontSize:
-                                                                        24,
-                                                                    height:
-                                                                        1.45,
-                                                                    color:
-                                                                        RecallColors
-                                                                            .ink,
-                                                                  ),
-                                                                ),
-                                                              if (_prompt.cue !=
-                                                                  StudyCue
-                                                                      .transliteration) ...[
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 8,
+                                                              ),
+                                                              if (transliteration
+                                                                  .isNotEmpty) ...[
                                                                 const SizedBox(
                                                                   height: 10,
                                                                 ),

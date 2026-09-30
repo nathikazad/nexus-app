@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/card_list/bulk_card_selection.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -55,10 +56,20 @@ class StudyLauncher extends StatelessWidget {
     return AnimatedBuilder(
       animation: tabs,
       builder: (context, _) {
-        if (tabs.index == 3) return const SizedBox.shrink();
-        return _build(
+        if (tabs.index == 2) return const BulkSelectButton();
+        final action = _build(
           context,
-          tabs.index == 0 ? StudySetupFlow.practice : StudySetupFlow.recall,
+          tabs.index == 1 ? StudySetupFlow.practice : StudySetupFlow.recall,
+        );
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (tabs.index == 1) ...[
+              const BulkSelectButton(),
+              const SizedBox(width: 8),
+            ],
+            action,
+          ],
         );
       },
     );

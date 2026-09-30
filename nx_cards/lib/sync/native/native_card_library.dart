@@ -75,6 +75,7 @@ final class NativeCardLibrary implements CardWorkspace {
         final LanguageCardContent newContent,
       ) =>
         newContent.copyWith(
+          similarWordGroups: oldContent.similarWordGroups,
           audioUrl: newContent.audioUrl ?? oldContent.audioUrl,
           audioSha256: newContent.audioSha256 ?? oldContent.audioSha256,
           audioBytes: newContent.audioBytes ?? oldContent.audioBytes,

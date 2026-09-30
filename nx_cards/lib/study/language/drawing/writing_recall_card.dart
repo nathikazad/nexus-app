@@ -26,9 +26,7 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
   LanguageCardContent get _content =>
       widget.prompt.card.content as LanguageCardContent;
 
-  String get _answer => widget.prompt.cue == StudyCue.fromLanguage
-      ? _content.originalScript
-      : _content.english;
+  String get _answer => _content.originalScript;
 
   String? get _audioUrl {
     final value = _content.audioUrl?.trim();
@@ -118,14 +116,10 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
       ],
       if (widget.revealed) ...[
         const SizedBox(height: 8),
-        Text(_content.transliteration, textAlign: TextAlign.center),
-        Text(
-          widget.prompt.cue == StudyCue.fromLanguage
-              ? _content.english
-              : _content.originalScript,
-          textAlign: TextAlign.center,
-        ),
+        Text(_content.english, textAlign: TextAlign.center),
       ],
+      if (widget.revealed)
+        Text(_content.transliteration, textAlign: TextAlign.center),
       const SizedBox(height: 8),
       Text(
         widget.revealed

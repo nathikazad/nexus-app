@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../study/study_setup_page_test.dart' show sample;
 import 'category_hierarchy_test.dart' as hierarchy;
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   test(
     'direction labels identify both languages, with a readable fallback',
     () {
@@ -21,67 +23,112 @@ void main() {
     },
   );
 
-  testWidgets('one direction controls category totals and the opened list', (
-    tester,
-  ) async {
-    final dashboard = CardsDashboard(
-      cards: [
-        hierarchy
-            .card(1, [
-              ['Word'],
-            ], language: 'Chinese')
-            .copyWith(
-              content: sample(1, 8).content,
-              schedules: sample(1, 8).schedules,
-              reviewHistory: sample(1, 8).reviewHistory,
-              learningStatus: LearningStatus.recall,
-            ),
-      ],
-    );
+  testWidgets('audio is the third independent direction', (tester) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          cardsCollectionProvider.overrideWith(
-            (ref, source) => Stream.value(dashboard),
-          ),
-          reviewProgressionSettingsProvider.overrideWith(
-            (ref) async => const ReviewProgressionSettings(),
-          ),
-        ],
-        child: const MaterialApp(home: LanguagePage(language: 'Chinese')),
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: LanguageDirectionButton(language: 'Chinese')),
+        ),
       ),
     );
-    await tester.pumpAndSettle();
-    Finder metric(String name, String count) => find.descendant(
-      of: find.byKey(ValueKey('language-category-word-$name')),
-      matching: find.text(count),
-    );
-    expect(metric('strong', '1'), findsOneWidget);
-    expect(find.text('EN → 中'), findsOneWidget);
-    expect(find.byTooltip('All cards'), findsNothing);
-    expect(metric('practice', '0'), findsOneWidget);
     await tester.tap(find.byTooltip('Recall direction: English → Chinese'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Chinese → English'));
-    await tester.pumpAndSettle();
-    expect(metric('strong', '0'), findsOneWidget);
+    expect(find.text('EN → 中'), findsNWidgets(2));
     expect(find.text('中 → EN'), findsOneWidget);
-    expect(metric('weak', '1'), findsOneWidget);
-    await tester.tap(find.text('All'));
+    await tester.tap(find.byKey(const ValueKey('recall-direction-from_audio')));
     await tester.pumpAndSettle();
-    expect(find.text('Weak  1'), findsOneWidget);
-    expect(find.text('Strong  0'), findsOneWidget);
-    await tester.tap(find.text('Weak  1'));
-    await tester.pumpAndSettle();
-    expect(find.text('word 1'), findsOneWidget);
-    await tester.tap(find.byTooltip('Recall direction: Chinese → English'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('English → Chinese'));
-    await tester.pumpAndSettle();
-    expect(find.text('Strong  1'), findsOneWidget);
-    expect(find.text('EN → 中'), findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(metric('strong', '1'), findsOneWidget);
+    expect(
+      find.byTooltip('Recall direction: Chinese audio → Chinese'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.volume_up_outlined), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(LanguageDirectionButton)),
+    );
+    expect(
+      container.read(languageDirectionProvider('Chinese')),
+      StudyCue.fromAudio,
+    );
   });
+
+  testWidgets(
+    'Current averages selected directions and only Current has a slider',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final dashboard = CardsDashboard(
+        cards: [
+          hierarchy
+              .card(1, [
+                ['Word'],
+              ], language: 'Chinese')
+              .copyWith(
+                content: sample(1, 8).content,
+                schedules: sample(1, 8).schedules,
+                reviewHistory: sample(1, 8).reviewHistory,
+                learningStatus: LearningStatus.recall,
+              ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardsCollectionProvider.overrideWith(
+              (ref, source) => Stream.value(dashboard),
+            ),
+            reviewProgressionSettingsProvider.overrideWith(
+              (ref) async => const ReviewProgressionSettings(),
+            ),
+          ],
+          child: const MaterialApp(home: LanguagePage(language: 'Chinese')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(find.text('Current  1'), findsOneWidget);
+      expect(find.text('33%'), findsOneWidget);
+      expect(find.byKey(const ValueKey('current-retention')), findsNothing);
+      expect(find.text('Weak · All directions'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('current-filter-toggle')));
+      await tester.pumpAndSettle();
+      final slider = tester.widget<Slider>(
+        find.byKey(const ValueKey('current-retention')),
+      );
+      expect(slider.value, .8);
+      slider.onChanged!(1);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('direction-from_audio')));
+      await tester.pumpAndSettle();
+      expect(find.text('50%'), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('direction-to_language')),
+      );
+      await tester.tap(find.byKey(const ValueKey('direction-to_language')));
+      await tester.pumpAndSettle();
+      expect(find.text('100%'), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('direction-from_language')),
+      );
+      await tester.tap(find.byKey(const ValueKey('direction-from_language')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('100%'),
+        findsOneWidget,
+      ); // Last direction cannot be cleared.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.byKey(const ValueKey('current-retention')), findsNothing);
+      await tester.tap(find.text('Upcoming  0'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('current-retention')), findsNothing);
+      await tester.tap(find.text('Backlog  0'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('current-retention')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
