@@ -10,15 +10,19 @@ class GroupGradeBatch {
     required CardScheduler scheduler,
     required DateTime now,
     required this.rating,
-  }) : updates = [
-         for (final prompt in prompts)
-           scheduler
-               .preview(
-                 prompt.withCard(latest[prompt.cardId] ?? prompt.card),
-                 now,
-               )[rating]!
-               .card,
-       ];
+  }) : updates = [] {
+    final staged = Map<int, StudyCard>.of(latest);
+    for (final prompt in prompts) {
+      final updated = scheduler
+          .preview(
+            prompt.withCard(staged[prompt.cardId] ?? prompt.card),
+            now,
+          )[rating]!
+          .card;
+      staged[prompt.cardId] = updated;
+      updates.add(updated);
+    }
+  }
   final CardRating rating;
   final List<StudyCard> updates;
   int _saved = 0;

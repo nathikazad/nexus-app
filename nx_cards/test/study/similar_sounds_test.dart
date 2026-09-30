@@ -47,64 +47,86 @@ StudyCard soundCard(
   },
 );
 void main() {
-  test('only explicit matching suffixes qualify; no phonetic fallback', () {
-    final cards = [
-      soundCard(1, 'shī', groups: ['shi-sound']),
-      soundCard(2, 'shì', groups: ['shi-sound', 'contrast-write']),
-      soundCard(3, 'shí'),
-      soundCard(4, 'zǐ', groups: ['contrast-write']),
-      soundCard(5, 'le', groups: ['unsuffixed']),
-    ];
-    for (final cue in StudyCue.activeDirections) {
-      final groups = similarSoundRecallGroups([
-        for (final c in cards) StudyPrompt(card: c, cue: cue),
-      ], limit: 100);
+  test(
+    'whole groups support both written cues and automatic audio without retention cutoff',
+    () {
+      final cards = [
+        soundCard(
+          1,
+          'shī',
+          groups: ['a-write', 'sound-sound'],
+          englishScore: 10,
+        ),
+        soundCard(
+          2,
+          'shì',
+          groups: ['a-write', 'sound-sound'],
+          englishScore: 10,
+        ),
+        soundCard(3, 'shí', groups: ['b-write']),
+        soundCard(4, 'shí'),
+      ];
+      final groups = manualRecallSession(
+        cards,
+        sound: false,
+        directions: {StudyCue.fromLanguage, StudyCue.toLanguage},
+        groupLimit: 2,
+        random: Random(1),
+      );
+      expect(groups.map((g) => g.label), ['b-write', 'a-write']);
+      final full = groups.last;
+      expect(full.prompts, hasLength(4));
+      expect(full.prompts.map((p) => '${p.cardId}:${p.cue.name}').toSet(), {
+        '1:fromLanguage',
+        '1:toLanguage',
+        '2:fromLanguage',
+        '2:toLanguage',
+      });
+      final sound = manualRecallSession(
+        cards,
+        sound: true,
+        directions: {},
+        groupLimit: 1,
+      );
+      expect(sound.single.label, 'sound-sound');
+      expect(sound.single.prompts, hasLength(2));
       expect(
-        groups.single.label,
-        cue == StudyCue.fromAudio ? 'shi-sound' : 'contrast-write',
+        sound.single.prompts.every((p) => p.cue == StudyCue.fromAudio),
+        isTrue,
+      );
+    },
+  );
+  test(
+    'manual groups work across languages and no membership means no session',
+    () {
+      final cards = [
+        soundCard(1, 'anything', language: 'Tamil', groups: ['pair-write']),
+        soundCard(2, 'anything', language: 'Tamil', groups: ['pair-write']),
+        soundCard(
+          3,
+          'anything',
+          language: 'Tamil',
+          groups: ['pair-write'],
+          status: LearningStatus.future,
+        ),
+      ];
+      final groups = manualRecallSession(
+        cards,
+        sound: false,
+        directions: {StudyCue.fromLanguage},
+        groupLimit: 1,
       );
       expect(
         groups.single.prompts.map((p) => p.cardId),
-        unorderedEquals(cue == StudyCue.fromAudio ? [1, 2] : [2, 4]),
-      );
-    }
-  });
-  test(
-    'manual groups retain overlap and partial comparisons, ordered weakest first',
-    () {
-      final cards = [
-        soundCard(1, 'guó', groups: ['strong-sound'], audioScore: 5),
-        soundCard(2, 'guǒ', groups: ['strong-sound'], audioScore: 5),
-        soundCard(3, 'shī', groups: ['weak-sound', 'overlap-sound']),
-        soundCard(4, 'shì', groups: ['weak-sound']),
-        soundCard(5, 'shí', groups: ['weak-sound']),
-      ];
-      final candidates = [
-        for (final c in cards) StudyPrompt(card: c, cue: StudyCue.fromAudio),
-      ];
-      final groups = similarSoundRecallGroups(
-        candidates,
-        limit: 2,
-        random: Random(1),
-      );
-      expect(groups.first.label, 'weak-sound');
-      expect(groups.single.prompts, hasLength(2));
-      expect(groups.single.comparisonCards, hasLength(3));
-      expect(
-        groups.last.comparisonCards.length,
-        greaterThanOrEqualTo(groups.last.prompts.length),
-      );
-      final all = similarSoundRecallGroups(candidates, limit: 100);
-      expect(all.last.label, 'strong-sound');
-      expect(
-        all.expand((g) => g.prompts).where((p) => p.cardId == 3),
-        hasLength(2),
+        unorderedEquals([1, 2]),
       );
       expect(
-        similarSoundRecallGroups([
-          candidates.first,
-          StudyPrompt(card: cards.last, cue: StudyCue.fromLanguage),
-        ], limit: 10),
+        manualRecallSession(
+          [soundCard(4, 'anything')],
+          sound: false,
+          directions: {StudyCue.fromLanguage},
+          groupLimit: 5,
+        ),
         isEmpty,
       );
     },

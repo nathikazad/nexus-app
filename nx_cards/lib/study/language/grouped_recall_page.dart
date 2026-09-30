@@ -146,8 +146,8 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       _revealed = false;
       _tested.clear();
       _questions = [
-        for (final c in _group.comparisonCards)
-          StudyPrompt(card: _latest[c.id]!, cue: _group.prompts.first.cue),
+        for (final prompt in _group.prompts)
+          prompt.withCard(_latest[prompt.cardId]!),
       ]..shuffle(Random.secure());
     });
     unawaited(_startNativeIfAvailable());

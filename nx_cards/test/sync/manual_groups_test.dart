@@ -36,7 +36,7 @@ StudyCard card(
 
 void main() {
   test(
-    'manual membership is exact, overlapping, Current-only and independent of pinyin',
+    'manual membership is exact, overlapping, Current-only, language-independent and independent of pinyin',
     () {
       final groups = manualSimilarSoundGroups([
         card(1, ['shi', 'contrast', 'shi']),
@@ -47,7 +47,7 @@ void main() {
         card(6, []),
       ]);
       expect(groups.first.label, 'shi');
-      expect(groups.first.cards.map((c) => c.id), [1, 2]);
+      expect(groups.first.cards.map((c) => c.id), [1, 2, 4]);
       expect(groups.map((g) => g.label), ['shi', 'Shi', 'contrast']);
       expect(similarWordGroupsFromJson(['', ' shi ', 3, 'shi', 'shi']), [
         'shi',
