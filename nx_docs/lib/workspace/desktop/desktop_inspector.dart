@@ -1,6 +1,6 @@
 part of 'desktop_workspace.dart';
 
-enum _InspectorTab { contents, details, ai }
+enum _InspectorTab { contents, details }
 
 class _DesktopInspector extends ConsumerStatefulWidget {
   const _DesktopInspector({required this.documentId, this.onClose});
@@ -22,11 +22,7 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
         _selectedTab ??
         (mobile ? _InspectorTab.details : _InspectorTab.contents);
     final tabs = mobile
-        ? const [
-            _InspectorTab.details,
-            _InspectorTab.contents,
-            _InspectorTab.ai,
-          ]
+        ? const [_InspectorTab.details, _InspectorTab.contents]
         : _InspectorTab.values;
     final id = widget.documentId;
     final document = id == null
@@ -101,7 +97,6 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
                       label: switch (item) {
                         _InspectorTab.contents => 'Contents',
                         _InspectorTab.details => 'Details',
-                        _InspectorTab.ai => 'AI',
                       },
                       active: tab == item,
                       onTap: () => setState(() => _selectedTab = item),
@@ -114,13 +109,6 @@ class _DesktopInspectorState extends ConsumerState<_DesktopInspector> {
           Expanded(
             child: document == null
                 ? const SizedBox.shrink()
-                : tab == _InspectorTab.ai
-                ? NoteCompanion(
-                    key: ValueKey<int>(document.id),
-                    document: document,
-                    embeddedChat: true,
-                    voiceEnabled: false,
-                  )
                 : tab == _InspectorTab.details
                 ? ListView(
                     padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),

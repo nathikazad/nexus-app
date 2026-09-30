@@ -12,7 +12,6 @@ import 'package:nx_docs/documents/document_data_providers.dart';
 import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_docs/tags/tag_system.dart';
 import 'package:nx_docs/documents/document_actions.dart';
-import 'package:nx_docs/companion/note_companion.dart';
 import 'package:nx_docs/documents/editor/document_editor_view.dart';
 import 'package:nx_docs/settings/settings_button.dart';
 import 'package:nx_docs/workspace/workspace_state.dart';

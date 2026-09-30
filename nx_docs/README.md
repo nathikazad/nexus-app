@@ -75,6 +75,26 @@ library/library_providers.dart       catalog and search streams
 publishing/publishing_providers.dart publishing services and triggers
 ```
 
+## Web reading and conversations
+
+On macOS, iOS and Android, HTTP(S) links open in an embedded browser over the
+current editor. The floating AI panel stays mounted and keeps the source
+Document's existing transcript through browser navigation and return to the
+editor. Opening a KGQL Document link switches to that document's conversation.
+Browsing never imports articles or creates article-specific transcripts.
+
+Article text is extracted locally with bundled Mozilla Readability, refreshed
+for each question, and sent as reference context separately from the question.
+Text and recorded voice questions both use the persistent document conversation.
+Extraction failures disable article questions; context above the socket's 64 KiB
+limit fails explicitly rather than silently truncating the article. The web app
+retains its existing external-link behavior. Desktop conversation controls now
+live in the floating panel rather than a second inspector conversation instance.
+
+The native browser adds a CocoaPods dependency on macOS and requires macOS 12
+or newer for the current Xcode toolchain. Changes to this native dependency
+require a new iOS Shorebird base release before installation.
+
 ## Web deployment
 
 The server uses the `nx_docs` static directory:

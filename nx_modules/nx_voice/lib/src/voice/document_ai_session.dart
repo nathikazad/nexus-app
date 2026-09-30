@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'packet_codec.dart';
 import 'socket_client.dart';
@@ -193,25 +194,35 @@ class DocumentAiSession {
     _sessionKey = key;
   }
 
-  void sendTextTurn(String text, {String context = ''}) {
+  void sendTextTurn(String text,
+      {String context = '', bool preserveContext = false}) {
     final normalized = text.trim();
     if (normalized.isEmpty) return;
     _streamIndex++;
     _activeAudioTurn = null;
-    _socket.sendContext('text', _turnContext(context));
+    _socket.sendContext(
+        'text', _turnContext(context, preserveContext: preserveContext));
     _socket.sendTextTurn(normalized, streamIndex: _streamIndex);
   }
 
-  String _turnContext(String context) {
+  String _turnContext(String context, {bool preserveContext = false}) {
     final text =
         [context, _referenceContext].where((s) => s.isNotEmpty).join('\n\n');
+    if (preserveContext) {
+      if (utf8.encode(text).length > 65536) {
+        throw StateError('This article exceeds the conversation context limit. '
+            'The full article could not be sent; no partial article was used.');
+      }
+      return text;
+    }
     return text.runes.length <= 15000
         ? text
         : '${String.fromCharCodes(text.runes.take(15000))}\n[Context truncated]';
   }
 
-  void beginAudioTurn({String context = ''}) {
-    _socket.sendContext('audio', _turnContext(context));
+  void beginAudioTurn({String context = '', bool preserveContext = false}) {
+    _socket.sendContext(
+        'audio', _turnContext(context, preserveContext: preserveContext));
     _streamIndex++;
     _packetIndex = 0;
     _activeAudioTurn = NxVoiceAudioTurn.create(streamIndex: _streamIndex);

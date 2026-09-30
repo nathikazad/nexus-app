@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:nx_docs/documents/browser/browser_article.dart';
 import 'package:nx_voice/nx_voice.dart';
 
 import 'package:flutter/foundation.dart';
@@ -34,6 +35,9 @@ class NoteCompanion extends ConsumerStatefulWidget {
     required this.document,
     this.onAudioBlockChanged,
     this.embeddedChat = false,
+    this.browserOpen = false,
+    this.article,
+    this.readArticle,
     this.voiceEnabled = true,
     super.key,
   });
@@ -41,6 +45,9 @@ class NoteCompanion extends ConsumerStatefulWidget {
   final NxDocument document;
   final ValueChanged<DocumentAudioBlockTiming>? onAudioBlockChanged;
   final bool embeddedChat;
+  final bool browserOpen;
+  final BrowserArticle? article;
+  final Future<BrowserArticle> Function()? readArticle;
   final bool voiceEnabled;
 
   @override
@@ -103,9 +110,18 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
     final voiceUser = ref.read(authProvider).value;
     if (voiceUser?.domainId == null) return;
     final initialAudio = widget.document.audio;
+    final sourceDocumentId = widget.document.id;
     final controller = NoteCompanionController(
       domainId: voiceUser!.requiredDomainId,
       documentId: widget.document.id,
+      turnContext: () async {
+        if (!widget.browserOpen) return '';
+        final article = widget.readArticle != null
+            ? await widget.readArticle!()
+            : widget.article;
+        if (article == null) throw StateError('Waiting for article text.');
+        return article.context;
+      },
       socketUrl: socketUrl,
       userId: userId,
       audioService: audioService,
@@ -115,11 +131,12 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
             .post(
               Uri.parse(baseUrl).resolve('/nx_docs/conversation'),
               headers: {'content-type': 'application/json'},
-              body: jsonEncode({'document_id': widget.document.id}),
+              body: jsonEncode({'document_id': sourceDocumentId}),
             )
             .timeout(const Duration(seconds: 15));
-        if (response.statusCode != 200)
+        if (response.statusCode != 200) {
           throw StateError('Conversation unavailable');
+        }
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return DocumentConversation(
           transcriptId: data['transcript_id'] as int,
@@ -449,7 +466,23 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
                 ],
               ),
             ),
+          if (widget.browserOpen)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+              child: Text(
+                widget.article == null
+                    ? 'Reading article text…'
+                    : widget.article!.error ??
+                          'Article context: ${widget.article!.title} · Conversation: ${widget.document.title}',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
           _Composer(
+            contextReady:
+                !widget.browserOpen ||
+                (widget.article != null && widget.article!.error == null),
             controller: controller,
             textController: _textController,
             focusNode: _textFocusNode,
@@ -509,6 +542,11 @@ class _NoteCompanionState extends ConsumerState<NoteCompanion> {
 
   void _startLiveConversation() {
     FocusScope.of(context).unfocus();
+    if (widget.browserOpen || !widget.document.isBook) {
+      // Like Books, document questions use the saved conversation for voice too.
+      unawaited(_controller?.startRecording());
+      return;
+    }
     if (widget.document.isBook) {
       setState(() {
         _bookChapterPickerActive = true;

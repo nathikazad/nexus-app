@@ -58,6 +58,7 @@ class NoteCompanionController extends ChangeNotifier {
     Future<Map<String, String>> Function(bool forceRefresh)? authHeaders,
     this.onAudioBlockChanged,
     this.loadConversation,
+    this.turnContext,
     DocumentAudio? initialAudio,
     String? initialBlockKey,
     NoteAiSession? session,
@@ -96,6 +97,7 @@ class NoteCompanionController extends ChangeNotifier {
   }
 
   final int documentId;
+  final FutureOr<String> Function()? turnContext;
   final Future<DocumentConversation> Function()? loadConversation;
   final String socketUrl;
   final String userId;
@@ -154,12 +156,18 @@ class NoteCompanionController extends ChangeNotifier {
   Future<void> sendText(String raw) async {
     final text = raw.trim();
     if (text.isEmpty || isRecording || isBusy) return;
-    _messages.add(NoteCompanionMessage(role: 'user', text: text));
     await pauseNoteAudio();
     _setPhase(NoteCompanionPhase.connecting, clearError: true);
     try {
+      final context = await turnContext?.call() ?? '';
       await _connect();
-      _session.sendTextTurn(text);
+      if (_disposed) return;
+      _session.sendTextTurn(
+        text,
+        context: context,
+        preserveContext: context.isNotEmpty,
+      );
+      _messages.add(NoteCompanionMessage(role: 'user', text: text));
       _setPhase(NoteCompanionPhase.waiting);
     } catch (error) {
       _setError(error);
@@ -170,10 +178,15 @@ class NoteCompanionController extends ChangeNotifier {
     if (isRecording || isBusy) return;
     _setPhase(NoteCompanionPhase.connecting, clearError: true);
     try {
+      final context = await turnContext?.call() ?? '';
       await pauseNoteAudio();
       await _connect();
+      if (_disposed) return;
       await _player.stop();
-      _session.beginAudioTurn();
+      _session.beginAudioTurn(
+        context: context,
+        preserveContext: context.isNotEmpty,
+      );
       final started = await _microphone.start(
         onOpusPacket: _session.sendAudioPacket,
         onError: _setError,

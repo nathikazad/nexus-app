@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:nx_docs/documents/browser/document_browser.dart';
 import 'package:nx_docs/documents/editor/document_scroll_store.dart';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
@@ -26,6 +27,7 @@ import 'package:nx_docs/documents/editor/nx_highlight_notes.dart';
 import 'package:nx_documents/nx_documents.dart' as shared_documents;
 // import 'package:nx_docs/documents/editor/offline_sync_status_label.dart';
 
+part 'document_editor_host.dart';
 part 'editor_canvas.dart';
 part 'editor_content_state.dart';
 part 'editor_navigation.dart';
@@ -43,109 +45,6 @@ enum DocumentInteractionMode {
   bool get canPersistChanges => this != DocumentInteractionMode.readOnly;
 }
 
-class DocumentEditorView extends ConsumerWidget {
-  const DocumentEditorView({
-    required this.documentId,
-    this.contextBar,
-    this.onTitleChanged,
-    this.onOpenDocumentLink,
-    this.canNavigateBack = false,
-    this.onNavigateBack,
-    this.horizontalPadding = 48,
-    this.contentTopPadding = 54,
-    this.showDocumentTitle = true,
-    this.active = true,
-    this.interactionMode = DocumentInteractionMode.edit,
-    this.showCompanion = true,
-    super.key,
-  });
-
-  final int documentId;
-  final Widget? contextBar;
-  final ValueChanged<String>? onTitleChanged;
-  final ValueChanged<int>? onOpenDocumentLink;
-  final bool canNavigateBack;
-  final VoidCallback? onNavigateBack;
-  final double horizontalPadding;
-  final double contentTopPadding;
-  final bool showDocumentTitle;
-  final bool active;
-  final DocumentInteractionMode interactionMode;
-  final bool showCompanion;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (kDebugMode) {
-      debugPrint('[nx_docs editor lifecycle] view-build document=$documentId');
-    }
-    final demand = active
-        ? ref.watch(documentDemandProvider(documentId))
-        : const AsyncValue<void>.data(null);
-    final asyncState = ref.watch(documentSessionStateProvider(documentId));
-    return asyncState.when(
-      data: (sessionState) {
-        final document = sessionState.document;
-        if (document == null) {
-          return Center(
-            child: Text(
-              demand.hasError ||
-                      sessionState.phase == DocumentPhase.unavailableOffline
-                  ? 'This document has not been downloaded on this device.'
-                  : sessionState.phase == DocumentPhase.notFound
-                  ? 'Document not found'
-                  : 'Opening document…',
-            ),
-          );
-        }
-        return Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: DocumentEditorBody(
-                scrollStore: ref.watch(documentScrollStoreProvider),
-                document: document,
-                changeOrigin: sessionState.origin,
-                contextBar: contextBar,
-                onTitleChanged: onTitleChanged,
-                onOpenDocumentLink: onOpenDocumentLink,
-                canNavigateBack: canNavigateBack,
-                onNavigateBack: onNavigateBack,
-                horizontalPadding: horizontalPadding,
-                contentTopPadding: contentTopPadding,
-                showDocumentTitle: showDocumentTitle,
-                active: active,
-                interactionMode: interactionMode,
-              ),
-            ),
-            if (active && showCompanion)
-              Positioned(
-                right: 12,
-                bottom: 12,
-                child: SafeArea(
-                  top: false,
-                  left: false,
-                  child: NoteCompanion(
-                    document: document,
-                    onAudioBlockChanged: (block) {
-                      documentAudioBlockRequestNotifier.value =
-                          DocumentAudioBlockRequest(
-                            documentId: document.id,
-                            blockIndex: block.blockIndex,
-                            blockKey: block.blockKey,
-                          );
-                      _saveAudioScrollAnchor(ref, document, block);
-                    },
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-      error: (error, stackTrace) => Center(child: Text('$error')),
-      loading: () => const Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
 class DocumentEditorBody extends ConsumerStatefulWidget {
   const DocumentEditorBody({
     this.scrollStore,
@@ -154,6 +53,7 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
     this.contextBar,
     this.onTitleChanged,
     this.onOpenDocumentLink,
+    this.onOpenWebLink,
     this.canNavigateBack = false,
     this.onNavigateBack,
     this.horizontalPadding = 48,
@@ -170,6 +70,7 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
   final Widget? contextBar;
   final ValueChanged<String>? onTitleChanged;
   final ValueChanged<int>? onOpenDocumentLink;
+  final ValueChanged<Uri>? onOpenWebLink;
   final bool canNavigateBack;
   final VoidCallback? onNavigateBack;
   final double horizontalPadding;
@@ -378,6 +279,11 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
     final documentId = nxDocumentIdFromHref(href);
     if (documentId != null && widget.onOpenDocumentLink != null) {
       widget.onOpenDocumentLink!(documentId);
+      return true;
+    }
+    final url = Uri.tryParse(href ?? '');
+    if (url != null && isArticleWebUrl(url) && widget.onOpenWebLink != null) {
+      widget.onOpenWebLink!(url);
       return true;
     }
     return false;

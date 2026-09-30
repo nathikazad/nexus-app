@@ -211,6 +211,7 @@ class _Composer extends StatelessWidget {
     required this.onSubmit,
     required this.onStartLiveConversation,
     this.voiceEnabled = true,
+    this.contextReady = true,
   });
 
   final NoteCompanionController controller;
@@ -219,10 +220,11 @@ class _Composer extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onStartLiveConversation;
   final bool voiceEnabled;
+  final bool contextReady;
 
   @override
   Widget build(BuildContext context) {
-    final disabled = controller.isBusy;
+    final disabled = controller.isBusy || !contextReady;
     final showStop = controller.isRecording || controller.anyAudioPlaying;
     final micDisabled = disabled && !controller.anyAudioPlaying;
     return Padding(

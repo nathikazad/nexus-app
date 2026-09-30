@@ -12,7 +12,10 @@ import 'package:nx_voice/stored_audio.dart';
 
 class _FakeSocket implements NoteAiSocketPort {
   @override
-  void sendContext(String input, String context) {}
+  void sendContext(String input, String context) => contexts.add(context);
+
+  final contexts = <String>[];
+  Map<String, String>? connectHeaders;
 
   bool connected = false;
   void Function(NxVoiceTextChunk packet)? textChunk;
@@ -45,6 +48,7 @@ class _FakeSocket implements NoteAiSocketPort {
     authHeaders,
   }) async {
     connected = true;
+    connectHeaders = headers;
     return true;
   }
 
@@ -111,6 +115,64 @@ void main() {
         const MethodChannel('com.llfbandit.record/messages'),
         (_) async => null,
       );
+
+  test(
+    'article navigation keeps the source transcript and sends full context',
+    () async {
+      final socket = _FakeSocket();
+      var article = 'First article: ${List.filled(20000, 'a').join()}';
+      final controller = NoteCompanionController(
+        domainId: 1,
+        documentId: 4450,
+        socketUrl: 'wss://socket.example',
+        userId: '1',
+        audioService: DocumentAudioService(baseUrl: 'https://notes.example'),
+        transcriptLoader: _FakeTranscriptLoader(),
+        loadConversation: () async =>
+            const DocumentConversation(transcriptId: 701),
+        turnContext: () => article,
+        session: NoteAiSession(socket: socket),
+      );
+      addTearDown(controller.dispose);
+      await controller.sendText('First question');
+      expect(socket.contexts.single, article);
+      expect(socket.connectHeaders!['X-Transcript-Id'], '701');
+      socket.emitText('First answer');
+      socket.emitTextEof();
+      article = 'Second article';
+      await controller.sendText('Second question');
+      expect(socket.contexts.last, 'Second article');
+      expect(socket.connectHeaders!['X-Transcript-Id'], '701');
+      socket.emitTextEof(streamIndex: 2);
+      article = '';
+      await controller.sendText('Back in the document');
+      expect(socket.contexts.last, '');
+      expect(controller.documentId, 4450);
+      expect(controller.messages.where((m) => m.fromUser).length, 3);
+    },
+  );
+
+  test(
+    'oversized article fails explicitly without sending partial context',
+    () async {
+      final socket = _FakeSocket();
+      final controller = NoteCompanionController(
+        domainId: 1,
+        documentId: 4450,
+        socketUrl: 'wss://socket.example',
+        userId: '1',
+        audioService: DocumentAudioService(baseUrl: 'https://notes.example'),
+        transcriptLoader: _FakeTranscriptLoader(),
+        turnContext: () => List.filled(17000, '😀').join(),
+        session: NoteAiSession(socket: socket),
+      );
+      addTearDown(controller.dispose);
+      await controller.sendText('Explain this article');
+      expect(socket.contexts, isEmpty);
+      expect(controller.error, contains('full article could not be sent'));
+      expect(controller.messages, isEmpty);
+    },
+  );
 
   test('keeps assistant answers from separate text turns distinct', () async {
     final socket = _FakeSocket();
