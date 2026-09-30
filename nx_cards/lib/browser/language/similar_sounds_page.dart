@@ -9,6 +9,14 @@ import 'package:nx_cards/browser/browser_error.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/similar_sounds.dart';
 
+const _tabKinds = [
+  SimilarSoundKind.manual,
+  SimilarSoundKind.syllable,
+  SimilarSoundKind.beginning,
+  SimilarSoundKind.ending,
+  SimilarSoundKind.nearby,
+];
+
 class SimilarSoundsPage extends ConsumerWidget {
   const SimilarSoundsPage({super.key, required this.language});
   final String language;
@@ -18,16 +26,14 @@ class SimilarSoundsPage extends ConsumerWidget {
       cardsCollectionProvider((language: language, bookId: null)),
     );
     return DefaultTabController(
-      length: SimilarSoundKind.values.length,
+      length: _tabKinds.length,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Similar sounding words'),
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            tabs: [
-              for (final kind in SimilarSoundKind.values) Tab(text: kind.label),
-            ],
+            tabs: [for (final kind in _tabKinds) Tab(text: kind.label)],
           ),
         ),
         body: data.when(
@@ -47,7 +53,7 @@ class SimilarSoundsPage extends ConsumerWidget {
             groups.addAll(manualSimilarSoundGroups(dashboard.cards));
             return TabBarView(
               children: [
-                for (final kind in SimilarSoundKind.values)
+                for (final kind in _tabKinds)
                   _SimilarSoundsTab(
                     key: ValueKey(kind),
                     kind: kind,

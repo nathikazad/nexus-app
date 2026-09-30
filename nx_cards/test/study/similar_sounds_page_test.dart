@@ -40,6 +40,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('explore-similar-sounds')));
       await tester.pumpAndSettle();
       expect(find.byType(Tab), findsNWidgets(5));
+      expect(tester.widget<Tab>(find.byType(Tab).first).text, 'My Own');
+      expect(find.text('My contrast'), findsOneWidget);
+      await tester.tap(find.text('Tones and meanings'));
+      await tester.pumpAndSettle();
       expect(find.text('Tones and meanings · 2 words'), findsOneWidget);
       await tester.tap(find.byType(ExpansionTile));
       await tester.pumpAndSettle();
