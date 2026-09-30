@@ -37,6 +37,38 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
     messenger.setMockMethodCallHandler(NativeDrawingSession.channel, null);
   });
+  test(
+    'grouped writing opts into completion-only controls; ordinary payload stays unchanged',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final opened = <Map<Object?, Object?>>[];
+      messenger.setMockMethodCallHandler(NativeDrawingSession.channel, (
+        call,
+      ) async {
+        if (call.method == 'available') return true;
+        if (call.method == 'open') {
+          opened.add(Map<Object?, Object?>.from(call.arguments as Map));
+        }
+        return null;
+      });
+      for (final grouped in [false, true]) {
+        await NativeDrawingSession.open(
+          title: 'Test',
+          cards: [
+            NativeDrawingSession.recallCard(
+              StudyPrompt(card: card, cue: StudyCue.fromAudio),
+            ),
+          ],
+          recall: true,
+          grouped: grouped,
+          onAction: (_) async => null,
+        );
+      }
+      expect(opened.first.containsKey('grouped'), isFalse);
+      expect(opened.last['grouped'], isTrue);
+      expect(opened.last['recall'], isTrue);
+    },
+  );
   test('recall preserves cue direction and optional transliteration', () {
     final from = NativeDrawingSession.recallCard(
       StudyPrompt(
