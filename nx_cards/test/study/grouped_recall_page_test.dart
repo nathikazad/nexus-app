@@ -88,7 +88,7 @@ void main() {
         expect(library.saved, isEmpty);
         await answerWord(tester);
         expect(library.saved, isEmpty);
-        expect(find.text('Compare sounds'), findsOneWidget);
+        expect(find.text('Compare words'), findsOneWidget);
         expect(find.text('Not asked'), findsOneWidget);
         for (final c in cards) {
           expect(find.text(c.front), findsOneWidget);

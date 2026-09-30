@@ -110,9 +110,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final cards = _recallBaseCandidates.map((p) => p.card).toList();
     if (!listEquals(cards, _similarGroupSource)) {
       _similarGroupSource = cards;
-      _similarGroupCache = similarSoundGroups(cards);
+      _similarGroupCache = manualSimilarSoundGroups(cards);
     }
-    return _similarGroupCache;
+    final suffix = _directions.single == StudyCue.fromAudio
+        ? '-sound'
+        : '-write';
+    return _similarGroupCache.where((g) => g.label.endsWith(suffix)).toList();
   }
 
   bool get _allowsSimilarSounds =>
@@ -1152,11 +1155,15 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     if (_allowsSimilarSounds) ...[
                       const SizedBox(height: 16),
                       _SetupCard(
-                        title: 'Similar sounds',
+                        title: 'Similar words',
                         child: SwitchListTile.adaptive(
                           key: const ValueKey('group-similar-sounds'),
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Group by similar sounds'),
+                          title: Text(
+                            _directions.single == StudyCue.fromAudio
+                                ? 'Group by similar sounds'
+                                : 'Group by similar writing',
+                          ),
                           value: _groupSimilarSounds,
                           onChanged: (value) {
                             setState(() {

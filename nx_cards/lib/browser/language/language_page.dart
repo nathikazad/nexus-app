@@ -142,7 +142,7 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
                       child: ListTile(
                         key: const ValueKey('explore-similar-sounds'),
                         leading: const Icon(Icons.graphic_eq_rounded),
-                        title: const Text('Similar sounding words'),
+                        title: const Text('Similar words'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => Navigator.of(context).push<void>(
                           MaterialPageRoute(

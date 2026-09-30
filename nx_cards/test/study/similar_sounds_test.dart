@@ -6,6 +6,7 @@ import 'package:nx_cards/study/language/similar_sounds.dart';
 StudyCard soundCard(
   int id,
   String pinyin, {
+  List<String> groups = const [],
   int englishScore = 0,
   int audioScore = 0,
   String language = 'Chinese',
@@ -13,6 +14,7 @@ StudyCard soundCard(
 }) => StudyCard(
   id: id,
   content: LanguageCardContent(
+    similarWordGroups: groups,
     english: 'meaning $id',
     originalScript: '字$id',
     transliteration: pinyin,
@@ -45,143 +47,66 @@ StudyCard soundCard(
   },
 );
 void main() {
-  test(
-    'browsing retains categories that share a group without repeating it in recall',
-    () {
-      final cards = [soundCard(1, 'yī'), soundCard(2, 'yě')];
-      final browse = similarSoundGroups(cards, includeEveryCategory: true);
+  test('only explicit matching suffixes qualify; no phonetic fallback', () {
+    final cards = [
+      soundCard(1, 'shī', groups: ['shi-sound']),
+      soundCard(2, 'shì', groups: ['shi-sound', 'contrast-write']),
+      soundCard(3, 'shí'),
+      soundCard(4, 'zǐ', groups: ['contrast-write']),
+      soundCard(5, 'le', groups: ['unsuffixed']),
+    ];
+    for (final cue in StudyCue.activeDirections) {
+      final groups = similarSoundRecallGroups([
+        for (final c in cards) StudyPrompt(card: c, cue: cue),
+      ], limit: 100);
       expect(
-        browse.map((g) => g.kind),
-        containsAll([SimilarSoundKind.nearby, SimilarSoundKind.beginning]),
+        groups.single.label,
+        cue == StudyCue.fromAudio ? 'shi-sound' : 'contrast-write',
       );
-      expect(similarSoundGroups(cards), hasLength(1));
-    },
-  );
-
-  test(
-    'parses tone marks, numeric tones, joined words and ü without conflating u',
-    () {
-      expect(parsePinyin('xuéshēng').map((s) => s.key), ['xue2', 'sheng1']);
-      expect(parsePinyin("xi1'an1").map((s) => s.key), ['xi1', 'an1']);
-      expect(parsePinyin('nu\u0308\u030c').single.key, 'nü3');
-      expect(parsePinyin('nv3').single.key, 'nü3');
-      expect(parsePinyin('nǔ').single.key, 'nu3');
-      expect(parsePinyin('de').single.key, 'de5');
-      expect(parsePinyin('not pinyin!'), isEmpty);
-    },
-  );
-  test('matches requested sound contrasts and keeps syllable order', () {
-    for (final pair in [
-      ('shī', 'shì'),
-      ('gǒu', 'hòu'),
-      ('gǒu', 'guó'),
-      ('yī', 'yě'),
-      ('gǒu', 'yǒu'),
-      ('yǒu', 'yo'),
-    ]) {
       expect(
-        pinyinDistance(parsePinyin(pair.$1), parsePinyin(pair.$2)),
-        isNotNull,
-        reason: '$pair',
+        groups.single.prompts.map((p) => p.cardId),
+        unorderedEquals(cue == StudyCue.fromAudio ? [1, 2] : [2, 4]),
       );
     }
-    expect(
-      pinyinDistance(parsePinyin('xuéshēng'), parsePinyin('shēngxué')),
-      isNull,
-    );
   });
   test(
-    'Current Chinese only; homophones included; guo appears in different groups',
-    () {
-      final groups = similarSoundGroups([
-        soundCard(1, 'guó'),
-        soundCard(2, 'guǒ'),
-        soundCard(3, 'guò'),
-        soundCard(4, 'gǒu'),
-        soundCard(5, 'hòu'),
-        soundCard(6, 'yóu'),
-        soundCard(7, 'yóu'),
-        soundCard(8, 'guó', language: 'Tamil'),
-        soundCard(9, 'guó', status: LearningStatus.practice),
-        soundCard(10, 'guó', status: LearningStatus.future),
-      ]);
-      expect(
-        groups
-            .where((g) => g.kind == SimilarSoundKind.syllable)
-            .map((g) => g.cards.map((c) => c.id).toSet()),
-        containsAll([
-          {1, 2, 3},
-          {6, 7},
-        ]),
-      );
-      expect(
-        groups.where((g) => g.cards.any((c) => c.id == 1)).length,
-        greaterThan(1),
-      );
-      expect(groups.expand((g) => g.cards).any((c) => c.id >= 8), isFalse);
-    },
-  );
-  test('orders by the group average in the selected direction', () {
-    final cards = [
-      soundCard(1, 'guó', englishScore: 5),
-      soundCard(2, 'guǒ', englishScore: 5),
-      soundCard(3, 'shī', audioScore: 5),
-      soundCard(4, 'shì', audioScore: 5),
-    ];
-    List<SimilarRecallGroup> select(StudyCue cue) => similarSoundRecallGroups(
-      [for (final c in cards) StudyPrompt(card: c, cue: cue)],
-      limit: 4,
-      random: Random(1),
-    );
-    expect(
-      select(StudyCue.fromLanguage).first.prompts.map((p) => p.cardId),
-      unorderedEquals([3, 4]),
-    );
-    expect(
-      select(StudyCue.fromAudio).first.prompts.map((p) => p.cardId),
-      unorderedEquals([1, 2]),
-    );
-  });
-  test(
-    'count truncates questions but retains the entire final comparison group',
+    'manual groups retain overlap and partial comparisons, ordered weakest first',
     () {
       final cards = [
-        soundCard(1, 'guó'),
-        soundCard(2, 'guǒ'),
-        soundCard(3, 'shī'),
-        soundCard(4, 'shì'),
-        soundCard(5, 'shí'),
+        soundCard(1, 'guó', groups: ['strong-sound'], audioScore: 5),
+        soundCard(2, 'guǒ', groups: ['strong-sound'], audioScore: 5),
+        soundCard(3, 'shī', groups: ['weak-sound', 'overlap-sound']),
+        soundCard(4, 'shì', groups: ['weak-sound']),
+        soundCard(5, 'shí', groups: ['weak-sound']),
+      ];
+      final candidates = [
+        for (final c in cards) StudyPrompt(card: c, cue: StudyCue.fromAudio),
       ];
       final groups = similarSoundRecallGroups(
-        [for (final c in cards) StudyPrompt(card: c, cue: StudyCue.fromAudio)],
-        limit: 3,
-        random: Random(2),
+        candidates,
+        limit: 2,
+        random: Random(1),
       );
-      expect(groups.map((g) => g.prompts.length), [2, 1]);
-      expect(groups.last.comparisonCards, hasLength(3));
-      final one = similarSoundRecallGroups([
-        for (final c in cards) StudyPrompt(card: c, cue: StudyCue.fromLanguage),
-      ], limit: 1);
-      expect(one.single.prompts, hasLength(1));
-      expect(one.single.comparisonCards, hasLength(2));
+      expect(groups.first.label, 'weak-sound');
+      expect(groups.single.prompts, hasLength(2));
+      expect(groups.single.comparisonCards, hasLength(3));
+      expect(
+        groups.last.comparisonCards.length,
+        greaterThanOrEqualTo(groups.last.prompts.length),
+      );
+      final all = similarSoundRecallGroups(candidates, limit: 100);
+      expect(all.last.label, 'strong-sound');
+      expect(
+        all.expand((g) => g.prompts).where((p) => p.cardId == 3),
+        hasLength(2),
+      );
+      expect(
+        similarSoundRecallGroups([
+          candidates.first,
+          StudyPrompt(card: cards.last, cue: StudyCue.fromLanguage),
+        ], limit: 10),
+        isEmpty,
+      );
     },
   );
-  test('same card is asked again in a different contrast group', () {
-    final cards = [
-      soundCard(1, 'guó'),
-      soundCard(2, 'guǒ'),
-      soundCard(3, 'gǒu'),
-      soundCard(4, 'hòu'),
-    ];
-    final groups = similarSoundRecallGroups([
-      for (final c in cards) StudyPrompt(card: c, cue: StudyCue.fromAudio),
-    ], limit: 100);
-    expect(
-      groups.expand((g) => g.prompts).where((p) => p.cardId == 1).length,
-      greaterThan(1),
-    );
-    for (final g in groups) {
-      expect(g.prompts.map((p) => p.cardId).toSet().length, g.prompts.length);
-    }
-  });
 }

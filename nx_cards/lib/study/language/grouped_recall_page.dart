@@ -185,8 +185,8 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       final audio = ref.read(cardAudioRepositoryProvider);
       final handled = await NativeDrawingSession.open(
         title: _practice
-            ? 'Similar sounds · Practice retry'
-            : 'Similar sounds · Group ${_groupIndex + 1}',
+            ? 'Similar words · Practice retry'
+            : 'Similar words · Group ${_groupIndex + 1}',
         cards: [
           for (final p in _questions)
             NativeDrawingSession.recallCard(p.withCard(_latest[p.cardId]!)),
@@ -288,7 +288,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       canPop: !blocked,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_comparison ? 'Compare sounds' : 'Similar sounds'),
+          title: Text(_comparison ? 'Compare words' : 'Similar words'),
           actions: [
             if (!_comparison)
               TextButton(
