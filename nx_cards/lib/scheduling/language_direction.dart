@@ -99,9 +99,11 @@ class DirectionChoices extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.allowed = StudyCue.activeDirections,
+    this.frontOnly = false,
   });
   final String language;
   final List<StudyCue> allowed;
+  final bool frontOnly;
   final Set<StudyCue> selected;
   final ValueChanged<Set<StudyCue>> onChanged;
 
@@ -120,19 +122,34 @@ class DirectionChoices extends StatelessWidget {
                 const Icon(Icons.volume_up_outlined, size: 18),
                 const SizedBox(width: 6),
               ],
-              Text(switch (cue) {
-                StudyCue.fromLanguage =>
-                  'EN → ${compactLanguageLabel(language)}',
-                StudyCue.fromAudio => '→ ${compactLanguageLabel(language)}',
-                _ => '${compactLanguageLabel(language)} → EN',
-              }),
+              Text(
+                frontOnly
+                    ? switch (cue) {
+                        StudyCue.fromLanguage => 'English',
+                        StudyCue.fromAudio => 'Sound',
+                        _ => language,
+                      }
+                    : switch (cue) {
+                        StudyCue.fromLanguage =>
+                          'EN → ${compactLanguageLabel(language)}',
+                        StudyCue.fromAudio =>
+                          '→ ${compactLanguageLabel(language)}',
+                        _ => '${compactLanguageLabel(language)} → EN',
+                      },
+              ),
             ],
           ),
-          tooltip: switch (cue) {
-            StudyCue.fromLanguage => 'English text to $language',
-            StudyCue.fromAudio => '$language audio to $language',
-            _ => '$language text to English',
-          },
+          tooltip: frontOnly
+              ? switch (cue) {
+                  StudyCue.fromLanguage => 'Show English',
+                  StudyCue.fromAudio => 'Play $language sound',
+                  _ => 'Show $language text',
+                }
+              : switch (cue) {
+                  StudyCue.fromLanguage => 'English text to $language',
+                  StudyCue.fromAudio => '$language audio to $language',
+                  _ => '$language text to English',
+                },
           selected: selected.contains(cue),
           onSelected: (enabled) {
             final next = {...selected};

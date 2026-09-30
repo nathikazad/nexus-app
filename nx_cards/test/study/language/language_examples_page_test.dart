@@ -78,7 +78,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Card stats'));
     await tester.pumpAndSettle();
-    expect(find.text('Examples (1)'), findsOneWidget);
+    expect(find.text('Examples (1)'), findsNothing);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
     expect(find.text('Stats'), findsNothing);
     expect(find.byTooltip('Edit card'), findsNothing);

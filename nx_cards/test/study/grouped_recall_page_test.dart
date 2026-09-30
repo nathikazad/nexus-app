@@ -55,142 +55,117 @@ Future<void> showGroups(
   await tester.pumpAndSettle();
 }
 
-Future<void> answerWord(WidgetTester tester) async {
-  final action = find.byKey(const ValueKey('group-question-next'));
-  await tester.tap(action);
+Future<void> answerWord(WidgetTester tester, {bool correct = true}) async {
+  await tester.tap(find.byKey(const ValueKey('group-question-next')));
   await tester.pumpAndSettle();
-  await tester.tap(action);
+  await tester.tap(
+    find.byKey(ValueKey(correct ? 'group-recalled' : 'group-not-recalled')),
+  );
   await tester.pumpAndSettle();
 }
 
 void main() {
   for (final format in GroupedRecallFormat.values) {
     testWidgets(
-      '${format.name} collects answers without grades, then one decision grades only tested words',
+      '${format.name} grades each word immediately; comparison writes nothing',
       (tester) async {
         final library = RecordingLibrary();
-        final cards = [
-          soundCard(1, 'guó'),
-          soundCard(2, 'guǒ'),
-          soundCard(3, 'guò'),
-        ];
+        final cards = [soundCard(1, 'a'), soundCard(2, 'b'), soundCard(3, 'c')];
         await showGroups(tester, library, [
           SimilarRecallGroup(
             prompts: [
-              for (final c in cards.take(2))
-                StudyPrompt(card: c, cue: StudyCue.fromAudio),
+              for (final card in cards.take(2))
+                StudyPrompt(card: card, cue: StudyCue.fromAudio),
             ],
             comparisonCards: cards,
           ),
         ], format);
-        expect(find.byKey(const ValueKey('group-recalled')), findsNothing);
         await answerWord(tester);
-        expect(library.saved, isEmpty);
-        await answerWord(tester);
-        expect(library.saved, isEmpty);
-        expect(find.text('Compare words'), findsOneWidget);
-        expect(find.text('Not asked'), findsOneWidget);
-        for (final c in cards) {
-          expect(find.text(c.front), findsOneWidget);
-        }
-        await tester.tap(find.byKey(const ValueKey('group-recalled')));
-        await tester.pumpAndSettle();
+        expect(library.saved.map((c) => c.id), [1]);
+        await answerWord(tester, correct: false);
         expect(library.saved.map((c) => c.id), [1, 2]);
         expect(
-          library.saved.every(
-            (c) => c.reviewHistoryFor(StudyCue.fromAudio).single.rating == 3,
-          ),
-          isTrue,
+          library.saved[0].reviewHistoryFor(StudyCue.fromAudio).single.rating,
+          3,
         );
-        expect(find.text('Group recalled'), findsOneWidget);
+        expect(
+          library.saved[1].reviewHistoryFor(StudyCue.fromAudio).single.rating,
+          1,
+        );
+        expect(find.text('Compare words'), findsOneWidget);
+        expect(find.byKey(const ValueKey('group-recalled')), findsNothing);
+        expect(find.text('Not asked'), findsOneWidget);
+        await tester.tap(find.text('Retry group'));
+        await tester.pumpAndSettle();
+        await answerWord(tester);
+        await answerWord(tester);
+        expect(library.saved, hasLength(2));
         await tester.tap(find.text('Finish'));
         await tester.pumpAndSettle();
-        expect(find.text('2 recalled'), findsOneWidget);
-        expect(tester.takeException(), isNull);
+        expect(find.text('1 recalled'), findsOneWidget);
+        expect(find.text('1 not recalled'), findsOneWidget);
+        expect(find.text('1 not tried'), findsNothing);
       },
     );
   }
   testWidgets(
-    'negative group decision applies to every word; practice retry writes nothing',
+    'failed individual save retries once and another direction preserves history',
     (tester) async {
-      final library = RecordingLibrary();
-      final cards = [soundCard(1, 'yóu'), soundCard(2, 'yóu')];
+      final library = RecordingLibrary()..failId = 1;
+      final card = soundCard(1, 'a');
       await showGroups(tester, library, [
-        SimilarRecallGroup(
-          prompts: [
-            for (final c in cards)
-              StudyPrompt(card: c, cue: StudyCue.fromLanguage),
-          ],
-          comparisonCards: cards,
-        ),
+        for (final cue in [StudyCue.fromLanguage, StudyCue.toLanguage])
+          SimilarRecallGroup(
+            prompts: [StudyPrompt(card: card, cue: cue)],
+            comparisonCards: [card],
+          ),
       ], GroupedRecallFormat.standard);
       await answerWord(tester);
-      await answerWord(tester);
-      await tester.tap(find.byKey(const ValueKey('group-not-recalled')));
-      await tester.pumpAndSettle();
-      expect(
-        library.saved.every(
-          (c) => c.reviewHistoryFor(StudyCue.fromLanguage).single.rating == 1,
-        ),
-        isTrue,
-      );
-      await tester.tap(find.text('Retry group'));
-      await tester.pumpAndSettle();
-      await answerWord(tester);
-      await answerWord(tester);
-      await tester.tap(find.byKey(const ValueKey('group-recalled')));
-      await tester.pumpAndSettle();
-      expect(library.saved, hasLength(2));
-      await tester.tap(find.text('Finish'));
-      await tester.pumpAndSettle();
-      expect(find.text('2 not recalled'), findsOneWidget);
-    },
-  );
-  testWidgets(
-    'save failure offers retry; next group keeps earlier history on repeated word',
-    (tester) async {
-      final library = RecordingLibrary()..failId = 2;
-      final a = soundCard(1, 'guó'),
-          b = soundCard(2, 'guǒ'),
-          c = soundCard(3, 'gǒu');
-      await showGroups(tester, library, [
-        SimilarRecallGroup(
-          prompts: [
-            for (final x in [a, b])
-              StudyPrompt(card: x, cue: StudyCue.fromLanguage),
-          ],
-          comparisonCards: [a, b],
-        ),
-        SimilarRecallGroup(
-          prompts: [
-            for (final x in [a, c])
-              StudyPrompt(card: x, cue: StudyCue.fromLanguage),
-          ],
-          comparisonCards: [a, c],
-        ),
-      ], GroupedRecallFormat.fast);
-      await answerWord(tester);
-      await answerWord(tester);
-      await tester.tap(find.byKey(const ValueKey('group-recalled')));
-      await tester.pumpAndSettle();
-      expect(library.saved.map((c) => c.id), [1]);
+      expect(library.saved, isEmpty);
       expect(find.text('Retry saving'), findsOneWidget);
       library.failId = null;
       await tester.tap(find.text('Retry saving'));
       await tester.pumpAndSettle();
-      expect(library.saved.map((c) => c.id), [1, 2]);
+      expect(library.saved, hasLength(1));
       await tester.tap(find.text('Next group'));
       await tester.pumpAndSettle();
-      await answerWord(tester);
-      await answerWord(tester);
-      await tester.tap(find.byKey(const ValueKey('group-not-recalled')));
-      await tester.pumpAndSettle();
+      await answerWord(tester, correct: false);
+      expect(library.saved, hasLength(2));
       expect(
-        library.saved[2]
+        library.saved.last
             .reviewHistoryFor(StudyCue.fromLanguage)
-            .map((r) => r.rating),
-        [3, 1],
+            .single
+            .rating,
+        3,
+      );
+      expect(
+        library.saved.last.reviewHistoryFor(StudyCue.toLanguage).single.rating,
+        1,
       );
     },
   );
+  testWidgets('ending after reveal does not grade an unanswered card', (
+    tester,
+  ) async {
+    final library = RecordingLibrary();
+    final cards = [soundCard(1, 'a'), soundCard(2, 'b')];
+    await showGroups(tester, library, [
+      SimilarRecallGroup(
+        prompts: [
+          for (final card in cards)
+            StudyPrompt(card: card, cue: StudyCue.fromAudio),
+        ],
+        comparisonCards: cards,
+      ),
+    ], GroupedRecallFormat.standard);
+    await answerWord(tester);
+    await tester.tap(find.byKey(const ValueKey('group-question-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Finish'));
+    await tester.pumpAndSettle();
+    expect(library.saved, hasLength(1));
+    expect(find.text('1 not tried'), findsOneWidget);
+  });
 }

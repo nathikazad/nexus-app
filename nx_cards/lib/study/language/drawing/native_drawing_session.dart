@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:nx_cards/study/hydrate_study_queue.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -113,6 +114,7 @@ class NativeDrawingSession {
   static Map<String, Object?> practiceCard(
     StudyCard card, {
     StudyCue? cue,
+    List<SimilarSoundGroup> similar = const [],
     List<LanguageCardContent> characters = const [],
     List<DerivedLanguageExample> derived = const [],
   }) {
@@ -129,6 +131,21 @@ class NativeDrawingSession {
           : '${content.originalScript}\n${content.english} · ${content.transliteration}',
       'audio': content.audioUrl?.isNotEmpty == true,
       'multiCharacter': content.originalScript.trim().characters.length > 1,
+      'similar': [
+        for (final group in similar)
+          {
+            'title': group.title,
+            'words': [
+              for (final member in group.cards)
+                if (member.content case final LanguageCardContent word)
+                  {
+                    'text': word.originalScript,
+                    'transliteration': word.transliteration,
+                    'translation': word.english,
+                  },
+            ],
+          },
+      ],
       'characters': [
         for (final part in characters)
           {
@@ -164,12 +181,18 @@ class NativeDrawingSession {
 
   static Map<String, Object?> recallCard(
     StudyPrompt prompt, {
+    List<SimilarSoundGroup> similar = const [],
     List<LanguageCardContent> characters = const [],
     List<DerivedLanguageExample> derived = const [],
   }) {
     final content = prompt.card.content as LanguageCardContent;
     return {
-      ...practiceCard(prompt.card, characters: characters, derived: derived),
+      ...practiceCard(
+        prompt.card,
+        characters: characters,
+        derived: derived,
+        similar: similar,
+      ),
       'prompt': prompt.prompt,
       'listening': prompt.isListening,
       'answer': content.originalScript,

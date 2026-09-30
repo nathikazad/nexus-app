@@ -47,6 +47,81 @@ StudyCard soundCard(
   },
 );
 void main() {
+  test('Written averages both text fronts for words, groups and sorting', () {
+    final english = soundCard(1, 'a', englishScore: 5);
+    final chinese = soundCard(2, 'b', englishScore: 3);
+    final both = english.copyWith(
+      reviewHistory: {
+        ...english.reviewHistory,
+        StudyCue.toLanguage: chinese.reviewHistoryFor(StudyCue.fromLanguage),
+      },
+    );
+    final group = SimilarSoundGroup([both, chinese], label: 'pair-write');
+    expect(
+      similarWordRetention(both, SimilarGroupKind.written),
+      closeTo(.8, 1e-9),
+    );
+    expect(
+      similarWordRetention(chinese, SimilarGroupKind.written),
+      closeTo(.3, 1e-9),
+    );
+    expect(similarGroupRetention(group), closeTo(.55, 1e-9));
+    final reverseOnly = english.copyWith(
+      reviewHistory: {
+        StudyCue.toLanguage: english.reviewHistoryFor(StudyCue.fromLanguage),
+      },
+    );
+    expect(
+      sortedSimilarGroups([
+        SimilarSoundGroup([reverseOnly], label: 'reverse-write'),
+        SimilarSoundGroup([chinese], label: 'english-write'),
+      ]).map((g) => g.label),
+      ['english-write', 'reverse-write'],
+    );
+  });
+
+  test(
+    'browsing uses direction-specific averages and strips only category suffixes',
+    () {
+      final cards = [
+        soundCard(1, 'a', groups: ['a-write', 'a-sound'], englishScore: 5),
+        soundCard(2, 'b', groups: ['b-write', 'b-sound'], audioScore: 5),
+        soundCard(3, 'c', groups: ['a-write', 'a-sound'], englishScore: 5),
+      ];
+      final groups = manualSimilarSoundGroups(cards);
+      expect(
+        sortedSimilarGroups(
+          groups.where((g) => g.kind == SimilarGroupKind.written),
+        ).map((g) => g.label),
+        ['b-write', 'a-write'],
+      );
+      expect(
+        sortedSimilarGroups(
+          groups.where((g) => g.kind == SimilarGroupKind.sound),
+        ).map((g) => g.label),
+        ['a-sound', 'b-sound'],
+      );
+      expect(similarGroupTitle('particle-other'), 'particle');
+      expect(similarGroupTitle('unknown-suffix'), 'unknown-suffix');
+      expect(similarGroupKind('particle-other'), SimilarGroupKind.other);
+    },
+  );
+  test(
+    'word details includes every assigned group and peers outside Current',
+    () {
+      final word = soundCard(1, 'a', groups: ['one-write', 'two-other']);
+      final peer = soundCard(
+        2,
+        'b',
+        groups: ['one-write'],
+        status: LearningStatus.future,
+      );
+      final groups = similarGroupsForCard(word, [word, peer]);
+      expect(groups.map((g) => g.label), ['one-write', 'two-other']);
+      expect(groups.first.cards.map((c) => c.id), containsAll([1, 2]));
+    },
+  );
+
   test(
     'whole groups support both written cues and automatic audio without retention cutoff',
     () {
@@ -70,18 +145,30 @@ void main() {
         cards,
         sound: false,
         directions: {StudyCue.fromLanguage, StudyCue.toLanguage},
-        groupLimit: 2,
+        groupLimit: 4,
         random: Random(1),
       );
-      expect(groups.map((g) => g.label), ['b-write', 'a-write']);
-      final full = groups.last;
-      expect(full.prompts, hasLength(4));
-      expect(full.prompts.map((p) => '${p.cardId}:${p.cue.name}').toSet(), {
-        '1:fromLanguage',
-        '1:toLanguage',
-        '2:fromLanguage',
-        '2:toLanguage',
-      });
+      expect(groups, hasLength(4));
+      for (final group in groups) {
+        expect(group.prompts.map((p) => p.cue).toSet(), hasLength(1));
+      }
+      final full = groups.where((g) => g.label == 'a-write');
+      expect(full, hasLength(2));
+      expect(
+        full
+            .expand((g) => g.prompts)
+            .map((p) => '${p.cardId}:${p.cue.name}')
+            .toSet(),
+        {'1:fromLanguage', '1:toLanguage', '2:fromLanguage', '2:toLanguage'},
+      );
+      final weakest = manualRecallSession(
+        cards,
+        sound: false,
+        directions: {StudyCue.fromLanguage},
+        groupLimit: 1,
+        random: Random(4),
+      );
+      expect(weakest.single.label, 'b-write');
       final sound = manualRecallSession(
         cards,
         sound: true,

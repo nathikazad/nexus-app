@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:fsrs/fsrs.dart' as fsrs;
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
@@ -66,3 +67,10 @@ void prioritizeRecallPrompts(
     return score != 0 ? score : order[a]!.compareTo(order[b]!);
   });
 }
+
+/// The priority order decides membership, never the order of the actual round.
+List<StudyPrompt> shuffledRecallSelection(
+  List<StudyPrompt> prioritized,
+  int count, {
+  Random? random,
+}) => prioritized.take(max(0, count)).toList()..shuffle(random);

@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/language/similar_sounds_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,44 @@ import 'package:nx_cards/browser/language/language_page.dart';
 import 'similar_sounds_test.dart' show soundCard;
 
 void main() {
+  testWidgets(
+    'group and word pills use the selected category and word opens details',
+    (tester) async {
+      final cards = [
+        soundCard(1, 'a', groups: ['pair-sound'], audioScore: 5),
+        soundCard(
+          2,
+          'b',
+          groups: ['pair-sound'],
+          audioScore: 1,
+          englishScore: 5,
+        ),
+      ];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardsCollectionProvider.overrideWith(
+              (ref, source) => Stream.value(CardsDashboard(cards: cards)),
+            ),
+            cardAudioRepositoryProvider.overrideWithValue(null),
+          ],
+          child: const MaterialApp(
+            home: SimilarSoundsPage(language: 'Chinese'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('60%'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('20%'), findsOneWidget);
+      await tester.tap(find.text('meaning 2'));
+      await tester.pumpAndSettle();
+      expect(find.text('Card details'), findsOneWidget);
+      expect(find.text('meaning 2'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('a non-Chinese language exposes its assigned groups', (
     tester,
   ) async {
@@ -28,7 +67,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('explore-similar-sounds')));
     await tester.pumpAndSettle();
-    expect(find.text('letters-write'), findsOneWidget);
+    await tester.tap(find.text('Written'));
+    await tester.pumpAndSettle();
+    expect(find.text('letters'), findsOneWidget);
+    expect(find.text('letters-write'), findsNothing);
+    expect(find.byType(ExpansionTile), findsNothing);
   });
 
   testWidgets(
@@ -62,11 +105,12 @@ void main() {
       expect(find.text('Explore'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('explore-similar-sounds')));
       await tester.pumpAndSettle();
-      expect(find.byType(Tab), findsNothing);
+      expect(find.byType(Tab), findsNWidgets(3));
+      await tester.tap(find.text('Other'));
+      await tester.pumpAndSettle();
       expect(find.text('Tones and meanings'), findsNothing);
       expect(find.text('My contrast'), findsOneWidget);
-      await tester.tap(find.text('My contrast'));
-      await tester.pumpAndSettle();
+
       expect(find.text('meaning 1'), findsOneWidget);
       expect(find.text('meaning 2'), findsNothing);
       expect(find.text('meaning 3'), findsNothing);

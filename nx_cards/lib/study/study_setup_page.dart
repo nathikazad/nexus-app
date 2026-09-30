@@ -41,7 +41,7 @@ enum StudySourceKind { language, book }
 
 enum StudyPresentation { sheet, draw }
 
-enum RecallPresentation { standard, write, fast, similar }
+enum RecallPresentation { standard, fast, similar }
 
 enum SimilarGroupType { written, sound }
 
@@ -85,9 +85,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   bool get _allowsWriting => _supportsDrawing;
   Set<StudyCue>? _regularDirections;
   RecallPresentation get _effectiveRecallPresentation =>
-      ((!_allowsWriting && _recallPresentation == RecallPresentation.write) ||
-          (!_allowsSimilar &&
-              _recallPresentation == RecallPresentation.similar))
+      !_allowsSimilar && _recallPresentation == RecallPresentation.similar
       ? RecallPresentation.standard
       : _recallPresentation;
   StudyCue? get _cue => _directions.firstOrNull;
@@ -177,7 +175,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       );
       final recallPresentation = _enumByName(
         RecallPresentation.values,
-        saved['recallPresentation'],
+        saved['recallPresentation'] == 'write'
+            ? 'standard'
+            : saved['recallPresentation'],
       );
       final order = _enumByName(StudyOrder.values, saved['order']);
       final retainedMaxPercentage = saved['retainedMaxPercentage'];
@@ -307,7 +307,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _studyCards.isNotEmpty &&
       _studyCards.every((card) => card.isLanguageCard);
 
-  String get _selectionTitle => 'Which cards?';
+  String get _selectionTitle =>
+      _mode == StudyMode.study ? 'Which cards?' : 'What to show on the front?';
 
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
@@ -488,11 +489,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     _beginStartup('recall');
     final prompts = await _latestSelectedPrompts(
       deferBodies:
-          _effectiveRecallPresentation == RecallPresentation.write &&
+          _allowsWriting &&
+          _effectiveRecallPresentation == RecallPresentation.standard &&
           await NativeDrawingSession.isAvailable(),
     );
     if (!mounted || prompts == null) return;
-    if (_effectiveRecallPresentation == RecallPresentation.write &&
+    if (_allowsWriting &&
+        _effectiveRecallPresentation == RecallPresentation.standard &&
         prompts.every((p) => p.card.content is LanguageCardContent)) {
       try {
         if (await _openNativeDrawing(prompts: prompts)) {
@@ -515,7 +518,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           studyScope: widget.studyScope,
           title: widget.title,
           prompts: prompts,
-          interaction: _effectiveRecallPresentation == RecallPresentation.write
+          interaction:
+              _allowsWriting &&
+                  _effectiveRecallPresentation == RecallPresentation.standard
               ? RecallInteraction.writing
               : RecallInteraction.standard,
         ),
@@ -592,12 +597,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       return recall
           ? NativeDrawingSession.recallCard(
               prompts[index].withCard(full),
+              similar: similarGroupsForCard(full, linkedLibrary.values),
               characters: characters[index],
               derived: derived[index],
             )
           : NativeDrawingSession.practiceCard(
               full,
               cue: practicePrompts?[index].cue,
+              similar: similarGroupsForCard(full, linkedLibrary.values),
               characters: characters[index],
               derived: derived[index],
             );
@@ -841,7 +848,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         );
       }
       _startupStep('selection_ready');
-      final chosen = selected.take(min(_count, selected.length)).toList();
+      final chosen = shuffledRecallSelection(
+        selected,
+        _count,
+        random: Random.secure(),
+      );
       final bodies = deferBodies
           ? chosen.map((p) => p.card).toList()
           : await hydrateStudyQueue(
@@ -1137,14 +1148,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                     child: Text('Standard', maxLines: 1),
                                   ),
                                 ),
-                                if (_allowsWriting)
-                                  const ButtonSegment(
-                                    value: RecallPresentation.write,
-                                    label: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text('Write', maxLines: 1),
-                                    ),
-                                  ),
                                 const ButtonSegment(
                                   value: RecallPresentation.fast,
                                   label: FittedBox(
@@ -1205,6 +1208,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         _SetupCard(
                           title: _selectionTitle,
                           child: DirectionChoices(
+                            frontOnly: true,
                             language: widget.toLanguage,
                             selected: _writtenDirections,
                             allowed: const [
@@ -1300,6 +1304,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   }
 
   Widget _directionChoices() => DirectionChoices(
+    frontOnly: _mode != StudyMode.study,
     language: widget.toLanguage,
     selected: _directions,
     allowed: _mode == StudyMode.ai

@@ -1,9 +1,21 @@
+import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/recall_priority.dart';
 import 'study_setup_page_test.dart' show sample;
 
 void main() {
+  test('selects weakest items before shuffling, preserving cues and count', () {
+    final prompts = [
+      for (var id = 1; id <= 10; id++)
+        StudyPrompt(card: sample(id, id - 1), cue: StudyCue.fromLanguage),
+    ];
+    prioritizeRecallPrompts(prompts, DateTime.utc(2026), historyWindow: 10);
+    final selected = shuffledRecallSelection(prompts, 5, random: Random(8));
+    expect(selected.map((p) => p.cardId), unorderedEquals([1, 2, 3, 4, 5]));
+    expect(selected.map((p) => p.cardId).toList(), isNot([1, 2, 3, 4, 5]));
+  });
+
   final now = DateTime.utc(2026, 9, 24);
   StudyPrompt past(
     int id,

@@ -1,3 +1,5 @@
+import 'package:nx_cards/browser/language/similar_sounds_page.dart';
+import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
@@ -13,7 +15,7 @@ import 'package:nx_cards/study/language/language_examples.dart';
 
 import 'package:nx_cards/browser/card_edit_dialog.dart';
 
-enum CardDetailsTab { examples, stats }
+enum CardDetailsTab { examples, stats, similar }
 
 class CardDetailsPage extends ConsumerStatefulWidget {
   const CardDetailsPage({
@@ -115,9 +117,25 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     final visibleCue = _visibleCue;
     final hasStats = reviewedCues.isNotEmpty;
     final hasExamples = languageContent?.examples.isNotEmpty == true;
+    final similarGroups = languageContent?.similarWordGroups.isNotEmpty == true
+        ? similarGroupsForCard(
+            card,
+            ref
+                    .watch(
+                      cardsCollectionProvider((
+                        language: card.language,
+                        bookId: null,
+                      )),
+                    )
+                    .value
+                    ?.cards ??
+                [card],
+          )
+        : <SimilarSoundGroup>[];
     final availableTabs = <CardDetailsTab>[
       if (hasExamples) CardDetailsTab.examples,
       if (hasStats) CardDetailsTab.stats,
+      if (similarGroups.isNotEmpty) CardDetailsTab.similar,
     ];
     final visibleTab = availableTabs.contains(_selectedTab)
         ? _selectedTab
@@ -279,40 +297,46 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                     padding: EdgeInsets.symmetric(vertical: 26),
                     child: Divider(),
                   ),
-                  SegmentedButton<CardDetailsTab>(
-                    style: const ButtonStyle(
-                      padding: WidgetStatePropertyAll(
-                        EdgeInsets.symmetric(horizontal: 8),
+                  if (availableTabs.length > 1)
+                    SegmentedButton<CardDetailsTab>(
+                      style: const ButtonStyle(
+                        padding: WidgetStatePropertyAll(
+                          EdgeInsets.symmetric(horizontal: 8),
+                        ),
                       ),
-                    ),
-                    segments: [
-                      if (hasExamples)
-                        ButtonSegment(
-                          value: CardDetailsTab.examples,
-                          label: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              'Examples (${languageContent!.examples.length})',
-                              maxLines: 1,
+                      segments: [
+                        if (hasExamples)
+                          ButtonSegment(
+                            value: CardDetailsTab.examples,
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Examples (${languageContent!.examples.length})',
+                                maxLines: 1,
+                              ),
                             ),
+                            icon: const Icon(Icons.menu_book_outlined),
                           ),
-                          icon: const Icon(Icons.menu_book_outlined),
-                        ),
-                      if (hasStats)
-                        const ButtonSegment(
-                          value: CardDetailsTab.stats,
-                          label: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text('Stats', maxLines: 1),
+                        if (hasStats)
+                          const ButtonSegment(
+                            value: CardDetailsTab.stats,
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Stats', maxLines: 1),
+                            ),
+                            icon: Icon(Icons.insights_outlined),
                           ),
-                          icon: Icon(Icons.insights_outlined),
-                        ),
-                    ],
-                    selected: {visibleTab},
-                    showSelectedIcon: false,
-                    onSelectionChanged: (selection) =>
-                        setState(() => _selectedTab = selection.single),
-                  ),
+                        if (similarGroups.isNotEmpty)
+                          const ButtonSegment(
+                            value: CardDetailsTab.similar,
+                            label: Text('Similar'),
+                          ),
+                      ],
+                      selected: {visibleTab},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (selection) =>
+                          setState(() => _selectedTab = selection.single),
+                    ),
                   const SizedBox(height: 20),
                   if (visibleTab == CardDetailsTab.stats) ...[
                     _DirectionHeading(label: _cueLabel(visibleCue, card)),
@@ -320,7 +344,9 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                     _RecallSummary(card: card, cue: visibleCue),
                     const SizedBox(height: 24),
                     _ReviewHistory(reviews: card.reviewHistoryFor(visibleCue)),
-                  ] else if (languageContent != null)
+                  ] else if (visibleTab == CardDetailsTab.similar)
+                    SimilarWordGroups(groups: similarGroups)
+                  else if (languageContent != null)
                     LanguageExamples(
                       examples: languageContent.examples,
                       audioRepository: audioRepository,

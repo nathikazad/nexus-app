@@ -33,23 +33,19 @@ class GroupedRecallPage extends ConsumerStatefulWidget {
 class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
   late final CardLibrary _library;
   late final Map<int, StudyCard> _latest;
-  late final List<CardRating?> _grades;
-  late final List<int> _gradedCounts;
+  final Map<String, CardRating> _grades = {};
   late List<StudyPrompt> _questions;
   int _groupIndex = 0, _wordIndex = 0;
   final Set<int> _tested = {};
   bool _revealed = false, _comparison = false, _saving = false;
-  bool _summary = false,
-      _ending = false,
-      _practice = false,
-      _practiceDone = false;
+  bool _summary = false, _ending = false, _practice = false;
   bool _nativeOpening = false;
   String? _error;
   GroupGradeBatch? _batch;
   SimilarRecallGroup get _group => widget.groups[_groupIndex];
   bool get _sameSession =>
       mounted && identical(_library, ref.read(cardLibraryProvider));
-  bool get _graded => _practice ? _practiceDone : _grades[_groupIndex] != null;
+  String get _answerKey => '$_groupIndex:$_wordIndex';
   StudyPrompt get _prompt =>
       _questions[_wordIndex].withCard(_latest[_questions[_wordIndex].cardId]!);
 
@@ -61,8 +57,6 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       for (final g in widget.groups)
         for (final c in g.comparisonCards) c.id: c,
     };
-    _grades = List.filled(widget.groups.length, null);
-    _gradedCounts = List.filled(widget.groups.length, 0);
     _questions = widget.groups.isEmpty ? [] : List.of(_group.prompts);
     _summary = widget.groups.isEmpty;
     WidgetsBinding.instance.addPostFrameCallback(
@@ -86,7 +80,6 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
     if (_saving || _batch != null && !_batch!.complete) return;
     setState(() {
       _ending = true;
-      if (_revealed) _tested.add(_wordIndex);
       if (_tested.isEmpty) {
         _summary = true;
       } else {
@@ -95,18 +88,19 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
     });
   }
 
-  Future<void> _grade(CardRating rating) async {
-    if (_saving || _graded || !_sameSession) return;
+  Future<bool> _grade(CardRating rating) async {
+    if (_saving || !_sameSession) return false;
     if (_practice) {
-      setState(() => _practiceDone = true);
-      return;
+      _advanceWord();
+      return true;
     }
+    if (_grades.containsKey(_answerKey)) return true;
     setState(() {
       _saving = true;
       _error = null;
     });
     _batch ??= GroupGradeBatch(
-      prompts: [for (final i in _tested.toList()..sort()) _questions[i]],
+      prompts: [_prompt],
       latest: _latest,
       scheduler: ref.read(cardSchedulerProvider),
       now: DateTime.now().toUtc(),
@@ -119,19 +113,17 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
         }
         await _library.saveSchedule(card);
       }, _latest);
-      if (!_sameSession) return;
+      if (!_sameSession) return false;
       ref.read(cardsInvalidationProvider)();
-      setState(() {
-        _grades[_groupIndex] = _batch!.rating;
-        _gradedCounts[_groupIndex] = _tested.length;
-      });
+      _grades[_answerKey] = _batch!.rating;
+      _batch = null;
+      _advanceWord();
+      return true;
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error =
-              'Could not save the whole group. Retry saving to finish.',
-        );
+        setState(() => _error = 'Could not save this answer. Retry saving.');
       }
+      return false;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -140,7 +132,6 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
   void _retryGroup() {
     setState(() {
       _practice = true;
-      _practiceDone = false;
       _comparison = false;
       _wordIndex = 0;
       _revealed = false;
@@ -164,7 +155,6 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       _revealed = false;
       _comparison = false;
       _practice = false;
-      _practiceDone = false;
       _tested.clear();
       _batch = null;
       _error = null;
@@ -175,7 +165,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
 
   Future<void> _startNativeIfAvailable() async {
     if (_summary ||
-        widget.format != GroupedRecallFormat.write ||
+        widget.format == GroupedRecallFormat.fast ||
         !_sameSession) {
       return;
     }
@@ -192,7 +182,6 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
             NativeDrawingSession.recallCard(p.withCard(_latest[p.cardId]!)),
         ],
         recall: true,
-        grouped: true,
         onAction: (call) async {
           if (!_sameSession) throw PlatformException(code: 'session_changed');
           final args = Map<Object?, Object?>.from(call.arguments as Map);
@@ -200,11 +189,17 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
           if (index is! int || index < 0 || index >= _questions.length) {
             throw PlatformException(code: 'invalid_card');
           }
-          if (call.method == 'groupNext') {
-            if (index != _tested.length && !_tested.contains(index)) {
+          if (call.method == 'rate') {
+            if (_tested.contains(index)) return null;
+            if (index != _wordIndex) {
               throw PlatformException(code: 'invalid_order');
             }
-            _tested.add(index);
+            final saved = await _grade(
+              args['correct'] == true ? CardRating.good : CardRating.again,
+            );
+            if (!saved) {
+              throw PlatformException(code: 'save_failed', message: _error);
+            }
             return null;
           }
           final content = _questions[index].card.content as LanguageCardContent;
@@ -255,6 +250,10 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
         },
       );
       if (!handled || !_sameSession) return;
+      if (_batch != null) {
+        setState(() => _revealed = true);
+        return;
+      }
       setState(() {
         _ending = _ending || _tested.length < _questions.length;
         _comparison = _tested.isNotEmpty;
@@ -292,7 +291,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
           actions: [
             if (!_comparison)
               TextButton(
-                onPressed: _nativeOpening ? null : _end,
+                onPressed: _nativeOpening || blocked ? null : _end,
                 child: const Text('End'),
               ),
           ],
@@ -309,22 +308,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                   child: _comparison
                       ? _comparisonActions()
-                      : FilledButton(
-                          key: const ValueKey('group-question-next'),
-                          onPressed: () => _revealed
-                              ? _advanceWord()
-                              : setState(() => _revealed = true),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Text(
-                              _revealed
-                                  ? _wordIndex + 1 == _questions.length
-                                        ? 'Compare group'
-                                        : 'Next word'
-                                  : 'Show answer',
-                            ),
-                          ),
-                        ),
+                      : _questionActions(),
                 ),
               ),
       ),
@@ -348,12 +332,18 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                 Text(
                   '${_practice ? 'Practice retry' : 'Group ${_groupIndex + 1} of ${widget.groups.length}'} · Word ${_wordIndex + 1} of ${_questions.length}',
                 ),
+                const SizedBox(height: 8),
+                Text(switch (prompt.cue) {
+                  StudyCue.fromAudio => 'Sound',
+                  StudyCue.toLanguage => prompt.card.language ?? 'Text',
+                  _ => 'English',
+                }),
                 const SizedBox(height: 16),
                 if (_error != null) Text(_error!),
                 Card(
                   child: Padding(
                     padding: EdgeInsets.all(fast ? 18 : 28),
-                    child: widget.format == GroupedRecallFormat.write
+                    child: widget.format != GroupedRecallFormat.fast
                         ? SizedBox(
                             height: max(420, constraints.maxHeight - 160),
                             child: WritingRecallCard(
@@ -435,20 +425,12 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        Text(_group.label, style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          similarGroupTitle(_group.label),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         if (_practice) const Text('Practice retry · does not change retention'),
-        if (_graded)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              _practice
-                  ? 'Practice complete'
-                  : _grades[_groupIndex] == CardRating.good
-                  ? 'Group recalled'
-                  : 'Group not recalled',
-            ),
-          ),
         const SizedBox(height: 12),
         SimilarSoundGrid(
           cards: [for (final c in _group.comparisonCards) _latest[c.id]!],
@@ -463,69 +445,67 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
     );
   }
 
-  Widget _comparisonActions() {
-    if (_saving) {
-      return const SizedBox(
-        height: 48,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_batch != null && !_batch!.complete) {
+  Widget _questionActions() {
+    if (_saving) return const Center(child: CircularProgressIndicator());
+    if (_batch != null) {
       return FilledButton(
         onPressed: () => _grade(_batch!.rating),
         child: const Text('Retry saving'),
       );
     }
-    if (!_graded) {
-      return Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              key: const ValueKey('group-not-recalled'),
-              onPressed: () => _grade(CardRating.again),
-              child: const Text('Not recalled'),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton(
-              key: const ValueKey('group-recalled'),
-              onPressed: () => _grade(CardRating.good),
-              child: const Text('Recalled'),
-            ),
-          ),
-        ],
+    if (!_revealed) {
+      return FilledButton(
+        key: const ValueKey('group-question-next'),
+        onPressed: () => setState(() => _revealed = true),
+        child: const Text('Show answer'),
       );
     }
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: _retryGroup,
-            child: const Text('Retry group'),
+            key: const ValueKey('group-not-recalled'),
+            onPressed: () => _grade(CardRating.again),
+            child: const Text('Not recalled'),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: FilledButton(
-            onPressed: _nextGroup,
-            child: Text(
-              _ending || _groupIndex + 1 == widget.groups.length
-                  ? 'Finish'
-                  : 'Next group',
-            ),
+            key: const ValueKey('group-recalled'),
+            onPressed: () => _grade(CardRating.good),
+            child: const Text('Recalled'),
           ),
         ),
       ],
     );
   }
 
+  Widget _comparisonActions() => Row(
+    children: [
+      Expanded(
+        child: OutlinedButton(
+          onPressed: _retryGroup,
+          child: const Text('Retry group'),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: FilledButton(
+          onPressed: _nextGroup,
+          child: Text(
+            _ending || _groupIndex + 1 == widget.groups.length
+                ? 'Finish'
+                : 'Next group',
+          ),
+        ),
+      ),
+    ],
+  );
+
   Widget _summaryPage() {
-    var positive = 0, negative = 0;
-    for (var i = 0; i < _grades.length; i++) {
-      if (_grades[i] == CardRating.good) positive += _gradedCounts[i];
-      if (_grades[i] == CardRating.again) negative += _gradedCounts[i];
-    }
+    final positive = _grades.values.where((r) => r == CardRating.good).length;
+    final negative = _grades.values.where((r) => r == CardRating.again).length;
     final total = widget.groups.fold<int>(
       0,
       (sum, g) => sum + g.prompts.length,

@@ -124,7 +124,7 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
       Text(
         widget.revealed
             ? 'Compare your drawing with the answer'
-            : 'Write your answer',
+            : 'Recall the answer · writing is optional',
         style: const TextStyle(color: RecallColors.faint, fontSize: 12),
       ),
       Expanded(

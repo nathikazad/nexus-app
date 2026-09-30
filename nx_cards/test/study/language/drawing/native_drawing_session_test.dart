@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,6 +32,21 @@ void main() {
     reviewHistory: const {},
     suspended: false,
   );
+  test('native reveal carries complete similar groups with display titles', () {
+    final payload = NativeDrawingSession.recallCard(
+      StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+      similar: [
+        SimilarSoundGroup([card], label: 'particle-other'),
+      ],
+    );
+    final groups = payload['similar'] as List;
+    expect(groups.single['title'], 'particle');
+    expect(groups.single['words'].single['text'], '很长的句子');
+    expect(
+      groups.single['words'].single['transliteration'],
+      'hěn cháng de jùzi',
+    );
+  });
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   tearDown(() {

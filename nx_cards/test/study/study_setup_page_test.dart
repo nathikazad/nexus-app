@@ -169,7 +169,7 @@ void main() {
       expect(find.text('Similar'), findsOneWidget);
       expect(
         tester.getTopLeft(find.text('Recall format')).dy,
-        lessThan(tester.getTopLeft(find.text('Which cards?')).dy),
+        lessThan(tester.getTopLeft(find.text('What to show on the front?')).dy),
       );
       await tester.tap(find.text('Similar'));
       await tester.pumpAndSettle();
@@ -196,7 +196,7 @@ void main() {
             .selected,
         isTrue,
       );
-      expect(find.text('1 recall groups available'), findsOneWidget);
+      expect(find.text('2 recall groups available'), findsOneWidget);
       await tester.tap(find.text('Sound'));
       await tester.pumpAndSettle();
       expect(find.byType(DirectionChoices), findsNothing);
@@ -232,10 +232,10 @@ void main() {
         directions: StudyCue.activeDirections.toSet(),
       );
       expect(find.text('81 recall items available'), findsOneWidget);
-      expect(find.text('Write'), findsOneWidget);
+      expect(find.text('Write'), findsNothing);
       final titles = [
         'Recall format',
-        'Which cards?',
+        'What to show on the front?',
         'Retention',
         'How many recall items?',
       ];
@@ -260,7 +260,7 @@ void main() {
     },
   );
 
-  testWidgets('Write remains available when reverse recall is selected', (
+  testWidgets('saved Write format migrates to Standard for reverse recall', (
     tester,
   ) async {
     await showSetup(
@@ -273,25 +273,24 @@ void main() {
     final formats = tester.widget<SegmentedButton<RecallPresentation>>(
       find.byType(SegmentedButton<RecallPresentation>),
     );
-    expect(formats.selected, {RecallPresentation.write});
+    expect(formats.selected, {RecallPresentation.standard});
     expect(formats.segments.map((s) => s.value), [
       RecallPresentation.standard,
-      RecallPresentation.write,
       RecallPresentation.fast,
     ]);
   });
 
   testWidgets(
-    'audio direction offers the existing three formats without a prompt toggle',
+    'audio direction offers the two formats without a prompt toggle',
     (tester) async {
       await showSetup(tester, cue: StudyCue.fromAudio);
       expect(find.text('Read'), findsNothing);
       expect(find.text('Listen'), findsNothing);
       expect(find.text('Recall format'), findsOneWidget);
-      expect(find.text('Write'), findsOneWidget);
+      expect(find.text('Write'), findsNothing);
       expect(find.text('Standard'), findsOneWidget);
       expect(find.text('Fast'), findsOneWidget);
-      await tester.tap(find.text('Write'));
+      await tester.tap(find.text('Standard'));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -299,7 +298,7 @@ void main() {
               find.byType(SegmentedButton<RecallPresentation>),
             )
             .selected,
-        {RecallPresentation.write},
+        {RecallPresentation.standard},
       );
     },
   );
@@ -313,7 +312,7 @@ void main() {
     expect(find.widgetWithText(TextButton, 'Weak'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Strong'), findsOneWidget);
     expect(find.text('Recall format'), findsOneWidget);
-    expect(find.text('Write'), findsOneWidget);
+    expect(find.text('Write'), findsNothing);
     expect(find.text('Start recall'), findsOneWidget);
     expect(find.text('Practice'), findsNothing);
   });

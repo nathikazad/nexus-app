@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +37,48 @@ class Library implements CardLibrary {
 }
 
 void main() {
+  testWidgets('Similar alone has no empty tabs and shows full groups', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 900);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final original = card(1, '了', 'completion');
+    final target = original.copyWith(
+      content: (original.content as LanguageCardContent).copyWith(
+        similarWordGroups: ['particle-other'],
+      ),
+    );
+    final originalPeer = card(2, '着', 'continuing state');
+    final peer = originalPeer.copyWith(
+      content: (originalPeer.content as LanguageCardContent).copyWith(
+        similarWordGroups: ['particle-other'],
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardLibraryProvider.overrideWithValue(Library([target, peer])),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TabletRecallContext(card: target),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('particle'), findsOneWidget);
+    expect(find.text('continuing state'), findsOneWidget);
+    expect(find.byType(SegmentedButton<String>), findsNothing);
+    expect(find.text('Examples'), findsNothing);
+    expect(find.text('Contains'), findsNothing);
+  });
+
   for (final tablet in [false, true]) {
     testWidgets(
       'revealed context is tablet-only ($tablet) and hidden before reveal',
@@ -80,20 +123,23 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('USED IN · EXAMPLES'), findsNothing);
+        expect(find.text('Contains'), findsNothing);
         expect(find.text('A linked example'), findsNothing);
         await tester.tap(find.textContaining('Show answer').first);
         await tester.pumpAndSettle();
-        expect(
-          find.text('USED IN · EXAMPLES'),
-          tablet ? findsOneWidget : findsNothing,
-        );
-        expect(find.text('CHARACTERS'), tablet ? findsOneWidget : findsNothing);
+        expect(find.text('Contains'), tablet ? findsOneWidget : findsNothing);
         expect(
           find.text('A linked example'),
           tablet ? findsOneWidget : findsNothing,
         );
-        expect(find.text('cat'), tablet ? findsOneWidget : findsNothing);
+        expect(find.text('cat'), findsNothing);
+        if (tablet) {
+          await tester.ensureVisible(find.text('Contains'));
+          await tester.tap(find.text('Contains'));
+          await tester.pumpAndSettle();
+          expect(find.text('cat'), findsOneWidget);
+          expect(find.text('A linked example'), findsNothing);
+        }
         expect(tester.takeException(), isNull);
       },
     );

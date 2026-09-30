@@ -28,16 +28,16 @@ class NativeDrawingActivity : Activity() {
     private lateinit var hint: TextView
     private lateinit var controls: LinearLayout
     private lateinit var end: Button
-    private var examplesHeading: TextView? = null
     private var examplesList: LinearLayout? = null
     private var examplesScroll: ScrollView? = null
     private var examplesCardIndex = -1
     private var contextHeadings: View? = null
     private var contextColumns: View? = null
-    private var characterColumn: LinearLayout? = null
-    private var characterHeading: TextView? = null
     private var charactersList: LinearLayout? = null
     private var charactersScroll: ScrollView? = null
+    private var contextTabs: LinearLayout? = null
+    private var similarList: LinearLayout? = null
+    private var similarScroll: ScrollView? = null
     private var ink: DrawingInkPanel? = null
     private var index = 0
     private var recall = false
@@ -102,37 +102,30 @@ class NativeDrawingActivity : Activity() {
             frame.addView(ink!!.getView(), LinearLayout.LayoutParams(-1, 0, 1f))
             // Tablet context is shared by practice and revealed recall.
             if (resources.configuration.smallestScreenWidthDp >= 600) {
-                val headings = LinearLayout(this)
-                contextHeadings = headings
-                examplesHeading = label(13f).apply {
-                    text = "USED IN · EXAMPLES"
-                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                }
-                headings.addView(examplesHeading, LinearLayout.LayoutParams(0, dp(36), 7f))
-                characterHeading = label(13f).apply {
-                    text = "CHARACTERS"
-                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                }
-                headings.addView(characterHeading, LinearLayout.LayoutParams(0, dp(36), 2f).apply { leftMargin = dp(16) })
-                root.addView(headings)
+                val tabs = LinearLayout(this)
+                contextTabs = tabs
+                contextHeadings = tabs
+                root.addView(tabs)
                 val columns = LinearLayout(this)
                 contextColumns = columns
                 examplesList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
                 examplesScroll = ScrollView(this).apply {
-                    isFillViewport = true
+                    isScrollbarFadingEnabled = false
                     addView(examplesList)
                 }
-                columns.addView(examplesScroll, LinearLayout.LayoutParams(0, -1, 7f))
+                columns.addView(examplesScroll, LinearLayout.LayoutParams(-1, -1))
                 charactersList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
                 charactersScroll = ScrollView(this).apply {
-                    isFillViewport = true
+                    isScrollbarFadingEnabled = false
                     addView(charactersList)
                 }
-                characterColumn = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    addView(charactersScroll, LinearLayout.LayoutParams(-1, -1))
+                columns.addView(charactersScroll, LinearLayout.LayoutParams(-1, -1))
+                similarList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                similarScroll = ScrollView(this).apply {
+                    isScrollbarFadingEnabled = false
+                    addView(similarList)
                 }
-                columns.addView(characterColumn, LinearLayout.LayoutParams(0, -1, 2f).apply { leftMargin = dp(16) })
+                columns.addView(similarScroll, LinearLayout.LayoutParams(-1, -1))
                 root.addView(columns, LinearLayout.LayoutParams(-1, 0, 1.2f))
             }
             setContentView(root)
@@ -156,19 +149,22 @@ class NativeDrawingActivity : Activity() {
         prompt.visibility = if (!recall && !visibleAnswer && card["practiceDirection"] != true) View.INVISIBLE else View.VISIBLE
         prompt.textSize = if (!recall && card["practiceDirection"] != true && card["multiCharacter"] == false) 64f else 32f
         subtitle.text = if (recall && !revealed || !recall && card["practiceDirection"] == true && !visibleAnswer) "" else value("subtitle")
-        hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Write your answer" } else "Practice only"
+        hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Recall the answer · writing is optional" } else "Practice only"
         val showContext = !recall || revealed
         // Reserve the context area before reveal. GONE resizes NoteView when
         // the answer appears; the firmware can discard pen records during that
         // resize before our layout listener captures them. INVISIBLE keeps the
         // ink surface and existing strokes in place without exposing answers.
-        val hasContext = listOf("examples", "derivedExamples", "characters").any {
+        val hasContext = listOf("examples", "derivedExamples", "characters", "similar").any {
             (card[it] as? List<*>)?.isNotEmpty() == true
         }
         val contextVisibility = if (!hasContext) View.GONE else if (showContext) View.VISIBLE else View.INVISIBLE
         contextHeadings?.visibility = contextVisibility
         contextColumns?.visibility = contextVisibility
-        if (showContext) updateExamples()
+        if (showContext) {
+            updateExamples()
+            if ((contextTabs?.childCount ?: 0) < 2) contextHeadings?.visibility = View.GONE
+        }
         controls.removeAllViews()
         control("Refresh screen", "refresh") { refreshScreen() }
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
@@ -230,13 +226,24 @@ class NativeDrawingActivity : Activity() {
         val examples = card["examples"] as? List<*> ?: emptyList<Any>()
         val derived = card["derivedExamples"] as? List<*> ?: emptyList<Any>()
         val hasExamples = examples.isNotEmpty() || derived.isNotEmpty()
-        examplesHeading?.visibility = if (hasExamples) View.VISIBLE else View.GONE
-        examplesScroll?.visibility = if (hasExamples) View.VISIBLE else View.GONE
-        listOf(characterHeading, characterColumn).forEach { view ->
-            view?.layoutParams = (view?.layoutParams as? LinearLayout.LayoutParams)?.apply {
-                leftMargin = if (hasExamples) dp(16) else 0
+        updateSimilar()
+        val sections = mutableListOf<Pair<String, View>>()
+        if (hasExamples) sections.add("Examples" to examplesScroll!!)
+        if ((card["characters"] as? List<*>)?.isNotEmpty() == true) sections.add("Contains" to charactersScroll!!)
+        if ((card["similar"] as? List<*>)?.isNotEmpty() == true) sections.add("Similar" to similarScroll!!)
+        contextTabs?.removeAllViews()
+        val views = listOf(examplesScroll, charactersScroll, similarScroll)
+        fun select(view: View) {
+            views.forEach { it?.visibility = if (it === view) View.VISIBLE else View.GONE }
+            for (i in 0 until (contextTabs?.childCount ?: 0)) {
+                contextTabs?.getChildAt(i)?.isSelected = sections[i].second === view
+                contextTabs?.getChildAt(i)?.alpha = if (sections[i].second === view) 1f else .55f
             }
         }
+        sections.forEach { (title, view) ->
+            contextTabs?.addView(button(title) { select(view) }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        }
+        sections.firstOrNull()?.let { select(it.second) }
         (examples + derived).forEachIndexed { exampleIndex, item ->
             val isDerived = exampleIndex >= examples.size
             if (isDerived && exampleIndex == examples.size) list.addView(label(14f).apply {
@@ -305,12 +312,40 @@ class NativeDrawingActivity : Activity() {
             list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
         }
     }
+    private fun updateSimilar() {
+        val list = similarList ?: return
+        list.removeAllViews()
+        similarScroll?.scrollTo(0, 0)
+        (card["similar"] as? List<*> ?: emptyList<Any>()).forEach { item ->
+            val group = item as? Map<*, *> ?: return@forEach
+            list.addView(label(18f).apply {
+                text = group["title"] as? String ?: ""
+                gravity = Gravity.START
+                setPadding(dp(8), dp(16), dp(8), dp(8))
+            })
+            val words = group["words"] as? List<*> ?: emptyList<Any>()
+            val count = (resources.configuration.screenWidthDp / 220).coerceIn(1, 4)
+            words.chunked(count).forEach { chunk ->
+                val row = LinearLayout(this)
+                chunk.forEach wordLoop@{ raw ->
+                    val word = raw as? Map<*, *> ?: return@wordLoop
+                    val cell = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(12), dp(12), dp(12), dp(12))
+                    }
+                    listOf("text" to 28f, "transliteration" to 16f, "translation" to 16f).forEach { (key, size) ->
+                        cell.addView(label(size).apply { text = word[key] as? String ?: ""; gravity = Gravity.START })
+                    }
+                    row.addView(cell, LinearLayout.LayoutParams(0, -2, 1f))
+                }
+                list.addView(row)
+            }
+        }
+    }
     private fun updateCharacters() {
         val list = charactersList ?: return
         val characters = card["characters"] as? List<*> ?: emptyList<Any>()
         val show = characters.isNotEmpty()
-        characterColumn?.visibility = if (show) View.VISIBLE else View.GONE
-        characterHeading?.visibility = if (show) View.VISIBLE else View.GONE
         list.removeAllViews()
         charactersScroll?.scrollTo(0, 0)
         if (!show) return

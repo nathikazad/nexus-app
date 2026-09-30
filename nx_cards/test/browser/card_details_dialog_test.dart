@@ -10,6 +10,48 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
 
 void main() {
+  testWidgets('Similar shows every group with no category suffix', (
+    tester,
+  ) async {
+    final base = _card();
+    final card = base.copyWith(
+      content: (base.content as LanguageCardContent).copyWith(
+        similarWordGroups: ['one-sound', 'two-other'],
+      ),
+    );
+    final peer = StudyCard(
+      id: 200,
+      tags: base.tags,
+      suspended: false,
+      schedules: const {},
+      reviewHistory: const {},
+      content: (base.content as LanguageCardContent).copyWith(
+        english: 'peer meaning',
+        similarWordGroups: ['one-sound'],
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cardAudioRepositoryProvider.overrideWithValue(null),
+          cardsCollectionProvider.overrideWith(
+            (ref, source) => Stream.value(CardsDashboard(cards: [card, peer])),
+          ),
+        ],
+        child: MaterialApp(home: CardDetailsPage(card: card)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Similar'));
+    await tester.tap(find.text('Similar'));
+    await tester.pumpAndSettle();
+    expect(find.text('one'), findsOneWidget);
+    expect(find.text('two'), findsOneWidget);
+    expect(find.text('peer meaning'), findsOneWidget);
+    expect(find.text('one-sound'), findsNothing);
+    expect(find.byType(ExpansionTile), findsNothing);
+  });
+
   testWidgets('saved word example opens by id and contains links back', (
     tester,
   ) async {
@@ -220,7 +262,8 @@ void main() {
     expect(find.text('fraud'), findsOneWidget);
     expect(find.text('തട്ടിപ്പ്'), findsOneWidget);
     expect(find.text('thattippu'), findsOneWidget);
-    expect(find.text('Examples (1)'), findsOneWidget);
+    expect(find.text('Examples (1)'), findsNothing);
+    expect(find.byType(SegmentedButton<CardDetailsTab>), findsNothing);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
     expect(find.text('Stats'), findsNothing);
     expect(
