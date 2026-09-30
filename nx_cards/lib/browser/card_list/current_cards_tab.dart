@@ -101,8 +101,35 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
     final range = weakOnly
         ? 'Below 80%'
         : '${(minimum * 100).round()}–${(maximum * 100).round()}%';
-    final summary =
-        '${weakOnly ? 'Weak' : range} · ${directions.length == 3 ? 'All directions' : '${directions.length} direction${directions.length == 1 ? '' : 's'}'}';
+    final summary = '${weakOnly ? 'Weak' : range} (${cards.length}) · ';
+    final target = compactLanguageLabel(widget.language ?? '');
+    final directionSpans = <InlineSpan>[];
+    if (directions.length == 3) {
+      directionSpans.add(const TextSpan(text: 'All directions'));
+    } else {
+      for (final cue in StudyCue.activeDirections.where(directions.contains)) {
+        if (directionSpans.isNotEmpty) {
+          directionSpans.add(const TextSpan(text: ', '));
+        }
+        if (cue == StudyCue.fromAudio) {
+          directionSpans.add(
+            const WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Icon(Icons.volume_up_outlined, size: 14),
+            ),
+          );
+          directionSpans.add(TextSpan(text: ' → $target'));
+        } else {
+          directionSpans.add(
+            TextSpan(
+              text: cue == StudyCue.fromLanguage
+                  ? 'EN → $target'
+                  : '$target → EN',
+            ),
+          );
+        }
+      }
+    }
     return Column(
       children: [
         Padding(
@@ -117,8 +144,8 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(
-                    child: Text(
-                      summary,
+                    child: Text.rich(
+                      TextSpan(text: summary, children: directionSpans),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -178,10 +205,10 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
                         ),
                         const SizedBox(width: 12),
                       ],
-                      SizedBox(
-                        width: 92,
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
                         child: Text(
-                          range,
+                          '$range (${cards.length})',
                           style: Theme.of(context).textTheme.labelMedium,
                         ),
                       ),

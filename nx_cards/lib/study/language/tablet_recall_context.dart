@@ -26,6 +26,7 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
   String? _selected;
   List<SimilarSoundGroup> _similar = const [];
   List<LanguageCardContent> _parts = const [];
+  Map<LanguageCardContent, int> _partIds = const {};
   List<DerivedLanguageExample> _derived = const [];
 
   @override
@@ -47,12 +48,18 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
         linked,
         (card) => hydrateStudyCard(ref, card),
       );
-      final parts = NativeDrawingSession.characterParts(widget.card, {
+      final parts = NativeDrawingSession.characterCards(widget.card, {
         for (final card in library) card.id: card,
       });
       if (mounted) {
         setState(() {
-          _parts = parts;
+          _parts = [
+            for (final part in parts) part.content as LanguageCardContent,
+          ];
+          _partIds = {
+            for (final part in parts)
+              part.content as LanguageCardContent: part.id,
+          };
           _similar = similarGroupsForCard(widget.card, library);
           _derived = NativeDrawingSession.derivedExamples(widget.card, linked);
         });
@@ -104,6 +111,7 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
           examples: [
             for (final part in _parts)
               LanguageExample(
+                cardId: _partIds[part],
                 text: part.originalScript,
                 transliteration: part.transliteration,
                 translation: part.english,

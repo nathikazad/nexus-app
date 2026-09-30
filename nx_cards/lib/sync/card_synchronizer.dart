@@ -76,22 +76,18 @@ final class CardLibrarySynchronizer {
     final generation = store is HashCardsStore
         ? (store as HashCardsStore).editGeneration
         : null;
-    final cards = (await _localStore.readDashboard()).cards;
     final assets = <AudioAsset>[];
-    final urls = <String>{};
-    for (final summary in cards) {
-      final card = await _localStore.getCard(summary.id);
-      if (card?.content case final LanguageCardContent content) {
-        if (repository is OfflineCardAudioRepository) {
+    if (store is CardAudioAssetsReader) {
+      assets.addAll(await (store as CardAudioAssetsReader).readAudioAssets());
+    } else {
+      for (final summary in (await store.readDashboard()).cards) {
+        final card = await store.getCard(summary.id);
+        if (card?.content case final LanguageCardContent content) {
           assets.addAll(AudioAsset.forContent(content));
         }
-        urls.addAll({
-          if (content.audioUrl case final url? when url.isNotEmpty) url,
-          for (final example in content.examples)
-            if (example.audioUrl case final url? when url.isNotEmpty) url,
-        });
       }
     }
+    final urls = assets.map((asset) => asset.url).toSet();
     if (repository is OfflineCardAudioRepository) {
       await repository.sync(
         assets,

@@ -1,3 +1,4 @@
+import 'package:nx_cards/audio/audio_asset.dart';
 import '../remote/cards_sync_transport.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_offline/nx_offline.dart';
@@ -34,4 +35,9 @@ abstract interface class HashCardsStore {
     List<CardHash> manifest, {
     int? expectedGeneration,
   });
+}
+
+/// Audio metadata from immutable card bodies, without rehydrating unchanged cards.
+abstract interface class CardAudioAssetsReader {
+  Future<List<AudioAsset>> readAudioAssets();
 }

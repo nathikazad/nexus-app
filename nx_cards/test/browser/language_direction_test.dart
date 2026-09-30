@@ -89,7 +89,10 @@ void main() {
       expect(find.text('Current  1'), findsOneWidget);
       expect(find.text('33%'), findsOneWidget);
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
-      expect(find.text('Weak · All directions'), findsOneWidget);
+      expect(
+        find.text('Weak (1) · All directions', findRichText: true),
+        findsOneWidget,
+      );
       await tester.tap(find.byKey(const ValueKey('current-filter-toggle')));
       await tester.pumpAndSettle();
       final slider = tester.widget<Slider>(

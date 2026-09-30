@@ -1,3 +1,4 @@
+import 'package:nx_cards/audio/audio_asset.dart';
 import 'package:flutter/foundation.dart';
 import '../remote/cards_sync_transport.dart';
 import 'dart:async';
@@ -14,7 +15,11 @@ import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/nx_offline_drift.dart';
 
 final class DriftLocalCardsStore
-    implements LocalCardsStore, QueuedCardReader, HashCardsStore {
+    implements
+        LocalCardsStore,
+        QueuedCardReader,
+        HashCardsStore,
+        CardAudioAssetsReader {
   DriftLocalCardsStore({
     required this.database,
     required this.account,
@@ -87,6 +92,42 @@ final class DriftLocalCardsStore
         }),
       ),
     );
+  }
+
+  final _audioAssets = <int, ({String reference, List<AudioAsset> assets})>{};
+
+  @override
+  Future<List<AudioAsset>> readAudioAssets() async {
+    await migrateContent();
+    final rows =
+        await (database.select(database.localStudyCards)..where(
+              (t) =>
+                  t.accountKey.equals(_accountKey) &
+                  t.deletedLocally.equals(false),
+            ))
+            .get();
+    final ids = rows.map((row) => row.remoteId).toSet();
+    _audioAssets.removeWhere((id, _) => !ids.contains(id));
+    final result = <AudioAsset>[];
+    for (final row in rows) {
+      final cached = _audioAssets[row.remoteId];
+      if (row.contentRef != null && cached?.reference == row.contentRef) {
+        result.addAll(cached!.assets);
+        continue;
+      }
+      final card = await _cardFromRow(row);
+      final assets = card.content is LanguageCardContent
+          ? AudioAsset.forContent(card.content as LanguageCardContent).toList()
+          : <AudioAsset>[];
+      if (row.contentRef != null) {
+        _audioAssets[row.remoteId] = (
+          reference: row.contentRef!,
+          assets: assets,
+        );
+      }
+      result.addAll(assets);
+    }
+    return result;
   }
 
   Future<StudyCard> _cardFromRow(LocalStudyCardRow row) async {

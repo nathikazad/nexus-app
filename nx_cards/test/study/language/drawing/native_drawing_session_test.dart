@@ -203,19 +203,34 @@ void main() {
     final library = {
       for (final item in [phrase, word, first, second, unlinked]) item.id: item,
     };
+    final cards = NativeDrawingSession.characterCards(phrase, library);
+    expect(cards.map((c) => c.id), [12, 13]);
+    final ids = {
+      for (final card in cards) card.content as LanguageCardContent: card.id,
+    };
     final parts = NativeDrawingSession.characterParts(phrase, library);
     expect(parts.map((p) => p.originalScript), ['学', '生']);
     final payload = NativeDrawingSession.practiceCard(
       phrase,
       characters: parts,
+      characterCardIds: ids,
     );
     expect(payload['multiCharacter'], isTrue);
     expect((payload['characters'] as List).first, {
+      'cardId': 12,
       'text': '学',
       'transliteration': 'sound 12',
       'translation': 'meaning 12',
       'audio': true,
     });
+    expect(
+      NativeDrawingSession.recallCard(
+        StudyPrompt(card: phrase, cue: StudyCue.toLanguage),
+        characters: parts,
+        characterCardIds: ids,
+      )['characters'],
+      payload['characters'],
+    );
     expect(NativeDrawingSession.characterParts(first, library), isEmpty);
     expect(NativeDrawingSession.practiceCard(first)['multiCharacter'], isFalse);
   });

@@ -553,6 +553,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       queue.length,
       (_) => [],
     );
+    final characterCardIds = <LanguageCardContent, int>{};
     final derived = List<List<DerivedLanguageExample>>.generate(
       queue.length,
       (_) => [],
@@ -583,10 +584,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         (card) => hydrateStudyCard(ref, card),
       );
       checkSession();
-      characters[index] = NativeDrawingSession.characterParts(
-        full,
-        linkedLibrary,
-      );
+      final parts = NativeDrawingSession.characterCards(full, linkedLibrary);
+      characters[index] = [
+        for (final part in parts) part.content as LanguageCardContent,
+      ];
+      characterCardIds.addAll({
+        for (final part in parts) part.content as LanguageCardContent: part.id,
+      });
       derived[index] = NativeDrawingSession.derivedExamples(
         full,
         linkedLibrary,
@@ -599,6 +603,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               prompts[index].withCard(full),
               similar: similarGroupsForCard(full, linkedLibrary.values),
               characters: characters[index],
+              characterCardIds: characterCardIds,
               derived: derived[index],
             )
           : NativeDrawingSession.practiceCard(
@@ -606,6 +611,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               cue: practicePrompts?[index].cue,
               similar: similarGroupsForCard(full, linkedLibrary.values),
               characters: characters[index],
+              characterCardIds: characterCardIds,
               derived: derived[index],
             );
     });
@@ -641,7 +647,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             final parent = queue[index].content as LanguageCardContent;
             final permitted = {
               ...parent.examples.map((e) => e.cardId),
+              ...characters[index].map((part) => characterCardIds[part]),
               ...derived[index].map((e) => e.example.cardId),
+              ...similarGroupsForCard(
+                queue[index],
+                linkedLibrary.values,
+              ).expand((g) => g.cards).map((c) => c.id),
             };
             final target = targetId is int ? linkedLibrary[targetId] : null;
             if (target == null ||
@@ -672,15 +683,29 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             final exampleIndex = args['exampleIndex'];
             final characterIndex = args['characterIndex'];
             final derivedIndex = args['derivedIndex'];
+            final similarCardId = args['similarCardId'];
             if ([
                   exampleIndex,
                   characterIndex,
                   derivedIndex,
+                  similarCardId,
                 ].where((v) => v != null).length >
                 1) {
               throw PlatformException(code: 'invalid_audio_target');
             }
             var audioUrl = content.audioUrl;
+            if (similarCardId != null) {
+              final target =
+                  similarGroupsForCard(queue[index], linkedLibrary.values)
+                      .expand((g) => g.cards)
+                      .where((c) => c.id == similarCardId)
+                      .firstOrNull;
+              if (target?.content case final LanguageCardContent word) {
+                audioUrl = word.audioUrl;
+              } else {
+                throw PlatformException(code: 'invalid_similar_card');
+              }
+            }
             if (derivedIndex != null) {
               if (derivedIndex is! int ||
                   derivedIndex < 0 ||

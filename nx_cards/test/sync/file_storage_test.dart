@@ -48,6 +48,19 @@ void main() {
       expect(await store.verifiedCard(hash), false);
       await store.applyCardBatch([HashedCard(card, hash.hash)]);
       expect(await store.verifiedCard(hash), true);
+      final firstAssets = await store.readAudioAssets();
+      final cachedAssets = await store.readAudioAssets();
+      expect(firstAssets.single.url, '/audio.mp3');
+      expect(identical(firstAssets.single, cachedAssets.single), isTrue);
+      final changed = card.copyWith(
+        content: (card.content as LanguageCardContent).copyWith(
+          audioUrl: '/changed.mp3',
+        ),
+      );
+      await store.applyCardBatch([HashedCard(changed, 'server-v2')]);
+      expect((await store.readAudioAssets()).single.url, '/changed.mp3');
+      await store.applyCardBatch([HashedCard(card, hash.hash)]);
+
       final audio = (await store.getCard(1))!.content as LanguageCardContent;
       expect(audio.audioSha256, 'abc');
       expect(audio.audioBytes, 123);

@@ -338,8 +338,33 @@ class NativeDrawingActivity : Activity() {
                         orientation = LinearLayout.VERTICAL
                         setPadding(dp(12), dp(12), dp(12), dp(12))
                     }
-                    listOf("text" to 28f, "transliteration" to 16f, "translation" to 16f).forEach { (key, size) ->
-                        cell.addView(label(size).apply { text = word[key] as? String ?: ""; gravity = Gravity.START })
+                    val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+                    val textArea = LinearLayout(this)
+                    textArea.addView(label(28f).apply {
+                        text = word["text"] as? String ?: ""
+                        gravity = Gravity.START
+                        if (word["cardId"] is Number) {
+                            contentDescription = "Open similar card: $text"
+                            isFocusable = true
+                            setOnClickListener {
+                                if (!busy && (!recall || revealed)) openExample((word["cardId"] as Number).toInt())
+                            }
+                        }
+                    }, LinearLayout.LayoutParams(-2, -2))
+                    heading.addView(textArea, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(8) })
+                    if (word["audio"] == true && word["cardId"] is Number) heading.addView(ImageButton(this).apply {
+                        contentDescription = "Play similar word: ${word["text"]}"
+                        tooltipText = "Play pronunciation"
+                        setImageDrawable(DrawingIcon("play"))
+                        setPadding(dp(12), dp(12), dp(12), dp(12))
+                        setBackgroundColor(Color.TRANSPARENT)
+                        setOnClickListener {
+                            if (!busy && (!recall || revealed)) play(similarCardId = (word["cardId"] as Number).toInt())
+                        }
+                    }, LinearLayout.LayoutParams(dp(48), dp(48)))
+                    cell.addView(heading)
+                    listOf("transliteration", "translation").forEach { key ->
+                        cell.addView(label(16f).apply { text = word[key] as? String ?: ""; gravity = Gravity.START })
                     }
                     row.addView(cell, LinearLayout.LayoutParams(0, -2, 1f))
                 }
@@ -361,10 +386,19 @@ class NativeDrawingActivity : Activity() {
                 setPadding(0, dp(12), 0, dp(12))
             }
             val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-            top.addView(label(28f).apply {
+            val textArea = LinearLayout(this)
+            textArea.addView(label(28f).apply {
                 text = part["text"] as? String ?: ""
                 gravity = Gravity.START
-            }, LinearLayout.LayoutParams(0, -2, 1f))
+                if (part["cardId"] is Number) {
+                    contentDescription = "Open contained card: $text"
+                    isFocusable = true
+                    setOnClickListener {
+                        if (!busy && (!recall || revealed)) openExample((part["cardId"] as Number).toInt())
+                    }
+                }
+            }, LinearLayout.LayoutParams(-2, -2))
+            top.addView(textArea, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(16) })
             if (part["audio"] == true) top.addView(ImageButton(this).apply {
                 contentDescription = "Play character: ${part["text"]}"
                 tooltipText = "Play character"
@@ -517,11 +551,11 @@ class NativeDrawingActivity : Activity() {
             override fun notImplemented() = error("missing", "Could not save review", null)
         })
     }
-    private fun play(exampleIndex: Int? = null, characterIndex: Int? = null, derivedIndex: Int? = null) {
+    private fun play(exampleIndex: Int? = null, characterIndex: Int? = null, derivedIndex: Int? = null, similarCardId: Int? = null) {
         stopAudio()
         val generation = audioGeneration
         hint.text = "Loading audio…"
-        NativeDrawingBridge.channel?.invokeMethod("audio", mapOf("index" to index, "exampleIndex" to exampleIndex, "characterIndex" to characterIndex, "derivedIndex" to derivedIndex), object : MethodChannel.Result {
+        NativeDrawingBridge.channel?.invokeMethod("audio", mapOf("index" to index, "exampleIndex" to exampleIndex, "characterIndex" to characterIndex, "derivedIndex" to derivedIndex, "similarCardId" to similarCardId), object : MethodChannel.Result {
             override fun success(result: Any?) {
                 if (generation != audioGeneration || isFinishing || isDestroyed) return
                 try {

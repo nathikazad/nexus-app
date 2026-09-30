@@ -184,9 +184,27 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
             return null;
           }
           final content = _questions[index].card.content as LanguageCardContent;
+          final similarCards = similarGroupsForCard(
+            _questions[index].card,
+            _latest.values,
+          ).expand((g) => g.cards).toList();
           if (call.method == 'audio') {
             final exampleIndex = args['exampleIndex'];
+            final similarCardId = args['similarCardId'];
+            if (similarCardId != null && exampleIndex != null) {
+              throw PlatformException(code: 'invalid_audio_target');
+            }
             var url = content.audioUrl;
+            if (similarCardId != null) {
+              final target = similarCards
+                  .where((c) => c.id == similarCardId)
+                  .firstOrNull;
+              if (target?.content case final LanguageCardContent word) {
+                url = word.audioUrl;
+              } else {
+                throw PlatformException(code: 'invalid_similar_card');
+              }
+            }
             if (exampleIndex != null) {
               if (exampleIndex is! int ||
                   exampleIndex < 0 ||
@@ -202,7 +220,8 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
           }
           if (call.method == 'exampleCard') {
             final id = args['cardId'];
-            if (!content.examples.any((e) => e.cardId == id)) {
+            if (!content.examples.any((e) => e.cardId == id) &&
+                !similarCards.any((c) => c.id == id)) {
               throw PlatformException(code: 'invalid_example');
             }
             final data = await ref.read(cardsDashboardProvider.future);

@@ -79,12 +79,20 @@ class NativeDrawingSession {
   static List<LanguageCardContent> characterParts(
     StudyCard card,
     Map<int, StudyCard> library,
+  ) => characterCards(
+    card,
+    library,
+  ).map((card) => card.content as LanguageCardContent).toList();
+
+  static List<StudyCard> characterCards(
+    StudyCard card,
+    Map<int, StudyCard> library,
   ) {
     final content = card.content as LanguageCardContent;
     final letters = content.originalScript.trim().characters.toList();
     if (letters.length <= 1) return const [];
     final visited = <int>{card.id};
-    final parts = <LanguageCardContent>[];
+    final parts = <StudyCard>[];
     void visit(StudyCard parent) {
       for (final id in parent.linkedWordIds) {
         if (!visited.add(id)) continue;
@@ -95,7 +103,7 @@ class NativeDrawingSession {
         if (text.characters.length == 1) {
           // Match whole written letters, not a consonant hidden inside a
           // combined letter. Stop here so வீ stays வீ, rather than வ் + ஈ.
-          if (letters.contains(text)) parts.add(part);
+          if (letters.contains(text)) parts.add(child);
           continue;
         }
         visit(child);
@@ -105,8 +113,12 @@ class NativeDrawingSession {
     visit(card);
     parts.sort(
       (a, b) => letters
-          .indexOf(a.originalScript.trim())
-          .compareTo(letters.indexOf(b.originalScript.trim())),
+          .indexOf((a.content as LanguageCardContent).originalScript.trim())
+          .compareTo(
+            letters.indexOf(
+              (b.content as LanguageCardContent).originalScript.trim(),
+            ),
+          ),
     );
     return parts;
   }
@@ -116,6 +128,7 @@ class NativeDrawingSession {
     StudyCue? cue,
     List<SimilarSoundGroup> similar = const [],
     List<LanguageCardContent> characters = const [],
+    Map<LanguageCardContent, int> characterCardIds = const {},
     List<DerivedLanguageExample> derived = const [],
   }) {
     final content = card.content as LanguageCardContent;
@@ -139,6 +152,8 @@ class NativeDrawingSession {
               for (final member in group.cards)
                 if (member.content case final LanguageCardContent word)
                   {
+                    'cardId': member.id,
+                    'audio': word.audioUrl?.trim().isNotEmpty == true,
                     'text': word.originalScript,
                     'transliteration': word.transliteration,
                     'translation': word.english,
@@ -149,6 +164,8 @@ class NativeDrawingSession {
       'characters': [
         for (final part in characters)
           {
+            if (characterCardIds[part] != null)
+              'cardId': characterCardIds[part],
             'text': part.originalScript,
             'transliteration': part.transliteration,
             'translation': part.english,
@@ -183,6 +200,7 @@ class NativeDrawingSession {
     StudyPrompt prompt, {
     List<SimilarSoundGroup> similar = const [],
     List<LanguageCardContent> characters = const [],
+    Map<LanguageCardContent, int> characterCardIds = const {},
     List<DerivedLanguageExample> derived = const [],
   }) {
     final content = prompt.card.content as LanguageCardContent;
@@ -190,6 +208,7 @@ class NativeDrawingSession {
       ...practiceCard(
         prompt.card,
         characters: characters,
+        characterCardIds: characterCardIds,
         derived: derived,
         similar: similar,
       ),

@@ -122,7 +122,7 @@ class SimilarWordGroupPanel extends StatelessWidget {
                 Flexible(
                   child: Text(
                     group.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: palette.ink,
                     ),
@@ -206,79 +206,79 @@ class SimilarSoundWord extends ConsumerWidget {
         side: BorderSide(color: palette.line),
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(13),
-        onTap: () => Navigator.of(context).push<void>(
-          MaterialPageRoute(builder: (_) => CardDetailsPage(card: card)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      content.originalScript,
-                      style: TextStyle(
-                        fontSize: 28,
-                        height: 1.35,
-                        fontWeight: FontWeight.w500,
-                        color: palette.ink,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute(
+                          builder: (_) => CardDetailsPage(card: card),
+                        ),
+                      ),
+                      child: Text(
+                        content.originalScript,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                          color: palette.ink,
+                        ),
                       ),
                     ),
                   ),
-                  if (audio != null && content.audioUrl?.isNotEmpty == true)
-                    PronunciationButton(
-                      key: ValueKey('compare-audio-${card.id}'),
-                      audioUrl: content.audioUrl!,
-                      repository: audio,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      content.transliteration,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.4,
-                        color: palette.muted,
-                      ),
+                ),
+                if (audio != null && content.audioUrl?.isNotEmpty == true)
+                  PronunciationButton(
+                    key: ValueKey('compare-audio-${card.id}'),
+                    audioUrl: content.audioUrl!,
+                    repository: audio,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    content.transliteration,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: palette.muted,
                     ),
                   ),
-                  if (retention != null) ...[
-                    const SizedBox(width: 8),
-                    SimilarRetentionPill(fraction: retention!),
-                  ],
+                ),
+                if (retention != null) ...[
+                  const SizedBox(width: 8),
+                  SimilarRetentionPill(fraction: retention!),
                 ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                content.english,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.45,
-                  color: palette.ink,
-                ),
-              ),
-              if (resultLabel != null) ...[
-                const SizedBox(height: 8),
-                Text(resultLabel!),
               ],
-              if (notAsked) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Not asked',
-                  style: TextStyle(color: colors.onSurfaceVariant),
-                ),
-              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              content.english,
+              style: TextStyle(fontSize: 12, height: 1.4, color: palette.ink),
+            ),
+            if (resultLabel != null) ...[
+              const SizedBox(height: 8),
+              Text(resultLabel!),
             ],
-          ),
+            if (notAsked) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Not asked',
+                style: TextStyle(color: colors.onSurfaceVariant),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -294,7 +294,7 @@ class SimilarRetentionPill extends StatelessWidget {
     return Tooltip(
       message: 'Retention',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         decoration: BoxDecoration(
           color: strong ? const Color(0xffecfdf5) : const Color(0xfffff7ed),
           borderRadius: BorderRadius.circular(5),
@@ -302,8 +302,10 @@ class SimilarRetentionPill extends StatelessWidget {
         child: Text(
           '${(fraction * 100).round()}%',
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontFamily: 'monospace',
+            fontSize: 8,
+            fontWeight: FontWeight.w700,
+            letterSpacing: .55,
             color: strong ? RecallColors.emerald : RecallColors.orange,
           ),
         ),

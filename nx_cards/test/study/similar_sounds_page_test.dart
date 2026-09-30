@@ -41,6 +41,10 @@ void main() {
       expect(find.text('20%'), findsOneWidget);
       await tester.tap(find.text('meaning 2'));
       await tester.pumpAndSettle();
+      expect(find.text('Card details'), findsNothing);
+      final content = cards[1].content as LanguageCardContent;
+      await tester.tap(find.text(content.originalScript));
+      await tester.pumpAndSettle();
       expect(find.text('Card details'), findsOneWidget);
       expect(find.text('meaning 2'), findsOneWidget);
       expect(tester.takeException(), isNull);

@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'shared_pronunciation_player.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -22,7 +24,7 @@ class LanguageAudioControls extends StatefulWidget {
   State<LanguageAudioControls> createState() => _LanguageAudioControlsState();
 }
 
-class PronunciationButton extends StatefulWidget {
+class PronunciationButton extends ConsumerStatefulWidget {
   const PronunciationButton({
     super.key,
     required this.audioUrl,
@@ -35,14 +37,11 @@ class PronunciationButton extends StatefulWidget {
   final CardAudioRepository repository;
 
   @override
-  State<PronunciationButton> createState() => _PronunciationButtonState();
+  ConsumerState<PronunciationButton> createState() =>
+      _PronunciationButtonState();
 }
 
-class _PronunciationButtonState extends State<PronunciationButton> {
-  final AudioPlayer _player = AudioPlayer();
-  bool _loading = false;
-  bool _playing = false;
-
+class _PronunciationButtonState extends ConsumerState<PronunciationButton> {
   @override
   void initState() {
     super.initState();
@@ -54,47 +53,42 @@ class _PronunciationButtonState extends State<PronunciationButton> {
   }
 
   Future<void> _play() async {
-    if (_loading) return;
-    setState(() => _loading = true);
     try {
-      final bytes = await widget.repository.fetch(widget.audioUrl);
-      if (!mounted) return;
-      await _player.play(languageAudioSource(bytes));
-      if (mounted) setState(() => _playing = true);
-      await _player.onPlayerComplete.first;
+      await ref
+          .read(sharedPronunciationPlayerProvider)
+          .start(this, widget.audioUrl, widget.repository);
     } catch (error, stackTrace) {
       debugPrint(
-        '[nx_cards audio] compact playback failed url=${widget.audioUrl} '
-        'error=$error\n$stackTrace',
+        '[nx_cards audio] compact playback failed: $error\n$stackTrace',
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _playing = false;
-        });
-      }
     }
   }
 
   @override
-  void dispose() {
-    unawaited(_player.dispose());
-    super.dispose();
+  Widget build(BuildContext context) {
+    final shared = ref.watch(sharedPronunciationPlayerProvider);
+    return AnimatedBuilder(
+      animation: shared,
+      builder: (context, _) {
+        final active = identical(shared.owner, this);
+        final loading = active && shared.loading;
+        final playing = active && shared.playing;
+        return IconButton.filledTonal(
+          key: const ValueKey<String>('pronunciation-button'),
+          tooltip: playing ? 'Playing pronunciation' : 'Play pronunciation',
+          onPressed: loading ? null : _play,
+          icon: loading
+              ? const SizedBox.square(
+                  dimension: 17,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  playing ? Icons.volume_up_rounded : Icons.play_arrow_rounded,
+                ),
+        );
+      },
+    );
   }
-
-  @override
-  Widget build(BuildContext context) => IconButton.filledTonal(
-    key: const ValueKey<String>('pronunciation-button'),
-    tooltip: _playing ? 'Playing pronunciation' : 'Play pronunciation',
-    onPressed: _loading ? null : _play,
-    icon: _loading
-        ? const SizedBox.square(
-            dimension: 17,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        : Icon(_playing ? Icons.volume_up_rounded : Icons.play_arrow_rounded),
-  );
 }
 
 class _LanguageAudioControlsState extends State<LanguageAudioControls> {
