@@ -110,6 +110,41 @@ Future<void> showSetup(
 
 void main() {
   testWidgets(
+    'grouped count and labels follow direction suffix after switching',
+    (tester) async {
+      final cards = [
+        for (var id = 1; id <= 3; id++)
+          sample(id, 0).copyWith(
+            content: LanguageCardContent(
+              english: 'word $id',
+              originalScript: '字$id',
+              transliteration: 'zi',
+              audioUrl: '/audio/$id',
+              similarWordGroups: ['all-sound', if (id < 3) 'pair-write'],
+            ),
+          ),
+      ];
+      await showSetup(tester, studyCards: cards);
+      await tester.tap(find.byKey(const ValueKey('group-similar-sounds')));
+      await tester.pumpAndSettle();
+      expect(find.text('Group by similar writing'), findsOneWidget);
+      expect(find.text('2 recall items available'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('direction-from_audio')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('direction-from_language')));
+      await tester.pumpAndSettle();
+      expect(find.text('Group by similar sounds'), findsOneWidget);
+      expect(find.text('3 recall items available'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('direction-to_language')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('direction-from_audio')));
+      await tester.pumpAndSettle();
+      expect(find.text('Group by similar writing'), findsOneWidget);
+      expect(find.text('2 recall items available'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'similar sounds toggle is only available for a single Chinese recall direction',
     (tester) async {
       for (final cue in StudyCue.activeDirections) {
@@ -119,7 +154,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          tester.getTopLeft(find.text('Similar sounds')).dy,
+          tester.getTopLeft(find.text('Similar words')).dy,
           greaterThan(
             tester.getTopLeft(find.text('How many recall items?')).dy,
           ),
