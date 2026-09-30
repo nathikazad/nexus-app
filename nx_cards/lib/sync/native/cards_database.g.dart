@@ -124,6 +124,18 @@ class $LocalStudyCardsTable extends LocalStudyCards
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _similarWordGroupsJsonMeta =
+      const VerificationMeta('similarWordGroupsJson');
+  @override
+  late final GeneratedColumn<String> similarWordGroupsJson =
+      GeneratedColumn<String>(
+        'similar_word_groups_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
   static const VerificationMeta _examplesJsonMeta = const VerificationMeta(
     'examplesJson',
   );
@@ -290,6 +302,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
     audioUrl,
     audioSha256,
     audioBytes,
+    similarWordGroupsJson,
     examplesJson,
     linkedWordIdsJson,
     tagsJson,
@@ -396,6 +409,15 @@ class $LocalStudyCardsTable extends LocalStudyCards
       context.handle(
         _audioBytesMeta,
         audioBytes.isAcceptableOrUnknown(data['audio_bytes']!, _audioBytesMeta),
+      );
+    }
+    if (data.containsKey('similar_word_groups_json')) {
+      context.handle(
+        _similarWordGroupsJsonMeta,
+        similarWordGroupsJson.isAcceptableOrUnknown(
+          data['similar_word_groups_json']!,
+          _similarWordGroupsJsonMeta,
+        ),
       );
     }
     if (data.containsKey('examples_json')) {
@@ -563,6 +585,10 @@ class $LocalStudyCardsTable extends LocalStudyCards
         DriftSqlType.int,
         data['${effectivePrefix}audio_bytes'],
       ),
+      similarWordGroupsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}similar_word_groups_json'],
+      )!,
       examplesJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}examples_json'],
@@ -637,6 +663,7 @@ class LocalStudyCardRow extends DataClass
   final String? audioUrl;
   final String? audioSha256;
   final int? audioBytes;
+  final String similarWordGroupsJson;
   final String examplesJson;
   final String linkedWordIdsJson;
   final String tagsJson;
@@ -662,6 +689,7 @@ class LocalStudyCardRow extends DataClass
     this.audioUrl,
     this.audioSha256,
     this.audioBytes,
+    required this.similarWordGroupsJson,
     required this.examplesJson,
     required this.linkedWordIdsJson,
     required this.tagsJson,
@@ -702,6 +730,7 @@ class LocalStudyCardRow extends DataClass
     if (!nullToAbsent || audioBytes != null) {
       map['audio_bytes'] = Variable<int>(audioBytes);
     }
+    map['similar_word_groups_json'] = Variable<String>(similarWordGroupsJson);
     map['examples_json'] = Variable<String>(examplesJson);
     map['linked_word_ids_json'] = Variable<String>(linkedWordIdsJson);
     map['tags_json'] = Variable<String>(tagsJson);
@@ -751,6 +780,7 @@ class LocalStudyCardRow extends DataClass
       audioBytes: audioBytes == null && nullToAbsent
           ? const Value.absent()
           : Value(audioBytes),
+      similarWordGroupsJson: Value(similarWordGroupsJson),
       examplesJson: Value(examplesJson),
       linkedWordIdsJson: Value(linkedWordIdsJson),
       tagsJson: Value(tagsJson),
@@ -792,6 +822,9 @@ class LocalStudyCardRow extends DataClass
       audioUrl: serializer.fromJson<String?>(json['audioUrl']),
       audioSha256: serializer.fromJson<String?>(json['audioSha256']),
       audioBytes: serializer.fromJson<int?>(json['audioBytes']),
+      similarWordGroupsJson: serializer.fromJson<String>(
+        json['similarWordGroupsJson'],
+      ),
       examplesJson: serializer.fromJson<String>(json['examplesJson']),
       linkedWordIdsJson: serializer.fromJson<String>(json['linkedWordIdsJson']),
       tagsJson: serializer.fromJson<String>(json['tagsJson']),
@@ -822,6 +855,7 @@ class LocalStudyCardRow extends DataClass
       'audioUrl': serializer.toJson<String?>(audioUrl),
       'audioSha256': serializer.toJson<String?>(audioSha256),
       'audioBytes': serializer.toJson<int?>(audioBytes),
+      'similarWordGroupsJson': serializer.toJson<String>(similarWordGroupsJson),
       'examplesJson': serializer.toJson<String>(examplesJson),
       'linkedWordIdsJson': serializer.toJson<String>(linkedWordIdsJson),
       'tagsJson': serializer.toJson<String>(tagsJson),
@@ -850,6 +884,7 @@ class LocalStudyCardRow extends DataClass
     Value<String?> audioUrl = const Value.absent(),
     Value<String?> audioSha256 = const Value.absent(),
     Value<int?> audioBytes = const Value.absent(),
+    String? similarWordGroupsJson,
     String? examplesJson,
     String? linkedWordIdsJson,
     String? tagsJson,
@@ -877,6 +912,7 @@ class LocalStudyCardRow extends DataClass
     audioUrl: audioUrl.present ? audioUrl.value : this.audioUrl,
     audioSha256: audioSha256.present ? audioSha256.value : this.audioSha256,
     audioBytes: audioBytes.present ? audioBytes.value : this.audioBytes,
+    similarWordGroupsJson: similarWordGroupsJson ?? this.similarWordGroupsJson,
     examplesJson: examplesJson ?? this.examplesJson,
     linkedWordIdsJson: linkedWordIdsJson ?? this.linkedWordIdsJson,
     tagsJson: tagsJson ?? this.tagsJson,
@@ -916,6 +952,9 @@ class LocalStudyCardRow extends DataClass
       audioBytes: data.audioBytes.present
           ? data.audioBytes.value
           : this.audioBytes,
+      similarWordGroupsJson: data.similarWordGroupsJson.present
+          ? data.similarWordGroupsJson.value
+          : this.similarWordGroupsJson,
       examplesJson: data.examplesJson.present
           ? data.examplesJson.value
           : this.examplesJson,
@@ -962,6 +1001,7 @@ class LocalStudyCardRow extends DataClass
           ..write('audioUrl: $audioUrl, ')
           ..write('audioSha256: $audioSha256, ')
           ..write('audioBytes: $audioBytes, ')
+          ..write('similarWordGroupsJson: $similarWordGroupsJson, ')
           ..write('examplesJson: $examplesJson, ')
           ..write('linkedWordIdsJson: $linkedWordIdsJson, ')
           ..write('tagsJson: $tagsJson, ')
@@ -992,6 +1032,7 @@ class LocalStudyCardRow extends DataClass
     audioUrl,
     audioSha256,
     audioBytes,
+    similarWordGroupsJson,
     examplesJson,
     linkedWordIdsJson,
     tagsJson,
@@ -1021,6 +1062,7 @@ class LocalStudyCardRow extends DataClass
           other.audioUrl == this.audioUrl &&
           other.audioSha256 == this.audioSha256 &&
           other.audioBytes == this.audioBytes &&
+          other.similarWordGroupsJson == this.similarWordGroupsJson &&
           other.examplesJson == this.examplesJson &&
           other.linkedWordIdsJson == this.linkedWordIdsJson &&
           other.tagsJson == this.tagsJson &&
@@ -1048,6 +1090,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<String?> audioUrl;
   final Value<String?> audioSha256;
   final Value<int?> audioBytes;
+  final Value<String> similarWordGroupsJson;
   final Value<String> examplesJson;
   final Value<String> linkedWordIdsJson;
   final Value<String> tagsJson;
@@ -1074,6 +1117,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.audioUrl = const Value.absent(),
     this.audioSha256 = const Value.absent(),
     this.audioBytes = const Value.absent(),
+    this.similarWordGroupsJson = const Value.absent(),
     this.examplesJson = const Value.absent(),
     this.linkedWordIdsJson = const Value.absent(),
     this.tagsJson = const Value.absent(),
@@ -1101,6 +1145,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.audioUrl = const Value.absent(),
     this.audioSha256 = const Value.absent(),
     this.audioBytes = const Value.absent(),
+    this.similarWordGroupsJson = const Value.absent(),
     this.examplesJson = const Value.absent(),
     this.linkedWordIdsJson = const Value.absent(),
     required String tagsJson,
@@ -1137,6 +1182,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Expression<String>? audioUrl,
     Expression<String>? audioSha256,
     Expression<int>? audioBytes,
+    Expression<String>? similarWordGroupsJson,
     Expression<String>? examplesJson,
     Expression<String>? linkedWordIdsJson,
     Expression<String>? tagsJson,
@@ -1164,6 +1210,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       if (audioUrl != null) 'audio_url': audioUrl,
       if (audioSha256 != null) 'audio_sha256': audioSha256,
       if (audioBytes != null) 'audio_bytes': audioBytes,
+      if (similarWordGroupsJson != null)
+        'similar_word_groups_json': similarWordGroupsJson,
       if (examplesJson != null) 'examples_json': examplesJson,
       if (linkedWordIdsJson != null) 'linked_word_ids_json': linkedWordIdsJson,
       if (tagsJson != null) 'tags_json': tagsJson,
@@ -1193,6 +1241,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Value<String?>? audioUrl,
     Value<String?>? audioSha256,
     Value<int?>? audioBytes,
+    Value<String>? similarWordGroupsJson,
     Value<String>? examplesJson,
     Value<String>? linkedWordIdsJson,
     Value<String>? tagsJson,
@@ -1220,6 +1269,8 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       audioUrl: audioUrl ?? this.audioUrl,
       audioSha256: audioSha256 ?? this.audioSha256,
       audioBytes: audioBytes ?? this.audioBytes,
+      similarWordGroupsJson:
+          similarWordGroupsJson ?? this.similarWordGroupsJson,
       examplesJson: examplesJson ?? this.examplesJson,
       linkedWordIdsJson: linkedWordIdsJson ?? this.linkedWordIdsJson,
       tagsJson: tagsJson ?? this.tagsJson,
@@ -1272,6 +1323,11 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     }
     if (audioBytes.present) {
       map['audio_bytes'] = Variable<int>(audioBytes.value);
+    }
+    if (similarWordGroupsJson.present) {
+      map['similar_word_groups_json'] = Variable<String>(
+        similarWordGroupsJson.value,
+      );
     }
     if (examplesJson.present) {
       map['examples_json'] = Variable<String>(examplesJson.value);
@@ -1332,6 +1388,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
           ..write('audioUrl: $audioUrl, ')
           ..write('audioSha256: $audioSha256, ')
           ..write('audioBytes: $audioBytes, ')
+          ..write('similarWordGroupsJson: $similarWordGroupsJson, ')
           ..write('examplesJson: $examplesJson, ')
           ..write('linkedWordIdsJson: $linkedWordIdsJson, ')
           ..write('tagsJson: $tagsJson, ')
@@ -1377,6 +1434,7 @@ typedef $$LocalStudyCardsTableCreateCompanionBuilder =
       Value<String?> audioUrl,
       Value<String?> audioSha256,
       Value<int?> audioBytes,
+      Value<String> similarWordGroupsJson,
       Value<String> examplesJson,
       Value<String> linkedWordIdsJson,
       required String tagsJson,
@@ -1405,6 +1463,7 @@ typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
       Value<String?> audioUrl,
       Value<String?> audioSha256,
       Value<int?> audioBytes,
+      Value<String> similarWordGroupsJson,
       Value<String> examplesJson,
       Value<String> linkedWordIdsJson,
       Value<String> tagsJson,
@@ -1482,6 +1541,11 @@ class $$LocalStudyCardsTableFilterComposer
 
   ColumnFilters<int> get audioBytes => $composableBuilder(
     column: $table.audioBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get similarWordGroupsJson => $composableBuilder(
+    column: $table.similarWordGroupsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1615,6 +1679,11 @@ class $$LocalStudyCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get similarWordGroupsJson => $composableBuilder(
+    column: $table.similarWordGroupsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get examplesJson => $composableBuilder(
     column: $table.examplesJson,
     builder: (column) => ColumnOrderings(column),
@@ -1733,6 +1802,11 @@ class $$LocalStudyCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get similarWordGroupsJson => $composableBuilder(
+    column: $table.similarWordGroupsJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get examplesJson => $composableBuilder(
     column: $table.examplesJson,
     builder: (column) => column,
@@ -1837,6 +1911,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<String?> audioUrl = const Value.absent(),
                 Value<String?> audioSha256 = const Value.absent(),
                 Value<int?> audioBytes = const Value.absent(),
+                Value<String> similarWordGroupsJson = const Value.absent(),
                 Value<String> examplesJson = const Value.absent(),
                 Value<String> linkedWordIdsJson = const Value.absent(),
                 Value<String> tagsJson = const Value.absent(),
@@ -1863,6 +1938,7 @@ class $$LocalStudyCardsTableTableManager
                 audioUrl: audioUrl,
                 audioSha256: audioSha256,
                 audioBytes: audioBytes,
+                similarWordGroupsJson: similarWordGroupsJson,
                 examplesJson: examplesJson,
                 linkedWordIdsJson: linkedWordIdsJson,
                 tagsJson: tagsJson,
@@ -1891,6 +1967,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<String?> audioUrl = const Value.absent(),
                 Value<String?> audioSha256 = const Value.absent(),
                 Value<int?> audioBytes = const Value.absent(),
+                Value<String> similarWordGroupsJson = const Value.absent(),
                 Value<String> examplesJson = const Value.absent(),
                 Value<String> linkedWordIdsJson = const Value.absent(),
                 required String tagsJson,
@@ -1917,6 +1994,7 @@ class $$LocalStudyCardsTableTableManager
                 audioUrl: audioUrl,
                 audioSha256: audioSha256,
                 audioBytes: audioBytes,
+                similarWordGroupsJson: similarWordGroupsJson,
                 examplesJson: examplesJson,
                 linkedWordIdsJson: linkedWordIdsJson,
                 tagsJson: tagsJson,

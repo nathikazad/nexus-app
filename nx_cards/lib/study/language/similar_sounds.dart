@@ -195,7 +195,8 @@ enum SimilarSoundKind {
   syllable('Tones and meanings'),
   beginning('Same beginning'),
   ending('Same ending'),
-  nearby('Nearby sounds');
+  nearby('Nearby sounds'),
+  manual('My Own');
 
   const SimilarSoundKind(this.label);
   final String label;
@@ -347,4 +348,32 @@ List<SimilarRecallGroup> similarSoundRecallGroups(
     left -= chosen.length;
   }
   return result;
+}
+
+/// Explicit membership only; pronunciation does not affect manual groups.
+List<SimilarSoundGroup> manualSimilarSoundGroups(Iterable<StudyCard> cards) {
+  final groups = <String, Map<int, StudyCard>>{};
+  for (final card in cards) {
+    if (!isChineseLanguage(card.language) ||
+        card.learningStatus != LearningStatus.recall) {
+      continue;
+    }
+    final content = card.content;
+    if (content is! LanguageCardContent) continue;
+    for (final id in content.similarWordGroups) {
+      if (id.isEmpty || id.trim() != id) continue;
+      (groups[id] ??= {})[card.id] = card;
+    }
+  }
+  return [
+    for (final entry in groups.entries)
+      SimilarSoundGroup(
+        entry.value.values.toList(),
+        kind: SimilarSoundKind.manual,
+        label: entry.key,
+      ),
+  ]..sort((a, b) {
+    final size = b.cards.length.compareTo(a.cards.length);
+    return size == 0 ? a.label.compareTo(b.label) : size;
+  });
 }

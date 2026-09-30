@@ -22,6 +22,9 @@ StudyCard? studyCardFromModel(
     notes: model.description,
     content: isLanguageCardModelType(modelTypeName)
         ? LanguageCardContent(
+            similarWordGroups: similarWordGroupsFromJson(
+              model.attributes?[attrSimilarWordGroups],
+            ),
             english: front,
             originalScript: back,
             transliteration:
@@ -306,4 +309,14 @@ int? _intFrom(Object? raw) {
 double? _doubleFrom(Object? raw) {
   if (raw is num) return raw.toDouble();
   return double.tryParse(raw?.toString() ?? '');
+}
+
+List<String> similarWordGroupsFromJson(Object? raw) {
+  if (raw is! List) return const [];
+  return List.unmodifiable(
+    raw
+        .whereType<String>()
+        .where((id) => id.isNotEmpty && id.trim() == id)
+        .toSet(),
+  );
 }

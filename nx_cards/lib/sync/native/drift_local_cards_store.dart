@@ -46,6 +46,7 @@ final class DriftLocalCardsStore
     final body = jsonEncode({
       'front': row.front.value,
       'back': row.back.value,
+      'similar_word_groups': row.similarWordGroupsJson.value,
       'examples': row.examplesJson.value,
       'history': row.reviewHistoryJson.value,
       'schedule': row.scheduleJson.value,
@@ -113,6 +114,8 @@ final class DriftLocalCardsStore
         sourceBookName: Value(json['source_book_name'] as String?),
         front: json['front'] as String,
         back: json['back'] as String,
+        similarWordGroupsJson:
+            json['similar_word_groups'] as String? ?? row.similarWordGroupsJson,
         examplesJson: json['examples'] as String,
         reviewHistoryJson: json['history'] as String,
       ),

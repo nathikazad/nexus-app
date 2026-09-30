@@ -37,6 +37,13 @@ final class DriftCardsMapper {
       audioBytes: Value(
         content is LanguageCardContent ? content.audioBytes : null,
       ),
+      similarWordGroupsJson: Value(
+        jsonEncode(
+          content is LanguageCardContent
+              ? content.similarWordGroups
+              : const <String>[],
+        ),
+      ),
       examplesJson: Value(
         jsonEncode(
           content is LanguageCardContent
@@ -70,6 +77,9 @@ final class DriftCardsMapper {
       notes: row.notes,
       content: isLanguageCardModelType(row.modelType)
           ? LanguageCardContent(
+              similarWordGroups: similarWordGroupsFromJson(
+                jsonDecode(row.similarWordGroupsJson),
+              ),
               english: row.front,
               originalScript: row.back,
               transliteration: row.transliteration ?? '',

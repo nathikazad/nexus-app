@@ -35,6 +35,7 @@ final class LanguageCardContent extends CardContent {
     this.audioUrl,
     this.audioSha256,
     this.audioBytes,
+    this.similarWordGroups = const <String>[],
     List<LanguageExample> examples = const <LanguageExample>[],
     // Keep the public named argument compatible while filtering reads.
     // ignore: prefer_initializing_formals
@@ -44,6 +45,7 @@ final class LanguageCardContent extends CardContent {
   String get english => front;
   String get originalScript => back;
 
+  final List<String> similarWordGroups;
   final String transliteration;
   final String? audioUrl;
   final String? audioSha256;
@@ -51,6 +53,7 @@ final class LanguageCardContent extends CardContent {
   final List<LanguageExample> _examples;
 
   LanguageCardContent copyWith({
+    List<String>? similarWordGroups,
     String? english,
     String? originalScript,
     String? transliteration,
@@ -65,6 +68,7 @@ final class LanguageCardContent extends CardContent {
     audioSha256: audioSha256 ?? this.audioSha256,
     audioBytes: audioBytes ?? this.audioBytes,
     examples: _examples,
+    similarWordGroups: similarWordGroups ?? this.similarWordGroups,
   );
 
   // A linked vocabulary item is not a usage example of itself. Keep the
