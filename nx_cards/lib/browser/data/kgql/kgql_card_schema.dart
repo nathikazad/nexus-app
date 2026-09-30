@@ -28,6 +28,7 @@ const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
+const attrSimilarWordGroups = 'similar_word_groups';
 const attrLearningState = 'learning_state';
 
 const cardDetailsJsonSchema = <String, dynamic>{

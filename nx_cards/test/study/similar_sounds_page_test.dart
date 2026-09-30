@@ -12,7 +12,10 @@ void main() {
     'Chinese Explore opens grouped Current words; absent for other languages',
     (tester) async {
       final cards = [
-        soundCard(1, 'guó'),
+        soundCard(1, 'guó').copyWith(
+          content: (soundCard(1, 'guó').content as LanguageCardContent)
+              .copyWith(similarWordGroups: ['My contrast']),
+        ),
         soundCard(2, 'guǒ'),
         soundCard(3, 'guò', status: LearningStatus.practice),
         soundCard(4, 'gǒu', status: LearningStatus.future),
@@ -36,7 +39,7 @@ void main() {
       expect(find.text('Explore'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('explore-similar-sounds')));
       await tester.pumpAndSettle();
-      expect(find.byType(Tab), findsNWidgets(4));
+      expect(find.byType(Tab), findsNWidgets(5));
       expect(find.text('Tones and meanings · 2 words'), findsOneWidget);
       await tester.tap(find.byType(ExpansionTile));
       await tester.pumpAndSettle();
@@ -44,6 +47,14 @@ void main() {
       expect(find.text('meaning 2'), findsOneWidget);
       expect(find.text('meaning 3'), findsNothing);
       expect(find.text('meaning 4'), findsNothing);
+      await tester.ensureVisible(find.text('My Own'));
+      await tester.tap(find.text('My Own'));
+      await tester.pumpAndSettle();
+      expect(find.text('My contrast'), findsOneWidget);
+      await tester.tap(find.text('My contrast'));
+      await tester.pumpAndSettle();
+      expect(find.text('meaning 1'), findsOneWidget);
+      expect(find.text('meaning 2'), findsNothing);
       await tester.pumpWidget(const SizedBox());
       await show('Tamil');
       expect(find.text('Explore'), findsNothing);

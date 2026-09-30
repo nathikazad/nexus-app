@@ -44,6 +44,7 @@ class SimilarSoundsPage extends ConsumerWidget {
                     if (bySize != 0) return bySize;
                     return a.label.compareTo(b.label);
                   });
+            groups.addAll(manualSimilarSoundGroups(dashboard.cards));
             return TabBarView(
               children: [
                 for (final kind in SimilarSoundKind.values)
@@ -73,10 +74,14 @@ class _SimilarSoundsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (groups.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('No matching Current words in this category yet.'),
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            kind == SimilarSoundKind.manual
+                ? 'No manual groups assigned to your Current words yet.'
+                : 'No matching Current words in this category yet.',
+          ),
         ),
       );
     }
