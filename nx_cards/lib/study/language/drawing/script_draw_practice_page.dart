@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -11,9 +12,11 @@ class ScriptDrawPracticePage extends StatefulWidget {
     required this.cards,
     this.audioRepository,
     this.cues,
+    this.initialIndex = 0,
   }) : assert(cards.length > 0);
 
   final String title;
+  final int initialIndex;
   final List<StudyCard> cards;
   final CardAudioRepository? audioRepository;
   final List<StudyCue>? cues;
@@ -40,7 +43,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
   String get _sound {
     final content = _card.content;
     return content is LanguageCardContent
-        ? '${_cue == null ? '' : '${content.originalScript} · '}${content.transliteration} · ${content.english}'
+        ? '${_cue == null ? '' : '${content.originalScript} · '}${content.transliteration}\n${content.english}'
         : _card.front;
   }
 
@@ -54,6 +57,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
   @override
   void initState() {
     super.initState();
+    _index = widget.initialIndex;
     _drawingController.addListener(_drawingChanged);
   }
 
@@ -69,9 +73,31 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
     if (mounted) setState(() {});
   }
 
-  void _next() {
+  Future<void> _next() async {
     if (_index == widget.cards.length - 1) {
-      Navigator.of(context).pop(true);
+      final repeat = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Practice complete'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Return'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Repeat'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || repeat == null) return;
+      if (!repeat) {
+        Navigator.of(context).pop(true);
+        return;
+      }
+      _drawingController.clear();
+      setState(() => _index = 0);
       return;
     }
     _drawingController.clear();
@@ -159,7 +185,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
         );
         return Scaffold(
           appBar: AppBar(
-            title: Text('${widget.title} · Draw'),
+            title: Text('${widget.title} · Practice'),
             leading: IconButton(
               tooltip: 'Quit drawing practice',
               onPressed: () => Navigator.of(context).pop(),
@@ -208,12 +234,27 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                   prompt,
                                   const SizedBox(height: 16),
                                   Expanded(child: practice),
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxHeight: 220,
+                                    ),
+                                    child: SingleChildScrollView(
+                                      child: TabletRecallContext(
+                                        key: ValueKey(
+                                          'practice-context-${_card.id}',
+                                        ),
+                                        card: _card,
+                                        allSizes: true,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              runSpacing: 8,
                               children: [
                                 if (_audioUrl case final audioUrl?
                                     when widget.audioRepository != null) ...[
@@ -239,6 +280,23 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                         ? Icons.visibility_off_outlined
                                         : Icons.visibility_outlined,
                                   ),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton.filledTonal(
+                                  tooltip: 'Study sheet',
+                                  onPressed: () => Navigator.pop(context),
+                                  icon: const Icon(Icons.view_list_outlined),
+                                ),
+                                const SizedBox(width: 12),
+                                IconButton.filledTonal(
+                                  tooltip: 'Previous',
+                                  onPressed: _index == 0
+                                      ? null
+                                      : () {
+                                          _drawingController.clear();
+                                          setState(() => _index--);
+                                        },
+                                  icon: const Icon(Icons.arrow_back),
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton.filled(

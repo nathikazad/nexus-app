@@ -101,15 +101,18 @@ class _ExampleCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  onTap: () => _openPhrase(context, ref),
-                  child: Text(
-                    example.text,
-                    style: const TextStyle(fontSize: 18, height: 1.4),
+              Row(
+                children: [
+                  Flexible(
+                    child: InkWell(
+                      onTap: () => _openPhrase(context, ref),
+                      child: Text(
+                        example.text,
+                        style: const TextStyle(fontSize: 18, height: 1.4),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(

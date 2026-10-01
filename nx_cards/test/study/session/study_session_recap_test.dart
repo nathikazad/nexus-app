@@ -9,6 +9,28 @@ import 'package:nx_cards/study/session/study_session_page.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
 
 void main() {
+  for (final untried in [0, 3]) {
+    testWidgets('no Repeat when nothing was wrong ($untried untried)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: RecallRecapPage(
+              reviewedCount: 5,
+              totalCount: 5 + untried,
+              missCount: 0,
+              entries: const [],
+              onRepeatIncorrect: () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Repeat'), findsNothing);
+      expect(find.text('Return'), findsOneWidget);
+    });
+  }
+
   test('retry preserves prompt conditions and includes untried cards', () {
     final card = StudyCard(
       id: 1,
@@ -158,10 +180,8 @@ void main() {
     expect(find.text('kazhivu'), findsOneWidget);
     expect(find.text('NOT REVIEWED'), findsOneWidget);
     expect(find.text('Not tried'), findsOneWidget);
-    await tester.tap(find.byTooltip('Retry missed and untried cards'));
-    await tester.pumpAndSettle();
-    expect(find.text('WORDS'), findsNothing);
-    expect(find.text('Show answer'), findsOneWidget);
+    expect(find.text('Repeat'), findsNothing);
+    expect(find.text('Return'), findsOneWidget);
   });
 
   testWidgets('recall recap uses a readable dark surface', (tester) async {

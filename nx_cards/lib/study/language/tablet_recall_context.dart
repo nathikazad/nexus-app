@@ -11,8 +11,13 @@ import 'package:nx_cards/study/language/language_examples.dart';
 
 /// Only mount after reveal. Uses the same saved character links as study.
 class TabletRecallContext extends ConsumerStatefulWidget {
-  const TabletRecallContext({super.key, required this.card});
+  const TabletRecallContext({
+    super.key,
+    required this.card,
+    this.allSizes = false,
+  });
   final StudyCard card;
+  final bool allSizes;
 
   static bool visibleOn(BuildContext context) =>
       MediaQuery.sizeOf(context).shortestSide >= 600;
@@ -73,7 +78,7 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
   Widget build(BuildContext context) {
     final content = widget.card.content;
     if (content is! LanguageCardContent ||
-        !TabletRecallContext.visibleOn(context)) {
+        (!widget.allSizes && !TabletRecallContext.visibleOn(context))) {
       return const SizedBox.shrink();
     }
     final audio = ref.watch(cardAudioRepositoryProvider);

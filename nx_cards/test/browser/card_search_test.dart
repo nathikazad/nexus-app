@@ -61,7 +61,7 @@ void main() {
   );
 
   testWidgets(
-    'search spans statuses, stays in category and restores tab and scroll',
+    'search sits before Practice, spans statuses and stays in category',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 700));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -93,21 +93,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Backlog  18'));
-      await tester.tap(find.text('Backlog  18'));
-      await tester.pumpAndSettle();
-      final originalScroll = tester.state<ScrollableState>(
-        find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
+      expect(
+        tester.getCenter(find.byTooltip('Search all cards')).dx,
+        lessThan(
+          tester.getCenter(find.byKey(const ValueKey('practice-select'))).dx,
+        ),
       );
-      originalScroll.position.jumpTo(300);
-      await tester.pumpAndSettle();
-      final offset = originalScroll.position.pixels;
-      expect(offset, greaterThan(0));
       await tester.tap(find.byTooltip('Search all cards'));
       await tester.pumpAndSettle();
       expect(find.byType(TabBar), findsNothing);
@@ -140,10 +131,8 @@ void main() {
       await tester.tap(find.byTooltip('Close search'));
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsNothing);
-      expect(tester.widget<TabBar>(find.byType(TabBar)).controller, isNull);
-      final context = tester.element(find.byType(TabBar));
-      expect(DefaultTabController.of(context).index, 2);
-      expect(originalScroll.position.pixels, offset);
+      expect(find.byType(TabBar), findsNothing);
+      expect(find.text('after 1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

@@ -162,7 +162,7 @@ List<SimilarSoundGroup> similarGroupsForCard(
         ...library.where((c) => c.id != card.id && c.language == card.language),
         card,
       ],
-      currentOnly: false,
+      currentOnly: true,
     ).where((g) => content.similarWordGroups.contains(g.label)),
   );
 }

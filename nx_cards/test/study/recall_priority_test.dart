@@ -5,6 +5,51 @@ import 'package:nx_cards/study/recall_priority.dart';
 import 'study_setup_page_test.dart' show sample;
 
 void main() {
+  test('repeated fronts preserve every item and maximize the gap', () {
+    final ids = [2, 1, 1, 3, 2, 3, 4];
+    final prompts = [
+      for (var i = 0; i < ids.length; i++)
+        StudyPrompt(
+          card: sample(ids[i], 0),
+          cue: StudyCue.activeDirections[i % 3],
+        ),
+    ];
+    final spaced = spaceRepeatedRecallCards(prompts);
+    expect(spaced, unorderedEquals(prompts));
+    final last = <int, int>{};
+    for (var i = 0; i < spaced.length; i++) {
+      if (last.containsKey(spaced[i].cardId)) {
+        expect(i - last[spaced[i].cardId]!, greaterThanOrEqualTo(4));
+      }
+      last[spaced[i].cardId] = i;
+    }
+  });
+  test('no adjacent repeats whenever the selected counts permit it', () {
+    for (var a = 1; a <= 3; a++) {
+      for (var b = 0; b <= 3; b++) {
+        for (var c = 0; c <= 3; c++) {
+          for (var seed = 0; seed < 20; seed++) {
+            final prompts = [
+              for (var id = 0; id < 3; id++)
+                for (var n = 0; n < [a, b, c][id]; n++)
+                  StudyPrompt(
+                    card: sample(id, 0),
+                    cue: StudyCue.activeDirections[n],
+                  ),
+            ]..shuffle(Random(seed));
+            final result = spaceRepeatedRecallCards(prompts);
+            expect(result, unorderedEquals(prompts));
+            if ([a, b, c].reduce(max) <= (prompts.length + 1) ~/ 2) {
+              for (var i = 1; i < result.length; i++) {
+                expect(result[i].cardId, isNot(result[i - 1].cardId));
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
   test('selects weakest items before shuffling, preserving cues and count', () {
     final prompts = [
       for (var id = 1; id <= 10; id++)

@@ -214,8 +214,9 @@ class SimilarSoundWord extends ConsumerWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
+                Flexible(
                   child: Align(
+                    widthFactor: 1,
                     alignment: Alignment.centerLeft,
                     child: InkWell(
                       onTap: () => Navigator.of(context).push<void>(

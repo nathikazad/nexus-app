@@ -325,8 +325,8 @@ class _SourceCard extends StatelessWidget {
                     children: [
                       CardMetric(
                         icon: Icons.style_outlined,
-                        value: total,
-                        label: 'Total',
+                        value: current,
+                        label: 'Current',
                       ),
                       CardMetric(
                         icon: Icons.schedule_outlined,

@@ -1,6 +1,5 @@
-import 'package:nx_cards/scheduling/learning_stage.dart';
+import 'card.dart';
 import 'collection.dart';
-import 'study.dart';
 import 'study_card.dart';
 
 final class LibrarySource {
@@ -34,13 +33,8 @@ List<LibrarySource> summarizeLibrary(
       if (card.sourceBookId != null)
         card.sourceBookId!: card.sourceBookName ?? 'Book',
   };
-  int current(List<StudyCard> cards) => cards
-      .where(
-        (c) =>
-            learningStage(c, StudyCue.fromLanguage, window: historyWindow) ==
-            LearningStage.current,
-      )
-      .length;
+  int current(List<StudyCard> cards) =>
+      cards.where((c) => c.learningStatus == LearningStatus.recall).length;
   return [
     for (final language in data.languages)
       LibrarySource(
@@ -52,7 +46,6 @@ List<LibrarySource> summarizeLibrary(
         due: data.dueCount(
           now,
           language: language,
-          cue: StudyCue.fromLanguage,
           historyWindow: historyWindow,
         ),
       ),

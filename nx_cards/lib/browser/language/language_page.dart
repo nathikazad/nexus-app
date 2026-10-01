@@ -1,18 +1,17 @@
+import 'package:nx_cards/browser/card_list/practice_selection_page.dart';
+import 'package:nx_cards/study/study_setup_page.dart';
+import 'package:nx_cards/browser/card_list/backlog_page.dart';
 import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:nx_cards/browser/language/similar_sounds_page.dart';
-import 'package:nx_cards/browser/card_list/bulk_card_selection.dart';
 import 'package:nx_cards/browser/card_list/current_cards_tab.dart';
-import 'package:nx_cards/scheduling/future_card_rank.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/browser_error.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
-import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/browser/card_list/learning_cards.dart';
 import 'package:nx_cards/browser/card_list/card_search.dart';
 import 'package:nx_cards/browser/card_list/study_launcher.dart';
@@ -222,9 +221,7 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
         .where((card) => learningStage(card, cue, window: window) == stage)
         .length;
     final current = count(LearningStage.current);
-    final upcoming = count(LearningStage.upcoming);
     final learnt = count(LearningStage.past);
-    final remaining = count(LearningStage.future);
     final labelStyle = TextStyle(
       fontSize: 10,
       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -248,10 +245,8 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
     }
 
     final metrics = <(int, String)>[
-      (cards.length, 'Total'),
       (current + learnt, 'Current'),
-      (upcoming, 'Upcoming'),
-      (remaining, 'Backlog'),
+      (CardsDashboard(cards: cards).dueCount(DateTime.now()), 'Due'),
     ];
     final widths = metrics.map((entry) {
       final labelWidth = textWidth(entry.$2, labelStyle);
@@ -301,40 +296,22 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
                   : category == 'Phrase'
                   ? 'Phrases'
                   : category;
-              const titleStyle = TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              );
               final controlsWidth = children.isEmpty ? 0.0 : 48.0;
+              final statsWidth =
+                  widths.reduce((a, b) => a + b) + 8 * (widths.length - 1);
               final titleBudget =
-                  (constraints.maxWidth -
-                          controlsWidth -
-                          49 -
-                          12 -
-                          widths.first)
-                      .clamp(32.0, 180.0);
-              final titleWidth = textWidth(
-                title,
-                titleStyle,
-              ).clamp(32.0, titleBudget);
-              final identityWidth = titleWidth + controlsWidth + 49;
-              // Add counts in priority order only while their measured text fits.
-              // Keep a readable title and all navigation controls at every width.
-              final budget = constraints.maxWidth - identityWidth - 12;
-              var statsWidth = 0.0;
-              var visibleCount = 0;
-              for (final width in widths) {
-                final nextWidth =
-                    statsWidth + (visibleCount == 0 ? 0 : 8) + width;
-                if (nextWidth > budget) break;
-                statsWidth = nextWidth;
-                visibleCount++;
+                  (constraints.maxWidth - controlsWidth - 49 - 12 - statsWidth)
+                      .clamp(0.0, double.infinity);
+              var titleSize = 16.0;
+              TextStyle titleStyle() =>
+                  TextStyle(fontSize: titleSize, fontWeight: FontWeight.w600);
+              while (titleSize > 12 &&
+                  textWidth(title, titleStyle()) > titleBudget) {
+                titleSize -= 0.5;
               }
               final metricWidgets = <Widget>[
-                for (var i = 0; i < visibleCount; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
+                for (var i = 0; i < metrics.length; i++)
                   metric(metrics[i].$1, metrics[i].$2, widths[i]),
-                ],
               ];
               final identity = Row(
                 children: [
@@ -364,7 +341,7 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: titleStyle,
+                      style: titleStyle(),
                     ),
                   ),
                   if (children.isNotEmpty)
@@ -380,16 +357,28 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
                     ),
                 ],
               );
+              if (titleBudget < 24) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    identity,
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: metricWidgets,
+                      ),
+                    ),
+                  ],
+                );
+              }
               return Row(
                 children: [
                   Expanded(child: identity),
-                  if (visibleCount > 0) ...[
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: statsWidth,
-                      child: Row(children: metricWidgets),
-                    ),
-                  ],
+                  const SizedBox(width: 12),
+                  Wrap(spacing: 8, children: metricWidgets),
                 ],
               );
             },
@@ -472,9 +461,6 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
     final dashboard = ref.watch(
       cardsCollectionProvider((language: language, bookId: null)),
     );
-    final historyWindow =
-        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
-    final cue = ref.watch(languageDirectionProvider(language));
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -502,74 +488,69 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                     (language == null || data.languageFor(card) == language),
               )
               .toList(growable: false);
-          final now = DateTime.now().toUtc();
-          final upcoming = cards
-              .where(
-                (card) =>
-                    learningStage(card, cue, window: historyWindow) ==
-                    LearningStage.upcoming,
-              )
+          final current = cards
+              .where((c) => c.learningStatus == LearningStatus.recall)
               .toList();
-          final learning = sortWordsByScheduleState(
-            cards.where(
-              (card) =>
-                  learningStage(card, cue, window: historyWindow) ==
-                  LearningStage.current,
-            ),
-            now,
-            historyWindow: historyWindow,
-            cue: cue,
-          );
-          final learnt = sortWordsByScheduleState(
-            cards.where(
-              (card) =>
-                  learningStage(card, cue, window: historyWindow) ==
-                  LearningStage.past,
-            ),
-            now,
-            historyWindow: historyWindow,
-            cue: cue,
-          );
-          final futureScores = futureCardScores(
-            data.cards,
-            cue: cue,
-            historyWindow: historyWindow,
-          );
-          final notStarted = sortFutureCards(
-            cards.where((card) => card.learningStatus == LearningStatus.future),
-            futureScores,
-          );
           final queue = [
-            for (final card in cards.where((c) => c.active)) ...card.prompts,
+            for (final card in current.where((c) => c.active)) ...card.prompts,
           ];
-          return DefaultTabController(
-            length: 3,
-            initialIndex: 0,
-            child: BulkCardSelectionScope(
-              cards: cards,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1200),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${cards.length} ${widget.allCards || widget.tagSystem != null
-                                    ? 'cards'
-                                    : category == 'Script'
-                                    ? 'letters'
-                                    : 'words'} · ${learning.length + learnt.length} current',
-                                style: const TextStyle(
-                                  color: RecallColors.muted,
+          return PracticeSelectionScope(
+            title: category,
+            cards: current,
+            languagePair: language == null
+                ? languagesForCards(data, current)
+                : LanguagePair('Front', language!),
+            sourceKind: StudySourceKind.language,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: LibraryActions(
+                        children: [
+                          Expanded(
+                            child: LibraryActionButton(
+                              label: 'Search',
+                              tooltip: _searching
+                                  ? 'Close search'
+                                  : 'Search all cards',
+                              onPressed: _searching
+                                  ? _closeSearch
+                                  : () => setState(() => _searching = true),
+                              icon: _searching ? Icons.close : Icons.search,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: const PracticeSelectionButton()),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: LibraryActionButton(
+                              key: const ValueKey('open-backlog'),
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => BacklogPage(
+                                    title: category,
+                                    language: language,
+                                    matches: (card) =>
+                                        widget.allCards ||
+                                        LanguageGroup(
+                                          category,
+                                          tagSystem: widget.tagSystem,
+                                          path: widget.categoryPath,
+                                        ).contains(card),
+                                  ),
                                 ),
                               ),
+                              icon: Icons.add,
+                              label: 'Add',
                             ),
-                            StudyLauncher(
-                              followLearningTab: true,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: StudyLauncher(
+                              followPracticeSelection: true,
                               studyScope: StudyScope(
                                 language: language,
                                 tagSystem: widget.tagSystem ?? 'Category',
@@ -583,135 +564,60 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                                   ? 'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}'
                                   : 'language-tag:${Uri.encodeComponent(language ?? 'all')}:${Uri.encodeComponent(widget.tagSystem!)}:${Uri.encodeComponent(widget.categoryPath?.join('/') ?? category)}',
                               prompts: queue,
-                              studyCards: [...upcoming, ...learning, ...learnt],
+                              studyCards: current,
                               languagePair: language == null
                                   ? languagesForCards(data, cards)
                                   : LanguagePair('Front', language!),
-                              builder: (onPressed) => FilledButton(
+                              builder: (onPressed) => LibraryActionButton(
+                                filled: true,
                                 onPressed: onPressed,
-                                child: const Text('Study'),
+                                icon: Icons.replay_rounded,
+                                label: 'Recall',
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: _searching
-                          ? Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: TextField(
-                                key: const ValueKey('card-search-field'),
-                                controller: _searchController,
-                                autofocus: true,
-                                onChanged: (_) => setState(() {}),
-                                decoration: InputDecoration(
-                                  hintText: 'Search all cards in $category',
-                                  prefixIcon: const Icon(Icons.search),
-                                  suffixIcon: IconButton(
-                                    tooltip: 'Close search',
-                                    onPressed: _closeSearch,
-                                    icon: const Icon(Icons.close),
-                                  ),
-                                ),
-                              ),
-                            )
-                          : Row(
-                              children: [
-                                Expanded(
-                                  child: TabBar(
-                                    isScrollable: true,
-                                    labelPadding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                    ),
-                                    tabAlignment: TabAlignment.start,
-                                    labelStyle: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    unselectedLabelStyle: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                    tabs: [
-                                      Tab(
-                                        text:
-                                            'Current  ${learning.length + learnt.length}',
-                                      ),
-                                      Tab(text: 'Upcoming  ${upcoming.length}'),
-                                      Tab(
-                                        text: 'Backlog  ${notStarted.length}',
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  tooltip: 'Search all cards',
-                                  onPressed: () =>
-                                      setState(() => _searching = true),
-                                  icon: const Icon(Icons.search),
-                                ),
-                              ],
-                            ),
+                ),
+                if (_searching)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: TextField(
+                      key: const ValueKey('card-search-field'),
+                      controller: _searchController,
+                      autofocus: true,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Search all cards in $category',
+                        prefixIcon: const Icon(Icons.search),
+                      ),
                     ),
                   ),
-                  Expanded(
-                    child: IndexedStack(
-                      index: _searching ? 1 : 0,
-                      children: [
-                        TabBarView(
-                          children: [
-                            CurrentCardsTab(
-                              cards: [...learning, ...learnt],
-                              dashboard: data,
-                              language: language,
-                            ),
-                            LearningCardsTab(
-                              cards: upcoming,
-                              nextStatus: LearningStatus.recall,
-                              actionLabel: 'Activate',
-                              emptyText: 'Move Backlog cards here to practice.',
-                              dashboard: data,
-                            ),
-                            LearningCardsTab(
-                              cards: notStarted,
-                              priorityScores: futureScores,
-                              emptyText: category == 'Script'
-                                  ? 'Every letter has been started.'
-                                  : widget.allCards || widget.tagSystem != null
-                                  ? 'Every card has been started.'
-                                  : 'Every word has been started.',
-                              nextStatus: LearningStatus.practice,
-                              actionLabel: '+',
-                              dashboard: data,
-                            ),
-                          ],
+                Expanded(
+                  child: _searching
+                      ? LearningCardsTab(
+                          key: const ValueKey('card-search-results'),
+                          cards: cards
+                              .where(
+                                (card) => cardMatchesSearch(
+                                  card,
+                                  _searchController.text,
+                                ),
+                              )
+                              .toList(),
+                          emptyText: 'No matching cards.',
+                          dashboard: data,
+                          showLearningStatus: true,
+                        )
+                      : CurrentCardsTab(
+                          cards: current,
+                          dashboard: data,
+                          language: language,
                         ),
-                        if (_searching)
-                          LearningCardsTab(
-                            key: const ValueKey('card-search-results'),
-                            cards: cards
-                                .where(
-                                  (card) => cardMatchesSearch(
-                                    card,
-                                    _searchController.text,
-                                  ),
-                                )
-                                .toList(growable: false),
-                            emptyText: 'No matching cards.',
-                            dashboard: data,
-                            showLearningStatus: true,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },

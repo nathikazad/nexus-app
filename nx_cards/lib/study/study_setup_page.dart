@@ -98,6 +98,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return latest.where((card) => ids.contains(card.id)).toList();
   }
 
+  RecallTiming _timing = RecallTiming.allMatching;
+  bool get _dueOnly =>
+      _mode == StudyMode.recall &&
+      !_usesSimilar &&
+      _timing == RecallTiming.dueNow;
   int _retainedMinPercentage = 0;
   bool _weakOnly = false;
   int _retainedMaxPercentage = 100;
@@ -200,6 +205,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         _retainedMinPercentage = (saved['retainedMinPercentage'] as int? ?? 0)
             .clamp(0, _retainedMaxPercentage);
         _weakOnly = saved['weakOnly'] == true;
+        _timing =
+            _enumByName(RecallTiming.values, saved['timing']) ??
+            RecallTiming.allMatching;
         _similarType =
             _enumByName(SimilarGroupType.values, saved['similarType']) ??
             SimilarGroupType.written;
@@ -240,6 +248,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'retainedMaxPercentage': _retainedMaxPercentage,
         'retainedMinPercentage': _retainedMinPercentage,
         'weakOnly': _weakOnly,
+        'timing': _timing.name,
         'similarType': _similarType.name,
         'writtenDirections': _writtenDirections.map((cue) => cue.name).toList(),
         'groupCount': _groupCount,
@@ -263,17 +272,25 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return _recallBaseCandidates;
   }
 
-  List<StudyPrompt> get _recallBaseCandidates => retentionPrompts(
-    _studyCards,
-    _directions,
-    minimum: _retainedMinPercentage / 100,
-    maximum: _retainedMaxPercentage / 100,
-    weakOnly: _weakOnly,
-  );
+  List<StudyPrompt> get _recallBaseCandidates =>
+      retentionPrompts(
+            _studyCards,
+            _directions,
+            minimum: _dueOnly ? 0 : _retainedMinPercentage / 100,
+            maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
+            weakOnly: !_dueOnly && _weakOnly,
+          )
+          .where(
+            (prompt) => !_dueOnly || prompt.schedule.isDueAt(DateTime.now()),
+          )
+          .toList();
 
   bool _matchesRecallBaseFilters(StudyCard card) {
     if (_mode == StudyMode.study) {
-      return card.learningStatus == LearningStatus.practice;
+      return true;
+    }
+    if (_dueOnly) {
+      return card.active && card.learningStatus == LearningStatus.recall;
     }
     final score = averageRetention(card, _directions);
     return card.active &&
@@ -833,7 +850,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       when !latestCard.suspended &&
                           (!_usesRecallFilters ||
                               _matchesRecallBaseFilters(latestCard)) &&
-                          latestCard.scheduleFor(queued.cue).enabled)
+                          latestCard.scheduleFor(queued.cue).enabled &&
+                          (!_dueOnly ||
+                              latestCard
+                                  .scheduleFor(queued.cue)
+                                  .isDueAt(DateTime.now())))
                     StudyPrompt(card: latestCard, cue: queued.cue),
               ]
               .where(
@@ -1264,8 +1285,38 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         const SizedBox(height: 16),
                       ],
                       _SetupCard(
-                        title: 'Retention',
-                        child: _recallFilterChoices(),
+                        title: 'Recall Cards By',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SegmentedButton<RecallTiming>(
+                              key: const ValueKey('recall-timing'),
+                              showSelectedIcon: false,
+                              segments: const [
+                                ButtonSegment(
+                                  value: RecallTiming.allMatching,
+                                  label: Text('Retention'),
+                                ),
+                                ButtonSegment(
+                                  value: RecallTiming.dueNow,
+                                  label: Text('Due'),
+                                ),
+                              ],
+                              selected: {_timing},
+                              onSelectionChanged: (value) {
+                                setState(() {
+                                  _timing = value.single;
+                                  _clampCount();
+                                });
+                                _rememberPreferences();
+                              },
+                            ),
+                            if (!_dueOnly) ...[
+                              const SizedBox(height: 16),
+                              _recallFilterChoices(),
+                            ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       _SetupCard(
@@ -1384,8 +1435,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   );
 
   Widget _countControl(int maxCount) => maxCount == 0
-      ? const Text(
-          'No cards match these filters',
+      ? Text(
+          _dueOnly ? '0 cards due' : 'No cards match these filters',
           style: TextStyle(color: RecallColors.faint),
         )
       : Column(
@@ -1401,11 +1452,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 ),
                 const Spacer(),
                 Text(
-                  '$maxCount ${_usesSimilar
-                      ? 'recall groups'
-                      : _usesRecallFilters
-                      ? 'recall items'
-                      : 'cards'} available',
+                  _dueOnly
+                      ? '$maxCount cards due'
+                      : '$maxCount ${_usesSimilar
+                            ? 'recall groups'
+                            : _usesRecallFilters
+                            ? 'recall items'
+                            : 'cards'} available',
                   style: const TextStyle(color: RecallColors.muted),
                 ),
               ],

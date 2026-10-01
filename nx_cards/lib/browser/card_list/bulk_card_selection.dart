@@ -5,13 +5,18 @@ import 'package:nx_cards/browser/browser_providers.dart';
 
 class BulkCardSelection extends ChangeNotifier {
   int tab = 0;
+  bool backlogOnly = false;
+  bool practiceOnly = false;
   bool selecting = false;
   bool busy = false;
   final selected = <int>{};
-  LearningStatus get source =>
-      tab == 1 ? LearningStatus.practice : LearningStatus.future;
+  LearningStatus get source => practiceOnly
+      ? LearningStatus.recall
+      : tab == 1 && !backlogOnly
+      ? LearningStatus.practice
+      : LearningStatus.future;
   LearningStatus get destination =>
-      tab == 1 ? LearningStatus.recall : LearningStatus.practice;
+      backlogOnly || tab == 1 ? LearningStatus.recall : LearningStatus.practice;
 
   void changeTab(int value) {
     if (tab == value) return;
@@ -57,7 +62,11 @@ class BulkCardSelectionScope extends ConsumerStatefulWidget {
     super.key,
     required this.cards,
     required this.child,
+    this.backlogOnly = false,
+    this.practiceActionBuilder,
   });
+  final bool backlogOnly;
+  final Widget Function(List<StudyCard>)? practiceActionBuilder;
   final List<StudyCard> cards;
   final Widget child;
   @override
@@ -73,6 +82,16 @@ class _BulkCardSelectionScopeState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.practiceActionBuilder != null) {
+      selection.practiceOnly = true;
+      selection.tab = 1;
+      return;
+    }
+    if (widget.backlogOnly) {
+      selection.backlogOnly = true;
+      selection.tab = 2;
+      return;
+    }
     final next = DefaultTabController.of(context);
     if (identical(next, tabs)) return;
     tabs?.removeListener(_tabChanged);
@@ -164,24 +183,42 @@ class _BulkCardSelectionScopeState
                   ),
                   child: Row(
                     children: [
+                      if (widget.practiceActionBuilder != null) ...[
+                        TextButton(
+                          key: const ValueKey('cancel-practice-selection'),
+                          onPressed: selection.toggleMode,
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: Text('${selection.selected.length} selected'),
                       ),
-                      FilledButton.icon(
-                        key: const ValueKey('bulk-move'),
-                        onPressed: selection.busy || selection.selected.isEmpty
-                            ? null
-                            : _move,
-                        icon: selection.busy
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                      if (widget.practiceActionBuilder != null)
+                        widget.practiceActionBuilder!(
+                          widget.cards
+                              .where(
+                                (card) => selection.selected.contains(card.id),
                               )
-                            : const Icon(Icons.arrow_forward),
-                        label: Text('Send to ${selection.destination.label}'),
-                      ),
+                              .toList(),
+                        )
+                      else
+                        FilledButton.icon(
+                          key: const ValueKey('bulk-move'),
+                          onPressed:
+                              selection.busy || selection.selected.isEmpty
+                              ? null
+                              : _move,
+                          icon: selection.busy
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.arrow_forward),
+                          label: Text('Send to ${selection.destination.label}'),
+                        ),
                     ],
                   ),
                 ),

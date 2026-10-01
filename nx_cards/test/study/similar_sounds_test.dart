@@ -142,21 +142,18 @@ void main() {
       expect(similarGroupKind('particle-other'), SimilarGroupKind.other);
     },
   );
-  test(
-    'word details includes every assigned group and peers outside Current',
-    () {
-      final word = soundCard(1, 'a', groups: ['one-write', 'two-other']);
-      final peer = soundCard(
-        2,
-        'b',
-        groups: ['one-write'],
-        status: LearningStatus.future,
-      );
-      final groups = similarGroupsForCard(word, [word, peer]);
-      expect(groups.map((g) => g.label), ['one-write', 'two-other']);
-      expect(groups.first.cards.map((c) => c.id), containsAll([1, 2]));
-    },
-  );
+  test('word details excludes peers outside Current', () {
+    final word = soundCard(1, 'a', groups: ['one-write', 'two-other']);
+    final peer = soundCard(
+      2,
+      'b',
+      groups: ['one-write'],
+      status: LearningStatus.future,
+    );
+    final groups = similarGroupsForCard(word, [word, peer]);
+    expect(groups.map((g) => g.label), ['one-write', 'two-other']);
+    expect(groups.first.cards.map((c) => c.id), equals([1]));
+  });
 
   test(
     'whole groups support both written cues and automatic audio without retention cutoff',

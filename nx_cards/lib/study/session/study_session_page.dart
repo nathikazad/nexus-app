@@ -290,29 +290,68 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                             MainAxisAlignment
                                                                 .center,
                                                         children: [
-                                                          Text(
-                                                            _revealed &&
-                                                                    _card.content
-                                                                        is LanguageCardContent
-                                                                ? (_card.content
-                                                                          as LanguageCardContent)
-                                                                      .originalScript
-                                                                : _prompt
-                                                                      .prompt,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            style: TextStyle(
-                                                              fontSize:
-                                                                  _revealed
-                                                                  ? 22
-                                                                  : 38,
-                                                              height: 1.2,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                              letterSpacing:
-                                                                  -0.8,
-                                                            ),
+                                                          Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              Flexible(
+                                                                child: Text(
+                                                                  _revealed &&
+                                                                          _card.content
+                                                                              is LanguageCardContent
+                                                                      ? (_card.content
+                                                                                as LanguageCardContent)
+                                                                            .originalScript
+                                                                      : _prompt
+                                                                            .prompt,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: TextStyle(
+                                                                    fontSize:
+                                                                        _revealed
+                                                                        ? 22
+                                                                        : 38,
+                                                                    height: 1.2,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    letterSpacing:
+                                                                        -0.8,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              if (_revealed &&
+                                                                  audioRepository !=
+                                                                      null &&
+                                                                  _card.content
+                                                                      is LanguageCardContent)
+                                                                if ((_card.content
+                                                                            as LanguageCardContent)
+                                                                        .audioUrl
+                                                                    case final url?
+                                                                    when url
+                                                                        .isNotEmpty)
+                                                                  Padding(
+                                                                    padding:
+                                                                        const EdgeInsets.only(
+                                                                          left:
+                                                                              8,
+                                                                        ),
+                                                                    child: PronunciationButton(
+                                                                      key: ValueKey(
+                                                                        'revealed:${_card.id}:$_index',
+                                                                      ),
+                                                                      autoPlay:
+                                                                          true,
+                                                                      audioUrl:
+                                                                          url,
+                                                                      repository:
+                                                                          audioRepository,
+                                                                    ),
+                                                                  ),
+                                                            ],
                                                           ),
                                                           if (!_revealed &&
                                                               _prompt
@@ -422,27 +461,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                           .muted,
                                                                 ),
                                                               ),
-                                                            if (_card.content
-                                                                case LanguageCardContent(
-                                                                  audioUrl: final audioUrl?,
-                                                                )
-                                                                when audioUrl
-                                                                        .isNotEmpty &&
-                                                                    audioRepository !=
-                                                                        null) ...[
-                                                              const SizedBox(
-                                                                height: 16,
-                                                              ),
-                                                              LanguageAudioControls(
-                                                                key: ValueKey(
-                                                                  '${_card.id}:${_prompt.cue.storageKey}:$audioUrl',
-                                                                ),
-                                                                audioUrl:
-                                                                    audioUrl,
-                                                                repository:
-                                                                    audioRepository,
-                                                              ),
-                                                            ],
                                                             if (_card.content
                                                                 case LanguageCardContent(
                                                                   examples: final examples,

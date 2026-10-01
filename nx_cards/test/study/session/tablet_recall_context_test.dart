@@ -46,12 +46,14 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final original = card(1, '了', 'completion');
     final target = original.copyWith(
+      learningStatus: LearningStatus.recall,
       content: (original.content as LanguageCardContent).copyWith(
         similarWordGroups: ['particle-other'],
       ),
     );
     final originalPeer = card(2, '着', 'continuing state');
     final peer = originalPeer.copyWith(
+      learningStatus: LearningStatus.recall,
       content: (originalPeer.content as LanguageCardContent).copyWith(
         similarWordGroups: ['particle-other'],
       ),

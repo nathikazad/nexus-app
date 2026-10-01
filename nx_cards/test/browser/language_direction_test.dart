@@ -86,7 +86,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('All'));
       await tester.pumpAndSettle();
-      expect(find.text('Current  1'), findsOneWidget);
+      expect(find.byTooltip('Recall'), findsOneWidget);
+      expect(find.byKey(const ValueKey('practice-select')), findsOneWidget);
+      expect(find.byType(TabBar), findsNothing);
       expect(find.text('33%'), findsOneWidget);
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
       expect(
@@ -125,12 +127,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('100%'), findsOneWidget);
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
-      await tester.tap(find.text('Upcoming  0'));
+      await tester.tap(find.byKey(const ValueKey('open-backlog')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
-      await tester.tap(find.text('Backlog  0'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('current-retention')), findsNothing);
+      expect(find.text('No cards in Backlog.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

@@ -171,78 +171,108 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
                   color: Theme.of(context).colorScheme.outlineVariant,
                 ),
               ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.language != null) ...[
-                        DirectionChoices(
-                          language: widget.language!,
-                          selected: directions,
-                          onChanged: (value) => _change(() {
-                            ref
-                                    .read(
-                                      selectedDirectionsProvider(
-                                        widget.language,
-                                      ).notifier,
-                                    )
-                                    .state =
-                                value;
-                          }),
-                        ),
-                        const SizedBox(width: 20),
-                        SizedBox(
-                          height: 28,
-                          child: VerticalDivider(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text(
-                          '$range (${cards.length})',
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final fronts = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Front',
                           style: Theme.of(context).textTheme.labelMedium,
                         ),
-                      ),
-                      SizedBox(
-                        width: 180,
-                        child: Slider(
-                          key: const ValueKey('current-retention'),
-                          value: maximum,
-                          divisions: 100,
-                          onChanged: (value) => _change(() {
-                            maximum = value;
-                            minimum = 0;
-                            weakOnly = false;
-                          }),
+                        const SizedBox(height: 8),
+                        DirectionChoices(
+                          language: widget.language ?? '',
+                          selected: directions,
+                          onChanged: (value) => _change(
+                            () =>
+                                ref
+                                        .read(
+                                          selectedDirectionsProvider(
+                                            widget.language,
+                                          ).notifier,
+                                        )
+                                        .state =
+                                    value,
+                          ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () => _change(() {
-                          minimum = 0;
-                          maximum = .8;
-                          weakOnly = true;
-                        }),
-                        child: const Text('Weak'),
-                      ),
-                      TextButton(
-                        onPressed: () => _change(() {
-                          minimum = .8;
-                          maximum = 1;
-                          weakOnly = false;
-                        }),
-                        child: const Text('Strong'),
-                      ),
-                    ],
-                  ),
+                      ],
+                    );
+                    final retention = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Retention · $range (${cards.length})',
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Slider(
+                                key: const ValueKey('current-retention'),
+                                value: maximum,
+                                divisions: 100,
+                                onChanged: (value) => _change(() {
+                                  maximum = value;
+                                  minimum = 0;
+                                  weakOnly = false;
+                                }),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => _change(() {
+                                minimum = 0;
+                                maximum = .8;
+                                weakOnly = true;
+                              }),
+                              child: const Text('Weak'),
+                            ),
+                            TextButton(
+                              onPressed: () => _change(() {
+                                minimum = .8;
+                                maximum = 1;
+                                weakOnly = false;
+                              }),
+                              child: const Text('Strong'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                    if (widget.language == null) return retention;
+                    if (constraints.maxWidth < 720) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          fronts,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Divider(
+                              height: 1,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          retention,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        fronts,
+                        SizedBox(
+                          height: 64,
+                          width: 48,
+                          child: VerticalDivider(
+                            thickness: 1,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                        Expanded(child: retention),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),

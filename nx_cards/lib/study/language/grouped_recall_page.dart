@@ -295,6 +295,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       canPop: !blocked,
       child: Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           title: const Text('Similar words'),
           actions: [
             TextButton(

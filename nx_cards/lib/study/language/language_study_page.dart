@@ -8,6 +8,7 @@ import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/study/language/language_examples_page.dart';
+import 'package:nx_cards/study/language/drawing/open_sheet_drawing.dart';
 
 class LanguageStudyPage extends ConsumerStatefulWidget {
   const LanguageStudyPage({
@@ -29,6 +30,7 @@ class LanguageStudyPage extends ConsumerStatefulWidget {
 
 class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
   final AudioPlayer _player = AudioPlayer();
+  final _scroll = ScrollController();
   final List<StreamSubscription<Object?>> _subscriptions = [];
   int? _activeCardId;
   int? _loadingCardId;
@@ -94,6 +96,7 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
       unawaited(subscription.cancel());
     }
     unawaited(_player.dispose());
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -107,8 +110,9 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: ListView.separated(
+            controller: _scroll,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
-            itemCount: cards.length + 1,
+            itemCount: cards.length + 2,
             separatorBuilder: (_, index) => index == 0
                 ? const SizedBox(height: 10)
                 : const Divider(height: 1),
@@ -119,10 +123,49 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
                   itemLabel: widget.itemLabel ?? 'words',
                 );
               }
+              if (index == cards.length + 1) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Return'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        onPressed: () => _scroll.animateTo(
+                          0,
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOut,
+                        ),
+                        child: const Text('Repeat'),
+                      ),
+                    ],
+                  ),
+                );
+              }
               final card = cards[index - 1];
               final content = card.content;
               return _StudySheetRow(
                 number: index,
+                onDraw: content is! LanguageCardContent
+                    ? null
+                    : () async {
+                        if (_activeCardId != null) await _player.stop();
+                        if (!context.mounted) return;
+                        final drawingCards = cards
+                            .where((c) => c.isLanguageCard)
+                            .toList();
+                        await openSheetDrawing(
+                          context,
+                          ref,
+                          widget.title,
+                          drawingCards,
+                          drawingCards.indexWhere((c) => c.id == card.id),
+                        );
+                      },
                 cue: widget.cues?[index - 1],
                 card: card,
                 content: content,
@@ -176,6 +219,7 @@ class _StudySheetHeader extends StatelessWidget {
 class _StudySheetRow extends StatelessWidget {
   const _StudySheetRow({
     required this.number,
+    required this.onDraw,
     this.cue,
     required this.card,
     required this.content,
@@ -186,6 +230,7 @@ class _StudySheetRow extends StatelessWidget {
   });
 
   final int number;
+  final VoidCallback? onDraw;
   final StudyCue? cue;
   final StudyCard card;
   final CardContent content;
@@ -207,51 +252,55 @@ class _StudySheetRow extends StatelessWidget {
           child: Text(number.toString().padLeft(2, '0'), style: monoLabel),
         ),
         Expanded(
-          flex: 3,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              cue == StudyCue.fromAudio
-                  ? 'Listen'
-                  : cue == StudyCue.toLanguage
-                  ? content.back
-                  : content.front,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.35,
-                color: RecallColors.muted,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          flex: 4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                cue == StudyCue.toLanguage ? content.front : content.back,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                languageContent?.originalScript ?? content.back,
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 28,
                   height: 1.35,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              if (languageContent case final languageContent?) ...[
-                const SizedBox(height: 3),
+              if (languageContent case final word?) ...[
                 Text(
-                  languageContent.transliteration,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.35,
-                    fontStyle: FontStyle.italic,
-                    color: RecallColors.faint,
-                  ),
+                  word.transliteration,
+                  style: const TextStyle(fontSize: 15, height: 1.5),
                 ),
-              ],
+                Text(
+                  word.english,
+                  style: const TextStyle(fontSize: 15, height: 1.5),
+                ),
+              ] else
+                Text(
+                  content.front,
+                  style: const TextStyle(fontSize: 15, height: 1.5),
+                ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                children: [
+                  if (onDraw != null)
+                    TextButton.icon(
+                      onPressed: onDraw,
+                      icon: const Icon(Icons.draw_outlined, size: 18),
+                      label: const Text('Draw'),
+                    ),
+                  if (languageContent?.examples.isNotEmpty == true)
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => LanguageExamplesPage(
+                            card: card,
+                            audioRepository: audioRepository,
+                          ),
+                        ),
+                      ),
+                      child: const Text('Examples'),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -290,31 +339,6 @@ class _StudySheetRow extends StatelessWidget {
                                     ? Icons.pause_rounded
                                     : Icons.play_arrow_rounded,
                               ),
-                      ),
-              ),
-              const SizedBox(height: 2),
-              SizedBox(
-                height: 24,
-                child:
-                    languageContent == null || languageContent!.examples.isEmpty
-                    ? null
-                    : TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: RecallColors.muted,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 24),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          textStyle: const TextStyle(fontSize: 11),
-                        ),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => LanguageExamplesPage(
-                              card: card,
-                              audioRepository: audioRepository,
-                            ),
-                          ),
-                        ),
-                        child: const Text('Examples'),
                       ),
               ),
             ],

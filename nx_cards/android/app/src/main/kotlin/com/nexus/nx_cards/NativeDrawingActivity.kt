@@ -72,13 +72,15 @@ class NativeDrawingActivity : Activity() {
             cards = (input["cards"] as List<*>).map { it as Map<*, *> }.toMutableList()
             NativeDrawingBridge.activity = WeakReference(this)
             require(cards.isNotEmpty())
+            index = (input["initialIndex"] as? Int ?: 0).coerceIn(0, cards.lastIndex)
             recall = input["recall"] == true
             grouped = input["grouped"] == true
             val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(16), dp(8), dp(16), dp(8)) }
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
             end = button(if (recall) "End" else "Back") { finish() }
-            header.addView(end)
+            if (recall) header.addView(View(this), LinearLayout.LayoutParams(dp(64), dp(48))) else header.addView(end)
             header.addView(label(18f).apply { text = input["title"] as? String ?: "Drawing" }, LinearLayout.LayoutParams(0, -2, 1f))
+            if (recall) header.addView(end)
             root.addView(header, LinearLayout.LayoutParams(-1, -2))
             progress = label(13f); root.addView(progress)
             val reference = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(12), dp(12), dp(12), dp(12)) }
@@ -172,6 +174,7 @@ class NativeDrawingActivity : Activity() {
         if (showContext) updateExamples()
         controls.removeAllViews()
         control("Refresh screen", "refresh") { refreshScreen() }
+        if (!recall) control("Study sheet", "list") { finish() }
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
         control("Undo", "undo") { ink?.undo() }
         control("Erase", "erase") { ink?.clear {} }
@@ -269,7 +272,9 @@ class NativeDrawingActivity : Activity() {
             })
             listOf("text" to 24f, "transliteration" to 16f, "translation" to 16f).forEach { (key, size) ->
                 val value = example[key] as? String ?: ""
-                if (value.isNotBlank()) textColumn.addView(label(size).apply {
+                if (value.isBlank()) return@forEach
+                val textView = label(size).apply {
+                    maxWidth = resources.displayMetrics.widthPixels - dp(140)
                     text = value
                     gravity = Gravity.START
                     setPadding(0, 0, 0, dp(5))
@@ -299,11 +304,11 @@ class NativeDrawingActivity : Activity() {
                             true
                         }
                     }
-                }, LinearLayout.LayoutParams(-2, -2))
-            }
-            // Keep a non-clickable gap between card navigation and audio.
-            row.addView(textColumn, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(16) })
-            if (example["audio"] == true) row.addView(ImageButton(this).apply {
+                }
+                if (key == "text") {
+                    val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+                    heading.addView(textView, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(6) })
+                    if (example["audio"] == true) heading.addView(ImageButton(this).apply {
                 contentDescription = "Play example: ${example["text"]}"
                 tooltipText = "Play example"
                 setImageDrawable(DrawingIcon("play"))
@@ -313,6 +318,10 @@ class NativeDrawingActivity : Activity() {
                     if (isDerived) play(derivedIndex = exampleIndex - examples.size) else play(exampleIndex)
                 } }
             }, LinearLayout.LayoutParams(dp(48), dp(48)))
+                    textColumn.addView(heading)
+                } else textColumn.addView(textView, LinearLayout.LayoutParams(-2, -2))
+            }
+            row.addView(textColumn, LinearLayout.LayoutParams(-1, -2))
             list.addView(row, LinearLayout.LayoutParams(-1, -2))
             list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
         }
@@ -341,6 +350,7 @@ class NativeDrawingActivity : Activity() {
                     val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
                     val textArea = LinearLayout(this)
                     textArea.addView(label(28f).apply {
+                        maxWidth = (resources.displayMetrics.widthPixels / count) - dp(90)
                         text = word["text"] as? String ?: ""
                         gravity = Gravity.START
                         if (word["cardId"] is Number) {
@@ -351,7 +361,7 @@ class NativeDrawingActivity : Activity() {
                             }
                         }
                     }, LinearLayout.LayoutParams(-2, -2))
-                    heading.addView(textArea, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(8) })
+                    heading.addView(textArea, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(8) })
                     if (word["audio"] == true && word["cardId"] is Number) heading.addView(ImageButton(this).apply {
                         contentDescription = "Play similar word: ${word["text"]}"
                         tooltipText = "Play pronunciation"
@@ -388,6 +398,7 @@ class NativeDrawingActivity : Activity() {
             val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
             val textArea = LinearLayout(this)
             textArea.addView(label(28f).apply {
+                maxWidth = resources.displayMetrics.widthPixels - dp(140)
                 text = part["text"] as? String ?: ""
                 gravity = Gravity.START
                 if (part["cardId"] is Number) {
@@ -398,7 +409,7 @@ class NativeDrawingActivity : Activity() {
                     }
                 }
             }, LinearLayout.LayoutParams(-2, -2))
-            top.addView(textArea, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(16) })
+            top.addView(textArea, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(16) })
             if (part["audio"] == true) top.addView(ImageButton(this).apply {
                 contentDescription = "Play character: ${part["text"]}"
                 tooltipText = "Play character"
@@ -491,7 +502,15 @@ class NativeDrawingActivity : Activity() {
         })
     }
     private fun advance() {
-        if (index == cards.lastIndex) { stopAudio(); finish(); return }
+        if (index == cards.lastIndex) {
+            stopAudio()
+            if (recall) { finish() } else {
+                android.app.AlertDialog.Builder(this).setTitle("Practice complete")
+                    .setNegativeButton("Return") { _, _ -> finish() }
+                    .setPositiveButton("Repeat") { _, _ -> moveTo(0) }.show()
+            }
+            return
+        }
         moveTo(index + 1)
     }
     private fun requestCard(target: Int, done: (String?) -> Unit) {

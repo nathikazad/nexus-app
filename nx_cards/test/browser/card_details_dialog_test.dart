@@ -13,7 +13,7 @@ void main() {
   testWidgets('Similar shows every group with no category suffix', (
     tester,
   ) async {
-    final base = _card();
+    final base = _card().copyWith(learningStatus: LearningStatus.recall);
     final card = base.copyWith(
       content: (base.content as LanguageCardContent).copyWith(
         similarWordGroups: ['one-sound', 'two-other'],
@@ -21,6 +21,7 @@ void main() {
     );
     final peer = StudyCard(
       id: 200,
+      learningStatus: LearningStatus.recall,
       tags: base.tags,
       suspended: false,
       schedules: const {},
@@ -110,7 +111,7 @@ void main() {
   });
 
   testWidgets(
-    'moves a card between all placements and keeps failed saves unchanged',
+    'Active switch moves between Current and Backlog and preserves failed saves',
     (tester) async {
       final library = _StatusLibrary();
       await tester.pumpWidget(
@@ -128,19 +129,18 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      SegmentedButton<LearningStatus> selector() =>
+      SwitchListTile selector() =>
           tester.widget(find.byKey(const ValueKey('card-learning-status')));
-      expect(selector().selected, {LearningStatus.future});
+      expect(selector().value, false);
       final content = find.byKey(const ValueKey('card-content'));
       final contentWidth = tester.getSize(content).width;
       for (final entry in {
-        'Upcoming': LearningStatus.practice,
         'Current': LearningStatus.recall,
         'Backlog': LearningStatus.future,
       }.entries) {
-        await tester.tap(find.text(entry.key));
+        await tester.tap(find.byKey(const ValueKey('card-learning-status')));
         await tester.pumpAndSettle();
-        expect(selector().selected, {entry.value});
+        expect(selector().value, entry.value == LearningStatus.recall);
         expect(library.savedStatus, entry.value);
         expect(library.savedCard?.id, 20);
         expect(tester.getSize(content).width, contentWidth);
@@ -160,14 +160,14 @@ void main() {
         );
       }
       library.pending = Completer<void>();
-      await tester.tap(find.text('Upcoming'));
+      await tester.tap(find.byKey(const ValueKey('card-learning-status')));
       await tester.pump();
-      expect(selector().onSelectionChanged, isNull);
-      expect(selector().selected, {LearningStatus.future});
+      expect(selector().onChanged, isNull);
+      expect(selector().value, false);
       library.pending!.completeError(StateError('Save failed'));
       await tester.pumpAndSettle();
-      expect(selector().selected, {LearningStatus.future});
-      expect(selector().onSelectionChanged, isNotNull);
+      expect(selector().value, false);
+      expect(selector().onChanged, isNotNull);
       expect(find.textContaining('Could not move card'), findsOneWidget);
     },
   );

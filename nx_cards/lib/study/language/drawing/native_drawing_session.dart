@@ -140,7 +140,7 @@ class NativeDrawingSession {
           : StudyPrompt(card: card, cue: cue).prompt,
       'answer': content.originalScript,
       'subtitle': cue == null
-          ? '${content.transliteration} · ${content.english}'
+          ? '${content.transliteration}\n${content.english}'
           : '${content.originalScript}\n${content.english} · ${content.transliteration}',
       'audio': content.audioUrl?.isNotEmpty == true,
       'multiCharacter': content.originalScript.trim().characters.length > 1,
@@ -234,6 +234,7 @@ class NativeDrawingSession {
     required List<Map<String, Object?>> cards,
     required bool recall,
     bool grouped = false,
+    int initialIndex = 0,
     required Future<Object?> Function(MethodCall) onAction,
   }) async {
     debugPrint(
@@ -247,6 +248,7 @@ class NativeDrawingSession {
       );
       await channel.invokeMethod<void>('open', {
         'title': title,
+        'initialIndex': initialIndex,
         'recall': recall,
         if (grouped) 'grouped': true,
         'cards': cards,

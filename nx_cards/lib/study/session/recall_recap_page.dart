@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/recall_priority.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,10 +30,10 @@ List<StudyPrompt> retryRecallPrompts(
       ).every((v) => v)) {
     indices.add(indices.removeAt(0));
   }
-  return [
+  return spaceRepeatedRecallCards([
     for (final i in indices)
       prompts[i].withCard(latestCards[prompts[i].cardId] ?? prompts[i].card),
-  ];
+  ]);
 }
 
 class RecallRecapEntry {
@@ -133,32 +134,6 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _RecapAction(
-                                  icon: Icons.refresh,
-                                  label: 'Retry',
-                                  tooltip: 'Retry missed and untried cards',
-                                  onPressed:
-                                      widget.missCount > 0 ||
-                                          widget.reviewedCount <
-                                              widget.totalCount
-                                      ? widget.onRepeatIncorrect
-                                      : null,
-                                ),
-                              ),
-                              Expanded(
-                                child: _RecapAction(
-                                  icon: Icons.arrow_forward,
-                                  label: 'Finish',
-                                  tooltip: 'Return to study',
-                                  onPressed: () => Navigator.pop(context, true),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
@@ -168,9 +143,27 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                   const SizedBox(height: 9),
                   widget.wordRecap ?? _RecallWordRecap(entries: widget.entries),
                   const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Return to study'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Return'),
+                        ),
+                      ),
+                      if (widget.missCount > 0) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Tooltip(
+                            message: 'Retry missed and untried cards',
+                            child: FilledButton(
+                              onPressed: widget.onRepeatIncorrect,
+                              child: const Text('Repeat'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -322,39 +315,6 @@ class _RecapStat extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-        ),
-      ),
-      Text(
-        label,
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: RecallColors.muted, fontSize: 12),
-      ),
-    ],
-  );
-}
-
-class _RecapAction extends StatelessWidget {
-  const _RecapAction({
-    required this.icon,
-    required this.label,
-    required this.tooltip,
-    required this.onPressed,
-  });
-  final IconData icon;
-  final String label;
-  final String tooltip;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      SizedBox(
-        height: 48,
-        child: IconButton(
-          tooltip: tooltip,
-          onPressed: onPressed,
-          icon: Icon(icon, size: 24),
         ),
       ),
       Text(
