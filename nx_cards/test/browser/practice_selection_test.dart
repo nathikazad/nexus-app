@@ -24,14 +24,16 @@ void main() {
           null,
         ),
       );
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       SharedPreferences.setMockInitialValues({});
       final cards = [
         sample(1, 0),
         sample(2, 0).copyWith(
           content: const LanguageCardContent(
-            originalScript: '字2',
+            originalScript: '字',
             transliteration: 'zi',
             english: 'word 2',
             examples: [
@@ -111,13 +113,27 @@ void main() {
         find.byType(ScriptDrawPracticePage),
       );
       expect(drawing.cards.map((c) => c.id), [2]);
-      expect(find.text('字2'), findsOneWidget);
+      expect(find.text('字'), findsOneWidget);
       expect(
         tester
             .getSize(find.byKey(const ValueKey('script-drawing-frame')))
             .height,
         greaterThan(350),
       );
+      final reference = tester.getRect(
+        find.byKey(const ValueKey('practice-reference')),
+      );
+      final letter = tester.getRect(
+        find.byKey(const ValueKey('draw-practice-letter')),
+      );
+      expect(letter.top, greaterThanOrEqualTo(reference.top));
+      expect(letter.bottom, lessThanOrEqualTo(reference.bottom));
+      expect(find.text('Practice only'), findsNothing);
+      await tester.tap(find.text('Examples'));
+      await tester.pumpAndSettle();
+      expect(find.text('例子'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Practice'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Study sheet'));
       await tester.pumpAndSettle();
       expect(find.byType(LanguageStudyPage), findsOneWidget);

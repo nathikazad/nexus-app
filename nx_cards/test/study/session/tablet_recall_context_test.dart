@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/language_examples_page.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,71 @@ class Library implements CardLibrary {
 }
 
 void main() {
+  testWidgets(
+    'phone examples page includes available Examples Contains and Similar tabs',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final original = card(
+        10,
+        '猫狗',
+        'pets',
+        links: {11},
+        examples: const [
+          LanguageExample(
+            text: '例子',
+            transliteration: 'li zi',
+            translation: 'An example',
+          ),
+        ],
+      );
+      final target = original.copyWith(
+        learningStatus: LearningStatus.recall,
+        content: (original.content as LanguageCardContent).copyWith(
+          similarWordGroups: ['pets-write'],
+        ),
+      );
+      final other = card(12, '狗', 'dog');
+      final peer = other.copyWith(
+        learningStatus: LearningStatus.recall,
+        content: (other.content as LanguageCardContent).copyWith(
+          similarWordGroups: ['pets-write'],
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardAudioRepositoryProvider.overrideWithValue(null),
+            cardLibraryProvider.overrideWithValue(
+              Library([target, card(11, '猫', 'cat'), peer]),
+            ),
+          ],
+          child: MaterialApp(
+            home: LanguageExamplesPage(card: target, audioRepository: null),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final tabs = tester.widget<SegmentedButton<String>>(
+        find.byType(SegmentedButton<String>),
+      );
+      expect(tabs.segments.map((s) => s.value), [
+        'Examples',
+        'Contains',
+        'Similar',
+      ]);
+      await tester.tap(find.text('Contains'));
+      await tester.pumpAndSettle();
+      expect(find.text('cat'), findsOneWidget);
+      await tester.tap(find.text('Similar'));
+      await tester.pumpAndSettle();
+      expect(find.text('dog'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Similar alone has no empty tabs and shows full groups', (
     tester,
   ) async {

@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/language_examples_page.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -107,10 +108,12 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
   @override
   Widget build(BuildContext context) {
     final last = _index == widget.cards.length - 1;
+    final compact = MediaQuery.sizeOf(context).shortestSide < 600;
     return LayoutBuilder(
       builder: (context, constraints) {
         final prompt = Container(
-          height: MediaQuery.sizeOf(context).shortestSide < 600
+          key: const ValueKey('practice-reference'),
+          height: compact
               ? (constraints.maxHeight * .18).clamp(120.0, 150.0)
               : (constraints.maxHeight * .28).clamp(120.0, 220.0),
           alignment: Alignment.center,
@@ -133,18 +136,26 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                           maintainSize: true,
                           maintainAnimation: true,
                           maintainState: true,
-                          child: SingleChildScrollView(
-                            child: Text(
-                              _letter,
-                              textAlign: TextAlign.center,
-                              key: const ValueKey<String>(
-                                'draw-practice-letter',
-                              ),
-                              style: TextStyle(
-                                fontSize: _letter.runes.length == 1 ? 82 : 32,
-                                height: 1,
-                                fontWeight: FontWeight.w500,
-                                color: RecallPalette.of(context).ink,
+                          child: LayoutBuilder(
+                            builder: (context, space) => FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: SizedBox(
+                                width: space.maxWidth,
+                                child: Text(
+                                  _letter,
+                                  textAlign: TextAlign.center,
+                                  key: const ValueKey<String>(
+                                    'draw-practice-letter',
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: _letter.runes.length == 1
+                                        ? 82
+                                        : 32,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w500,
+                                    color: RecallPalette.of(context).ink,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -222,12 +233,29 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                       style: monoLabel,
                                     ),
                                     const Spacer(),
-                                    Text(
-                                      'Practice only',
-                                      style: monoLabel.copyWith(
-                                        color: RecallColors.faint,
+                                    if (compact)
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute<void>(
+                                                builder: (_) =>
+                                                    LanguageExamplesPage(
+                                                      card: _card,
+                                                      audioRepository: widget
+                                                          .audioRepository,
+                                                      backLabel: 'Practice',
+                                                    ),
+                                              ),
+                                            ),
+                                        child: const Text('Examples'),
+                                      )
+                                    else
+                                      Text(
+                                        'Practice only',
+                                        style: monoLabel.copyWith(
+                                          color: RecallColors.faint,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
@@ -310,14 +338,15 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      child: TabletRecallContext(
-                        key: ValueKey('practice-context-${_card.id}'),
-                        card: _card,
-                        allSizes: true,
+                    if (!compact)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        child: TabletRecallContext(
+                          key: ValueKey('practice-context-${_card.id}'),
+                          card: _card,
+                          allSizes: true,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

@@ -15,9 +15,11 @@ class TabletRecallContext extends ConsumerStatefulWidget {
     super.key,
     required this.card,
     this.allSizes = false,
+    this.audioRepository,
   });
   final StudyCard card;
   final bool allSizes;
+  final CardAudioRepository? audioRepository;
 
   static bool visibleOn(BuildContext context) =>
       MediaQuery.sizeOf(context).shortestSide >= 600;
@@ -81,7 +83,8 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
         (!widget.allSizes && !TabletRecallContext.visibleOn(context))) {
       return const SizedBox.shrink();
     }
-    final audio = ref.watch(cardAudioRepositoryProvider);
+    final audio =
+        widget.audioRepository ?? ref.watch(cardAudioRepositoryProvider);
     final sections = <String, Widget>{
       if (content.examples.isNotEmpty || _derived.isNotEmpty)
         'Examples': Column(

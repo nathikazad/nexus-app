@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
-import 'package:nx_cards/study/language/language_examples.dart';
+import 'package:nx_cards/study/language/tablet_recall_context.dart';
 
 class LanguageExamplesPage extends StatelessWidget {
   const LanguageExamplesPage({
@@ -76,10 +76,10 @@ class LanguageExamplesPage extends StatelessWidget {
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Divider(),
                 ),
-                LanguageExamples(
-                  examples: content.examples,
+                TabletRecallContext(
+                  card: card,
+                  allSizes: true,
                   audioRepository: audioRepository,
-                  audioKeyPrefix: '${card.id}:examples-page',
                 ),
               ],
             ),
