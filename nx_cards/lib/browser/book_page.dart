@@ -44,50 +44,39 @@ class BookPage extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
                   child: LibraryActions(
-                    children: [
-                      Expanded(child: const PracticeSelectionButton()),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: LibraryActionButton(
-                          key: const ValueKey('open-backlog'),
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => BacklogPage(
-                                title: bookName,
-                                bookId: bookId,
-                                matches: (card) => card.sourceBookId == bookId,
-                              ),
-                            ),
-                          ),
-                          icon: Icons.add,
-                          label: 'Add',
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: StudyLauncher(
-                          followPracticeSelection: true,
-                          studyScope: StudyScope(bookId: bookId),
-                          title: bookName,
-                          preferenceKey: 'book:$bookId',
-                          prompts: [
-                            for (final card in current)
-                              StudyPrompt(
-                                card: card,
-                                cue: StudyCue.fromLanguage,
-                              ),
-                          ],
-                          studyCards: current,
-                          sourceKind: StudySourceKind.book,
-                          builder: (onPressed) => LibraryActionButton(
-                            filled: true,
-                            onPressed: onPressed,
-                            icon: Icons.replay_rounded,
-                            label: 'Recall',
+                    practice: const PracticeSelectionButton(),
+                    add: LibraryActionButton(
+                      key: const ValueKey('open-backlog'),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => BacklogPage(
+                            title: bookName,
+                            bookId: bookId,
+                            matches: (card) => card.sourceBookId == bookId,
                           ),
                         ),
                       ),
-                    ],
+                      icon: Icons.add,
+                      label: 'Add',
+                    ),
+                    recall: StudyLauncher(
+                      followPracticeSelection: true,
+                      studyScope: StudyScope(bookId: bookId),
+                      title: bookName,
+                      preferenceKey: 'book:$bookId',
+                      prompts: [
+                        for (final card in current)
+                          StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+                      ],
+                      studyCards: current,
+                      sourceKind: StudySourceKind.book,
+                      builder: (onPressed) => LibraryActionButton(
+                        filled: true,
+                        onPressed: onPressed,
+                        icon: Icons.replay_rounded,
+                        label: 'Recall',
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(

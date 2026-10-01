@@ -24,8 +24,27 @@ void main() {
           null,
         ),
       );
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       SharedPreferences.setMockInitialValues({});
-      final cards = [sample(1, 0), sample(2, 0), sample(3, 0)];
+      final cards = [
+        sample(1, 0),
+        sample(2, 0).copyWith(
+          content: const LanguageCardContent(
+            originalScript: '字2',
+            transliteration: 'zi',
+            english: 'word 2',
+            examples: [
+              LanguageExample(
+                text: '例子',
+                transliteration: 'li zi',
+                translation: 'example',
+              ),
+            ],
+          ),
+        ),
+        sample(3, 0),
+      ];
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -52,6 +71,26 @@ void main() {
       expect(find.text('0 selected'), findsOneWidget);
       expect(find.byKey(const ValueKey('top-practice')), findsOneWidget);
       expect(find.byTooltip('Recall'), findsNothing);
+      expect(find.byKey(const ValueKey('open-backlog')), findsNothing);
+      expect(find.byKey(const ValueKey('top-cancel-practice')), findsOneWidget);
+      expect(
+        tester.getCenter(find.byKey(const ValueKey('top-practice'))).dx,
+        lessThan(
+          tester
+              .getCenter(find.byKey(const ValueKey('top-cancel-practice')))
+              .dx,
+        ),
+      );
+      expect(
+        tester.getCenter(find.byKey(const ValueKey('bulk-practice'))).dx,
+        lessThan(
+          tester
+              .getCenter(
+                find.byKey(const ValueKey('cancel-practice-selection')),
+              )
+              .dx,
+        ),
+      );
       await tester.tap(find.byKey(const ValueKey('select-card-2')));
       await tester.pumpAndSettle();
       expect(find.text('1 selected'), findsOneWidget);
@@ -63,17 +102,26 @@ void main() {
       expect(sheet.cards.map((c) => c.id), [2]);
       expect(sheet.cards.single.learningStatus, LearningStatus.recall);
       expect(find.text('How many cards?'), findsNothing);
-      await tester.tap(find.text('Draw'));
+      expect(find.text('Repeat'), findsNothing);
+      expect(find.text('Return'), findsOneWidget);
+      expect(find.text('End'), findsOneWidget);
+      await tester.tap(find.byTooltip('Draw'));
       await tester.pumpAndSettle();
       final drawing = tester.widget<ScriptDrawPracticePage>(
         find.byType(ScriptDrawPracticePage),
       );
       expect(drawing.cards.map((c) => c.id), [2]);
       expect(find.text('字2'), findsOneWidget);
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('script-drawing-frame')))
+            .height,
+        greaterThan(350),
+      );
       await tester.tap(find.byTooltip('Study sheet'));
       await tester.pumpAndSettle();
       expect(find.byType(LanguageStudyPage), findsOneWidget);
-      await tester.pageBack();
+      await tester.tap(find.text('End'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('cancel-practice-selection')));
       await tester.pumpAndSettle();

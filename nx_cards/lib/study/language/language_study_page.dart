@@ -105,7 +105,16 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
     final audioRepository = ref.watch(cardAudioRepositoryProvider);
     final cards = widget.cards;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: Text(widget.title),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('End'),
+          ),
+        ],
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
@@ -132,15 +141,6 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
                       OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         child: const Text('Return'),
-                      ),
-                      const SizedBox(width: 12),
-                      FilledButton(
-                        onPressed: () => _scroll.animateTo(
-                          0,
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOut,
-                        ),
-                        child: const Text('Repeat'),
                       ),
                     ],
                   ),
@@ -277,72 +277,51 @@ class _StudySheetRow extends StatelessWidget {
                   content.front,
                   style: const TextStyle(fontSize: 15, height: 1.5),
                 ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                children: [
-                  if (onDraw != null)
-                    TextButton.icon(
-                      onPressed: onDraw,
-                      icon: const Icon(Icons.draw_outlined, size: 18),
-                      label: const Text('Draw'),
-                    ),
-                  if (languageContent?.examples.isNotEmpty == true)
-                    TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => LanguageExamplesPage(
-                            card: card,
-                            audioRepository: audioRepository,
-                          ),
-                        ),
-                      ),
-                      child: const Text('Examples'),
-                    ),
-                ],
-              ),
             ],
           ),
         ),
         const SizedBox(width: 6),
-        SizedBox(
-          width: 58,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              SizedBox(
-                height: 34,
-                child: onAudio == null
-                    ? null
-                    : IconButton(
-                        tooltip: playing
-                            ? 'Pause pronunciation'
-                            : 'Play pronunciation',
-                        constraints: const BoxConstraints.tightFor(
-                          width: 34,
-                          height: 34,
-                        ),
-                        padding: const EdgeInsets.all(6),
-                        style: IconButton.styleFrom(
-                          foregroundColor: RecallPalette.of(context).ink,
-                        ),
-                        onPressed: loading ? null : onAudio,
-                        icon: loading
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Icon(
-                                playing
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                              ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onAudio != null)
+              IconButton(
+                tooltip: playing ? 'Pause pronunciation' : 'Play pronunciation',
+                onPressed: loading ? null : onAudio,
+                icon: loading
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        playing
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
                       ),
               ),
-            ],
-          ),
+            if (onDraw != null)
+              IconButton(
+                tooltip: 'Draw',
+                onPressed: onDraw,
+                color: Colors.blue,
+                icon: const Icon(Icons.draw_outlined, size: 20),
+              ),
+            if (languageContent?.examples.isNotEmpty == true)
+              TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => LanguageExamplesPage(
+                      card: card,
+                      audioRepository: audioRepository,
+                    ),
+                  ),
+                ),
+                child: const Text('Examples'),
+              ),
+          ],
         ),
       ],
     ),

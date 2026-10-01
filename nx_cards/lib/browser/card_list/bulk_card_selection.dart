@@ -183,14 +183,6 @@ class _BulkCardSelectionScopeState
                   ),
                   child: Row(
                     children: [
-                      if (widget.practiceActionBuilder != null) ...[
-                        TextButton(
-                          key: const ValueKey('cancel-practice-selection'),
-                          onPressed: selection.toggleMode,
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
                       Expanded(
                         child: Text('${selection.selected.length} selected'),
                       ),
@@ -219,6 +211,19 @@ class _BulkCardSelectionScopeState
                               : const Icon(Icons.arrow_forward),
                           label: Text('Send to ${selection.destination.label}'),
                         ),
+                      if (widget.practiceActionBuilder != null) ...[
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          key: const ValueKey('cancel-practice-selection'),
+                          style: TextButton.styleFrom(
+                            fixedSize: const Size(112, 48),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: selection.toggleMode,
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('Cancel'),
+                        ),
+                      ],
                     ],
                   ),
                 ),

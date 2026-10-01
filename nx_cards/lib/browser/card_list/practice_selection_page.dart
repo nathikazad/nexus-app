@@ -31,8 +31,12 @@ class PracticeSelectionScope extends StatelessWidget {
       sourceKind: languagePair == null ? StudySourceKind.book : sourceKind,
       builder: (onPressed) => FilledButton.icon(
         key: const ValueKey('bulk-practice'),
+        style: FilledButton.styleFrom(
+          fixedSize: const Size(112, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
         onPressed: onPressed,
-        icon: const Icon(Icons.draw_outlined),
+        icon: const Icon(Icons.draw_outlined, size: 18),
         label: const Text('Practice'),
       ),
     ),

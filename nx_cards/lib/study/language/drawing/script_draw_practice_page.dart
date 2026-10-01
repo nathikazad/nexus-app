@@ -110,7 +110,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final prompt = Container(
-          height: (constraints.maxHeight * .28).clamp(120.0, 220.0),
+          height: MediaQuery.sizeOf(context).shortestSide < 600
+              ? (constraints.maxHeight * .18).clamp(120.0, 150.0)
+              : (constraints.maxHeight * .28).clamp(120.0, 220.0),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: RecallPalette.of(context).soft,
@@ -195,126 +197,128 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, bodyConstraints) => SingleChildScrollView(
-                child: SizedBox(
-                  height: bodyConstraints.maxHeight.clamp(
-                    500.0,
-                    double.infinity,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: bodyConstraints.maxHeight.clamp(
+                        500.0,
+                        double.infinity,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1200),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  'CARD ${_index + 1} OF ${widget.cards.length}',
-                                  key: const ValueKey<String>(
-                                    'draw-practice-progress',
-                                  ),
-                                  style: monoLabel,
-                                ),
-                                const Spacer(),
-                                Text(
-                                  'Practice only',
-                                  style: monoLabel.copyWith(
-                                    color: RecallColors.faint,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  prompt,
-                                  const SizedBox(height: 16),
-                                  Expanded(child: practice),
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxHeight: 220,
+                                Row(
+                                  children: [
+                                    Text(
+                                      'CARD ${_index + 1} OF ${widget.cards.length}',
+                                      key: const ValueKey<String>(
+                                        'draw-practice-progress',
+                                      ),
+                                      style: monoLabel,
                                     ),
-                                    child: SingleChildScrollView(
-                                      child: TabletRecallContext(
-                                        key: ValueKey(
-                                          'practice-context-${_card.id}',
-                                        ),
-                                        card: _card,
-                                        allSizes: true,
+                                    const Spacer(),
+                                    Text(
+                                      'Practice only',
+                                      style: monoLabel.copyWith(
+                                        color: RecallColors.faint,
                                       ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      prompt,
+                                      const SizedBox(height: 16),
+                                      Expanded(child: practice),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              alignment: WrapAlignment.center,
-                              runSpacing: 8,
-                              children: [
-                                if (_audioUrl case final audioUrl?
-                                    when widget.audioRepository != null) ...[
-                                  PronunciationButton(
-                                    key: ValueKey<String>(
-                                      'draw-practice-audio-${_card.id}-${_cue?.storageKey}',
+                                ),
+                                const SizedBox(height: 16),
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  runSpacing: 8,
+                                  children: [
+                                    if (_audioUrl case final audioUrl?
+                                        when widget.audioRepository !=
+                                            null) ...[
+                                      PronunciationButton(
+                                        key: ValueKey<String>(
+                                          'draw-practice-audio-${_card.id}-${_cue?.storageKey}',
+                                        ),
+                                        autoPlay: _cue == StudyCue.fromAudio,
+                                        audioUrl: audioUrl,
+                                        repository: widget.audioRepository!,
+                                      ),
+                                      const SizedBox(width: 12),
+                                    ],
+                                    IconButton.filledTonal(
+                                      tooltip: _letterVisible
+                                          ? 'Hide character'
+                                          : 'Show character',
+                                      onPressed: () => setState(
+                                        () => _letterVisible = !_letterVisible,
+                                      ),
+                                      icon: Icon(
+                                        _letterVisible
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                      ),
                                     ),
-                                    autoPlay: _cue == StudyCue.fromAudio,
-                                    audioUrl: audioUrl,
-                                    repository: widget.audioRepository!,
-                                  ),
-                                  const SizedBox(width: 12),
-                                ],
-                                IconButton.filledTonal(
-                                  tooltip: _letterVisible
-                                      ? 'Hide character'
-                                      : 'Show character',
-                                  onPressed: () => setState(
-                                    () => _letterVisible = !_letterVisible,
-                                  ),
-                                  icon: Icon(
-                                    _letterVisible
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                IconButton.filledTonal(
-                                  tooltip: 'Study sheet',
-                                  onPressed: () => Navigator.pop(context),
-                                  icon: const Icon(Icons.view_list_outlined),
-                                ),
-                                const SizedBox(width: 12),
-                                IconButton.filledTonal(
-                                  tooltip: 'Previous',
-                                  onPressed: _index == 0
-                                      ? null
-                                      : () {
-                                          _drawingController.clear();
-                                          setState(() => _index--);
-                                        },
-                                  icon: const Icon(Icons.arrow_back),
-                                ),
-                                const SizedBox(width: 12),
-                                IconButton.filled(
-                                  tooltip: last ? 'Finish' : 'Next',
-                                  onPressed: _next,
-                                  icon: Icon(
-                                    last
-                                        ? Icons.check_circle_outline
-                                        : Icons.arrow_forward,
-                                  ),
+                                    const SizedBox(width: 12),
+                                    IconButton.filledTonal(
+                                      tooltip: 'Study sheet',
+                                      onPressed: () => Navigator.pop(context),
+                                      icon: const Icon(
+                                        Icons.view_list_outlined,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    IconButton.filledTonal(
+                                      tooltip: 'Previous',
+                                      onPressed: _index == 0
+                                          ? null
+                                          : () {
+                                              _drawingController.clear();
+                                              setState(() => _index--);
+                                            },
+                                      icon: const Icon(Icons.arrow_back),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    IconButton.filled(
+                                      tooltip: last ? 'Finish' : 'Next',
+                                      onPressed: _next,
+                                      icon: Icon(
+                                        last
+                                            ? Icons.check_circle_outline
+                                            : Icons.arrow_forward,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: TabletRecallContext(
+                        key: ValueKey('practice-context-${_card.id}'),
+                        card: _card,
+                        allSizes: true,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

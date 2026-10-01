@@ -210,21 +210,55 @@ class LanguagePair {
 
 /// Keep the collection actions compact on tablets and aligned on phones.
 class LibraryActions extends StatelessWidget {
-  const LibraryActions({super.key, required this.children});
-  final List<Widget> children;
+  const LibraryActions({
+    super.key,
+    this.search,
+    required this.practice,
+    required this.add,
+    required this.recall,
+  });
+  final Widget? search;
+  final Widget practice, add, recall;
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => _LibraryActionLayout(
-      compact: constraints.maxWidth < 440,
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Row(children: children),
+  Widget build(BuildContext context) {
+    final selection = bulkCardSelectionOf(context);
+    final selecting = selection?.practiceOnly == true && selection!.selecting;
+    final actions = <Widget>[
+      ?search,
+      if (selecting) ...[
+        recall,
+        LibraryActionButton(
+          key: const ValueKey('top-cancel-practice'),
+          label: 'Cancel',
+          icon: Icons.close,
+          onPressed: selection.toggleMode,
+        ),
+      ] else ...[
+        practice,
+        add,
+        recall,
+      ],
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) => _LibraryActionLayout(
+        compact: constraints.maxWidth < (selecting ? 320 : 440),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Row(
+              children: [
+                for (var i = 0; i < actions.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(child: actions[i]),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _LibraryActionLayout extends InheritedWidget {

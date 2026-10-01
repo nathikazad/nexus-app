@@ -509,74 +509,63 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
                       child: LibraryActions(
-                        children: [
-                          Expanded(
-                            child: LibraryActionButton(
-                              label: 'Search',
-                              tooltip: _searching
-                                  ? 'Close search'
-                                  : 'Search all cards',
-                              onPressed: _searching
-                                  ? _closeSearch
-                                  : () => setState(() => _searching = true),
-                              icon: _searching ? Icons.close : Icons.search,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(child: const PracticeSelectionButton()),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: LibraryActionButton(
-                              key: const ValueKey('open-backlog'),
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => BacklogPage(
-                                    title: category,
-                                    language: language,
-                                    matches: (card) =>
-                                        widget.allCards ||
-                                        LanguageGroup(
-                                          category,
-                                          tagSystem: widget.tagSystem,
-                                          path: widget.categoryPath,
-                                        ).contains(card),
-                                  ),
-                                ),
-                              ),
-                              icon: Icons.add,
-                              label: 'Add',
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: StudyLauncher(
-                              followPracticeSelection: true,
-                              studyScope: StudyScope(
+                        search: LibraryActionButton(
+                          label: 'Search',
+                          tooltip: _searching
+                              ? 'Close search'
+                              : 'Search all cards',
+                          onPressed: _searching
+                              ? _closeSearch
+                              : () => setState(() => _searching = true),
+                          icon: _searching ? Icons.close : Icons.search,
+                        ),
+                        practice: const PracticeSelectionButton(),
+                        add: LibraryActionButton(
+                          key: const ValueKey('open-backlog'),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => BacklogPage(
+                                title: category,
                                 language: language,
-                                tagSystem: widget.tagSystem ?? 'Category',
-                                categoryPath: widget.categoryPath,
-                                tag: widget.allCards ? null : category,
-                              ),
-                              title: language == null
-                                  ? category
-                                  : '$language · $category',
-                              preferenceKey: widget.tagSystem == null
-                                  ? 'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}'
-                                  : 'language-tag:${Uri.encodeComponent(language ?? 'all')}:${Uri.encodeComponent(widget.tagSystem!)}:${Uri.encodeComponent(widget.categoryPath?.join('/') ?? category)}',
-                              prompts: queue,
-                              studyCards: current,
-                              languagePair: language == null
-                                  ? languagesForCards(data, cards)
-                                  : LanguagePair('Front', language!),
-                              builder: (onPressed) => LibraryActionButton(
-                                filled: true,
-                                onPressed: onPressed,
-                                icon: Icons.replay_rounded,
-                                label: 'Recall',
+                                matches: (card) =>
+                                    widget.allCards ||
+                                    LanguageGroup(
+                                      category,
+                                      tagSystem: widget.tagSystem,
+                                      path: widget.categoryPath,
+                                    ).contains(card),
                               ),
                             ),
                           ),
-                        ],
+                          icon: Icons.add,
+                          label: 'Add',
+                        ),
+                        recall: StudyLauncher(
+                          followPracticeSelection: true,
+                          studyScope: StudyScope(
+                            language: language,
+                            tagSystem: widget.tagSystem ?? 'Category',
+                            categoryPath: widget.categoryPath,
+                            tag: widget.allCards ? null : category,
+                          ),
+                          title: language == null
+                              ? category
+                              : '$language · $category',
+                          preferenceKey: widget.tagSystem == null
+                              ? 'language-category:${language ?? 'all'}:${widget.allCards ? '*all*' : category}'
+                              : 'language-tag:${Uri.encodeComponent(language ?? 'all')}:${Uri.encodeComponent(widget.tagSystem!)}:${Uri.encodeComponent(widget.categoryPath?.join('/') ?? category)}',
+                          prompts: queue,
+                          studyCards: current,
+                          languagePair: language == null
+                              ? languagesForCards(data, cards)
+                              : LanguagePair('Front', language!),
+                          builder: (onPressed) => LibraryActionButton(
+                            filled: true,
+                            onPressed: onPressed,
+                            icon: Icons.replay_rounded,
+                            label: 'Recall',
+                          ),
+                        ),
                       ),
                     ),
                   ),

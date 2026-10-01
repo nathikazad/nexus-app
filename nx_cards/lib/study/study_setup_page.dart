@@ -103,6 +103,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _mode == StudyMode.recall &&
       !_usesSimilar &&
       _timing == RecallTiming.dueNow;
+  int _dueMinPercentage = 0;
   int _retainedMinPercentage = 0;
   bool _weakOnly = false;
   int _retainedMaxPercentage = 100;
@@ -204,6 +205,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         }
         _retainedMinPercentage = (saved['retainedMinPercentage'] as int? ?? 0)
             .clamp(0, _retainedMaxPercentage);
+        _dueMinPercentage = (saved['dueMinPercentage'] as int? ?? 0).clamp(
+          0,
+          100,
+        );
         _weakOnly = saved['weakOnly'] == true;
         _timing =
             _enumByName(RecallTiming.values, saved['timing']) ??
@@ -247,6 +252,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'combinedPrompt': _combinedPrompt,
         'retainedMaxPercentage': _retainedMaxPercentage,
         'retainedMinPercentage': _retainedMinPercentage,
+        'dueMinPercentage': _dueMinPercentage,
         'weakOnly': _weakOnly,
         'timing': _timing.name,
         'similarType': _similarType.name,
@@ -276,7 +282,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       retentionPrompts(
             _studyCards,
             _directions,
-            minimum: _dueOnly ? 0 : _retainedMinPercentage / 100,
+            minimum:
+                (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
             maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
             weakOnly: !_dueOnly && _weakOnly,
           )
@@ -290,7 +297,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       return true;
     }
     if (_dueOnly) {
-      return card.active && card.learningStatus == LearningStatus.recall;
+      return card.active &&
+          card.learningStatus == LearningStatus.recall &&
+          averageRetention(card, _directions) + 1e-9 >= _dueMinPercentage / 100;
     }
     final score = averageRetention(card, _directions);
     return card.active &&
@@ -1311,10 +1320,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                 _rememberPreferences();
                               },
                             ),
-                            if (!_dueOnly) ...[
-                              const SizedBox(height: 16),
+                            const SizedBox(height: 16),
+                            if (_dueOnly)
+                              _dueFilterChoices()
+                            else
                               _recallFilterChoices(),
-                            ],
                           ],
                         ),
                       ),
@@ -1391,6 +1401,40 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _clampCount();
     }),
   );
+
+  Widget _dueFilterChoices() {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('$_dueMinPercentage–100%'),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: colors.secondaryContainer,
+            inactiveTrackColor: colors.primary,
+            activeTickMarkColor: colors.secondaryContainer,
+            inactiveTickMarkColor: colors.primary,
+            thumbColor: colors.primary,
+          ),
+          child: Slider(
+            key: const ValueKey('due-retention'),
+            value: _dueMinPercentage.toDouble(),
+            min: 0,
+            max: 100,
+            divisions: 100,
+            label: '$_dueMinPercentage–100%',
+            onChanged: (value) {
+              setState(() {
+                _dueMinPercentage = value.round();
+                _clampCount();
+              });
+              _rememberPreferences();
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _recallFilterChoices() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,

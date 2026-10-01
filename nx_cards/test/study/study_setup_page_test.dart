@@ -110,32 +110,39 @@ Future<void> showSetup(
 }
 
 void main() {
-  testWidgets('Due ignores retention and updates count for selected fronts', (
-    tester,
-  ) async {
-    await showSetup(
-      tester,
-      directions: {StudyCue.fromLanguage},
-      studyCards: [sample(1, 0), sample(2, 10), sample(3, 0, due: false)],
-    );
-    expect(find.text('3 recall items available'), findsOneWidget);
-    final retention = tester.widgetList<Slider>(find.byType(Slider)).first;
-    retention.onChanged!(0);
-    await tester.pumpAndSettle();
-    expect(find.text('2 recall items available'), findsOneWidget);
-    await tester.tap(find.text('Due'));
-    await tester.pumpAndSettle();
-    expect(find.text('2 cards due'), findsOneWidget);
-    expect(find.byType(Slider), findsOneWidget);
-    expect(
-      tester.widget<Slider>(find.byKey(const ValueKey('card-count'))).max,
-      2,
-    );
-    await tester.tap(find.text('Retention'));
-    await tester.pumpAndSettle();
-    expect(find.text('2 recall items available'), findsOneWidget);
-    expect(find.byType(Slider), findsNWidgets(2));
-  });
+  testWidgets(
+    'Due filters by its own minimum retention and preserves Retention settings',
+    (tester) async {
+      await showSetup(
+        tester,
+        directions: {StudyCue.fromLanguage},
+        studyCards: [sample(1, 0), sample(2, 10), sample(3, 0, due: false)],
+      );
+      expect(find.text('3 recall items available'), findsOneWidget);
+      final retention = tester.widgetList<Slider>(find.byType(Slider)).first;
+      retention.onChanged!(0);
+      await tester.pumpAndSettle();
+      expect(find.text('2 recall items available'), findsOneWidget);
+      await tester.tap(find.text('Due'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 cards due'), findsOneWidget);
+      expect(find.byType(Slider), findsNWidgets(2));
+      expect(
+        tester.widget<Slider>(find.byKey(const ValueKey('card-count'))).max,
+        2,
+      );
+      tester
+          .widget<Slider>(find.byKey(const ValueKey('due-retention')))
+          .onChanged!(80);
+      await tester.pumpAndSettle();
+      expect(find.text('80–100%'), findsOneWidget);
+      expect(find.text('1 cards due'), findsOneWidget);
+      await tester.tap(find.text('Retention'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 recall items available'), findsOneWidget);
+      expect(find.byType(Slider), findsNWidgets(2));
+    },
+  );
 
   testWidgets(
     'sound-only groups show only Sound and restore Similar without text directions',
