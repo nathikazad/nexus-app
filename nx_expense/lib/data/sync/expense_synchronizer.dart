@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'expense_store.dart';
 import 'expense_transport.dart';
@@ -53,6 +54,16 @@ class ExpenseReconciler implements PullReconciler<int> {
   final AppSyncSession session;
   @override
   Future<void> pullAll() async {
+    try {
+      await _pullAll();
+    } catch (error) {
+      debugPrint('[ExpenseSync] Download failed: $error');
+      rethrow;
+    }
+  }
+
+  Future<void> _pullAll() async {
+    debugPrint('[ExpenseSync] Checking manifest');
     final manifest = await session.manifest();
     if (manifest == null) {
       throw StateError('Expense synchronization is unavailable');
@@ -62,6 +73,9 @@ class ExpenseReconciler implements PullReconciler<int> {
       for (final entry in manifest.entries)
         if (hashes[entry['id']] != entry['hash']) entry['id'] as int,
     };
+    debugPrint(
+      '[ExpenseSync] Downloading ${wanted.length} of ${manifest.entries.length} records at revision ${manifest.revision}',
+    );
     final items = await session.download(manifest, wanted);
     await store.applySnapshot(items, {
       for (final entry in manifest.entries) entry['id'] as int,
@@ -81,7 +95,9 @@ class ExpenseReconciler implements PullReconciler<int> {
         )) {
       onChanged?.call();
     }
+    debugPrint('[ExpenseSync] Records saved; downloading receipts');
     await syncAssets?.call();
+    debugPrint('[ExpenseSync] Complete');
   }
 
   @override

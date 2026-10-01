@@ -3,7 +3,7 @@ import 'package:nx_expense/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nx_expense/features/expense/expense_form_page.dart';
+import 'package:nx_expense/features/expense/expense_quick_add.dart';
 import 'package:nx_expense/features/expense/expense_list_view_model.dart';
 import 'desktop_nav.dart';
 
@@ -149,11 +149,7 @@ class DesktopShell extends ConsumerWidget {
             )
           : child,
       floatingActionButton: uri.path == '/expenses' && !selecting
-          ? FloatingActionButton(
-              tooltip: 'New expense',
-              onPressed: () => showAddExpenseModal(context),
-              child: const Icon(Icons.add),
-            )
+          ? const ExpenseQuickAdd()
           : uri.path == '/tag-systems' && desktop
           ? FloatingActionButton(
               onPressed: () => navToTagSystemCreate(context, ref),

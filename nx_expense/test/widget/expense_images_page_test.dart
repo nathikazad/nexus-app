@@ -1,8 +1,9 @@
+import 'package:nx_expense/features/expense/expense_quick_add.dart';
 import 'package:nx_expense/data/sync/expense_sync_providers.dart';
 import 'package:nx_expense/features/desktop/desktop_shell.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -42,6 +43,52 @@ void main() {
       http.MultipartRequest('POST', Uri.parse('https://example.com/snapshots')),
     ),
   );
+  testWidgets('quick add opens the shared receipt source sheet', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final picker = _Picker();
+    when(
+      () => picker.pickImage(source: ImageSource.gallery, imageQuality: 85),
+    ).thenAnswer((_) async => null);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_Auth.new),
+          expenseImagePickerProvider.overrideWithValue(picker),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(floatingActionButton: ExpenseQuickAdd()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await ProviderScope.containerOf(
+      tester.element(find.byType(ExpenseQuickAdd)),
+    ).read(authProvider.future);
+    expect(find.text('Photo'), findsNothing);
+    await tester.tap(find.byTooltip('Add expense or photo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Expense'), findsOneWidget);
+    await tester.tap(find.text('Photo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Take photo'), findsOneWidget);
+    expect(find.text('Choose PDF'), findsOneWidget);
+    expect(find.text('Choose image'), findsOneWidget);
+    verifyNever(
+      () => picker.pickImage(source: ImageSource.gallery, imageQuality: 85),
+    );
+    await tester.tap(find.text('Choose image'));
+    await tester.pumpAndSettle();
+    verify(
+      () => picker.pickImage(source: ImageSource.gallery, imageQuality: 85),
+    ).called(1);
+    expect(find.text('Choose image'), findsNothing);
+    expect(find.text('Photo'), findsNothing);
+    expect(tester.takeException(), isNull);
+    debugDefaultTargetPlatformOverride = null;
+  });
   for (final size in [const Size(320, 740), const Size(1100, 740)]) {
     testWidgets('Images navigation fits ${size.width}', (tester) async {
       tester.view.physicalSize = size;
