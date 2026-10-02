@@ -329,10 +329,20 @@ class _ImagesPageState extends ConsumerState<ImagesPage> {
       );
     }
 
+    // Do not start an unauthenticated image request while headers resolve:
+    // the image provider retains that failed request even after headers arrive.
+    final headers = ref.watch(nexusRequestHeadersProvider);
+    if (headers.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (headers.hasError) {
+      return const Center(child: Text('Could not authenticate image request'));
+    }
+
     return CachedNetworkImage(
       imageUrl: entry.url,
       cacheManager: imageCacheManager,
-      httpHeaders: ref.watch(nexusRequestHeadersProvider).value ?? const {},
+      httpHeaders: headers.requireValue,
       fit: BoxFit.contain,
       placeholder: (context, url) => const Center(
         child: CircularProgressIndicator(),
