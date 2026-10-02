@@ -70,6 +70,29 @@ class RecallRecapPage extends ConsumerStatefulWidget {
 }
 
 class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
+  Widget _actions() => Row(
+    children: [
+      Expanded(
+        child: OutlinedButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Return'),
+        ),
+      ),
+      if (widget.missCount > 0 || widget.reviewedCount < widget.totalCount) ...[
+        const SizedBox(width: 12),
+        Expanded(
+          child: Tooltip(
+            message: 'Retry missed and untried cards',
+            child: FilledButton(
+              onPressed: widget.onRepeatIncorrect,
+              child: const Text('Repeat'),
+            ),
+          ),
+        ),
+      ],
+    ],
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
@@ -139,32 +162,13 @@ class _RecallRecapPageState extends ConsumerState<RecallRecapPage> {
                     ),
                   ),
                   const SizedBox(height: 28),
+                  _actions(),
+                  const SizedBox(height: 24),
                   Text(widget.wordRecapTitle, style: monoLabel),
                   const SizedBox(height: 9),
                   widget.wordRecap ?? _RecallWordRecap(entries: widget.entries),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Return'),
-                        ),
-                      ),
-                      if (widget.missCount > 0) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Tooltip(
-                            message: 'Retry missed and untried cards',
-                            child: FilledButton(
-                              onPressed: widget.onRepeatIncorrect,
-                              child: const Text('Repeat'),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                  _actions(),
                 ],
               ),
             ),

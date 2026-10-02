@@ -9,8 +9,8 @@ import 'package:nx_cards/study/session/study_session_page.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
 
 void main() {
-  for (final untried in [0, 3]) {
-    testWidgets('no Repeat when nothing was wrong ($untried untried)', (
+  for (final untried in [0, 1, 3]) {
+    testWidgets('Repeat is available for untried cards ($untried untried)', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -26,8 +26,11 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Repeat'), findsNothing);
-      expect(find.text('Return'), findsOneWidget);
+      expect(
+        find.text('Repeat'),
+        untried > 0 ? findsNWidgets(2) : findsNothing,
+      );
+      expect(find.text('Return'), findsNWidgets(2));
     });
   }
 
@@ -91,7 +94,7 @@ void main() {
     expect(find.text('5'), findsOneWidget);
     expect(find.text('Not tried'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byTooltip('Retry missed and untried cards'));
+    await tester.tap(find.byTooltip('Retry missed and untried cards').first);
     expect(retried, isTrue);
   });
 
@@ -180,8 +183,8 @@ void main() {
     expect(find.text('kazhivu'), findsOneWidget);
     expect(find.text('NOT REVIEWED'), findsOneWidget);
     expect(find.text('Not tried'), findsOneWidget);
-    expect(find.text('Repeat'), findsNothing);
-    expect(find.text('Return'), findsOneWidget);
+    expect(find.text('Repeat'), findsNWidgets(2));
+    expect(find.text('Return'), findsNWidgets(2));
   });
 
   testWidgets('recall recap uses a readable dark surface', (tester) async {

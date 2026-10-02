@@ -192,7 +192,7 @@ void main() {
     expect(find.text('relief'), findsOneWidget);
     expect(find.text('ആശ്വാസം'), findsOneWidget);
     expect(find.text('āśvāsaṃ'), findsOneWidget);
-    await tester.tap(find.byTooltip('Retry missed and untried cards'));
+    await tester.tap(find.byTooltip('Retry missed and untried cards').first);
     await tester.pumpAndSettle();
     expect(find.text('Session complete'), findsNothing);
     expect(find.text('Tap to reveal'), findsOneWidget);
@@ -206,12 +206,8 @@ void main() {
       2,
     );
     expect(find.text('CORRECT'), findsOneWidget);
-    expect(
-      tester
-          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh))
-          .onPressed,
-      isNull,
-    );
+    expect(find.text('Repeat'), findsNothing);
+    expect(find.text('Return'), findsNWidgets(2));
   });
 
   testWidgets('a rated row quickly collapses after the answer was revealed', (

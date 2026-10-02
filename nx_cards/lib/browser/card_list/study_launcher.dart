@@ -242,15 +242,25 @@ class LibraryActions extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) => _LibraryActionLayout(
         compact: constraints.maxWidth < (selecting ? 320 : 440),
+        naturalSpacing: !selecting && constraints.maxWidth >= 440,
         child: Align(
           alignment: Alignment.centerRight,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: Row(
+              mainAxisSize: selecting || constraints.maxWidth < 440
+                  ? MainAxisSize.max
+                  : MainAxisSize.min,
               children: [
                 for (var i = 0; i < actions.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(child: actions[i]),
+                  if (i > 0)
+                    SizedBox(
+                      width: constraints.maxWidth >= 440 && !selecting ? 24 : 8,
+                    ),
+                  if (selecting || constraints.maxWidth < 440)
+                    Expanded(child: actions[i])
+                  else
+                    actions[i],
                 ],
               ],
             ),
@@ -262,11 +272,17 @@ class LibraryActions extends StatelessWidget {
 }
 
 class _LibraryActionLayout extends InheritedWidget {
-  const _LibraryActionLayout({required this.compact, required super.child});
+  const _LibraryActionLayout({
+    required this.compact,
+    required this.naturalSpacing,
+    required super.child,
+  });
   final bool compact;
+  final bool naturalSpacing;
   @override
   bool updateShouldNotify(_LibraryActionLayout oldWidget) =>
-      compact != oldWidget.compact;
+      compact != oldWidget.compact ||
+      naturalSpacing != oldWidget.naturalSpacing;
 }
 
 class LibraryActionButton extends StatelessWidget {
@@ -285,25 +301,31 @@ class LibraryActionButton extends StatelessWidget {
   final bool filled;
   @override
   Widget build(BuildContext context) {
-    final compact =
-        context
-            .dependOnInheritedWidgetOfExactType<_LibraryActionLayout>()
-            ?.compact ??
-        false;
+    final layout = context
+        .dependOnInheritedWidgetOfExactType<_LibraryActionLayout>();
+    final compact = layout?.compact ?? false;
     final style = TextButton.styleFrom(
       minimumSize: const Size(48, 48),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: !filled && layout?.naturalSpacing == true ? 0 : 12,
+      ),
       textStyle: const TextStyle(fontSize: 14),
     );
     return Tooltip(
       message: tooltip ?? label,
       child: compact
-          ? (filled
-                ? IconButton.filled(
-                    onPressed: onPressed,
-                    icon: Icon(icon, size: 20),
-                  )
-                : IconButton(onPressed: onPressed, icon: Icon(icon, size: 20)))
+          ? SizedBox.square(
+              dimension: 48,
+              child: (filled
+                  ? IconButton.filled(
+                      onPressed: onPressed,
+                      icon: Icon(icon, size: 20),
+                    )
+                  : IconButton(
+                      onPressed: onPressed,
+                      icon: Icon(icon, size: 20),
+                    )),
+            )
           : (filled
                 ? FilledButton.icon(
                     style: style,
