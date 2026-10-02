@@ -55,14 +55,14 @@ $('mic').onclick = async () => {
     };
     source.connect(micNode); micNode.connect(sink); sink.connect(context.destination);
     $('mic').textContent = 'Turn microphone off'; $('talk').disabled = !connected;
-    $('hint').textContent = 'Hold the button or space bar. Release to send.';
+    $('hint').textContent = 'Hold the touch pad above the camera to record. Release to send. Space bar works too.';
   } catch(e) { error(e); stream?.getTracks().forEach(track => track.stop()); }
   finally { busy = false; }
 };
 function stopPlayback() { for (const node of playing) { try { node.stop(); } catch {} } playing.clear(); playbackAt = 0; }
 async function press() {
   if (!enabled || !connected || holding) return;
-  holding = true; stopPlayback(); $('talk').classList.add('active'); $('talk').textContent = 'Listening… release to send';
+  holding = true; stopPlayback(); $('talk').classList.add('active'); $('talk').setAttribute('aria-pressed', 'true');
   try {
     buttonQueue = buttonQueue.then(async () => { await context.resume(); await post('/press'); });
     await buttonQueue;
@@ -71,7 +71,7 @@ async function press() {
 }
 async function release() {
   if (!holding) return;
-  holding = false; $('talk').classList.remove('active'); $('talk').textContent = 'Hold to talk';
+  holding = false; $('talk').classList.remove('active'); $('talk').setAttribute('aria-pressed', 'false');
   // Flush submitted microphone chunks before releasing the simulated GPIO.
   buttonQueue = buttonQueue.catch(() => {}).then(async () => { await flushMic(); await sendQueue; await post('/release'); });
   await buttonQueue;
@@ -118,7 +118,7 @@ async function poll() {
     $('camera-detail').textContent = `${s.camera_done} completed · ${s.camera_failed} failed`;
     $('packets').textContent = `${s.uplink} audio packets sent · ${s.speaker_samples} speaker samples`;
     if (holding) $('hint').textContent = s.mic ? 'Microphone is running. Speak now.' : 'Waking the device…';
-    else if(enabled) $('hint').textContent = 'Hold the button or space bar. Release to send.';
+    else if(enabled) $('hint').textContent = 'Hold the touch pad above the camera to record. Release to send. Space bar works too.';
     for(const event of s.events) if(event.id > lastEvent) {
       const row = document.createElement('li'), time = document.createElement('time');
       time.textContent = new Date(event.at).toLocaleTimeString(); row.append(time, document.createTextNode(event.text));
