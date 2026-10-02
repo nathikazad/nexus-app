@@ -11,9 +11,17 @@ abstract interface class NecklaceDevicePort {
   Future<bool> writeHaptic(int effectId);
 }
 
-class BleNecklaceDevicePort implements NecklaceDevicePort {
+abstract interface class NecklaceAudioControlPort {
+  Future<bool> writeBackgroundAudio(int operation);
+}
+
+class BleNecklaceDevicePort
+    implements NecklaceDevicePort, NecklaceAudioControlPort {
   BleNecklaceDevicePort(this.client);
   final BleClient client;
+  @override
+  Future<bool> writeBackgroundAudio(int operation) =>
+      client.writeBackgroundAudio(operation);
   @override
   Future<void> sendAudio(Uint8List bytes) => client.sendAudio(bytes);
   @override

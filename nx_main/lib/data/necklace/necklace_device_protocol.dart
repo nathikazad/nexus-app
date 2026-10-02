@@ -46,6 +46,7 @@ class NecklaceDeviceProtocol {
       }
 
       const deviceActions = [
+        'audio.start', 'audio.stop', 'audio.new',
         'take_photo',
         'get_camera_status',
         'start_record',

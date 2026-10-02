@@ -17,6 +17,7 @@ import 'package:nexus_voice_assistant/domain/ble/ble_constants.dart';
 class BleClient {
   BluetoothDevice? _device;
   BluetoothCharacteristic? _identityCharacteristic;
+  BluetoothCharacteristic? _backgroundAudioCharacteristic;
   Future<void> _identityTail = Future.value();
   int _identityRequestId = 0;
 
@@ -299,6 +300,7 @@ class BleClient {
     _fileRxCharacteristic = null;
     _identityCharacteristic = null;
     _fileCtrlCharacteristic = null;
+    _backgroundAudioCharacteristic = null;
     _cameraCmdCharacteristic = null;
     _cameraStatusCharacteristic = null;
   }
@@ -408,7 +410,9 @@ class BleClient {
 
       for (BluetoothCharacteristic char in targetService.characteristics) {
         final uuid = char.uuid.toString().toLowerCase();
-        if (uuid == 'beb54841-36e1-4688-b7f5-ea07361b26ae') {
+        if (uuid == 'beb54842-36e1-4688-b7f5-ea07361b26ae') {
+          _backgroundAudioCharacteristic = char;
+        } else if (uuid == 'beb54841-36e1-4688-b7f5-ea07361b26ae') {
           _identityCharacteristic = char;
         } else if (uuid ==
             BleConstants.audioTxCharacteristicUuid.toLowerCase()) {
@@ -950,6 +954,20 @@ class BleClient {
       return true;
     } catch (e) {
       _log('Error writing device name: $e');
+      return false;
+    }
+  }
+
+  /// Queues background audio start/stop/rotation in the nRF firmware.
+  Future<bool> writeBackgroundAudio(int operation) async {
+    final characteristic = _backgroundAudioCharacteristic;
+    if (!isConnected || characteristic == null || operation < 0 || operation > 2) {
+      return false;
+    }
+    try {
+      await characteristic.write([operation], withoutResponse: false);
+      return true;
+    } catch (_) {
       return false;
     }
   }

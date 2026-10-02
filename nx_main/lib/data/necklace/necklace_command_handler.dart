@@ -12,6 +12,27 @@ class NecklaceCommandHandler {
       int requestId, String action, Map<String, dynamic> params) async {
     try {
       switch (action) {
+        case 'audio.start':
+        case 'audio.stop':
+        case 'audio.new':
+          final target = device;
+          if (target is! NecklaceAudioControlPort) {
+            return jsonEncode({
+              'success': false,
+              'error': 'Audio recording control unavailable'
+            });
+          }
+          final operation = action == 'audio.stop'
+              ? 0
+              : action == 'audio.start'
+                  ? 1
+                  : 2;
+          final accepted = await (target as NecklaceAudioControlPort)
+              .writeBackgroundAudio(operation);
+          return jsonEncode({
+            'success': accepted,
+            'status': accepted ? 'accepted' : 'failed'
+          });
         case 'take_photo':
           final success =
               await device.writeCamera(CameraCommand.capture.toBytes());
