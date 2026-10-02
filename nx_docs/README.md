@@ -124,6 +124,25 @@ library supervisor uses Books' bounded exponential retry policy; providers close
 both supervisors when the account scope is disposed. Sync phase/count timestamps
 are logged with the `[NX Docs sync]` prefix without document bodies or credentials.
 
+## Canvas conversion
+
+In Edit mode, click **Convert to text** on a canvas. NX Docs saves and syncs the
+source, then sends its document ID and canvas ID to the NX Docs agent. Its scoped
+conversion tool loads that saved canvas, renders all ink across boards and
+returns editable text blocks. The app inserts them immediately below the canvas
+and saves them through the normal document session. The drawing stays intact.
+Unreadable names are marked `[unclear]`, with additional warnings shown below
+the canvas.
+
+Conversion requires a connection. If the drawing, selected account, or document
+changes while the agent works, the stale result is discarded. Repeating conversion
+of unchanged ink does not append duplicate text. If the final local save fails,
+**Save converted text** retries that save without calling the agent again.
+
+The server route is `/nx_docs/canvas/convert`, owned by `nx_docs/agents/assistant.py`.
+The vision model can be configured with `NX_DOCS_CANVAS_MODEL`; the tested default
+is `anthropic:claude-sonnet-5-5`. Its provider key stays on the server.
+
 ## Canvas persistence and performance
 
 The native canvas runtime is owned by `nx_modules/nx_canvas`; see its README for

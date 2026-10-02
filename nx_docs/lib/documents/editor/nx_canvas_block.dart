@@ -3,10 +3,12 @@ part of 'nx_appflowy_blocks.dart';
 class NxCanvasBlockComponentBuilder extends BlockComponentBuilder {
   NxCanvasBlockComponentBuilder({
     this.documentId,
+    this.convert,
     this.persist,
     this.isIdentityPersisted,
   });
   final String? documentId;
+  final ConvertCanvas? convert;
   final Future<void> Function()? persist;
   final bool Function(String id)? isIdentityPersisted;
   @override
@@ -21,6 +23,7 @@ class NxCanvasBlockComponentBuilder extends BlockComponentBuilder {
     actionBuilder: (c, s) => actionBuilder(context, s),
     editor: Provider.of<EditorState>(context.buildContext, listen: false),
     documentId: documentId,
+    convert: convert,
     persist: persist,
     isIdentityPersisted: isIdentityPersisted,
   );
@@ -35,11 +38,13 @@ class _CanvasBlock extends BlockComponentStatefulWidget {
     super.actionBuilder,
     required this.editor,
     this.documentId,
+    this.convert,
     this.persist,
     this.isIdentityPersisted,
   });
   final EditorState editor;
   final String? documentId;
+  final ConvertCanvas? convert;
   final Future<void> Function()? persist;
   final bool Function(String id)? isIdentityPersisted;
   @override
@@ -51,6 +56,39 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
   double? _height;
   bool _opening = false;
   String? _error;
+  bool _converting = false;
+  String? _conversionMessage;
+  NxCanvasConversionSession? _conversion;
+
+  Future<void> _convert() async {
+    if (_converting || _opening || !_canEdit || widget.convert == null) return;
+    setState(() {
+      _converting = true;
+      _error = null;
+      _conversionMessage = null;
+    });
+    final session = _conversion ??= NxCanvasConversionSession(
+      editor: widget.editor,
+      persist: () => widget.persist!(),
+      convert: (id, drawing) => widget.convert!(id, drawing),
+      isActive: () => mounted && _canEdit && widget.convert != null,
+    );
+    try {
+      final message = await session.run(widget.node);
+      if (mounted) setState(() => _conversionMessage = message);
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = session.pendingSave
+              ? 'Text was added but could not be saved. Tap Save converted text to retry.'
+              : error.toString(),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _converting = false);
+    }
+  }
+
   bool get _canEdit =>
       widget.editor.editable &&
       widget.persist != null &&
@@ -82,7 +120,7 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
   }
 
   Future<void> _open() async {
-    if (_opening) return;
+    if (_opening || _converting) return;
     if (!_canEdit || !_android) {
       await showDialog<void>(
         context: context,
@@ -169,6 +207,30 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
                       style: TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
                   ),
+                  if (_canEdit && widget.convert != null)
+                    Positioned(
+                      right: 8,
+                      top: 4,
+                      child: TextButton.icon(
+                        onPressed: _opening || _converting ? null : _convert,
+                        icon: _converting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.auto_awesome, size: 16),
+                        label: Text(
+                          _converting
+                              ? 'Converting…'
+                              : _conversion?.pendingSave == true
+                              ? 'Save converted text'
+                              : 'Convert to text',
+                        ),
+                      ),
+                    ),
                   if (_canEdit)
                     Positioned(
                       right: 4,
@@ -190,6 +252,16 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
               ),
             ),
           ),
+          if (_conversionMessage != null)
+            Text(
+              _conversionMessage!,
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          if (_conversion?.warnings.isNotEmpty == true)
+            Text(
+              _conversion!.warnings.join('\n'),
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
           if (_error != null)
             Text(
               _error!,

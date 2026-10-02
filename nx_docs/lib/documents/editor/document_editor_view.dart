@@ -1,3 +1,5 @@
+import 'package:nx_docs/documents/editor/canvas_conversion_service.dart';
+import 'package:nx_docs/workspace/workspace_providers.dart';
 import 'package:nx_docs/documents/browser/document_browser_session.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -580,6 +582,46 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
                                       },
                                     )
                                   : _NxAppFlowyEditor(
+                                      convertCanvas:
+                                          !widget.interactionMode.canEditContent
+                                          ? null
+                                          : (canvasId, drawing) async {
+                                              final service = ref.read(
+                                                canvasConversionServiceProvider,
+                                              );
+                                              final workspace = ref.read(
+                                                documentWorkspaceProvider,
+                                              );
+                                              final documentId =
+                                                  widget.document.id;
+                                              if (service == null ||
+                                                  workspace == null)
+                                                throw StateError(
+                                                  'Sign in to convert this canvas.',
+                                                );
+                                              await workspace
+                                                  .uploadPending()
+                                                  .timeout(
+                                                    const Duration(seconds: 30),
+                                                  );
+                                              service.ensureActive();
+                                              if (!mounted ||
+                                                  !widget.active ||
+                                                  widget.document.id !=
+                                                      documentId ||
+                                                  !widget
+                                                      .interactionMode
+                                                      .canEditContent) {
+                                                throw StateError(
+                                                  'Document changed. Please try again.',
+                                                );
+                                              }
+                                              return service.convert(
+                                                documentId: documentId,
+                                                canvasId: canvasId,
+                                                drawing: drawing,
+                                              );
+                                            },
                                       header:
                                           floatingModeToggle &&
                                               documentTitle != null

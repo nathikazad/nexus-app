@@ -10,6 +10,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
     required this.onFindBarChanged,
     required this.searchLinkableModels,
     this.onChanged,
+    this.convertCanvas,
     this.scrollStore,
     this.onLinkableModelSelected,
     this.createLinkedDocument,
@@ -21,6 +22,7 @@ class _NxAppFlowyEditor extends StatefulWidget {
     this.header,
   });
 
+  final ConvertCanvas? convertCanvas;
   final Widget? header;
   final DocumentScrollStore? scrollStore;
   final NxDocument document;
@@ -884,6 +886,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
         // in both modes so switching to Edit cannot reintroduce a blank block.
         useReadTable: true,
         canvasDocumentId: widget.document.id.toString(),
+        convertCanvas: widget.active ? widget.convertCanvas : null,
         // widget.document comes from the stored document session, not the
         // live editor draft. Pending autosaves continue independently.
         isCanvasIdentityPersisted: (id) =>

@@ -1,3 +1,4 @@
+import 'package:nx_docs/documents/editor/canvas_conversion_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
@@ -97,3 +98,17 @@ final documentSnapshotsProvider =
 final projectsProvider = FutureProvider<List<LinkedModel>>(
   (ref) => ref.watch(documentRepositoryProvider).listProjects(),
 );
+
+final canvasConversionServiceProvider = Provider<CanvasConversionService?>((
+  ref,
+) {
+  final client = ref.watch(nexusHttpClientProvider);
+  final user = ref.watch(authProvider).value;
+  if (client == null || user == null || user.domainId == null) return null;
+  final service = CanvasConversionService(
+    baseUrl: resolve(user.preset).imageHttp,
+    client: client,
+  );
+  ref.onDispose(service.dispose);
+  return service;
+});

@@ -1,3 +1,5 @@
+import 'package:nx_docs/documents/editor/canvas_conversion_service.dart';
+import 'package:nx_docs/documents/editor/nx_canvas_conversion_session.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -41,6 +43,7 @@ const String nxExcalidrawBlockType = 'nx_excalidraw';
 Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
   bool useReadTable = false,
   String? canvasDocumentId,
+  ConvertCanvas? convertCanvas,
   Future<void> Function()? persistCanvasDocument,
   bool Function(String id)? isCanvasIdentityPersisted,
   Future<void> Function(String url)? deleteDocumentImage,
@@ -68,6 +71,7 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
     nxExcalidrawBlockType: NxExcalidrawBlockComponentBuilder(),
     nxCanvasBlockType: NxCanvasBlockComponentBuilder(
       documentId: canvasDocumentId,
+      convert: convertCanvas,
       persist: persistCanvasDocument,
       isIdentityPersisted: isCanvasIdentityPersisted,
     ),
