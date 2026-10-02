@@ -559,7 +559,7 @@ void main() {
       final originalEditorState = tester.state(find.byType(AppFlowyEditor));
 
       update(
-        document.copyWith(document: '# Heading\nRemote body'),
+        document.copyWith(document: '# Heading\n\nFirst\n\nSecond\n\nLast'),
         DocumentChangeOrigin.remoteRefresh,
       );
       await tester.pump();
@@ -571,6 +571,13 @@ void main() {
           tester.state(find.byType(AppFlowyEditor)),
         ),
         isTrue,
+      );
+      final editor = tester.widget<AppFlowyEditor>(find.byType(AppFlowyEditor));
+      expect(
+        editor.editorState.document.root.children
+            .map((node) => node.delta?.toPlainText())
+            .toList(),
+        ['Heading', 'First', 'Second', 'Last'],
       );
       expect(workspace.openCount, 0);
     },

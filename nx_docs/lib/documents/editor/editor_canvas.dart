@@ -238,7 +238,10 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
     if (existingCount > 0) {
       transaction.deleteNodesAtPath(<int>[0], existingCount);
     }
-    transaction.insertNodes(<int>[0], incoming.root.children);
+    // Transaction paths refer to the document before earlier operations.
+    // Deleting the old blocks shifts this end position back to zero; passing
+    // zero here would be shifted negative and reverse the inserted blocks.
+    transaction.insertNodes(<int>[existingCount], incoming.root.children);
     final wasEditable = _editorState.editable;
     _editorState.editable = true;
     try {
