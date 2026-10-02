@@ -47,3 +47,9 @@ class BrowserArticle {
 
 bool isArticleWebUrl(Uri url) =>
     (url.scheme == 'https' || url.scheme == 'http') && url.host.isNotEmpty;
+
+/// Older articles often link to HTTP addresses even when HTTPS is supported.
+/// Keep the path, query and fragment, and map the default HTTP port to HTTPS.
+Uri secureArticleUrl(Uri url) => url.scheme == 'http' && url.host.isNotEmpty
+    ? url.replace(scheme: 'https', port: url.port == 80 ? 443 : url.port)
+    : url;

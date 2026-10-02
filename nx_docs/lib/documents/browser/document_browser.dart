@@ -49,7 +49,7 @@ class DocumentBrowser extends StatefulWidget {
 
 class _DocumentBrowserState extends State<DocumentBrowser> {
   InAppWebViewController? _controller;
-  late Uri _url = widget.initialUrl;
+  late Uri _url = secureArticleUrl(widget.initialUrl);
   late final Future<String> _readability = rootBundle.loadString(
     'assets/article_reader/Readability.js',
   );
@@ -134,12 +134,26 @@ $extract
     }
   }
 
-  Future<NavigationActionPolicy> _navigate(WebUri? target) async {
-    final url = target?.uriValue;
+  Future<NavigationActionPolicy> _navigate(
+    InAppWebViewController controller,
+    URLRequest request, {
+    bool mainFrame = true,
+  }) async {
+    final url = request.url?.uriValue;
     if (url == null) return NavigationActionPolicy.CANCEL;
     final documentId = nxDocumentIdFromHref(url.toString());
     if (documentId != null) {
       widget.onOpenDocument(documentId);
+      return NavigationActionPolicy.CANCEL;
+    }
+    // Only upgrade page GETs: subresources and form submissions keep their
+    // normal WebView semantics. Never fall back to unencrypted transport.
+    final secureUrl = secureArticleUrl(url);
+    if (mainFrame &&
+        (request.method ?? 'GET').toUpperCase() == 'GET' &&
+        secureUrl != url) {
+      request.url = WebUri.uri(secureUrl);
+      await controller.loadUrl(urlRequest: request);
       return NavigationActionPolicy.CANCEL;
     }
     return isArticleWebUrl(url)
@@ -201,7 +215,9 @@ $extract
             Padding(padding: const EdgeInsets.all(12), child: Text(_error!)),
           Expanded(
             child: InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri.uri(widget.initialUrl)),
+              initialUrlRequest: URLRequest(
+                url: WebUri.uri(secureArticleUrl(widget.initialUrl)),
+              ),
               initialSettings: InAppWebViewSettings(
                 useShouldOverrideUrlLoading: true,
                 supportMultipleWindows: true,
@@ -232,11 +248,15 @@ $extract
                   );
                 }
               },
-              shouldOverrideUrlLoading: (_, action) =>
-                  _navigate(action.request.url),
+              shouldOverrideUrlLoading: (controller, action) => _navigate(
+                controller,
+                action.request,
+                mainFrame: action.isForMainFrame,
+              ),
               onCreateWindow: (controller, action) async {
                 final target = action.request.url;
-                if (await _navigate(target) == NavigationActionPolicy.ALLOW &&
+                if (await _navigate(controller, action.request) ==
+                        NavigationActionPolicy.ALLOW &&
                     mounted) {
                   await controller.loadUrl(urlRequest: URLRequest(url: target));
                 }
