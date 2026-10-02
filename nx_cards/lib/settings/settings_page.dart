@@ -1,3 +1,4 @@
+import 'package:nx_cards/goals/daily_goal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/account/account_session.dart';
@@ -135,6 +136,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const DailyGoalSettings(),
+              const SizedBox(height: 24),
               const DomainSettingsTile(),
               const Divider(),
               const SizedBox(height: 18),

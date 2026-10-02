@@ -1,3 +1,4 @@
+import 'package:nx_cards/goals/daily_goal.dart';
 import 'package:nx_cards/browser/card_list/practice_selection_page.dart';
 import 'package:nx_cards/browser/card_list/backlog_page.dart';
 import 'package:nx_cards/browser/card_list/current_cards_tab.dart';
@@ -41,6 +42,10 @@ class BookPage extends ConsumerWidget {
             sourceKind: StudySourceKind.book,
             child: Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                  child: DailyGoalBar(name: bookName, bookId: bookId),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
                   child: LibraryActions(

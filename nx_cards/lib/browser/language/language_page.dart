@@ -17,6 +17,7 @@ import 'package:nx_cards/browser/card_list/card_search.dart';
 import 'package:nx_cards/browser/card_list/study_launcher.dart';
 import 'package:nx_cards/browser/language/language_groups.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
+import 'package:nx_cards/goals/daily_goal.dart';
 
 class LanguagePage extends ConsumerWidget {
   const LanguagePage({super.key, required this.language});
@@ -67,6 +68,10 @@ class _LanguageCategoriesDashboard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (language != null) ...[
+                    DailyGoalBar(name: language!),
+                    const SizedBox(height: 20),
+                  ],
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(

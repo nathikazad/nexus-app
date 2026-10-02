@@ -5,13 +5,33 @@ import 'package:nx_db/nx_db.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewProgressionSettings {
-  const ReviewProgressionSettings({this.historyWindow = 10});
+  const ReviewProgressionSettings({
+    this.historyWindow = 10,
+    this.dailyGoals = const {},
+  });
   final int historyWindow;
+  final Map<String, int> dailyGoals;
   bool get isValid => historyWindow >= 1 && historyWindow <= 10;
-  Map<String, Object> toJson() => {'history_window': historyWindow};
+  Map<String, Object> toJson() => {
+    'history_window': historyWindow,
+    'daily_goals': dailyGoals,
+  };
   factory ReviewProgressionSettings.fromJson(Map<String, Object?> json) {
     final n = (json['history_window'] as num?)?.toInt() ?? 10;
-    return ReviewProgressionSettings(historyWindow: n >= 1 && n <= 10 ? n : 10);
+    return ReviewProgressionSettings(
+      historyWindow: n >= 1 && n <= 10 ? n : 10,
+      dailyGoals: {
+        for (final e
+            in (json['daily_goals'] is Map
+                ? (json['daily_goals'] as Map).entries
+                : <MapEntry<dynamic, dynamic>>[]))
+          if (e.key is String &&
+              e.value is int &&
+              e.value >= 0 &&
+              e.value <= 100000)
+            e.key as String: e.value as int,
+      },
+    );
   }
 }
 
@@ -58,6 +78,28 @@ class ReviewProgressionSettingsStore {
     return ReviewProgressionSettings.fromJson(data);
   }
 
+  Future<void> saveGoal(String sourceKey, int goal) async {
+    if (goal < 0 || goal > 100000) {
+      throw ArgumentError('Enter 0 to 100000 recalls.');
+    }
+    if (client == null || userId == null) {
+      throw StateError('Sign in to save goals.');
+    }
+    final result = await client!.mutate(
+      MutationOptions(
+        document: gql(
+          r'''mutation CardsDailyGoal($key: String!, $goal: Int!) { setCardsDailyGoal(sourceKey: $key, goal: $goal) }''',
+        ),
+        variables: {'key': sourceKey, 'goal': goal},
+      ),
+    );
+    if (result.hasException) throw result.exception!;
+    final payload = result.data?['setCardsDailyGoal'];
+    if (payload == null) throw StateError('Goal was not saved.');
+    final local = await SharedPreferences.getInstance();
+    await local.setString(_key, jsonEncode(payload));
+  }
+
   Future<void> save(ReviewProgressionSettings settings) async {
     if (!settings.isValid) {
       throw ArgumentError('Choose between 1 and 10 answers.');
@@ -75,7 +117,10 @@ class ReviewProgressionSettingsStore {
     );
     if (result.hasException) throw result.exception!;
     final local = await SharedPreferences.getInstance();
-    await local.setString(_key, jsonEncode(settings.toJson()));
+    await local.setString(
+      _key,
+      jsonEncode(result.data?['setCardsRecallWindow'] ?? settings.toJson()),
+    );
   }
 }
 
