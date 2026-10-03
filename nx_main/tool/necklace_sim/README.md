@@ -1,7 +1,7 @@
 # Desktop Necklace phone relay
 
-Runs the actual NX Main `NecklaceDeviceAuth`, `SocketClient`, `NecklaceRelay`,
-audio codec and device command handler on the computer using Flutter's desktop
+Runs the shared NX Main `PhoneRelayRuntime` (device authentication, production
+WebSocket, live audio, commands and stateless v2 file forwarding) on the computer using Flutter's desktop
 test runtime. `FirmwareProcess` replaces Bluetooth with a serialized pipe to
 `nexus_blackbox`, which runs the firmware startup and RTOS tasks. No phone is
 required. The normal scripted simulator remains available for repeatable tests.
@@ -15,7 +15,7 @@ python3 tool/necklace_sim/run.py --config ../../tmp/live-necklace/hetzner.json -
 ```
 
 Open **http://127.0.0.1:8765**. Click **Enable microphone**, allow the browser's
-microphone permission, then hold **Hold to talk** (or the space bar). Speak when
+microphone permission, then hold the capacitive touch area above the necklace camera (or the space bar). Speak when
 the status says the microphone is running; release to finish the turn. Replies
 play through the browser. Try “start recording audio”, “start a new recording”,
 and “stop recording audio”. Those tools are deployed on Hetzner.
@@ -52,7 +52,8 @@ those returned packets to display the last received photo. The phone relay also
 forwards the photo to the live server. This transmits the captured webcam image
 to the configured server. **Turn webcam off** stops the camera tracks.
 
-The browser scales JPEGs to fit the current legacy transfer limit (32 KB).
+The browser scales JPEGs to a small demo payload. Transfers use the v2 file
+protocol; the panel keeps only a bounded preview and does not acknowledge files.
 Missing webcam permission or a frame timeout produces an explicit capture
 failure. Periodic webcam photos are not implemented; the live adapter rejects
 `start_record` rather than silently reusing an old frame. The scripted simulator
@@ -119,29 +120,32 @@ configuration stores paths, not secrets.
 
 ## Repeatable end-to-end check
 
-From the workspace root:
+From the necklace-simulator workspace root:
 
 ```sh
-servers/venv/bin/python mobile/nx_main/tool/necklace_sim/contract_test.py --workspace "$PWD"
+servers/docker/necklace-test/test.sh software
 ```
 
-This local protocol peer uses the server's actual proof verifier and packet
-parser/serializers. It verifies signed authentication and WebSocket headers,
-real firmware Opus uplink/EOF, downlink decoding into the simulated speaker,
-three correlated recording commands, SD writes, final stopped state and a
-byte-for-byte JPEG round trip through the real camera/SD/BLE path. It
-makes no AI calls. The live runner separately exercises the deployed server.
+This runs software unit tests before firmware scenarios and a real local-server
+E2E test. The E2E test uses the same runtime as the phone and desktop panel,
+including device authentication and production WebSocket transport. It verifies
+photo/audio/telemetry uploads, IDs and timeline links, offline capture, firmware
+reboot, reconnect/resume and a lost commit acknowledgment. It makes no AI calls.
+The older `contract_test.py` protocol peer is not the current v2 integration gate.
 
 ## Current boundaries
 
 - The panel supports live microphone input and immediate speaker playback.
   Automated runs can use a WAV fixture or deterministic simulator tone.
+- Native desktop BLE discovery and physical board tests are still a separate
+  hardware stage. The shared runtime already accepts the BLE device port.
 - BLE/SD remain simulated. The live panel uses a real webcam JPEG as its
   camera sensor input; deterministic tests can load a JPEG fixture. The original
   command-file simulator retains its synthetic byte pattern unless configured.
-- Background audio files remain on the simulated SD card. The existing phone
-  does not yet implement the simulator's type-3 file sync protocol, so this
-  relay does not acknowledge or pretend to upload those files.
+- Closed background audio files use the same v2 relay as photos and telemetry.
+  Firmware retains files on SD until the backend commits them. A backend must
+  support v2 ingestion; the local test stack does. This change does not deploy
+  that support to Hetzner.
 - Audio tools are deployed on Hetzner; another server needs the corresponding
   `audio.start`, `audio.new`, and `audio.stop` tool changes.
 - Battery, haptic effects and cold resets return unsupported in this adapter.

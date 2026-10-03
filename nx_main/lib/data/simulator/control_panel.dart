@@ -3,44 +3,56 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import '../devices/necklace_identity.dart';
-import '../necklace/necklace_command_handler.dart';
+import '../file_transfer/protocol.dart';
+import '../necklace/phone_relay_runtime.dart';
 import '../socket/bg_socket_client.dart';
 import 'firmware_process.dart';
 
 /// Loopback-only UI. PCM enters the simulated microphone, never the server socket.
 class SimulatorPanel {
-  SimulatorPanel(this.firmware, this.socket, this.assets, this.artifacts);
+  SimulatorPanel(this.firmware, this.relay, this.assets, this.artifacts);
   final FirmwareProcess firmware;
-  final SocketClient socket;
+  final PhoneRelayRuntime relay;
+  SocketClient get socket => relay.socket;
   final Directory assets, artifacts;
   bool cameraEnabled = false;
   int cameraRequest = 0, photoVersion = 0;
   Completer<void>? _frameReady;
   Uint8List? _photo;
-  String? _imageName;
-  final Map<int, Uint8List> _imageParts = {};
-  int _imageTotal = 0;
+  FileManifest? _preview;
+  final List<int> _previewBytes = [];
 
-  /// Observe the actual FILE_TX notifications; preview only a complete transfer.
-  void onImagePacket(Uint8List packet) {
-    if (packet.length < 6 || packet[0] != 0 || packet[1] != 1) return;
-    final end = packet.indexOf(0, 4);
-    if (end < 0 || packet[3] == 0 || packet[2] >= packet[3]) return;
-    final name = utf8.decode(packet.sublist(4, end), allowMalformed: true);
-    if (_imageName != name) {
-      _imageName = name;
-      _imageParts.clear();
-      _imageTotal = packet[3];
+  /// Bounded UI preview only: no storage, ACKs or upload policy live here.
+  void onFilePacket(Uint8List bytes) {
+    try {
+      final packet = FilePacket.parse(bytes);
+      if (packet.op == FileOp.begin) {
+        final manifest = packet.manifest();
+        if (manifest.kind != FileKind.photo || manifest.size > 512 * 1024)
+          return;
+        if (_preview?.id != manifest.id) _previewBytes.clear();
+        _preview = manifest;
+      }
+      final manifest = _preview;
+      if (manifest == null || packet.id != manifest.id) return;
+      if (packet.op == FileOp.chunk &&
+          packet.offset == _previewBytes.length &&
+          _previewBytes.length + bytes.length - 24 <= manifest.size) {
+        _previewBytes.addAll(bytes.sublist(24));
+      }
+      if (packet.op == FileOp.finish &&
+          _previewBytes.length == manifest.size &&
+          crc32(_previewBytes) == manifest.checksum) {
+        _photo = Uint8List.fromList(_previewBytes);
+        photoVersion++;
+        _preview = null;
+        _previewBytes.clear();
+        event(
+            'Photo received from necklace: ${manifest.name} (${_photo!.length} bytes)');
+      }
+    } on FormatException {
+      // Unsupported legacy packets cannot affect the authoritative relay.
     }
-    if (packet[3] != _imageTotal) return;
-    _imageParts[packet[2]] = Uint8List.sublistView(packet, end + 1);
-    if (_imageParts.length != _imageTotal) return;
-    final assembled = BytesBuilder();
-    for (var i = 0; i < _imageTotal; i++) assembled.add(_imageParts[i]!);
-    _photo = assembled.takeBytes();
-    photoVersion++;
-    _imageParts.clear();
-    event('Photo received from necklace: $name (${_photo!.length} bytes)');
   }
 
   Future<void> _freshFrame() async {
@@ -227,8 +239,7 @@ class SimulatorPanel {
         // The capture wait stays outside _controls so incoming webcam frames
         // and microphone operations cannot deadlock behind it.
         await _freshFrame();
-        final result =
-            await NecklaceCommandHandler(firmware).handle(0, 'take_photo', {});
+        final result = await relay.execute(0, 'take_photo', {});
         event('Phone → take_photo: $result');
         request.response.headers.contentType = ContentType.json;
         request.response.write(result);
@@ -281,8 +292,7 @@ class SimulatorPanel {
             stopped = true;
           } else if ({'/audio.start', '/audio.new', '/audio.stop'}
               .contains(path)) {
-            final result = await NecklaceCommandHandler(firmware)
-                .handle(0, path.substring(1), {});
+            final result = await relay.execute(0, path.substring(1), {});
             event('Direct control ${path.substring(1)}: $result');
           } else {
             request.response.statusCode = 404;

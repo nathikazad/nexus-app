@@ -19,6 +19,13 @@ const id = '00112233-4455-6677-8899-aabbccddeeff';
 
 class Device extends BleClient {
   bool connected = true;
+  final files = <Uint8List>[];
+  @override
+  Future<bool> writeFileRx(Uint8List bytes) async {
+    files.add(bytes);
+    return true;
+  }
+
   @override
   bool get isConnected => connected;
   @override
@@ -136,6 +143,7 @@ void main() {
       'authorization': 'Bearer nd1_${'ab' * 32}',
     });
     await until(() => requests.contains('/v1/domains'));
+    expect(device.files.single, [0, 0x83, 2]);
     final before = socket.disconnects;
     device.connected = false;
     device.onConnectionStateChanged!(BleConnectionState.idle);

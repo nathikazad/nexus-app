@@ -15,10 +15,16 @@ abstract interface class NecklaceAudioControlPort {
   Future<bool> writeBackgroundAudio(int operation, {Uint8List? fileId});
 }
 
+abstract interface class NecklaceFilePort {
+  Future<bool> writeFileRx(Uint8List bytes);
+}
+
 class BleNecklaceDevicePort
-    implements NecklaceDevicePort, NecklaceAudioControlPort {
+    implements NecklaceDevicePort, NecklaceAudioControlPort, NecklaceFilePort {
   BleNecklaceDevicePort(this.client);
   final BleClient client;
+  @override
+  Future<bool> writeFileRx(Uint8List bytes) => client.writeFileRx(bytes);
   @override
   Future<bool> writeBackgroundAudio(int operation, {Uint8List? fileId}) =>
       client.writeBackgroundAudio(operation, fileId: fileId);

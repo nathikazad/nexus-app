@@ -6,7 +6,8 @@ import '../necklace/necklace_device_port.dart';
 import '../devices/necklace_identity.dart';
 
 /// A single serialized IPC channel to the real application simulator.
-class FirmwareProcess implements NecklaceDevicePort, NecklaceAudioControlPort {
+class FirmwareProcess
+    implements NecklaceDevicePort, NecklaceAudioControlPort, NecklaceFilePort {
   FirmwareProcess._(this.process, this._lines);
   final Process process;
   final StreamIterator<String> _lines;
@@ -70,6 +71,12 @@ class FirmwareProcess implements NecklaceDevicePort, NecklaceAudioControlPort {
 
   Future<void> write(String characteristic, Uint8List bytes) => request(
       'call external.simulated_phone.write_$characteristic ${identityHex(bytes)}');
+  @override
+  Future<bool> writeFileRx(Uint8List bytes) async {
+    await write('file_rx', bytes);
+    return true;
+  }
+
   @override
   Future<void> sendAudio(Uint8List bytes) => write('audio', bytes);
   @override

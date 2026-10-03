@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexus_voice_assistant/data/devices/necklace_identity.dart';
-import 'package:nexus_voice_assistant/data/necklace/necklace_relay.dart';
+import 'package:nexus_voice_assistant/data/necklace/phone_relay_runtime.dart';
 import 'package:nexus_voice_assistant/data/simulator/firmware_process.dart';
 import 'package:nexus_voice_assistant/data/simulator/control_panel.dart';
 import 'package:nexus_voice_assistant/data/simulator/software_identity.dart';
@@ -32,49 +32,32 @@ void main() {
     if (deviceId == null)
       throw StateError(
           'Enroll Simulated Necklace and supply pairing_setup_file first');
-    final auth = NecklaceDeviceAuth(
-        baseUrl: config['http_url'] as String,
-        deviceId: deviceId,
-        exchange: identity.exchange,
-        isCurrent: () => true);
-    addTearDown(auth.close);
     final socket = SocketClient();
     final firmware = await FirmwareProcess.start(
         config['binary'] as String, config['output'] as String);
+    final relay = PhoneRelayRuntime(device: firmware, socket: socket);
     addTearDown(() async {
       firmware.onNotification = null;
-      await socket.disconnect();
+      await relay.close();
       await firmware.close();
     });
-    final relay = NecklaceRelay(
-        device: firmware,
-        socketClient: socket,
-        emit: (_, __) {},
-        currentGeneration: () => 1);
-    relay.attachSocket();
     SimulatorPanel? panelObserver;
     firmware.onNotification = (channel, bytes) {
-      if (channel == 'audio') relay.onAudioPacket(bytes);
-      if (channel == 'file' &&
-          bytes.length >= 5 &&
-          bytes[0] == 0 &&
-          bytes[1] == 1) {
-        panelObserver?.onImagePacket(bytes);
-        relay.onImagePacket(bytes);
-      }
+      relay.onNotification(channel, bytes);
+      if (channel == 'file') panelObserver?.onFilePacket(bytes);
     };
     await firmware.request('advance 1000');
     await firmware.request('call external.simulated_phone.attach_relay');
     // The initial interactive fixture is idle. The firmware's default is ON.
     await firmware.writeBackgroundAudio(0);
     await firmware.request('advance 1000');
-    final connected = await socket.connect(config['socket_url'] as String,
-        headers: {
-          'X-Client-Id': 'necklace',
-          if (config['domain_id'] != null)
-            'X-Domain-Id': '${config['domain_id']}'
-        },
-        authHeaders: auth.headers);
+    final connected = await relay.connect(PhoneRelaySession(
+        httpUrl: config['http_url'] as String,
+        socketUrl: config['socket_url'] as String,
+        deviceId: deviceId,
+        exchangeIdentity: identity.exchange,
+        isCurrent: () => firmware.failure == null,
+        domainId: config['domain_id'] as int?));
     expect(connected, isTrue,
         reason: 'Authenticated necklace WebSocket handshake');
     if (config['live_microphone'] == true) {
@@ -89,7 +72,7 @@ void main() {
     bool pressed = false, released = false;
     final panel = SimulatorPanel(
         firmware,
-        socket,
+        relay,
         Directory('tool/necklace_sim/panel'),
         Directory(config['output'] as String));
     panelObserver = panel;

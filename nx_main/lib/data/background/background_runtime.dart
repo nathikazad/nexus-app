@@ -1,4 +1,3 @@
-import '../file_transfer/relay.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -10,18 +9,15 @@ import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart'
     show BleClient;
 import 'package:nexus_voice_assistant/data/gps/gps_upload_manager.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
-import '../file_transfer/protocol.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_observability/nx_observability.dart';
 import '../../application/devices/device_command.dart';
 import '../../application/devices/device_command_result.dart';
-import '../../application/sessions/agent_routes.dart';
 import '../necklace/necklace_device_port.dart';
-import '../necklace/necklace_relay.dart';
+import '../necklace/phone_relay_runtime.dart';
 import 'background_commands.dart';
 import 'background_session_command.dart';
 import 'ambient_storage_domain.dart';
-import '../devices/necklace_identity.dart';
 import '../devices/necklace_enrollment.dart';
 
 class BackgroundRuntime {
@@ -44,39 +40,30 @@ class BackgroundRuntime {
 
     final bleClient = device ?? BleClient();
     final socketClient = socket ?? SocketClient();
-    FileRelay? fileRelay;
     GpsUploadManager? gpsUploadManager;
     http.Client? authenticatedHttpClient;
     int sessionGeneration = 0;
-    NecklaceDeviceAuth? deviceAuth;
     bool pairingDevice = false;
     Map<String, dynamic>? lastSocketConfig;
     Future<void> Function(Map<String, dynamic>)? reconnect;
 
-    final relay = NecklaceRelay(
+    final relay = PhoneRelayRuntime(
       device: BleNecklaceDevicePort(bleClient),
-      socketClient: socketClient,
+      socket: socketClient,
       emit: service.invoke,
-      currentGeneration: () => sessionGeneration,
     );
     bool appIsForeground = true;
     String? gpsHttpBaseUrl;
     String? gpsTimezoneLabel;
 
     Future<void> retireSession() async {
-      deviceAuth?.close();
-      deviceAuth = null;
       final gps = gpsUploadManager;
       final client = authenticatedHttpClient;
       gpsUploadManager = null;
-      final files = fileRelay;
-      fileRelay = null;
-      socketClient.onFilePacket = null;
-      await files?.close();
       authenticatedHttpClient = null;
       gpsHttpBaseUrl = null;
       gpsTimezoneLabel = null;
-      final disconnected = socketClient.disconnect();
+      final disconnected = relay.disconnect();
       client?.close();
       await gps?.stop(flushPending: false);
       await disconnected;
@@ -183,7 +170,8 @@ class BackgroundRuntime {
       }
     };
 
-    bleClient.onAudioPacketReceived = relay.onAudioPacket;
+    bleClient.onAudioPacketReceived =
+        (bytes) => relay.onNotification('audio', bytes);
 
     bleClient.onError = (error) {
       debugPrint("[BLE BG] Error: $error");
@@ -218,8 +206,6 @@ class BackgroundRuntime {
     // ============================================================================
     // 3. SOCKET CONFIGURATION
     // ============================================================================
-
-    relay.attachSocket();
 
     // ============================================================================
     // 4. SERVICE EVENT HANDLERS
@@ -282,20 +268,17 @@ class BackgroundRuntime {
       final uploadBase = telemetryHttpBaseUrl.isNotEmpty
           ? telemetryHttpBaseUrl
           : httpBaseFromSocketUrl(url);
-      final auth = NecklaceDeviceAuth(
-        baseUrl: uploadBase,
+      final connected = await relay.connect(PhoneRelaySession(
+        httpUrl: uploadBase,
+        socketUrl: url,
         deviceId: enrolledId,
-        exchange: bleClient.exchangeIdentity,
+        exchangeIdentity: bleClient.exchangeIdentity,
         isCurrent: () =>
             generation == sessionGeneration &&
             bleClient.isConnected &&
             bleClient.device?.remoteId.str == remoteId,
-      );
-      deviceAuth = auth;
-      final socketMetadata = AgentRoutes.necklace.headers();
-      await socketClient.connect(url,
-          headers: socketMetadata, authHeaders: auth.headers);
-      if (generation != sessionGeneration) return;
+      ));
+      if (!connected || generation != sessionGeneration) return;
 
       // User authentication belongs to phone telemetry/GPS, not Necklace's socket.
       final oidc = NexusOidcService();
@@ -333,17 +316,6 @@ class BackgroundRuntime {
       );
       authenticatedHttpClient = client;
       unawaited(printServerClockDrift(uploadBase, client));
-      fileRelay = FileRelay(
-        sendToServer: socketClient.sendFilePacket,
-        sendToDevice: (bytes) async {
-          if (generation != sessionGeneration || !bleClient.isConnected) return;
-          if (!await bleClient.writeFileRx(bytes)) {
-            throw StateError('File reply failed');
-          }
-        },
-      );
-      socketClient.onFilePacket = fileRelay!.fromServer;
-      await bleClient.writeFileRx(Uint8List.fromList(fileHello));
       gpsHttpBaseUrl = uploadBase;
       gpsTimezoneLabel = localTimezoneOffsetLabel();
       await startGpsIfBackground('socket.connect');
@@ -554,13 +526,7 @@ class BackgroundRuntime {
 
     // Relay all file kinds to the authoritative backend receiver.
     bleClient.onFileTxDataReceived = (data) {
-      if (data.length >= 4 && data[0] == 0 && data[1] == 0x84) {
-        try {
-          fileRelay?.fromDevice(data);
-        } catch (error) {
-          debugPrint('[File transfer] $error');
-        }
-      }
+      relay.onNotification('file', data);
       service.invoke('ble.fileTx.data', {'data': data.toList()});
     };
 

@@ -4,9 +4,57 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:nexus_voice_assistant/data/file_transfer/protocol.dart';
-import 'package:nexus_voice_assistant/data/file_transfer/relay.dart';
-import 'package:nexus_voice_assistant/data/necklace/necklace_command_handler.dart';
+import 'package:nexus_voice_assistant/data/necklace/phone_relay_runtime.dart';
+import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
+import 'package:nexus_voice_assistant/data/simulator/software_identity.dart';
 import 'package:nexus_voice_assistant/data/simulator/firmware_process.dart';
+
+// Faults wrap the production socket; handshake, encoding and reads remain real.
+class FaultSocket extends SocketClient {
+  final committed = <String>{};
+  final manifests = <String, FileManifest>{};
+  bool dropCommit = true, disconnectOnce = true, resumedPartial = false;
+  Future<void> recovery = Future.value();
+  late Future<void> Function() reconnect;
+  @override
+  bool sendFilePacket(Uint8List bytes) {
+    final p = FilePacket.parse(bytes);
+    if (p.op == FileOp.begin) manifests[p.id] = p.manifest();
+    final sent = super.sendFilePacket(bytes);
+    if (sent &&
+        disconnectOnce &&
+        p.op == FileOp.chunk &&
+        manifests[p.id]?.kind == FileKind.telemetry) {
+      disconnectOnce = false;
+      recovery = disconnect().then((_) async {
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        await reconnect();
+      });
+    }
+    return sent;
+  }
+
+  @override
+  set onFilePacket(Future<void> Function(Uint8List)? callback) {
+    super.onFilePacket = callback == null
+        ? null
+        : (bytes) async {
+            final p = FilePacket.parse(bytes);
+            if (p.op == FileOp.resume &&
+                p.offset > 0 &&
+                manifests[p.id]?.kind == FileKind.telemetry)
+              resumedPartial = true;
+            if (p.op == FileOp.commit) {
+              committed.add(p.id);
+              if (dropCommit) {
+                dropCommit = false;
+                return;
+              }
+            }
+            await callback(bytes);
+          };
+  }
+}
 
 void main() {
   final binary = Platform.environment['NEXUS_FIRMWARE_SIM'];
@@ -17,7 +65,11 @@ void main() {
     final config = jsonDecode(await File(configPath!).readAsString())
         as Map<String, dynamic>;
     final configDir = File(configPath).parent;
-    final token = await File('${configDir.path}/device-token').readAsString();
+    final identity = await SoftwareIdentity.start(
+        Platform.environment['NEXUS_TEST_PYTHON'] ?? 'python3',
+        'tool/necklace_sim/identity.py',
+        '${configDir.path}/relay-identity.json');
+    addTearDown(identity.close);
     final root =
         await Directory('../../tmp/necklace-websocket').createTemp('e2e-');
     final seeds = File('$configPath.next-seed');
@@ -31,96 +83,47 @@ void main() {
       'x-domain-id': '${config['necklace']['domain_id']}'
     };
     final client = http.Client();
-    WebSocket? socket;
-    Future<void> replies = Future.value();
-    final committed = <String>{}, manifests = <String, FileManifest>{};
-    var dropCommit = true, disconnectOnce = true, resumedPartial = false;
-    Future<void> reconnectWork = Future.value();
-    late Future<void> Function() reconnect;
-    final relay = FileRelay(sendToServer: (b) {
-      final p = FilePacket.parse(b);
-      if (p.op == FileOp.begin) manifests[p.id] = p.manifest();
-      File('${root.path}/frames.log').writeAsStringSync(
-          'TX ${p.op} ${p.id} ${b.length}\n',
-          mode: FileMode.append);
-      if (socket?.readyState != WebSocket.open) return false;
-      socket!.add(b);
-      if (disconnectOnce &&
-          p.op == FileOp.chunk &&
-          manifests[p.id]?.kind == FileKind.telemetry) {
-        disconnectOnce = false;
-        final closing = socket!;
-        socket = null;
-        reconnectWork = closing.close().then((_) async {
-          await Future<void>.delayed(const Duration(milliseconds: 30));
-          await reconnect();
-        });
-      }
-      return true;
-    }, sendToDevice: (b) async {
-      final p = FilePacket.parse(b);
-      File('${root.path}/frames.log')
-          .writeAsStringSync('RX ${p.op} ${p.id}\n', mode: FileMode.append);
-      if (p.op == FileOp.resume &&
-          p.offset > 0 &&
-          manifests[p.id]?.kind == FileKind.telemetry) {
-        resumedPartial = true;
-      }
-      if (p.op == FileOp.commit) {
-        committed.add(p.id);
-        if (dropCommit) {
-          dropCommit = false;
-          return;
-        }
-      }
-      await firmware.write('file_rx', b);
-    });
+    final socket = FaultSocket();
+    var relay = PhoneRelayRuntime(device: firmware, socket: socket);
     void attach() {
-      firmware.onNotification = (channel, b) {
-        if (channel == 'file') relay.fromDevice(b);
-      };
+      firmware.onNotification = relay.onNotification;
     }
 
     Future<void> connect() async {
-      socket = await WebSocket.connect(config['websocket_url'], headers: {
-        'authorization': 'Bearer $token',
-        'x-client-id': 'necklace'
-      });
-      socket!.listen((message) {
-        if (message is List<int> &&
-            message.length >= 4 &&
-            message[0] == 0 &&
-            message[1] == 0x84) {
-          replies = replies
-              .then((_) => relay.fromServer(Uint8List.fromList(message)));
-        }
-      });
+      expect(
+          await relay.connect(PhoneRelaySession(
+            httpUrl: config['http_url'],
+            socketUrl: config['websocket_url'],
+            deviceId: config['device_id'],
+            domainId: config['necklace']['domain_id'],
+            exchangeIdentity: identity.exchange,
+            isCurrent: () => firmware.failure == null,
+          )),
+          true);
     }
+
+    socket.reconnect = connect;
 
     Future<void> advance(int milliseconds) async {
       for (var n = 0; n < milliseconds; n += 100) {
         await firmware.request('advance 100');
         // Let real network I/O progress independently of firmware virtual time.
         await Future<void>.delayed(const Duration(milliseconds: 5));
-        await replies;
-        await reconnectWork;
+        await relay.drained;
+        await socket.recovery;
       }
     }
 
     addTearDown(() async {
-      await socket?.close();
-      await replies;
       await relay.close();
       await firmware.close();
       client.close();
     });
-    reconnect = connect;
     attach();
     await advance(1500);
     await firmware.request('call external.simulated_phone.attach_relay');
     await firmware.writeBackgroundAudio(0);
     await advance(3000);
-    final commands = NecklaceCommandHandler(firmware);
     for (final key in ['photo', 'audio']) {
       final response = await client.get(
           Uri.parse('${config['http_url']}${config[key]['url']}'),
@@ -128,38 +131,37 @@ void main() {
       expect(response.statusCode, 404,
           reason: 'Model reference exists before media');
     }
-    await firmware.write('file_rx', Uint8List.fromList(fileHello));
     expect(
-        jsonDecode((await commands.handle(1, 'take_photo',
+        jsonDecode((await relay.execute(1, 'take_photo',
             {'file_id': config['photo']['file_id']}))!)['success'],
         true);
     await advance(3000);
-    expect(committed, isEmpty);
+    expect(socket.committed, isEmpty);
     final sd = '${root.path}/firmware/sd';
     expect(File('$sd/${config['photo']['file_id']}.jpg').existsSync(), true);
     // Device reboot + no phone file cache: backend and SD are the durable ends.
+    await relay.close();
     await firmware.close();
     firmware = await FirmwareProcess.start(binary, '${root.path}/restarted',
         restoreSd: sd, seed: seed + 1);
+    relay = PhoneRelayRuntime(device: firmware, socket: socket);
     attach();
     await advance(1500);
     await firmware.request('call external.simulated_phone.attach_relay');
     await firmware.writeBackgroundAudio(0);
     await advance(3000);
     await connect();
-    await firmware.write('file_rx', Uint8List.fromList(fileHello));
-    final resumedCommands = NecklaceCommandHandler(firmware);
     expect(
-        jsonDecode((await resumedCommands.handle(2, 'audio.start',
+        jsonDecode((await relay.execute(2, 'audio.start',
             {'file_id': config['audio']['file_id']}))!)['success'],
         true);
     await advance(3000);
     expect(
-        jsonDecode((await resumedCommands.handle(3, 'audio.new',
+        jsonDecode((await relay.execute(3, 'audio.new',
             {'file_id': config['audio_new']['file_id']}))!)['success'],
         true);
     await advance(3000);
-    await resumedCommands.handle(4, 'audio.stop', {});
+    await relay.execute(4, 'audio.stop', {});
     final telemetry =
         File('${root.path}/restarted/sd/telemetry/outbox/demo.jsonl');
     await telemetry.parent.create(recursive: true);
@@ -167,26 +169,26 @@ void main() {
     await advance(20000);
     for (final key in ['photo', 'audio', 'audio_new']) {
       final id = config[key]['file_id'];
-      expect(committed, contains(id));
+      expect(socket.committed, contains(id));
       final response = await client.get(
           Uri.parse('${config['http_url']}${config[key]['url']}'),
           headers: headers);
       expect(response.statusCode, 200);
-      expect(response.bodyBytes.length, manifests[id]!.size);
-      expect(crc32(response.bodyBytes), manifests[id]!.checksum);
+      expect(response.bodyBytes.length, socket.manifests[id]!.size);
+      expect(crc32(response.bodyBytes), socket.manifests[id]!.checksum);
       expect(
           File('${root.path}/restarted/sd/${id}${key == 'photo' ? '.jpg' : '.opusraw'}')
               .existsSync(),
           false);
     }
-    expect(
-        manifests.values.map((m) => m.kind).toSet(), FileKind.values.toSet());
+    expect(socket.manifests.values.map((m) => m.kind).toSet(),
+        FileKind.values.toSet());
     expect(Directory('${root.path}/phone').existsSync(), false);
     final telemetryManifest =
-        manifests.values.singleWhere((m) => m.name == 'demo.jsonl');
-    expect(committed, contains(telemetryManifest.id));
+        socket.manifests.values.singleWhere((m) => m.name == 'demo.jsonl');
+    expect(socket.committed, contains(telemetryManifest.id));
     expect(telemetry.existsSync(), false);
-    expect(resumedPartial, true,
+    expect(socket.resumedPartial, true,
         reason: 'Backend resumes partial telemetry after WebSocket reconnect');
     print('WebSocket transfer artifacts: ${root.path}');
   },
