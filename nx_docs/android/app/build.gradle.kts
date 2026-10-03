@@ -5,6 +5,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+apply(from = "flutter-ime-patch.gradle.kts")
+
 android {
     namespace = "com.nexus.nx_docs"
     compileSdk = flutter.compileSdkVersion
@@ -31,6 +33,11 @@ android {
         manifestPlaceholders["oidcRedirectScheme"] = "nx-docs"
     }
 
+    // Compile the same embedding patch in the JVM test sandbox.
+    sourceSets.getByName("test").java.srcDir("src/main/java/io/flutter/plugin/editing")
+
+    testOptions { unitTests.isIncludeAndroidResources = true }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -44,4 +51,7 @@ flutter {
     source = "../.."
 }
 
-dependencies { testImplementation("junit:junit:4.13.2") }
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.15.1")
+}
