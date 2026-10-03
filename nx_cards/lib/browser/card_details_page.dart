@@ -720,7 +720,7 @@ class _KnowledgeBanner extends StatelessWidget {
           ),
         ),
         if (metricValue != null)
-          Flexible(
+          Expanded(
             flex: 2,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,

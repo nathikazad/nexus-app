@@ -115,9 +115,10 @@ class DirectionChoices extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   '$percentage%',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
