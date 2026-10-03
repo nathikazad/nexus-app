@@ -34,7 +34,7 @@ class CardDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
-  StudyCard? _loadedCard;
+  Set<RecallComponent> _statsComponents = RecallComponent.values.toSet();
   CardContent? _editedContent;
   bool _showNotes = false;
   bool _savingStatus = false;
@@ -101,15 +101,6 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     invalidate();
   }
 
-  List<RecallComponent> get _reviewedCues => [
-    for (final cue in RecallComponent.values)
-      if (selectionReviews(_loadedCard ?? widget.card, cue).isNotEmpty) cue,
-  ];
-
-  RecallComponent get _visibleCue => ref.read(
-    languageDirectionProvider((_loadedCard ?? widget.card).language),
-  );
-
   @override
   Widget build(BuildContext context) {
     final body = widget.card.isSummary
@@ -129,16 +120,27 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
       learningStatus: _updatedStatus,
       content: _editedContent,
     );
-    _loadedCard = card;
     final languageContent = switch (card.content) {
       final LanguageCardContent content => content,
       _ => null,
     };
     final audioRepository = ref.watch(cardAudioRepositoryProvider);
     final audioUrl = languageContent?.audioUrl;
-    final reviewedCues = _reviewedCues;
-    final visibleCue = _visibleCue;
-    final hasStats = reviewedCues.isNotEmpty;
+    final availableComponents = [
+      RecallComponent.meaning,
+      RecallComponent.sound,
+      if (!card.spokenOnly) RecallComponent.script,
+    ];
+    final intersection = _statsComponents.intersection(
+      availableComponents.toSet(),
+    );
+    final components = intersection.isEmpty
+        ? availableComponents.toSet()
+        : intersection;
+    final cues = selectedCues(card, components);
+    final reviews = [for (final cue in cues) ...card.reviewHistoryFor(cue)]
+      ..sort((a, b) => b.reviewedAt.compareTo(a.reviewedAt));
+    final hasStats = selectionReviews(card, null).isNotEmpty;
     final hasExamples = languageContent?.examples.isNotEmpty == true;
     final similarGroups = languageContent?.similarWordGroups.isNotEmpty == true
         ? similarGroupsForCard(
@@ -195,7 +197,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                     ),
                     if (card.learningStatus == LearningStatus.recall) ...[
                       const SizedBox(width: 12),
-                      _RecallStrengthPill(card: card, cue: visibleCue),
+                      _RecallStrengthPill(card: card),
                     ],
                     if (card.suspended)
                       const _StatusPill(
@@ -375,11 +377,50 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                     ),
                   const SizedBox(height: 20),
                   if (visibleTab == CardDetailsTab.stats) ...[
-                    _DirectionHeading(label: _cueLabel(visibleCue, card)),
+                    if (card.isLanguageCard) ...[
+                      DirectionChoices(
+                        key: const ValueKey('stats-components'),
+                        language: card.language ?? '',
+                        allowed: availableComponents,
+                        retentionPercentages: {
+                          for (final component in availableComponents)
+                            component: recallScore(
+                              card,
+                              component,
+                              window:
+                                  ref
+                                      .watch(reviewProgressionSettingsProvider)
+                                      .value
+                                      ?.historyWindow ??
+                                  10,
+                            ).percentage,
+                        },
+                        selected: components,
+                        onChanged: (value) =>
+                            setState(() => _statsComponents = value),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${cues.length} directions · To or from selected skills',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: RecallColors.muted,
+                        ),
+                      ),
+                    ] else
+                      const Text(
+                        'Front / Back',
+                        style: TextStyle(color: RecallColors.muted),
+                      ),
                     const SizedBox(height: 16),
-                    _RecallSummary(card: card, cue: visibleCue),
+                    _RecallSummary(card: card, cues: cues, reviews: reviews),
                     const SizedBox(height: 24),
-                    _ReviewHistory(reviews: selectionReviews(card, visibleCue)),
+                    if (reviews.isEmpty)
+                      const Text(
+                        'No reviews for these skills yet.',
+                        style: TextStyle(color: RecallColors.muted),
+                      )
+                    else
+                      _ReviewHistory(reviews: reviews),
                   ] else if (visibleTab == CardDetailsTab.similar)
                     SimilarWordGroups(groups: similarGroups)
                   else if (languageContent != null)
@@ -399,10 +440,9 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
 }
 
 class _RecallStrengthPill extends ConsumerWidget {
-  const _RecallStrengthPill({required this.card, required this.cue});
+  const _RecallStrengthPill({required this.card});
 
   final StudyCard card;
-  final RecallComponent cue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -513,32 +553,23 @@ class _PlainField extends StatelessWidget {
   );
 }
 
-class _DirectionHeading extends StatelessWidget {
-  const _DirectionHeading({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    label,
-    key: const ValueKey('single-review-direction'),
-    style: const TextStyle(fontSize: 14, color: RecallColors.muted),
-  );
-}
-
 class _RecallSummary extends ConsumerWidget {
-  const _RecallSummary({required this.card, required this.cue});
+  const _RecallSummary({
+    required this.card,
+    required this.cues,
+    required this.reviews,
+  });
 
   final StudyCard card;
-  final RecallComponent cue;
+  final Set<StudyCue> cues;
+  final List<CardReview> reviews;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final schedules = selectionCues(card, cue).map(card.scheduleFor).toList();
+    final schedules = cues.map(card.scheduleFor).toList();
     final dueDates = schedules.map((s) => s.dueAt).nonNulls.toList()..sort();
     final reviewDates = schedules.map((s) => s.lastReviewedAt).nonNulls.toList()
       ..sort();
-    final reviews = selectionReviews(card, cue);
     final now = DateTime.now().toUtc();
     final successes = reviews.where((review) => review.rating >= 3).length;
     final failures = reviews.length - successes;
@@ -548,8 +579,20 @@ class _RecallSummary extends ConsumerWidget {
     final streak = _successStreak(reviews);
     final window =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
-    final stage = learningStage(card, cue, window: window);
-    final score = recallScore(card, cue, window: window);
+    final scores = [
+      for (final cue in cues) recallScore(card, cue, window: window),
+    ];
+    final score = RecallScore(
+      recalled: scores.fold(0, (sum, score) => sum + score.recalled),
+      attempts: scores.fold(0, (sum, score) => sum + score.attempts),
+      denominator: cues.length * window,
+    );
+    final stage = switch (card.learningStatus) {
+      LearningStatus.future => LearningStage.future,
+      LearningStatus.practice => LearningStage.upcoming,
+      LearningStatus.recall =>
+        score.strong ? LearningStage.past : LearningStage.current,
+    };
     final due = dueDates.firstOrNull;
 
     return Column(
@@ -677,22 +720,26 @@ class _KnowledgeBanner extends StatelessWidget {
           ),
         ),
         if (metricValue != null)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                metricValue!,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
+          Flexible(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  metricValue!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              Text(
-                metricLabel,
-                style: const TextStyle(fontSize: 11, color: Colors.white60),
-              ),
-            ],
+                Text(
+                  metricLabel,
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(fontSize: 11, color: Colors.white60),
+                ),
+              ],
+            ),
           ),
       ],
     ),
@@ -1094,9 +1141,6 @@ class _StatusPill extends StatelessWidget {
     );
   }
 }
-
-String _cueLabel(RecallComponent cue, StudyCard card) =>
-    card.isLanguageCard ? cue.label : 'Front / Back';
 
 String _cardSource(StudyCard card) =>
     card.sourceBookName ?? card.language ?? 'Flashcard';

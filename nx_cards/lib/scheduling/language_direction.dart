@@ -86,10 +86,12 @@ class DirectionChoices extends StatelessWidget {
     required this.onChanged,
     this.allowed = RecallComponent.values,
     this.frontOnly = false,
+    this.retentionPercentages = const {},
   });
   final String language;
   final List<RecallComponent> allowed;
   final bool frontOnly;
+  final Map<RecallComponent, int> retentionPercentages;
   final Set<RecallComponent> selected;
   final ValueChanged<Set<RecallComponent>> onChanged;
 
@@ -109,6 +111,16 @@ class DirectionChoices extends StatelessWidget {
                 const SizedBox(width: 6),
               ],
               Text(cue.label),
+              if (retentionPercentages[cue] case final percentage?) ...[
+                const SizedBox(width: 6),
+                Text(
+                  '$percentage%',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ],
           ),
           tooltip: switch (cue) {

@@ -11,6 +11,158 @@ import 'package:nx_cards/browser/card_details_page.dart';
 
 void main() {
   testWidgets(
+    'unreviewed skill selection shows empty history without losing controls',
+    (tester) async {
+      final card = _card(
+        schedules: {
+          for (final cue in StudyCue.languageDirections)
+            cue: const CardSchedule.initial(enabled: true),
+        },
+        reviewHistory: {
+          StudyCue.meaningToSound: [
+            _review('sound', DateTime.now(), rating: 3),
+          ],
+        },
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+          child: MaterialApp(
+            home: CardDetailsPage(card: card, initialTab: CardDetailsTab.stats),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (final skill in ['meaning', 'sound']) {
+        final chip = find.byKey(ValueKey('direction-$skill'));
+        await Scrollable.ensureVisible(tester.element(chip), alignment: .4);
+        await tester.pumpAndSettle();
+        await tester.tap(chip);
+        await tester.pumpAndSettle();
+      }
+      expect(
+        tester
+            .widget<FilterChip>(find.byKey(const ValueKey('direction-meaning')))
+            .selected,
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<FilterChip>(find.byKey(const ValueKey('direction-sound')))
+            .selected,
+        isFalse,
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(find.text('No reviews for these skills yet.'), findsOneWidget);
+      expect(find.text('0/40 · 0 recent attempts'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  for (final spokenOnly in [false, true]) {
+    testWidgets(
+      'stats chips union histories and adapt to spokenOnly=$spokenOnly',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 844));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final time = DateTime.now().subtract(const Duration(days: 1));
+        final card =
+            _card(
+              schedules: {
+                for (final cue in StudyCue.languageDirections)
+                  cue: const CardSchedule.initial(enabled: true),
+              },
+              reviewHistory: {
+                for (final cue in StudyCue.languageDirections)
+                  cue: [
+                    _review(
+                      cue.storageKey,
+                      time,
+                      rating: cue == StudyCue.scriptToSound ? 1 : 3,
+                    ),
+                  ],
+              },
+            ).copyWith(
+              content: LanguageCardContent(
+                english: 'cat',
+                originalScript: '猫',
+                transliteration: 'māo',
+                spokenOnly: spokenOnly,
+              ),
+            );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+            child: MaterialApp(
+              theme: buildRecallTheme(),
+              home: CardDetailsPage(
+                card: card,
+                initialTab: CardDetailsTab.stats,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        Finder chip(String name) => find.byKey(ValueKey('direction-$name'));
+        expect(tester.widget<FilterChip>(chip('meaning')).selected, isTrue);
+        expect(tester.widget<FilterChip>(chip('sound')).selected, isTrue);
+        expect(chip('script'), spokenOnly ? findsNothing : findsOneWidget);
+        expect(
+          find.descendant(of: chip('meaning'), matching: find.text('10%')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: chip('sound'),
+            matching: find.text(spokenOnly ? '10%' : '8%'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            spokenOnly
+                ? '2/20 · 2 recent attempts'
+                : '5/60 · 6 recent attempts',
+          ),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(chip('sound'));
+        await tester.tap(chip('sound'));
+        await tester.pumpAndSettle();
+        // Two selected skills still cover all six directions, without duplication.
+        expect(
+          find.text(
+            spokenOnly
+                ? '2/20 · 2 recent attempts'
+                : '5/60 · 6 recent attempts',
+          ),
+          findsOneWidget,
+        );
+        if (!spokenOnly) {
+          await tester.tap(chip('script'));
+          await tester.pumpAndSettle();
+          expect(find.text('4/40 · 4 recent attempts'), findsOneWidget);
+          expect(find.text('4 yes · 0 no'), findsOneWidget);
+        }
+        await tester.drag(find.byType(ListView), const Offset(0, 1000));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(chip('meaning'));
+        await tester.tap(chip('meaning'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilterChip>(chip('meaning')).selected, isTrue);
+        await tester.drag(find.byType(ListView), const Offset(0, -700));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(spokenOnly ? '2 reviews' : '4 reviews'),
+          findsOneWidget,
+        );
+        await tester.binding.setSurfaceSize(const Size(820, 1000));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets(
     'Spoken only is below Active, saves and retains value after a failed save',
     (tester) async {
       final library = _StatusLibrary();
@@ -357,62 +509,72 @@ void main() {
     expect(decoration.color, isNot(const Color(0xfff4f4f5)));
   });
 
-  testWidgets('only offers recall directions with collected history', (
-    tester,
-  ) async {
-    final reviewedAt = DateTime.now().toUtc().subtract(const Duration(days: 2));
-    final card = _card(
-      schedules: {
-        for (final direction in StudyCue.values)
-          direction: CardSchedule.initial(
-            enabled: direction != StudyCue.backToFront,
-          ),
-        StudyCue.meaningToScript: _schedule(reviewedAt, reviewCount: 2),
-        StudyCue.scriptToMeaning: _schedule(reviewedAt, reviewCount: 1),
-        StudyCue.scriptToSound: const CardSchedule.initial(enabled: true),
-      },
-      reviewHistory: {
-        StudyCue.meaningToScript: [
-          _review('from-1', reviewedAt, rating: 1),
-          _review('from-2', reviewedAt.add(const Duration(days: 1)), rating: 3),
-        ],
-        StudyCue.scriptToMeaning: [_review('to-1', reviewedAt, rating: 3)],
-        StudyCue.scriptToSound: const [],
-      },
-    );
+  testWidgets(
+    'stats includes all skills and preserves existing review history',
+    (tester) async {
+      final reviewedAt = DateTime.now().toUtc().subtract(
+        const Duration(days: 2),
+      );
+      final card = _card(
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+          StudyCue.meaningToScript: _schedule(reviewedAt, reviewCount: 2),
+          StudyCue.scriptToMeaning: _schedule(reviewedAt, reviewCount: 1),
+          StudyCue.scriptToSound: const CardSchedule.initial(enabled: true),
+        },
+        reviewHistory: {
+          StudyCue.meaningToScript: [
+            _review('from-1', reviewedAt, rating: 1),
+            _review(
+              'from-2',
+              reviewedAt.add(const Duration(days: 1)),
+              rating: 3,
+            ),
+          ],
+          StudyCue.scriptToMeaning: [_review('to-1', reviewedAt, rating: 3)],
+          StudyCue.scriptToSound: const [],
+        },
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
-        child: MaterialApp(home: CardDetailsPage(card: card)),
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+          child: MaterialApp(home: CardDetailsPage(card: card)),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Stats'), findsOneWidget);
-    expect(find.text('Examples (1)'), findsOneWidget);
-    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.text('Examples (1)')).dx,
-      lessThan(tester.getTopLeft(find.text('Stats')).dx),
-    );
-    await tester.ensureVisible(find.text('Stats'));
-    await tester.tap(find.text('Stats'));
-    await tester.pumpAndSettle();
-    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
-    expect(
-      find.byKey(const ValueKey('review-direction-selector')),
-      findsNothing,
-    );
-    expect(find.text('Meaning'), findsOneWidget);
-    expect(find.text('2 yes · 1 no'), findsOneWidget);
-    await tester.drag(find.byType(ListView), const Offset(0, -900));
-    await tester.pumpAndSettle();
-    expect(find.text('3 reviews'), findsOneWidget);
-    expect(find.byKey(const ValueKey('review-history-graph')), findsOneWidget);
-  });
+      expect(find.text('Stats'), findsOneWidget);
+      expect(find.text('Examples (1)'), findsOneWidget);
+      expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Examples (1)')).dx,
+        lessThan(tester.getTopLeft(find.text('Stats')).dx),
+      );
+      await tester.ensureVisible(find.text('Stats'));
+      await tester.tap(find.text('Stats'));
+      await tester.pumpAndSettle();
+      expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('review-direction-selector')),
+        findsNothing,
+      );
+      expect(find.text('Meaning'), findsOneWidget);
+      expect(find.text('2 yes · 1 no'), findsOneWidget);
+      await tester.drag(find.byType(ListView), const Offset(0, -900));
+      await tester.pumpAndSettle();
+      expect(find.text('3 reviews'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('review-history-graph')),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('does not show navigation for a single reviewed direction', (
+  testWidgets('shows all skill chips even with a single reviewed direction', (
     tester,
   ) async {
     final reviewedAt = DateTime.now().toUtc().subtract(const Duration(days: 1));
@@ -443,10 +605,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const ValueKey('single-review-direction')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('stats-components')), findsOneWidget);
     expect(find.text('Meaning'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('review-direction-selector')),
@@ -504,8 +663,8 @@ void main() {
 
     expect(find.text('Backlog'), findsOneWidget);
     expect(find.text('Learning step 2 of 2'), findsNothing);
-    expect(find.text('0%'), findsOneWidget);
-    expect(find.text('0/40 · 4 recent attempts'), findsOneWidget);
+    expect(find.text('0%'), findsNWidgets(4));
+    expect(find.text('0/60 · 4 recent attempts'), findsOneWidget);
     expect(find.text('estimated recall'), findsNothing);
   });
 }
