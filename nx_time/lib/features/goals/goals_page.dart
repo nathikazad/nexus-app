@@ -1289,7 +1289,10 @@ Widget _domainGoalRow(
       ref,
       ref.watch(timeDomainsProvider).asData?.value.origins[item.id],
     );
-    final name = appearance.label;
+    final name = sharedDomainLabel(
+      ref,
+      ref.watch(timeDomainsProvider).asData?.value.origins[item.id],
+    );
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.only(left: 10, right: 6, top: 6),
@@ -1305,7 +1308,11 @@ Widget _domainGoalRow(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name, style: TextStyle(fontSize: 11, color: appearance.accent)),
+          if (name != null)
+            Text(
+              name,
+              style: TextStyle(fontSize: 11, color: appearance.accent),
+            ),
           daily
               ? _buildDailyRow(context, item, weekStart, actions)
               : _buildWeeklyRow(context, item, weekStart, actions),

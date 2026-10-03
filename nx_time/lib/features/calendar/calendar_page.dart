@@ -341,7 +341,16 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     ),
                     subtitle: Text(
                       [
-                        appearance.label,
+                        if (sharedDomainLabel(
+                              ref,
+                              ref
+                                  .watch(timeDomainsProvider)
+                                  .asData
+                                  ?.value
+                                  .origins[e.id],
+                            )
+                            case final label?)
+                          label,
                         if (e.isTask)
                           e.status == 'progress' ? 'In progress' : 'To do',
                         if (e.kind == 'action') 'Planned',

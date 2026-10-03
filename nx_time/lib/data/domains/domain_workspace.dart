@@ -95,7 +95,9 @@ class DomainWorkspace {
   final Map<int, int> origins = {};
   final Map<String, Future<ModelType>> _schemas = {};
   String name(int id) => memberships.singleWhere((d) => d.id == id).name;
-  String? nameFor(int id) => origins[id] == null ? null : name(origins[id]!);
+  String? nameFor(int id) => origins[id] == null || origins[id] == personalId
+      ? null
+      : name(origins[id]!);
   Future<ModelType> schema(int id, String type) => _schemas.putIfAbsent(
     '$id:$type',
     () => fetchKgqlModelTypeByName(clients[id]!, type),

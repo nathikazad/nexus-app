@@ -90,6 +90,15 @@ DomainAppearance domainAppearance(WidgetRef ref, int? id) {
       );
 }
 
+/// Personal items need no domain badge; only shared origins are labelled.
+String? sharedDomainLabel(WidgetRef ref, int? id) {
+  final workspace = ref.watch(timeDomainsProvider).asData?.value;
+  if (workspace == null || id == null || id == workspace.personalId) {
+    return null;
+  }
+  return domainAppearance(ref, id).label;
+}
+
 Future<Map<String, dynamic>> readDomainPreferenceRoot(
   GraphQLClient client,
   int userId,

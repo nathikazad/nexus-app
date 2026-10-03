@@ -174,7 +174,12 @@ class TasksPage extends ConsumerWidget {
                               child: TaskRowTile(
                                 title: row.title,
                                 subtitle: [
-                                  appearance.label,
+                                  if (sharedDomainLabel(
+                                        ref,
+                                        workspace?.origins[row.taskId],
+                                      )
+                                      case final label?)
+                                    label,
                                   if (row.subtitle.isNotEmpty) row.subtitle,
                                 ].join(' · '),
                                 durationLabel: row.durationLabel,

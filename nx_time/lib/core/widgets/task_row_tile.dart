@@ -63,14 +63,16 @@ class TaskRowTile extends StatelessWidget {
                     decorationColor: AppColors.slate900,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.slate500,
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.slate500,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
