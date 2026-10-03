@@ -1,3 +1,8 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/data/domains/multi_task_repository.dart';
+import 'package:nx_time/data/domains/multi_goal_repository.dart';
+import 'package:nx_time/data/domains/multi_project_repository.dart';
+import 'package:nx_time/data/domains/personal_action_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/person.dart';
 import 'package:nx_db/riverpod.dart';
@@ -9,17 +14,10 @@ import 'package:nx_time/domain/projects/project_repository.dart';
 import 'package:nx_time/domain/tasks/task_repository.dart';
 import 'package:nx_time/data/action/action_schema_provider.dart';
 import 'package:nx_time/data/action/action_subtypes_provider.dart';
-import 'package:nx_time/data/action/kgql_action_repository.dart';
-import 'package:nx_time/data/goals/goal_schema_provider.dart';
-import 'package:nx_time/data/goals/kgql_goal_repository.dart';
 import 'package:nx_time/data/log/kgql_log_repository.dart';
 import 'package:nx_time/data/log/log_schema_provider.dart';
 import 'package:nx_time/data/person/model_type_colors.dart';
-import 'package:nx_time/data/projects/kgql_project_repository.dart';
-import 'package:nx_time/data/projects/project_schema_provider.dart';
 import 'package:nx_time/data/schema/kgql_action_schema_repository.dart';
-import 'package:nx_time/data/tasks/kgql_task_repository.dart';
-import 'package:nx_time/data/tasks/task_schema_provider.dart';
 
 export 'package:nx_db/person.dart';
 export 'package:nx_time/data/action/action_schema_provider.dart';
@@ -40,40 +38,29 @@ final modelTypeColorsProvider = FutureProvider<ModelTypeColors>((ref) async {
 
 /// Default KGQL-backed [ActionRepository].
 final actionRepositoryProvider = Provider<ActionRepository>((ref) {
-  return KgqlActionRepository(
-    client: ref.watch(graphqlClientProvider),
-    loadActionSchema: () => ref.read(actionSchemaProvider.future),
-  );
+  return PersonalActionRepository(ref.watch(timeDomainsProvider).requireValue);
 });
 
 /// KGQL-backed [TaskRepository].
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
-  return KgqlTaskRepository(
-    client: ref.watch(graphqlClientProvider),
-    loadTaskSchema: () => ref.read(taskSchemaProvider.future),
-  );
+  return MultiTaskRepository(ref.watch(timeDomainsProvider).requireValue);
 });
 
 /// KGQL-backed [ProjectRepository].
 final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
-  return KgqlProjectRepository(
-    client: ref.watch(graphqlClientProvider),
-    loadProjectSchema: () => ref.read(projectSchemaProvider.future),
-  );
+  return MultiProjectRepository(ref.watch(timeDomainsProvider).requireValue);
 });
 
 /// KGQL-backed [GoalRepository] (`app.get_action_goals_*` / `app.get_expense_goals_month`).
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
-  return KgqlGoalRepository(
-    client: ref.watch(graphqlClientProvider),
-    loadGoalSchema: () => ref.read(goalSchemaProvider.future),
-  );
+  return MultiGoalRepository(ref.watch(timeDomainsProvider).requireValue);
 });
 
 /// KGQL-backed [LogRepository] for `Daily Log` rows in the personal domain.
 final logRepositoryProvider = Provider<LogRepository>((ref) {
   return KgqlLogRepository(
     client: ref.watch(graphqlClientProvider),
+    domainId: ref.watch(timeDomainsProvider).requireValue.personalId,
     loadLogSchema: () => ref.read(logSchemaProvider.future),
   );
 });

@@ -14,16 +14,19 @@ class DomainMembership {
     required this.id,
     required this.name,
     required this.role,
+    this.kind,
   });
   final int id;
   final String name;
   final String role;
+  final String? kind;
   bool get writable => role == 'owner' || role == 'member';
   factory DomainMembership.fromJson(Map<String, dynamic> json) =>
       DomainMembership(
         id: json['id'] as int,
         name: json['name'] as String,
         role: json['role'] as String,
+        kind: json['kind'] as String?,
       );
 }
 

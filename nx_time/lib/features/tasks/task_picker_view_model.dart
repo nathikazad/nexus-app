@@ -22,14 +22,14 @@ final pickerUnfinishedYesterdayProvider = FutureProvider<List<Task>>((
   ref,
 ) async {
   await ref.watch(authenticatedUserProvider.future);
-  final repo = ref.read(taskRepositoryProvider);
+  final repo = ref.watch(taskRepositoryProvider);
   final y = calendarDay(DateTime.now()).subtract(const Duration(days: 1));
   return unfinishedTasksOnDay(repo, y);
 });
 
 final pickerRecentTasksProvider = FutureProvider<List<Task>>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
-  final all = await ref.read(taskRepositoryProvider).listAll();
+  final all = await ref.watch(taskRepositoryProvider).listAll();
   final sorted = List<Task>.from(all)..sort((a, b) => b.id.compareTo(a.id));
   if (sorted.length <= _pickerRecentLimit) return sorted;
   return sorted.sublist(0, _pickerRecentLimit);

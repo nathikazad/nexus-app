@@ -1,6 +1,12 @@
 @Tags(['widget'])
 library;
 
+import '../_support/test_domains.dart';
+import '../_support/mock_graphql_client.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
+import 'package:nx_time/domain/action/week_actions.dart';
+import 'package:nx_time/features/domains/domain_day_actions_page.dart';
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +40,17 @@ void main() {
       tester,
       child: const GoalDetailPage(goalId: 1),
       overrides: [
+        timeDomainsProvider.overrideWith(
+          () => TestDomains(MockGraphQLClient()),
+        ),
+        goalWeekActionsProvider.overrideWith(
+          (ref, key) async => WeekActions(
+            weekStart: key.$2,
+            all: [],
+            byDay: List.generate(7, (_) => []),
+          ),
+        ),
+        selectedDayActionsProvider.overrideWith((ref, day) async => []),
         authenticatedUserProvider.overrideWith(
           (ref) async => User(userId: '1', preset: BackendPreset.localhost),
         ),
@@ -75,6 +92,17 @@ void main() {
       tester,
       child: const GoalDetailPage(goalId: 1),
       overrides: [
+        timeDomainsProvider.overrideWith(
+          () => TestDomains(MockGraphQLClient()),
+        ),
+        goalWeekActionsProvider.overrideWith(
+          (ref, key) async => WeekActions(
+            weekStart: key.$2,
+            all: [],
+            byDay: List.generate(7, (_) => []),
+          ),
+        ),
+        selectedDayActionsProvider.overrideWith((ref, day) async => []),
         authenticatedUserProvider.overrideWith(
           (ref) async => User(userId: '1', preset: BackendPreset.localhost),
         ),

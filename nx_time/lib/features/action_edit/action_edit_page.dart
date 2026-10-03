@@ -1,3 +1,5 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/features/domains/time_domain_gate.dart';
 import 'package:nx_time/domain/calendar/calendar_entry.dart';
 import 'package:nx_time/features/calendar/calendar_record_editor.dart';
 import 'package:flutter/material.dart' hide Action;
@@ -246,11 +248,22 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
           start: start,
           end: end,
         );
-        final newId = await repo.create(
-          action,
-          cat.name,
-          parentActionId: widget.parentActionId,
+        final domain = await chooseCreationDomain(
+          context,
+          ref,
+          relatedId: widget.parentActionId ?? _pendingTaskIdsToLink.firstOrNull,
         );
+        if (domain == null || !mounted) return;
+        final w = await ref.read(timeDomainsProvider.future);
+        w.writable(domain);
+        for (final taskId in _pendingTaskIdsToLink) {
+          if (await w.owner(taskId) != domain)
+            throw StateError('Linked tasks must be in the same domain');
+        }
+        final newId = await w
+            .actions(domain)
+            .create(action, cat.name, parentActionId: widget.parentActionId);
+        w.remember(domain, [newId]);
         final taskRepo = ref.read(taskRepositoryProvider);
         for (final taskId in _pendingTaskIdsToLink) {
           await taskRepo.linkActivity(

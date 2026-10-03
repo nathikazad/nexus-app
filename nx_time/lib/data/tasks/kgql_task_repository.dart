@@ -12,11 +12,13 @@ import 'package:nx_time/domain/tasks/task_status.dart';
 class KgqlTaskRepository implements TaskRepository {
   KgqlTaskRepository({
     required GraphQLClient client,
+    this.domainId,
     required Future<ModelType> Function() loadTaskSchema,
   }) : _client = client,
        _loadTaskSchema = loadTaskSchema;
 
   final GraphQLClient _client;
+  final int? domainId;
   final Future<ModelType> Function() _loadTaskSchema;
   Map<String, dynamic> _taskFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -31,6 +33,7 @@ class KgqlTaskRepository implements TaskRepository {
     final models = await fetchKgqlModelsForRelationPicker(
       _client,
       kTaskModelTypeName,
+      domainId: domainId,
     );
     return models.map(taskFromModel).toList()
       ..sort((x, y) => x.id.compareTo(y.id));
@@ -71,6 +74,7 @@ class KgqlTaskRepository implements TaskRepository {
         if (filters.isNotEmpty) 'filters': filters,
       },
       struct: struct,
+      domainId: domainId,
     );
     return models.map(taskFromModel).toList();
   }
@@ -84,6 +88,7 @@ class KgqlTaskRepository implements TaskRepository {
       modelTypeName: kTaskModelTypeName,
       id: id,
       struct: struct,
+      domainId: domainId,
     );
     return m == null ? null : taskFromModel(m);
   }
@@ -95,7 +100,7 @@ class KgqlTaskRepository implements TaskRepository {
       parentTaskId: parentTaskId,
       projectId: projectId,
     );
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: domainId);
   }
 
   @override
@@ -103,6 +108,7 @@ class KgqlTaskRepository implements TaskRepository {
     return setKgqlModel(
       _client,
       setModelRequestForUpdateTask(task, includeAttributes: includeAttributes),
+      domainId: domainId,
     );
   }
 
@@ -124,6 +130,7 @@ class KgqlTaskRepository implements TaskRepository {
             ),
         ],
       ),
+      domainId: domainId,
     );
   }
 
@@ -145,7 +152,11 @@ class KgqlTaskRepository implements TaskRepository {
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDeleteTask(id));
+    await setKgqlModel(
+      _client,
+      setModelRequestForDeleteTask(id),
+      domainId: domainId,
+    );
   }
 
   @override
@@ -161,6 +172,7 @@ class KgqlTaskRepository implements TaskRepository {
           ModelRelation(modelType: kTaskRelationKey, link: [childId]),
         ],
       ),
+      domainId: domainId,
     );
   }
 
@@ -175,6 +187,7 @@ class KgqlTaskRepository implements TaskRepository {
         id: parentId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
+      domainId: domainId,
     );
   }
 
@@ -188,6 +201,7 @@ class KgqlTaskRepository implements TaskRepository {
           ModelRelation(modelType: kProjectRelationKey, link: [projectId]),
         ],
       ),
+      domainId: domainId,
     );
   }
 
@@ -202,6 +216,7 @@ class KgqlTaskRepository implements TaskRepository {
         id: taskId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
+      domainId: domainId,
     );
   }
 
@@ -219,6 +234,7 @@ class KgqlTaskRepository implements TaskRepository {
           ModelRelation(modelType: activityModelTypeName, link: [activityId]),
         ],
       ),
+      domainId: domainId,
     );
   }
 
@@ -233,6 +249,7 @@ class KgqlTaskRepository implements TaskRepository {
         id: taskId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
+      domainId: domainId,
     );
   }
 }

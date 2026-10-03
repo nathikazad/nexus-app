@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nx_time/data/providers.dart';
@@ -98,7 +99,7 @@ Map<int, String> projectBreadcrumbLabels(List<Project> all) {
 
 final allProjectsProvider = FutureProvider<List<Project>>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
-  return ref.read(projectRepositoryProvider).listAll();
+  return ref.watch(projectRepositoryProvider).listAll();
 });
 
 final projectBreadcrumbLabelsProvider = FutureProvider<Map<int, String>>((
@@ -110,19 +111,19 @@ final projectBreadcrumbLabelsProvider = FutureProvider<Map<int, String>>((
 
 final tasksForTodayProvider = FutureProvider<List<Task>>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
-  final day = calendarDay(DateTime.now());
+  final day = ref.watch(taskCalendarDayProvider);
   final all = await ref.watch(allTasksProvider.future);
   return currentTasks(all, day);
 });
 
 final allTasksProvider = FutureProvider<List<Task>>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
-  return ref.read(taskRepositoryProvider).listAll();
+  return ref.watch(taskRepositoryProvider).listAll();
 });
 
 final taskDetailProvider = FutureProvider.family<Task?, int>((ref, id) async {
   await ref.watch(authenticatedUserProvider.future);
-  return ref.read(taskRepositoryProvider).getById(id);
+  return ref.watch(taskRepositoryProvider).getById(id);
 });
 
 final subtasksOfTaskProvider = FutureProvider.family<List<Task>, int>((
@@ -132,7 +133,7 @@ final subtasksOfTaskProvider = FutureProvider.family<List<Task>, int>((
   await ref.watch(authenticatedUserProvider.future);
   final parent = await ref.watch(taskDetailProvider(parentId).future);
   if (parent == null) return [];
-  final repo = ref.read(taskRepositoryProvider);
+  final repo = ref.watch(taskRepositoryProvider);
   final out = <Task>[];
   for (final cid in parent.childTaskIds) {
     final c = await repo.getById(cid);
@@ -202,3 +203,45 @@ List<Task> currentTasks(List<Task> tasks, DateTime day) {
       )
       .toList();
 }
+
+/// Recompute date windows at local midnight, including days with DST changes.
+final taskCalendarDayProvider = Provider<DateTime>((ref) {
+  final now = DateTime.now();
+  final next = DateTime(now.year, now.month, now.day + 1);
+  final timer = Timer(next.difference(now), ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
+  return calendarDay(now);
+});
+
+List<Task> recentlyCompletedTasks(List<Task> tasks, DateTime day) {
+  final from = DateTime(day.year, day.month, day.day - 1);
+  final until = DateTime(day.year, day.month, day.day + 1);
+  return tasks
+      .where(
+        (task) =>
+            task.status == TaskStatus.done &&
+            task.completedAt != null &&
+            !task.completedAt!.isBefore(from) &&
+            task.completedAt!.isBefore(until),
+      )
+      .toList()
+    ..sort((a, b) {
+      final order = b.completedAt!.compareTo(a.completedAt!);
+      return order != 0 ? order : a.id.compareTo(b.id);
+    });
+}
+
+final recentlyCompletedTasksProvider = FutureProvider<List<Task>>((ref) async {
+  final day = ref.watch(taskCalendarDayProvider);
+  return recentlyCompletedTasks(await ref.watch(allTasksProvider.future), day);
+});
+
+/// Only an explicit opt-out on a shared task removes it from the main list.
+bool taskInMainList(
+  Task task, {
+  required bool personal,
+  required String userId,
+}) =>
+    personal ||
+    !(task.participants[userId] is Map &&
+        task.participants[userId]['assigned'] == false);

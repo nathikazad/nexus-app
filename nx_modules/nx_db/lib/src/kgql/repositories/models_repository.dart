@@ -31,10 +31,12 @@ Future<List<Model>> fetchKgqlModels(
   GraphQLClient client, {
   required Map<String, dynamic> filter,
   required Map<String, dynamic> struct,
+  int? domainId,
 }) async {
   final variables = {
     'filter': filter,
     'struct': struct,
+    if (domainId != null) 'domainId': domainId,
   };
   debugPrint(
     '[nx_db kgql] getKgqlModels query=${kgqlGetKgqlModelsQuery.trim()} '
@@ -64,6 +66,7 @@ Future<Model?> fetchKgqlModelById(
   required String modelTypeName,
   required int id,
   required Map<String, dynamic> struct,
+  int? domainId,
 }) async {
   final list = await fetchKgqlModels(
     client,
@@ -74,6 +77,7 @@ Future<Model?> fetchKgqlModelById(
       ],
     },
     struct: struct,
+    domainId: domainId,
   );
   if (list.isEmpty) return null;
   return list.first;
@@ -81,23 +85,25 @@ Future<Model?> fetchKgqlModelById(
 
 /// Minimal struct for relation pickers (label + metadata).
 Map<String, dynamic> get kgqlRelationPickerModelStruct => const {
-      'id': true,
-      'name': true,
-      'description': true,
-      'model_type_id': true,
-      'created_at': true,
-      'updated_at': true,
-    };
+  'id': true,
+  'name': true,
+  'description': true,
+  'model_type_id': true,
+  'created_at': true,
+  'updated_at': true,
+};
 
 /// Lists all models of [modelTypeName] for pickers (no date filter).
 Future<List<Model>> fetchKgqlModelsForRelationPicker(
   GraphQLClient client,
-  String modelTypeName,
-) async {
+  String modelTypeName, {
+  int? domainId,
+}) async {
   return fetchKgqlModels(
     client,
     filter: {'model_type': modelTypeName},
     struct: kgqlRelationPickerModelStruct,
+    domainId: domainId,
   );
 }
 
@@ -110,7 +116,8 @@ Future<int> setKgqlModel(
   String auditSourceKind = '',
 }) async {
   final requestJson = request.toJson();
-  final context = auditContext ??
+  final context =
+      auditContext ??
       currentDbAuditContext() ??
       DbAuditContext.create(
         sourceKind: auditSourceKind,
@@ -187,8 +194,8 @@ String _setModelSourceLabel(SetModelRequest request) {
   final action = request.delete
       ? 'delete'
       : request.id == null
-          ? 'create'
-          : 'update';
+      ? 'create'
+      : 'update';
   final modelType = request.modelType ?? 'model';
   final name = request.name == null || request.name!.trim().isEmpty
       ? ''

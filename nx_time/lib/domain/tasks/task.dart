@@ -44,9 +44,12 @@ class Task {
     required this.modelTypeId,
     this.modelTypeName,
     this.status = TaskStatus.todo,
+    this.createdAt,
     this.dueAt,
     this.completedAt,
     this.history = const [],
+    this.rank,
+    this.participants = const {},
     this.parentTaskId,
     this.childTaskIds = const [],
     this.relationIdByChildTaskId = const {},
@@ -63,10 +66,15 @@ class Task {
 
   final TaskStatus status;
 
+  /// Server-managed creation timestamp.
+  final DateTime? createdAt;
+
   /// Optional calendar pin date.
   final DateTime? dueAt;
   final DateTime? completedAt;
   final List<Map<String, dynamic>> history;
+  final String? rank;
+  final Map<String, dynamic> participants;
 
   final int? parentTaskId;
 
@@ -89,9 +97,12 @@ class Task {
     int? modelTypeId,
     Object? modelTypeName = _taskCopyUnset,
     TaskStatus? status,
+    Object? createdAt = _taskCopyUnset,
     Object? dueAt = _taskCopyUnset,
     Object? completedAt = _taskCopyUnset,
     List<Map<String, dynamic>>? history,
+    String? rank,
+    Map<String, dynamic>? participants,
     Object? parentTaskId = _taskCopyUnset,
     List<int>? childTaskIds,
     Map<int, int>? relationIdByChildTaskId,
@@ -110,11 +121,16 @@ class Task {
           ? this.modelTypeName
           : modelTypeName as String?,
       status: status ?? this.status,
+      createdAt: identical(createdAt, _taskCopyUnset)
+          ? this.createdAt
+          : createdAt as DateTime?,
       dueAt: identical(dueAt, _taskCopyUnset) ? this.dueAt : dueAt as DateTime?,
       completedAt: identical(completedAt, _taskCopyUnset)
           ? this.completedAt
           : completedAt as DateTime?,
       history: history ?? this.history,
+      rank: rank ?? this.rank,
+      participants: participants ?? this.participants,
       parentTaskId: identical(parentTaskId, _taskCopyUnset)
           ? this.parentTaskId
           : parentTaskId as int?,
@@ -142,7 +158,13 @@ class Task {
           modelTypeId == other.modelTypeId &&
           modelTypeName == other.modelTypeName &&
           status == other.status &&
+          rank == other.rank &&
+          const DeepCollectionEquality().equals(
+            participants,
+            other.participants,
+          ) &&
           const DeepCollectionEquality().equals(history, other.history) &&
+          createdAt == other.createdAt &&
           dueAt == other.dueAt &&
           completedAt == other.completedAt &&
           parentTaskId == other.parentTaskId &&
@@ -160,7 +182,10 @@ class Task {
     modelTypeId,
     modelTypeName,
     status,
+    rank,
+    const DeepCollectionEquality().hash(participants),
     const DeepCollectionEquality().hash(history),
+    createdAt,
     dueAt,
     completedAt,
     parentTaskId,

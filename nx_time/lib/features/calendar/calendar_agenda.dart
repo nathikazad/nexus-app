@@ -23,6 +23,7 @@ class CalendarAgenda extends ConsumerWidget {
       ),
     );
     ref.invalidate(calendarFeedProvider);
+    ref.invalidate(calendarRefreshProvider);
   }
 
   @override
@@ -61,6 +62,7 @@ class CalendarAgenda extends ConsumerWidget {
                     ),
                   );
                   ref.invalidate(calendarFeedProvider);
+                  ref.invalidate(calendarRefreshProvider);
                 },
                 icon: const Icon(Icons.add),
               ),
@@ -202,6 +204,7 @@ class _PlanAttendanceButtonState extends ConsumerState<_PlanAttendanceButton> {
               final repo = await ref.read(calendarRepositoryProvider.future);
               await repo.planAttendance(widget.event);
               ref.invalidate(calendarFeedProvider);
+              ref.invalidate(calendarRefreshProvider);
             } catch (e) {
               if (context.mounted) {
                 ScaffoldMessenger.of(

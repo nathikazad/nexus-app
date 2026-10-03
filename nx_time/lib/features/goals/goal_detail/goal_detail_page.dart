@@ -402,7 +402,7 @@ class _WakeBodyData extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final w = ref.watch(currentWeekProvider);
     final asyncWa = ref.watch(
-      weekActionsProvider(DateTime(w.year, w.month, w.day)),
+      goalWeekActionsProvider((item.id, DateTime(w.year, w.month, w.day))),
     );
     return asyncWa.when(
       data: (wa) => _wakeColumn(wa),
@@ -928,7 +928,9 @@ Widget _wakeSwimRow(
               fontWeight: today ? FontWeight.w600 : FontWeight.w500,
               color: today
                   ? AppColors.accent
-                  : ((pending || off) ? AppColors.slate300 : AppColors.slate400),
+                  : ((pending || off)
+                        ? AppColors.slate300
+                        : AppColors.slate400),
             ),
           ),
         ),
@@ -1039,7 +1041,9 @@ class _SleepBodyData extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final w = ref.watch(currentWeekProvider);
     return ref
-        .watch(weekActionsProvider(DateTime(w.year, w.month, w.day)))
+        .watch(
+          goalWeekActionsProvider((item.id, DateTime(w.year, w.month, w.day))),
+        )
         .when(
           data: (wa) => _column(wa),
           loading: () => _column(null),
@@ -1260,7 +1264,9 @@ class _GymBodyData extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final w = ref.watch(currentWeekProvider);
     return ref
-        .watch(weekActionsProvider(DateTime(w.year, w.month, w.day)))
+        .watch(
+          goalWeekActionsProvider((item.id, DateTime(w.year, w.month, w.day))),
+        )
         .when(
           data: (wa) => _gymContent(wa: wa),
           loading: () => _gymContent(wa: null),

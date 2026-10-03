@@ -9,11 +9,13 @@ import 'package:nx_time/domain/log/log_repository.dart';
 class KgqlLogRepository implements LogRepository {
   KgqlLogRepository({
     required GraphQLClient client,
+    this.domainId,
     required Future<ModelType> Function() loadLogSchema,
   }) : _client = client,
        _loadLogSchema = loadLogSchema;
 
   final GraphQLClient _client;
+  final int? domainId;
   final Future<ModelType> Function() _loadLogSchema;
   Map<String, dynamic> _logFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -48,6 +50,7 @@ class KgqlLogRepository implements LogRepository {
         ],
       },
       struct: struct,
+      domainId: domainId,
     );
 
     final logs = models.map(dailyLogFromModel).toList()
@@ -71,6 +74,7 @@ class KgqlLogRepository implements LogRepository {
       modelTypeName: kDailyLogModelTypeName,
       id: id,
       struct: struct,
+      domainId: domainId,
     );
     return m == null ? null : dailyLogFromModel(m);
   }
@@ -88,6 +92,7 @@ class KgqlLogRepository implements LogRepository {
         entry: entry,
         tags: tags,
       ),
+      domainId: domainId,
     );
   }
 
@@ -106,11 +111,16 @@ class KgqlLogRepository implements LogRepository {
         entry: entry,
         tags: tags,
       ),
+      domainId: domainId,
     );
   }
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDeleteDailyLog(id));
+    await setKgqlModel(
+      _client,
+      setModelRequestForDeleteDailyLog(id),
+      domainId: domainId,
+    );
   }
 }

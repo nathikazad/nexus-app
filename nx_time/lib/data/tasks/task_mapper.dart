@@ -155,12 +155,17 @@ Task taskFromModel(Model m) {
     modelTypeId: m.modelTypeId,
     modelTypeName: m.modelType?.name,
     status: taskStatusFromKgql(statusRaw),
+    createdAt: DateTime.tryParse(m.createdAt ?? '')?.toLocal(),
     dueAt: m.attrDateTime(kTaskAttrDueAt) == null
         ? null
         : asStoredLocalWallClock(m.attrDateTime(kTaskAttrDueAt)!),
     completedAt: m.attrDateTime(kTaskAttrCompletedAt) == null
         ? null
         : asStoredLocalWallClock(m.attrDateTime(kTaskAttrCompletedAt)!),
+    rank: m.attrString('rank'),
+    participants: Map<String, dynamic>.from(
+      m.attributes?['participants'] as Map? ?? {},
+    ),
     history: [
       for (final h in (m.attributes?['history'] as List? ?? []))
         Map<String, dynamic>.from(h as Map),

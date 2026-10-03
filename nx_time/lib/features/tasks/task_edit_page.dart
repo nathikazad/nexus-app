@@ -96,6 +96,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
       ref.invalidate(tasksForTodayProvider);
       ref.invalidate(allTasksProvider);
       ref.invalidate(calendarFeedProvider);
+      ref.invalidate(calendarRefreshProvider);
       ref.invalidate(projectBreadcrumbLabelsProvider);
       if (mounted) Navigator.of(context).maybePop();
     } finally {
@@ -109,6 +110,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
     ref.invalidate(calendarFeedProvider);
+    ref.invalidate(calendarRefreshProvider);
     if (!mounted) return;
     Navigator.of(context).pop();
     if (Navigator.of(context).canPop()) {

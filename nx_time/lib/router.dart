@@ -1,3 +1,4 @@
+import 'package:nx_time/features/domains/time_domain_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,7 +49,7 @@ final routerProvider = Provider.family<GoRouter, int>((ref, initialTabIndex) {
         builder: (context, state) {
           final tab =
               int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
-          return AppShell(initialTabIndex: tab);
+          return TimeDomainGate(child: AppShell(initialTabIndex: tab));
         },
       ),
     ],

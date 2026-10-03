@@ -20,11 +20,43 @@ void main() {
       expect(attrs.containsKey('end_time'), isFalse);
       expect(attrs.containsKey('date'), isFalse);
       expect(attrs.containsKey('history'), isFalse);
+      expect(attrs.containsKey('participants'), isFalse);
+      expect(attrs.containsKey('rank'), isFalse);
       expect(attrs.containsKey('completed_at'), isFalse);
     },
   );
 
   group('taskFromModel', () {
+    test(
+      'loads participant settings and preserves them through ordinary edits',
+      () {
+        final task = taskFromModel(
+          Model.fromJson({
+            'id': 3,
+            'name': 'Shared task',
+            'model_type_id': 9,
+            'participants': {
+              '17': {'assigned': true, 'rank': 'aM'},
+            },
+            'created_at': '2026-10-03T10:00:00Z',
+          }),
+        );
+        expect(task.participants['17']['rank'], 'aM');
+        expect(task.copyWith(name: 'Edited').participants, task.participants);
+        expect(
+          task.createdAt,
+          DateTime.parse('2026-10-03T10:00:00Z').toLocal(),
+        );
+        final request = setModelRequestForUpdateTask(
+          task.copyWith(name: 'Edited'),
+          includeAttributes: true,
+        );
+        expect(
+          request.attributes!.any((a) => a.key == 'participants'),
+          isFalse,
+        );
+      },
+    );
     test('reads status and due date', () {
       final m = Model.fromJson({
         'id': 1,

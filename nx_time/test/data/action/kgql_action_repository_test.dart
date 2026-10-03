@@ -1,3 +1,5 @@
+import '../../_support/test_domains.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -115,10 +117,12 @@ void main() {
       overrides: [
         authProvider.overrideWith(_AuthLoggedIn.new),
         graphqlClientProvider.overrideWithValue(mock),
+        timeDomainsProvider.overrideWith(()=>TestDomains(mock)),
       ],
     );
     addTearDown(container.dispose);
     await container.read(authProvider.future);
+    await container.read(timeDomainsProvider.future);
 
     final repo = container.read(actionRepositoryProvider);
     final list = await repo.listForCalendarDay(DateTime(2026, 4, 18));

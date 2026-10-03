@@ -1,3 +1,5 @@
+import 'package:nx_time/features/domains/domain_appearance_page.dart';
+import 'package:nx_time/features/domains/time_domain_gate.dart';
 import 'package:nx_time/features/calendar/history_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +30,15 @@ class NxAppMenuButton extends ConsumerWidget {
       offset: const Offset(0, 40),
       icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
       onSelected: (value) async {
-        if (value == 'history') {
+        if (value == 'domain_appearance') {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const DomainAppearancePage(),
+            ),
+          );
+        } else if (value == 'domains') {
+          await showTimeDomains(context, ref);
+        } else if (value == 'history') {
           Navigator.of(context).push<void>(
             MaterialPageRoute(
               builder: (_) => Scaffold(body: const HistoryPage()),
@@ -72,6 +82,12 @@ class NxAppMenuButton extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
+        _menuItem('domains', Icons.layers_outlined, 'Domains'),
+        _menuItem(
+          'domain_appearance',
+          Icons.palette_outlined,
+          'Domain appearance',
+        ),
         _menuItem('history', Icons.history, 'History'),
         _menuItem('tags', Icons.label_outline, 'Daily log tags'),
         _menuItem('colors', Icons.palette_outlined, 'Colors'),

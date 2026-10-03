@@ -13,7 +13,8 @@ void main() {
       expect(d.definitions, isNotEmpty);
       expect(kgqlGetKgqlModelsQuery, contains(r'$filter'));
       expect(kgqlGetKgqlModelsQuery, contains(r'$struct'));
-      expect(kgqlGetKgqlModelsQuery, isNot(contains(r'$domainId')));
+      expect(kgqlGetKgqlModelsQuery, contains(r'$domainId: Int'));
+      expect(kgqlGetKgqlModelsQuery, contains(r'domainId: $domainId'));
     });
 
     test('set_kgql_models', () {

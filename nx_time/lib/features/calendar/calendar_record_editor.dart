@@ -1,4 +1,5 @@
-import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/features/domains/time_domain_gate.dart';
 import 'package:nx_time/data/action/planning_schema.dart';
 import 'package:nx_time/domain/calendar/birthday.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,7 @@ class _CalendarRecordEditorState extends ConsumerState<CalendarRecordEditor> {
   late final TextEditingController name, notes, birthday;
   late String type, status;
   DateTime? start, end, actualStart, actualEnd, due;
-  int? personId, placeId;
+  int? personId, placeId, domainId;
   bool saving = false;
   String? error;
   List<Model> people = [], places = [];
@@ -52,21 +53,32 @@ class _CalendarRecordEditorState extends ConsumerState<CalendarRecordEditor> {
     actualStart = e?.time('start_time');
     actualEnd = e?.time('end_time');
     due = e?.time('due_at');
-    _loadChoices();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadChoices());
   }
 
   Future<void> _loadChoices() async {
     try {
-      final schema = await ref.read(actionSchemaProvider.future);
+      final w = await ref.read(timeDomainsProvider.future);
+      if (!mounted) return;
+      domainId ??= widget.entry == null
+          ? await chooseCreationDomain(context, ref)
+          : await w.owner(widget.entry!.id);
+      if (domainId == null) {
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+      final schema = await w.schema(domainId!, 'Action');
       if (!mounted) return;
       setState(() {
         plannableTypes = plannableTypeNames(schema);
         schemaReady = true;
         final e = widget.entry;
-        start = e?.time(action ? "scheduled_start_time" : "start_time");
-        end = e?.time(action ? "scheduled_end_time" : "end_time");
+        if (e != null) {
+          start = e.time(action ? "scheduled_start_time" : "start_time");
+          end = e.time(action ? "scheduled_end_time" : "end_time");
+        }
       });
-      final repo = await ref.read(calendarRepositoryProvider.future);
+      final repo = w.calendar(domainId!);
       final results = await Future.wait([
         repo.choices('Person'),
         repo.choices('Place'),
@@ -120,7 +132,9 @@ class _CalendarRecordEditorState extends ConsumerState<CalendarRecordEditor> {
       error = null;
     });
     try {
-      final repo = await ref.read(calendarRepositoryProvider.future);
+      final w = await ref.read(timeDomainsProvider.future);
+      w.writable(domainId!);
+      final repo = w.calendar(domainId!);
       final attrs = <String, dynamic>{
         if (type == 'Person')
           'birthday': birthday.text.trim().isEmpty
@@ -143,7 +157,7 @@ class _CalendarRecordEditorState extends ConsumerState<CalendarRecordEditor> {
           'end_time': actualEnd?.toIso8601String(),
         },
       };
-      await repo.save(
+      final savedId = await repo.save(
         id: widget.entry?.id ?? (type == 'Person' ? personId : null),
         modelType: widget.entry == null ? type : null,
         name: name.text.trim(),
@@ -166,7 +180,9 @@ class _CalendarRecordEditorState extends ConsumerState<CalendarRecordEditor> {
             ),
         ],
       );
+      w.remember(domainId!, [savedId]);
       ref.invalidate(calendarFeedProvider);
+      ref.invalidate(calendarRefreshProvider);
       ref.invalidate(allTasksProvider);
       ref.invalidate(tasksForTodayProvider);
       invalidateActionsAfterMutation(ref);
@@ -186,6 +202,36 @@ class _CalendarRecordEditorState extends ConsumerState<CalendarRecordEditor> {
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        if (domainId != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.layers_outlined),
+            title: Text(
+              ref.watch(timeDomainsProvider).requireValue.name(domainId!),
+            ),
+            subtitle: const Text('Destination domain'),
+            trailing: widget.entry != null
+                ? null
+                : TextButton(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            final id = await chooseCreationDomain(context, ref);
+                            if (id != null && mounted) {
+                              setState(() {
+                                domainId = id;
+                                personId = null;
+                                placeId = null;
+                                people = [];
+                                places = [];
+                                schemaReady = false;
+                              });
+                              await _loadChoices();
+                            }
+                          },
+                    child: const Text('Change'),
+                  ),
+          ),
         if (widget.entry == null)
           DropdownButtonFormField<String>(
             initialValue: type,

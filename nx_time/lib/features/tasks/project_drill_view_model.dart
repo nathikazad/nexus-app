@@ -10,7 +10,7 @@ final projectByIdProvider = FutureProvider.family<Project?, int>((
   id,
 ) async {
   await ref.watch(authenticatedUserProvider.future);
-  return ref.read(projectRepositoryProvider).getById(id);
+  return ref.watch(projectRepositoryProvider).getById(id);
 });
 
 final subProjectsProvider = FutureProvider.family<List<Project>, int>((
@@ -20,7 +20,7 @@ final subProjectsProvider = FutureProvider.family<List<Project>, int>((
   await ref.watch(authenticatedUserProvider.future);
   final parent = await ref.watch(projectByIdProvider(parentId).future);
   if (parent == null) return [];
-  final repo = ref.read(projectRepositoryProvider);
+  final repo = ref.watch(projectRepositoryProvider);
   final out = <Project>[];
   for (final cid in parent.childProjectIds) {
     final c = await repo.getById(cid);

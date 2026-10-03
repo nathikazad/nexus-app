@@ -1,3 +1,5 @@
+import 'package:nx_time/data/domains/domain_appearance.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -25,9 +27,31 @@ class PlanningWeek extends Notifier<DateTime> {
 final planningFeedProvider = FutureProvider.autoDispose<CalendarFeed>((
   ref,
 ) async {
-  final repo = await ref.watch(calendarRepositoryProvider.future);
+  ref.watch(calendarRefreshProvider);
+  final w = await ref.watch(timeDomainsProvider.future);
   final week = ref.watch(planningWeekProvider);
-  return repo.load(week, DateTime(week.year, week.month, week.day + 7));
+  final feeds = await Future.wait(
+    w.selectedIds.map((id) async {
+      final f = await w
+          .calendar(id)
+          .load(week, DateTime(week.year, week.month, week.day + 7));
+      w.remember(
+        id,
+        [...f.entries, ...f.unscheduled, ...f.currentTasks].map((e) => e.id),
+      );
+      for (final e in f.entries) {
+        w.remember(id, e.attendance.map((a) => a.id));
+      }
+      return f;
+    }),
+  );
+  final entries = feeds.expand((f) => f.entries).toList()
+    ..sort((a, b) => (a.start ?? week).compareTo(b.start ?? week));
+  return CalendarFeed(
+    entries: entries,
+    unscheduled: feeds.expand((f) => f.unscheduled).toList(),
+    currentTasks: feeds.expand((f) => f.currentTasks).toList(),
+  );
 });
 
 /// Remaining tasks, independent events/birthdays and explicit plans only.
@@ -276,13 +300,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   }
 
   Widget _entry(CalendarEntry e) {
-    final color = e.isTask
-        ? const Color(0xFF007F73)
-        : e.kind == 'birthday'
-        ? const Color(0xFFAD5B16)
-        : e.kind == 'event'
-        ? const Color(0xFF6750A4)
-        : const Color(0xFF2463BD);
+    final appearance = domainAppearance(
+      ref,
+      ref.watch(timeDomainsProvider).asData?.value.origins[e.id],
+    );
+    final color = appearance.accent;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -305,7 +327,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           Expanded(
             child: Ink(
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.07),
+                color: appearance.secondary.withValues(alpha: 0.07),
                 border: Border(left: BorderSide(color: color, width: 3)),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -319,6 +341,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     ),
                     subtitle: Text(
                       [
+                        appearance.label,
                         if (e.isTask)
                           e.status == 'progress' ? 'In progress' : 'To do',
                         if (e.kind == 'action') 'Planned',
@@ -349,8 +372,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     TextButton(
                       onPressed: () async {
                         try {
-                          final repo = await ref.read(
-                            calendarRepositoryProvider.future,
+                          final w = await ref.read(timeDomainsProvider.future);
+                          final repo = w.calendar(
+                            await w.owner(e.id, write: true),
                           );
                           await repo.planAttendance(e);
                           ref.invalidate(planningFeedProvider);

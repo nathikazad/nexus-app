@@ -1,4 +1,8 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:intl/intl.dart';
+import 'package:nx_time/features/tasks/task_history_card.dart';
+import 'package:nx_time/features/tasks/task_participants.dart';
+import 'package:nx_time/domain/tasks/task.dart';
 import 'package:nx_time/features/calendar/calendar_feed_providers.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +29,22 @@ class TaskDetailPage extends ConsumerStatefulWidget {
 }
 
 class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
+  Future<bool> _canEdit() async {
+    try {
+      final w = await ref.read(timeDomainsProvider.future);
+      await w.owner(widget.taskId, write: true);
+      return true;
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
+      return false;
+    }
+  }
+
   Future<void> _onStatusChanged(TaskStatus s) async {
+    if (!await _canEdit()) return;
     final repo = ref.read(taskRepositoryProvider);
     await repo.updateStatus(id: widget.taskId, status: s);
     ref.invalidate(taskDetailProvider(widget.taskId));
@@ -34,9 +53,11 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
     ref.invalidate(calendarFeedProvider);
+    ref.invalidate(calendarRefreshProvider);
   }
 
   Future<void> _moveToTomorrow() async {
+    if (!await _canEdit()) return;
     final task = await ref.read(taskDetailProvider(widget.taskId).future);
     if (task == null || !mounted) return;
     final next = calendarDay(DateTime.now()).add(const Duration(days: 1));
@@ -47,6 +68,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   }
 
   Future<void> _unpinFromToday() async {
+    if (!await _canEdit()) return;
     final task = await ref.read(taskDetailProvider(widget.taskId).future);
     if (task == null || !mounted) return;
     final repo = ref.read(taskRepositoryProvider);
@@ -56,11 +78,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   }
 
   Future<void> _delete() async {
+    if (!await _canEdit()) return;
     final repo = ref.read(taskRepositoryProvider);
     await repo.delete(widget.taskId);
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
     ref.invalidate(calendarFeedProvider);
+    ref.invalidate(calendarRefreshProvider);
     if (mounted) Navigator.of(context).maybePop();
   }
 
@@ -71,6 +95,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
     ref.invalidate(calendarFeedProvider);
+    ref.invalidate(calendarRefreshProvider);
   }
 
   void _openEdit() {
@@ -167,7 +192,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                             ),
                           ],
                           const SizedBox(height: 20),
-                          _dateTimeCard(vm),
+                          _dateTimeCard(task),
+                          TaskAssignment(task: task),
                           const SizedBox(height: 16),
                           TaskStatusSegmented(
                             value: task.status,
@@ -264,43 +290,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                             loading: () => const SizedBox.shrink(),
                             error: (_, __) => const SizedBox.shrink(),
                           ),
-                          if (task.dueAt != null)
-                            ListTile(
-                              title: const Text('Due'),
-                              subtitle: Text(
-                                DateFormat(
-                                  'MMM d, yyyy · h:mm a',
-                                ).format(task.dueAt!),
-                              ),
-                            ),
                           if (task.history.isNotEmpty)
-                            ExpansionTile(
-                              title: const Text('Task history'),
-                              children: [
-                                for (final entry in task.history.reversed)
-                                  ListTile(
-                                    title: Text(
-                                      entry['status']?.toString() ?? '',
-                                    ),
-                                    subtitle: Text(
-                                      [
-                                        if (DateTime.tryParse(
-                                              entry['at']?.toString() ?? '',
-                                            )
-                                            case final DateTime at)
-                                          DateFormat(
-                                            'MMM d, yyyy h:mm a',
-                                          ).format(at.toLocal()),
-                                        entry['due_at'] == null
-                                            ? 'No due date'
-                                            : 'Due ${entry['due_at']}',
-                                        if (entry['note'] != null)
-                                          entry['note'].toString(),
-                                      ].join(' · '),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                            TaskHistoryCard(history: task.history),
                           if (task.completedAt != null)
                             ListTile(
                               title: const Text('Completed'),
@@ -385,9 +376,50 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     );
   }
 
-  Widget _dateTimeCard(TaskDetailVm vm) {
+  Widget _dateTimeCard(Task task) {
+    Widget timestamp(String label, DateTime? value, String empty) {
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1,
+                  color: AppColors.slate400,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value == null ? empty : DateFormat('MMM d, yyyy').format(value),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate900,
+                ),
+              ),
+              if (value != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  DateFormat('h:mm a').format(value),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.slate500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
       decoration: BoxDecoration(
         color: AppColors.slate50,
         borderRadius: BorderRadius.circular(12),
@@ -395,42 +427,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Column(
-              children: [
-                const Text(
-                  'DUE',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1,
-                    color: AppColors.slate400,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  vm.dateLabel,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.slate900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(width: 1, height: 28, color: AppColors.slate200),
-          Expanded(
-            child: Text(
-              vm.timeRangeLabel,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.slate900,
-              ),
-            ),
-          ),
+          timestamp('CREATED AT', task.createdAt, 'Unavailable'),
+          Container(width: 1, height: 40, color: AppColors.slate200),
+          timestamp('DUE AT', task.dueAt, 'Unscheduled'),
         ],
       ),
     );

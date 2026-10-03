@@ -10,11 +10,13 @@ import 'package:nx_time/domain/projects/project_repository.dart';
 class KgqlProjectRepository implements ProjectRepository {
   KgqlProjectRepository({
     required GraphQLClient client,
+    this.domainId,
     required Future<ModelType> Function() loadProjectSchema,
   }) : _client = client,
        _loadProjectSchema = loadProjectSchema;
 
   final GraphQLClient _client;
+  final int? domainId;
   final Future<ModelType> Function() _loadProjectSchema;
   Map<String, dynamic> _projectFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -31,6 +33,7 @@ class KgqlProjectRepository implements ProjectRepository {
       _client,
       filter: {'model_type': kProjectModelTypeName},
       struct: struct,
+      domainId: domainId,
     );
     return models.map(projectFromModel).toList();
   }
@@ -44,6 +47,7 @@ class KgqlProjectRepository implements ProjectRepository {
       modelTypeName: kProjectModelTypeName,
       id: id,
       struct: struct,
+      domainId: domainId,
     );
     return m == null ? null : projectFromModel(m);
   }
@@ -54,17 +58,25 @@ class KgqlProjectRepository implements ProjectRepository {
       project,
       parentProjectId: parentProjectId,
     );
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: domainId);
   }
 
   @override
   Future<int> update(Project project) async {
-    return setKgqlModel(_client, setModelRequestForUpdateProject(project));
+    return setKgqlModel(
+      _client,
+      setModelRequestForUpdateProject(project),
+      domainId: domainId,
+    );
   }
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDeleteProject(id));
+    await setKgqlModel(
+      _client,
+      setModelRequestForDeleteProject(id),
+      domainId: domainId,
+    );
   }
 
   @override
@@ -80,6 +92,7 @@ class KgqlProjectRepository implements ProjectRepository {
           ModelRelation(modelType: kProjectRelationKey, link: [childId]),
         ],
       ),
+      domainId: domainId,
     );
   }
 
@@ -94,6 +107,7 @@ class KgqlProjectRepository implements ProjectRepository {
         id: parentId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
+      domainId: domainId,
     );
   }
 }

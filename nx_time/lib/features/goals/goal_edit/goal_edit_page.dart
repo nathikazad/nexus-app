@@ -1,3 +1,5 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/features/domains/time_domain_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -142,7 +144,12 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     try {
       final repo = ref.read(goalRepositoryProvider);
       if (widget.mode == GoalEditMode.create) {
-        await repo.create(built);
+        final domain = await chooseCreationDomain(context, ref);
+        if (domain == null || !mounted) return;
+        final w = await ref.read(timeDomainsProvider.future);
+        w.writable(domain);
+        final id = await w.goals(domain).create(built);
+        w.remember(domain, [id]);
       } else {
         await repo.update(built);
       }

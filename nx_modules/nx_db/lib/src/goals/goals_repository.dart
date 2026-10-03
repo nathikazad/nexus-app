@@ -82,6 +82,7 @@ Future<ActionGoalWeekResponse> fetchActionGoalsWeek(
   GraphQLClient client, {
   required DateTime weekStart,
   int? goalId,
+  int? domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
@@ -89,6 +90,7 @@ Future<ActionGoalWeekResponse> fetchActionGoalsWeek(
       variables: {
         'weekStart': formatGraphqlDate(weekStart),
         'goalId': goalId,
+        if (domainId != null) 'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -109,6 +111,7 @@ Future<ActionGoalMonthResponse> fetchActionGoalsMonth(
   GraphQLClient client, {
   required DateTime monthStart,
   int? goalId,
+  int? domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
@@ -116,6 +119,7 @@ Future<ActionGoalMonthResponse> fetchActionGoalsMonth(
       variables: {
         'monthStart': formatGraphqlDate(monthStart),
         'goalId': goalId,
+        if (domainId != null) 'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -136,6 +140,7 @@ Future<ActionGoalMonthScoreResponse> fetchActionGoalsMonthScore(
   GraphQLClient client, {
   required DateTime monthStart,
   int? goalId,
+  int? domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
@@ -143,6 +148,7 @@ Future<ActionGoalMonthScoreResponse> fetchActionGoalsMonthScore(
       variables: {
         'monthStart': formatGraphqlDate(monthStart),
         'goalId': goalId,
+        if (domainId != null) 'domainId': domainId,
       },
       fetchPolicy: FetchPolicy.networkOnly,
     ),
@@ -163,12 +169,14 @@ Future<ActionGoalTrendResponse> fetchActionGoalsTrend(
   GraphQLClient client, {
   required int goalId,
   required int weeks,
+  int? domainId,
 }) async {
   final result = await client.query(
     QueryOptions(
       document: gql(getActionGoalsTrendQuery),
       variables: {
         'goalId': goalId,
+        if (domainId != null) 'domainId': domainId,
         'weeks': weeks,
       },
       fetchPolicy: FetchPolicy.networkOnly,

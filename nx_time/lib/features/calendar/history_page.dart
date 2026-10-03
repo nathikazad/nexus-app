@@ -1,6 +1,7 @@
 import 'package:nx_time/features/calendar/calendar_feed_providers.dart';
 import 'package:nx_time/domain/calendar/calendar_entry.dart';
 import 'package:nx_time/features/tasks/task_detail_page.dart';
+import 'package:nx_time/features/tasks/task_view_models.dart';
 import 'dart:math' as math;
 
 import 'package:dotted_border/dotted_border.dart';
@@ -1159,6 +1160,8 @@ String _compactTimeRange(DateTime? start, DateTime? end) {
 
 final _historyTasksProvider = FutureProvider.autoDispose
     .family<CalendarFeed, DateTime>((ref, day) async {
+      ref.watch(allTasksProvider);
+      ref.watch(calendarRefreshProvider);
       final repo = await ref.watch(calendarRepositoryProvider.future);
       return repo.load(
         day,

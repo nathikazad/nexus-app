@@ -1,6 +1,9 @@
 @Tags(['widget'])
 library;
 
+import '../_support/test_domains.dart';
+import '../_support/mock_graphql_client.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_time/data/providers.dart';
@@ -17,6 +20,9 @@ void main() {
       tester,
       child: const GoalEditPage(),
       overrides: [
+        timeDomainsProvider.overrideWith(
+          () => TestDomains(MockGraphQLClient(), goals: fake),
+        ),
         goalRepositoryProvider.overrideWithValue(fake),
         goalActionTypeOptionsProvider.overrideWith(
           (ref) async => const [GoalActionTypeOption(id: 1, name: 'Sleep')],

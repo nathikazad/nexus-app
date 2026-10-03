@@ -1,3 +1,4 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -14,6 +15,13 @@ class _TestAuth extends AuthController {
 
   @override
   Future<User?> build() async => user;
+}
+
+class _Domains extends TimeDomains {
+  _Domains(this.workspace);
+  final DomainWorkspace workspace;
+  @override
+  Future<DomainWorkspace> build() async => workspace;
 }
 
 void main() {
@@ -74,6 +82,61 @@ void main() {
     expect(change.modelId, 7);
     expect(change.domainId, 9);
   });
+
+  test(
+    'workspace subscriptions include Home and personal, with matching domain arguments',
+    () async {
+      final clients = {1: MockGraphQLClient(), 3: MockGraphQLClient()};
+      final requested = <int>[];
+      for (final entry in clients.entries) {
+        when(() => entry.value.subscribe(any())).thenAnswer((invocation) {
+          final options =
+              invocation.positionalArguments.single as SubscriptionOptions;
+          expect(options.variables['domainId'], entry.key);
+          requested.add(entry.key);
+          return Stream.value(
+            QueryResult(
+              options: options,
+              source: QueryResultSource.network,
+              data: {
+                'subscribeKgqlModels': {
+                  'operation': 'UPDATE',
+                  'modelId': entry.key * 10,
+                  'modelTypeName': 'Task',
+                  'domainId': entry.key,
+                },
+              },
+            ),
+          );
+        });
+      }
+      final workspace = DomainWorkspace(
+        user: User(userId: '3', preset: BackendPreset.localhost),
+        memberships: const [],
+        personalId: 3,
+        selectedIds: {1},
+        clients: clients,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          timeDomainsProvider.overrideWith(() => _Domains(workspace)),
+        ],
+      );
+      addTearDown(container.dispose);
+      final events = <int>[];
+      final subscription = container.listen(workspaceChangesProvider, (
+        _,
+        next,
+      ) {
+        if (next.asData?.value case final change?) events.add(change.domainId);
+      });
+      addTearDown(subscription.close);
+      await container.read(workspaceChangesProvider.future);
+      await container.pump();
+      expect(requested.toSet(), {1, 3});
+      expect(events.toSet(), {1, 3});
+    },
+  );
 
   for (final user in <User?>[
     null,

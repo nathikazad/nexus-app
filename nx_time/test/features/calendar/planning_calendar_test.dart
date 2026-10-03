@@ -1,3 +1,7 @@
+import 'package:nx_time/data/domains/domain_appearance.dart';
+import '../../_support/test_domains.dart';
+import '../../_support/mock_graphql_client.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +35,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+        domainAppearancesProvider.overrideWith((ref) async=>{}),
+          timeDomainsProvider.overrideWith(()=>TestDomains(MockGraphQLClient())),
           planningFeedProvider.overrideWith(
             (ref) async => CalendarFeed(
               entries: [

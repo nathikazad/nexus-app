@@ -18,6 +18,22 @@ void main() {
   });
 
   group('month calendar helpers', () {
+    test(
+      'DST transition months retain complete weeks and local midnight dates',
+      () {
+        for (final month in [DateTime(2026, 3), DateTime(2026, 11)]) {
+          final cells = buildGoalMonthCalendarCells(const [], month);
+          expect(cells.length % 7, 0);
+          expect(cells.first.date.weekday, DateTime.monday);
+          expect(cells.last.date.weekday, DateTime.sunday);
+          expect(cells.every((c) => c.date.hour == 0), isTrue);
+          expect(
+            cells.where((c) => c.inMonth).length,
+            DateTime(month.year, month.month + 1, 0).day,
+          );
+        }
+      },
+    );
     test('buildGoalMonthCalendarCells pads to Monday-Sunday weeks', () {
       final cells = buildGoalMonthCalendarCells(const [], DateTime(2026, 4));
       expect(cells.length, 35);

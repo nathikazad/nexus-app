@@ -1,3 +1,5 @@
+import '../../_support/test_domains.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -29,6 +31,7 @@ void main() {
     final mock = MockGraphQLClient();
     when(() => mock.query(any())).thenAnswer(
       (_) async => okQueryResult({
+        'getKgqlModelType': [{'id':9,'name':'Task'}],
         'getKgqlModels': [
           {'id': 1, 'name': 'Refactor token validation', 'model_type_id': 9},
         ],
@@ -39,10 +42,12 @@ void main() {
       overrides: [
         authProvider.overrideWith(_AuthLoggedIn.new),
         graphqlClientProvider.overrideWithValue(mock),
+        timeDomainsProvider.overrideWith(()=>TestDomains(mock)),
       ],
     );
     addTearDown(container.dispose);
     await container.read(authProvider.future);
+    await container.read(timeDomainsProvider.future);
 
     final repo = container.read(taskRepositoryProvider);
     final tasks = await repo.listForPicker();
@@ -212,7 +217,7 @@ void main() {
     final list = await repo.listAll(status: TaskStatus.todo);
     expect(list.length, 1);
     expect(list.first.name, 'Do thing');
-    expect(queryCount, 3);
+    expect(queryCount, 2);
   });
 
   test('updateStatus sends status and local completion time', () async {

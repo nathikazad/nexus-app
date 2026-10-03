@@ -11,11 +11,13 @@ import 'package:nx_time/data/action/action_mapper.dart';
 class KgqlActionRepository implements ActionRepository {
   KgqlActionRepository({
     required GraphQLClient client,
+    this.domainId,
     required Future<ModelType> Function() loadActionSchema,
   }) : _client = client,
        _loadActionSchema = loadActionSchema;
 
   final GraphQLClient _client;
+  final int? domainId;
   final Future<ModelType> Function() _loadActionSchema;
   Map<String, dynamic> _actionFetchStruct(ModelType schema) {
     final base = buildKgqlStructFromSchema(schema);
@@ -53,6 +55,7 @@ class KgqlActionRepository implements ActionRepository {
         ],
       },
       struct: struct,
+      domainId: domainId,
     );
 
     final actions = models.map(actionFromModel).toList();
@@ -88,6 +91,7 @@ class KgqlActionRepository implements ActionRepository {
         ],
       },
       struct: struct,
+      domainId: domainId,
     );
 
     return models.map(actionFromModel).toList();
@@ -105,6 +109,7 @@ class KgqlActionRepository implements ActionRepository {
       modelTypeName: modelTypeName,
       id: id,
       struct: struct,
+      domainId: domainId,
     );
     return m == null ? null : actionFromModel(m);
   }
@@ -126,7 +131,7 @@ class KgqlActionRepository implements ActionRepository {
             plannable: plannable,
           )
         : setModelRequestForCreate(action, modelTypeName, plannable: plannable);
-    return setKgqlModel(_client, req);
+    return setKgqlModel(_client, req, domainId: domainId);
   }
 
   @override
@@ -137,12 +142,17 @@ class KgqlActionRepository implements ActionRepository {
         action,
         modelTypeNameIfChanged: modelTypeNameIfChanged,
       ),
+      domainId: domainId,
     );
   }
 
   @override
   Future<void> delete(int id) async {
-    await setKgqlModel(_client, setModelRequestForDelete(id));
+    await setKgqlModel(
+      _client,
+      setModelRequestForDelete(id),
+      domainId: domainId,
+    );
   }
 
   @override
@@ -158,6 +168,7 @@ class KgqlActionRepository implements ActionRepository {
           ModelRelation(modelType: kActionRelationKey, link: [childId]),
         ],
       ),
+      domainId: domainId,
     );
   }
 
@@ -172,6 +183,7 @@ class KgqlActionRepository implements ActionRepository {
         id: parentId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
+      domainId: domainId,
     );
   }
 }

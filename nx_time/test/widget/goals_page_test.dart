@@ -1,6 +1,13 @@
 @Tags(['widget'])
 library;
 
+import 'package:nx_time/data/domains/domain_appearance.dart';
+import '../_support/test_domains.dart';
+import '../_support/mock_graphql_client.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/features/calendar/calendar_providers.dart';
+import 'package:nx_time/domain/action/week_actions.dart';
+import 'package:nx_time/features/domains/domain_day_actions_page.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -36,6 +43,18 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
+        domainAppearancesProvider.overrideWith((ref) async=>{}),
+        timeDomainsProvider.overrideWith(
+          () => TestDomains(MockGraphQLClient()),
+        ),
+        goalWeekActionsProvider.overrideWith(
+          (ref, key) async => WeekActions(
+            weekStart: key.$2,
+            all: [],
+            byDay: List.generate(7, (_) => []),
+          ),
+        ),
+        selectedDayActionsProvider.overrideWith((ref, day) async => []),
         authenticatedUserProvider.overrideWith(
           (ref) async => User(userId: '1', preset: BackendPreset.localhost),
         ),
@@ -100,6 +119,18 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
+        domainAppearancesProvider.overrideWith((ref) async=>{}),
+        timeDomainsProvider.overrideWith(
+          () => TestDomains(MockGraphQLClient()),
+        ),
+        goalWeekActionsProvider.overrideWith(
+          (ref, key) async => WeekActions(
+            weekStart: key.$2,
+            all: [],
+            byDay: List.generate(7, (_) => []),
+          ),
+        ),
+        selectedDayActionsProvider.overrideWith((ref, day) async => []),
         authenticatedUserProvider.overrideWith(
           (ref) async => User(userId: '1', preset: BackendPreset.localhost),
         ),
@@ -135,6 +166,18 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
+        domainAppearancesProvider.overrideWith((ref) async=>{}),
+        timeDomainsProvider.overrideWith(
+          () => TestDomains(MockGraphQLClient()),
+        ),
+        goalWeekActionsProvider.overrideWith(
+          (ref, key) async => WeekActions(
+            weekStart: key.$2,
+            all: [],
+            byDay: List.generate(7, (_) => []),
+          ),
+        ),
+        selectedDayActionsProvider.overrideWith((ref, day) async => []),
         authenticatedUserProvider.overrideWith(
           (ref) async => User(userId: '1', preset: BackendPreset.localhost),
         ),
@@ -155,9 +198,9 @@ void main() {
     await tester.tap(find.text('1/2'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Actions'), findsOneWidget);
-    expect(find.text(DateFormat('EEEE, MMM d').format(month)), findsOneWidget);
-    expect(find.text('No actions or logs'), findsOneWidget);
+    expect(find.byType(DomainDayActionsPage), findsOneWidget);
+    expect(find.text(DateFormat.MMMEd().format(month)), findsOneWidget);
+    expect(find.text('No activity in the selected domains'), findsOneWidget);
   });
 }
 

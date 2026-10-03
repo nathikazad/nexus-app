@@ -1,3 +1,7 @@
+import 'package:nx_time/data/domains/domain_appearance.dart';
+import 'package:nx_time/features/tasks/recently_completed_tasks.dart';
+import 'package:nx_time/features/tasks/task_participants.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -34,8 +38,185 @@ class TasksPage extends ConsumerWidget {
               loading: () => const <int, String>{},
               error: (_, __) => const <int, String>{},
             );
-            final summary = taskListSummary(tasks);
+            final recent = ref
+                .watch(recentlyCompletedTasksProvider)
+                .asData
+                ?.value;
+            final today = ref.watch(taskCalendarDayProvider);
+            final doneToday = recent
+                ?.where((task) => calendarDay(task.completedAt!) == today)
+                .length;
             final rows = taskRowVmsFromTasks(tasks, crumbs);
+            final workspace = ref.watch(timeDomainsProvider).asData?.value;
+            if (workspace != null) {
+              final byId = {for (final task in tasks) task.id: task};
+              rows.sort((a, b) {
+                final order = taskRank(
+                  byId[a.taskId]!,
+                  workspace,
+                ).compareTo(taskRank(byId[b.taskId]!, workspace));
+                return order != 0 ? order : a.taskId.compareTo(b.taskId);
+              });
+            }
+            bool inMainList(TaskRowVm row) =>
+                workspace == null ||
+                taskInMainList(
+                  tasks.firstWhere((task) => task.id == row.taskId),
+                  personal:
+                      workspace.origins[row.taskId] == workspace.personalId,
+                  userId: '${workspace.user.userId}',
+                );
+            final primary = rows.where(inMainList).toList();
+            final others = rows.where((row) => !inMainList(row)).toList();
+            Widget section(
+              String storageKey,
+              List<TaskRowVm> rows,
+            ) => ReorderableListView.builder(
+              key: PageStorageKey(storageKey),
+              buildDefaultDragHandles: false,
+              onReorder: (oldIndex, newIndex) async {
+                if (newIndex > oldIndex) newIndex--;
+                if (oldIndex == newIndex || workspace == null) return;
+                final ordered = [
+                  for (final row in rows)
+                    tasks.firstWhere((t) => t.id == row.taskId),
+                ];
+                final moved = ordered.removeAt(oldIndex);
+                ordered.insert(newIndex, moved);
+                try {
+                  final rank = rankBetween(
+                    newIndex == 0
+                        ? null
+                        : taskRank(ordered[newIndex - 1], workspace),
+                    newIndex == ordered.length - 1
+                        ? null
+                        : taskRank(ordered[newIndex + 1], workspace),
+                  );
+                  await saveTaskRank(ref, moved, rank);
+                } catch (e) {
+                  if (context.mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not reorder: $e')),
+                    );
+                }
+              },
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: rows.length,
+
+              header: rows.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'No open tasks',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.slate500,
+                        ),
+                      ),
+                    )
+                  : const SizedBox(height: 12),
+              itemBuilder: (context, i) {
+                final row = rows[i];
+                final appearance = domainAppearance(
+                  ref,
+                  workspace?.origins[row.taskId],
+                );
+                final task = tasks.firstWhere((t) => t.id == row.taskId);
+                return Dismissible(
+                  key: ValueKey('task_row_${row.taskId}'),
+                  direction:
+                      ref
+                              .watch(timeDomainsProvider)
+                              .value
+                              ?.canWriteModel(task.id) ==
+                          false
+                      ? DismissDirection.none
+                      : DismissDirection.endToStart,
+                  confirmDismiss: (_) async {
+                    if (task.status == TaskStatus.done) {
+                      return false;
+                    }
+                    final repo = ref.read(taskRepositoryProvider);
+                    await repo.updateStatus(
+                      id: task.id,
+                      status: TaskStatus.done,
+                    );
+                    invalidateTasksAfterMutation(ref);
+                    return false;
+                  },
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    color: const Color(0xFF15803D),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: appearance.secondary.withValues(alpha: 0.045),
+                      border: Border(
+                        left: BorderSide(
+                          color: appearance.accent.withValues(alpha: 0.25),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TaskRowTile(
+                                title: row.title,
+                                subtitle: [
+                                  appearance.label,
+                                  if (row.subtitle.isNotEmpty) row.subtitle,
+                                ].join(' · '),
+                                durationLabel: row.durationLabel,
+                                done: row.isDone,
+                                onTap: () {
+                                  Navigator.of(context).push<void>(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) =>
+                                          TaskDetailPage(taskId: row.taskId),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            if (workspace?.canWriteModel(task.id) == true)
+                              ReorderableDragStartListener(
+                                index: i,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: Icon(
+                                    Icons.drag_handle_rounded,
+                                    color: AppColors.slate400,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (storageKey == 'other_task_order')
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: 44,
+                              bottom: 10,
+                            ),
+                            child: TaskAssignment(task: task, compact: true),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
             return Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -56,24 +237,17 @@ class TasksPage extends ConsumerWidget {
                             child: Row(
                               children: [
                                 _Chip(
-                                  label: '${summary.total} Total',
+                                  label: '${tasks.length} Open',
                                   bg: AppColors.slate100,
                                   border: AppColors.slate200,
                                   fg: AppColors.slate600,
                                 ),
                                 const SizedBox(width: 8),
                                 _Chip(
-                                  label: '${summary.doneCount} Done',
+                                  label: '${doneToday ?? '—'} Done today',
                                   bg: const Color(0xFFF0FDF4),
                                   border: const Color(0xFFDCFCE7),
                                   fg: const Color(0xFF15803D),
-                                ),
-                                const SizedBox(width: 8),
-                                _Chip(
-                                  label: '${summary.todoCount} Todo',
-                                  bg: AppColors.slate50,
-                                  border: AppColors.slate100,
-                                  fg: AppColors.slate500,
                                 ),
                               ],
                             ),
@@ -111,77 +285,30 @@ class TasksPage extends ConsumerWidget {
                     ),
                   ),
                   Expanded(
-                    child: rows.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No tasks pinned to today',
-                              style: TextStyle(color: AppColors.slate500),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                      children: [
+                        section('primary_task_order', primary),
+                        if (others.isNotEmpty)
+                          ExpansionTile(
+                            key: const PageStorageKey('other_tasks'),
+                            initiallyExpanded: false,
+                            tilePadding: EdgeInsets.zero,
+                            shape: const Border(),
+                            collapsedShape: const Border(),
+                            title: Text(
+                              'Other Tasks (${others.length})',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.slate500,
+                              ),
                             ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-                            itemCount: rows.length + 1,
-                            itemBuilder: (context, i) {
-                              if (i == 0) {
-                                return const Padding(
-                                  padding: EdgeInsets.only(bottom: 16),
-                                  child: Text(
-                                    'SWIPE RIGHT = DONE • LONG PRESS TO REORDER',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      letterSpacing: 1.2,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.slate400,
-                                    ),
-                                  ),
-                                );
-                              }
-                              final row = rows[i - 1];
-                              final task = tasks.firstWhere(
-                                (t) => t.id == row.taskId,
-                              );
-                              return Dismissible(
-                                key: ValueKey('task_row_${row.taskId}'),
-                                direction: DismissDirection.endToStart,
-                                confirmDismiss: (_) async {
-                                  if (task.status == TaskStatus.done) {
-                                    return false;
-                                  }
-                                  final repo = ref.read(taskRepositoryProvider);
-                                  await repo.updateStatus(
-                                    id: task.id,
-                                    status: TaskStatus.done,
-                                  );
-                                  ref.invalidate(tasksForTodayProvider);
-                                  return false;
-                                },
-                                background: Container(
-                                  alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.only(right: 20),
-                                  color: const Color(0xFF15803D),
-                                  child: const Text(
-                                    'Done',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                child: TaskRowTile(
-                                  title: row.title,
-                                  subtitle: row.subtitle,
-                                  durationLabel: row.durationLabel,
-                                  done: row.isDone,
-                                  onTap: () {
-                                    Navigator.of(context).push<void>(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) =>
-                                            TaskDetailPage(taskId: row.taskId),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
+                            children: [section('other_task_order', others)],
                           ),
+                        const RecentlyCompletedTasks(),
+                      ],
+                    ),
                   ),
                 ],
               ),

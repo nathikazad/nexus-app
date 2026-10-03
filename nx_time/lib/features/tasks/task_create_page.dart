@@ -1,3 +1,5 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/features/domains/time_domain_gate.dart';
 import 'package:nx_time/features/calendar/calendar_datetime_field.dart';
 import 'package:nx_time/features/calendar/calendar_feed_providers.dart';
 import 'package:flutter/material.dart';
@@ -72,7 +74,17 @@ class _TaskCreatePageState extends ConsumerState<TaskCreatePage> {
     final schema = await ref.read(taskSchemaProvider.future);
     setState(() => _saving = true);
     try {
-      final repo = ref.read(taskRepositoryProvider);
+      final domain = await chooseCreationDomain(
+        context,
+        ref,
+        relatedId: widget.parentTaskId ?? _draft.projectId,
+      );
+      if (domain == null || !mounted) return;
+      final w = await ref.read(timeDomainsProvider.future);
+      if (_draft.projectId != null &&
+          await w.owner(_draft.projectId!) != domain)
+        throw StateError('Project must be in the destination domain');
+      final repo = w.tasks(domain);
       final task = _draft.toTaskForCreate(
         modelTypeId: schema.id,
         modelTypeName: schema.name,
@@ -82,10 +94,17 @@ class _TaskCreatePageState extends ConsumerState<TaskCreatePage> {
         parentTaskId: widget.parentTaskId,
         projectId: _draft.projectId,
       );
+      w.remember(domain, [newId]);
       ref.invalidate(tasksForTodayProvider);
       ref.invalidate(allTasksProvider);
       ref.invalidate(calendarFeedProvider);
+      ref.invalidate(calendarRefreshProvider);
       if (mounted) Navigator.of(context).pop(newId);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

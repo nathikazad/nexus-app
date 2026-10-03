@@ -1,3 +1,5 @@
+import 'package:nx_time/data/domains/domain_appearance.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -16,7 +18,7 @@ import 'package:nx_time/features/goals/goal_detail/goal_detail_helpers.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_detail_page.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_page.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_view_model.dart';
-import 'package:nx_time/features/today/day_actions_page.dart';
+import 'package:nx_time/features/domains/domain_day_actions_page.dart';
 
 class GoalsPage extends ConsumerStatefulWidget {
   const GoalsPage({super.key});
@@ -63,7 +65,7 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
 
   void _openDay(DateTime day) {
     Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => DayActionsPage(date: day)),
+      MaterialPageRoute<void>(builder: (_) => DomainDayActionsPage(date: day)),
     );
   }
 
@@ -72,7 +74,6 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
     final m = ref.watch(currentWeekProvider);
     final monday = DateTime(m.year, m.month, m.day);
     final weekAsync = ref.watch(actionGoalsWeekProvider(monday));
-    final weekActions = ref.watch(weekActionsProvider(monday));
     final monthScore = ref.watch(actionGoalsMonthScoreProvider(_visibleMonth));
 
     return Column(
@@ -106,19 +107,15 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
                   final weekly = week.items
                       .where((e) => e.cadence == GoalCadence.weekly)
                       .toList();
-                  final wa = weekActions.maybeWhen(
-                    data: (d) => d,
-                    orElse: () => null,
-                  );
                   return [
                     const _SectionLabel(text: 'Daily goals'),
                     ...daily.map(
-                      (item) => _buildDailyRow(context, item, ws, wa),
+                      (item) => _domainGoalRow(item, ws, daily: true),
                     ),
                     const SizedBox(height: 14),
                     const _SectionLabel(text: 'Weekly goals'),
                     ...weekly.map(
-                      (item) => _buildWeeklyRow(context, item, ws, wa),
+                      (item) => _domainGoalRow(item, ws, daily: false),
                     ),
                     _AddGoalRow(onTap: () => GoalsPage.openCreate(context)),
                   ];
@@ -1278,3 +1275,42 @@ class _GymCheck extends StatelessWidget {
     );
   }
 }
+
+Widget _domainGoalRow(
+  ActionGoalWeekItem item,
+  DateTime weekStart, {
+  required bool daily,
+}) => Consumer(
+  builder: (context, ref, _) {
+    final actions = ref
+        .watch(goalWeekActionsProvider((item.id, weekStart)))
+        .value;
+    final appearance = domainAppearance(
+      ref,
+      ref.watch(timeDomainsProvider).asData?.value.origins[item.id],
+    );
+    final name = appearance.label;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(left: 10, right: 6, top: 6),
+      decoration: BoxDecoration(
+        color: appearance.secondary.withValues(alpha: 0.045),
+        border: Border(
+          left: BorderSide(
+            color: appearance.accent.withValues(alpha: 0.65),
+            width: 2,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(name, style: TextStyle(fontSize: 11, color: appearance.accent)),
+          daily
+              ? _buildDailyRow(context, item, weekStart, actions)
+              : _buildWeeklyRow(context, item, weekStart, actions),
+        ],
+      ),
+    );
+  },
+);

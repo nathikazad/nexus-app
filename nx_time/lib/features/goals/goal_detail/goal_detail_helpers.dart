@@ -88,18 +88,15 @@ List<GoalMonthCalendarCell> buildGoalMonthCalendarCells(
 ) {
   final start = monthStartOf(monthStart);
   final daysInMonth = daysInCalendarMonth(start);
-  final firstGridDay = start.subtract(Duration(days: start.weekday - 1));
-  final lastMonthDay = start.add(Duration(days: daysInMonth - 1));
-  final lastGridDay = lastMonthDay.add(
-    Duration(days: 7 - lastMonthDay.weekday),
-  );
-  final totalDays = lastGridDay.difference(firstGridDay).inDays + 1;
+  // Calendar dates must not accumulate DST offsets by adding 24-hour periods.
+  final leadingDays = start.weekday - 1;
+  final totalDays = ((leadingDays + daysInMonth + 6) ~/ 7) * 7;
   final byKey = <int, GoalDailyState>{};
   for (final state in daily) {
     byKey[dayKey(state.date)] = state;
   }
   return List.generate(totalDays, (i) {
-    final date = firstGridDay.add(Duration(days: i));
+    final date = DateTime(start.year, start.month, 1 - leadingDays + i);
     final inMonth = date.year == start.year && date.month == start.month;
     return GoalMonthCalendarCell(
       date: date,

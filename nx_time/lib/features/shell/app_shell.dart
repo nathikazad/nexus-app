@@ -108,42 +108,24 @@ class _AppShellState extends ConsumerState<AppShell>
     final colors = modelTypeColorsOrFallback(
       ref.watch(modelTypeColorsProvider),
     );
-    final todayMode = ref.watch(todayViewModeProvider);
     final voiceState = ref.watch(voiceSocketControllerProvider);
-    final actionsTabVisible = _routeVisible && _index == 3;
 
     ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
       if (next.hasError) {
         debugPrint('[nx_time shell] todaySnapshot: ${next.error}');
       }
     });
-    if (actionsTabVisible &&
-        (todayMode == TodayViewMode.actions ||
-            todayMode == TodayViewMode.stats)) {
-      ref.listen<AsyncValue<KgqlModelChange>>(
-        kgqlModelChangesProvider('Action'),
-        (prev, next) {
-          final change = next.asData?.value;
-          if (change != null) {
-            invalidateActionsAfterMutation(ref);
-          } else if (next.hasError) {
-            debugPrint('[nx_time shell] action subscription: ${next.error}');
-          }
-        },
-      );
-    }
-    if (actionsTabVisible && todayMode == TodayViewMode.actions) {
-      ref.listen<AsyncValue<KgqlModelChange>>(
-        kgqlModelChangesProvider('Daily Log'),
-        (prev, next) {
-          final change = next.asData?.value;
-          if (change != null) {
-            invalidateLogsAfterMutation(ref);
-          } else if (next.hasError) {
-            debugPrint('[nx_time shell] log subscription: ${next.error}');
-          }
-        },
-      );
+    if (_routeVisible) {
+      ref.listen<AsyncValue<KgqlModelChange>>(workspaceChangesProvider, (
+        prev,
+        next,
+      ) {
+        if (next.asData?.value == null) return;
+        invalidateActionsAfterMutation(ref);
+        invalidateTasksAfterMutation(ref);
+        invalidateLogsAfterMutation(ref);
+        ref.invalidate(planningFeedProvider);
+      });
     }
 
     return Scaffold(

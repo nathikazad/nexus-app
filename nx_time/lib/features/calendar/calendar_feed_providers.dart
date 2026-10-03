@@ -40,3 +40,5 @@ final calendarFeedProvider = FutureProvider.autoDispose<CalendarFeed>((
     actualHistory: actual,
   );
 });
+
+final calendarRefreshProvider = Provider<Object>((ref) => Object());

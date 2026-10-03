@@ -1,3 +1,4 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -127,9 +128,31 @@ class _TaskPickerPageState extends ConsumerState<TaskPickerPage> {
                           .map(
                             (t) => _taskRow(
                               title: t.name,
-                              subtitle: _projectSubtitle(crumbs, t.projectId),
+                              subtitle:
+                                  [
+                                        ref
+                                            .watch(timeDomainsProvider)
+                                            .value
+                                            ?.nameFor(t.id),
+                                        _projectSubtitle(crumbs, t.projectId),
+                                      ]
+                                      .whereType<String>()
+                                      .where((s) => s.isNotEmpty)
+                                      .join(' · '),
                               selected: _selectedTaskIds.contains(t.id),
                               onTap: () => setState(() {
+                                if (ref
+                                        .read(timeDomainsProvider)
+                                        .value
+                                        ?.canWriteModel(t.id) ==
+                                    false) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('This domain is read only'),
+                                    ),
+                                  );
+                                  return;
+                                }
                                 if (!_selectedTaskIds.add(t.id)) {
                                   _selectedTaskIds.remove(t.id);
                                 }
@@ -163,9 +186,31 @@ class _TaskPickerPageState extends ConsumerState<TaskPickerPage> {
                           .map(
                             (t) => _taskRow(
                               title: t.name,
-                              subtitle: _projectSubtitle(crumbs, t.projectId),
+                              subtitle:
+                                  [
+                                        ref
+                                            .watch(timeDomainsProvider)
+                                            .value
+                                            ?.nameFor(t.id),
+                                        _projectSubtitle(crumbs, t.projectId),
+                                      ]
+                                      .whereType<String>()
+                                      .where((s) => s.isNotEmpty)
+                                      .join(' · '),
                               selected: _selectedTaskIds.contains(t.id),
                               onTap: () => setState(() {
+                                if (ref
+                                        .read(timeDomainsProvider)
+                                        .value
+                                        ?.canWriteModel(t.id) ==
+                                    false) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('This domain is read only'),
+                                    ),
+                                  );
+                                  return;
+                                }
                                 if (!_selectedTaskIds.add(t.id)) {
                                   _selectedTaskIds.remove(t.id);
                                 }
@@ -252,6 +297,7 @@ class _TaskPickerPageState extends ConsumerState<TaskPickerPage> {
           );
           if (newId != null && mounted) {
             setState(() => _selectedTaskIds.add(newId));
+            ref.invalidate(pickerRecentTasksProvider);
           }
         },
       ),
