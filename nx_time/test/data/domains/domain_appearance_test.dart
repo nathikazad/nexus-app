@@ -130,7 +130,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('My life'), findsOneWidget);
+    expect(find.text('My life'), findsNothing);
     expect(find.text('My tasks'), findsNothing);
     expect(find.text('Other shared tasks'), findsNothing);
     expect(find.text('Our home'), findsOneWidget);

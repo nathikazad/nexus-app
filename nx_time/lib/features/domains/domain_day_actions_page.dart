@@ -55,7 +55,7 @@ class DomainDayActionsPage extends ConsumerWidget {
                                   '',
                               if (action.startTime != null)
                                 DateFormat.jm().format(action.startTime!),
-                            ].join(' · '),
+                            ].where((part) => part.isNotEmpty).join(' · '),
                           ),
                           onTap: () async {
                             await Navigator.of(context).push(
