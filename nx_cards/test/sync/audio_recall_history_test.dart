@@ -12,7 +12,7 @@ import 'package:nx_offline/nx_offline.dart';
 
 void main() {
   test(
-    'legacy JSON gains fresh audio recall and all histories survive storage',
+    'v4 audio review and other direction histories survive storage',
     () async {
       final model = Model(
         id: 1,
@@ -28,21 +28,20 @@ void main() {
           },
           attrLearningState: 'recall',
           attrSchedule: {
-            'version': 3,
+            'version': 4,
             'algorithm': 'fsrs',
             'cues': {
-              'from_language': {'enabled': true},
-              'to_language': {'enabled': true},
-              'transliteration': {'enabled': false},
+              for (final cue in StudyCue.languageDirections)
+                cue.storageKey: {'enabled': true},
             },
           },
           attrReviewHistory: {
-            'version': 3,
+            'version': 4,
             'items': [
               for (var i = 0; i < 8; i++)
                 {
                   'id': 'text-$i',
-                  'cue': 'from_language',
+                  'cue': 'meaning_to_script',
                   'rating': 3,
                   'reviewed_at': DateTime.utc(2026, 9, 1 + i).toIso8601String(),
                   'elapsed_seconds': 0,
@@ -53,13 +52,16 @@ void main() {
         },
       );
       final old = studyCardFromModel(model)!;
-      expect(old.scheduleFor(StudyCue.fromAudio).enabled, isTrue);
-      expect(old.reviewHistoryFor(StudyCue.fromAudio), isEmpty);
-      expect(learningStage(old, StudyCue.fromLanguage), LearningStage.past);
-      expect(learningStage(old, StudyCue.fromAudio), LearningStage.current);
+      expect(old.scheduleFor(StudyCue.soundToMeaning).enabled, isTrue);
+      expect(old.reviewHistoryFor(StudyCue.soundToMeaning), isEmpty);
+      expect(learningStage(old, StudyCue.meaningToScript), LearningStage.past);
+      expect(
+        learningStage(old, StudyCue.soundToMeaning),
+        LearningStage.current,
+      );
       final graded = FsrsCardScheduler(reviewId: () => 'audio-1')
           .preview(
-            StudyPrompt(card: old, cue: StudyCue.fromAudio),
+            StudyPrompt(card: old, cue: StudyCue.soundToMeaning),
             DateTime.utc(2026, 9, 28),
           )[CardRating.good]!
           .card;
@@ -76,13 +78,19 @@ void main() {
       );
       await store.applyCardSnapshot([graded]);
       final stored = (await store.getCard(1))!;
-      expect(stored.reviewHistoryFor(StudyCue.fromLanguage).length, 8);
-      expect(stored.reviewHistoryFor(StudyCue.fromAudio).single.id, 'audio-1');
-      expect(stored.reviewHistoryFor(StudyCue.toLanguage), isEmpty);
-      expect(stored.scheduleFor(StudyCue.fromAudio).reviewCount, 1);
+      expect(stored.reviewHistoryFor(StudyCue.meaningToScript).length, 8);
+      expect(
+        stored.reviewHistoryFor(StudyCue.soundToMeaning).single.id,
+        'audio-1',
+      );
+      expect(stored.reviewHistoryFor(StudyCue.scriptToMeaning), isEmpty);
+      expect(stored.scheduleFor(StudyCue.soundToMeaning).reviewCount, 1);
       expect(scheduleJson(stored), scheduleJson(graded));
       expect(reviewHistoryJson(stored), reviewHistoryJson(graded));
-      expect(scheduleJson(stored)['cues']['from_audio']['enabled'], isTrue);
+      expect(
+        scheduleJson(stored)['cues']['sound_to_meaning']['enabled'],
+        isTrue,
+      );
     },
   );
 }

@@ -7,7 +7,7 @@ import 'package:nx_cards/scheduling/learning_stage.dart';
 /// categories or activation. Matches the approved V2 ranking experiment.
 Map<int, double> futureCardScores(
   Iterable<StudyCard> cards, {
-  required StudyCue cue,
+  required RecallSelection? cue,
   required int historyWindow,
 }) {
   final languages = <String?, List<StudyCard>>{};
@@ -44,7 +44,8 @@ Map<int, double> futureCardScores(
         LearningStage.future => 0,
         LearningStage.upcoming => .1,
         LearningStage.past => 1,
-        LearningStage.current => .1 + .9 * (recallScore(c, cue).fraction / .8),
+        LearningStage.current =>
+          .1 + .9 * (recallScore(c, cue, window: historyWindow).fraction / .8),
       };
     }
     for (final c in collection) {

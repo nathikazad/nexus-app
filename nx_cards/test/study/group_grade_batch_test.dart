@@ -10,7 +10,7 @@ void main() {
     final latest = {1: card};
     final batch = GroupGradeBatch(
       prompts: [
-        for (final cue in [StudyCue.fromLanguage, StudyCue.toLanguage])
+        for (final cue in [StudyCue.meaningToScript, StudyCue.scriptToMeaning])
           StudyPrompt(card: card, cue: cue),
       ],
       latest: latest,
@@ -19,9 +19,9 @@ void main() {
       rating: CardRating.good,
     );
     await batch.save((card) async {}, latest);
-    expect(latest[1]!.reviewHistoryFor(StudyCue.fromLanguage), hasLength(1));
-    expect(latest[1]!.reviewHistoryFor(StudyCue.toLanguage), hasLength(1));
-    expect(latest[1]!.reviewHistoryFor(StudyCue.fromAudio), hasLength(2));
+    expect(latest[1]!.reviewHistoryFor(StudyCue.meaningToScript), hasLength(1));
+    expect(latest[1]!.reviewHistoryFor(StudyCue.scriptToMeaning), hasLength(1));
+    expect(latest[1]!.reviewHistoryFor(StudyCue.soundToMeaning), hasLength(2));
   });
 
   test(
@@ -38,7 +38,7 @@ void main() {
       final batch = GroupGradeBatch(
         prompts: [
           for (final c in cards.take(2))
-            StudyPrompt(card: c, cue: StudyCue.fromAudio),
+            StudyPrompt(card: c, cue: StudyCue.soundToMeaning),
         ],
         latest: latest,
         scheduler: scheduler,
@@ -49,11 +49,17 @@ void main() {
         saved.add(c);
       }, latest);
       expect(saved, hasLength(2));
-      expect(latest[3]!.reviewHistoryFor(StudyCue.fromAudio), isEmpty);
-      expect(latest[1]!.reviewHistoryFor(StudyCue.fromLanguage), hasLength(2));
-      expect(latest[1]!.reviewHistoryFor(StudyCue.fromAudio).single.rating, 3);
+      expect(latest[3]!.reviewHistoryFor(StudyCue.soundToMeaning), isEmpty);
+      expect(
+        latest[1]!.reviewHistoryFor(StudyCue.meaningToScript),
+        hasLength(2),
+      );
+      expect(
+        latest[1]!.reviewHistoryFor(StudyCue.soundToMeaning).single.rating,
+        3,
+      );
       final next = GroupGradeBatch(
-        prompts: [StudyPrompt(card: cards.first, cue: StudyCue.fromAudio)],
+        prompts: [StudyPrompt(card: cards.first, cue: StudyCue.soundToMeaning)],
         latest: latest,
         scheduler: scheduler,
         now: DateTime.utc(2026, 9, 29, 1),
@@ -63,7 +69,9 @@ void main() {
         saved.add(c);
       }, latest);
       expect(
-        latest[1]!.reviewHistoryFor(StudyCue.fromAudio).map((r) => r.rating),
+        latest[1]!
+            .reviewHistoryFor(StudyCue.soundToMeaning)
+            .map((r) => r.rating),
         [3, 1],
       );
     },
@@ -75,7 +83,8 @@ void main() {
       final latest = {for (final c in cards) c.id: c};
       final batch = GroupGradeBatch(
         prompts: [
-          for (final c in cards) StudyPrompt(card: c, cue: StudyCue.fromAudio),
+          for (final c in cards)
+            StudyPrompt(card: c, cue: StudyCue.soundToMeaning),
         ],
         latest: latest,
         scheduler: FsrsCardScheduler(),
@@ -97,7 +106,7 @@ void main() {
       expect(identical(attempts[1], attempts[2]), isTrue);
       expect(
         latest.values.every(
-          (c) => c.reviewHistoryFor(StudyCue.fromAudio).single.rating == 1,
+          (c) => c.reviewHistoryFor(StudyCue.soundToMeaning).single.rating == 1,
         ),
         isTrue,
       );

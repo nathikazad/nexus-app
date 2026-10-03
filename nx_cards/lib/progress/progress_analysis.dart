@@ -64,9 +64,10 @@ typedef _Event = ({StudyCard card, StudyCue cue, CardReview review});
 /// No historical workflow status or category membership is inferred.
 ProgressAnalysis analyzeProgress({
   required List<StudyCard> cards,
-  required Set<StudyCue> directions,
+  required Set<RecallComponent> directions,
   required int targetPercent,
   required DateTime now,
+  int window = 10,
   DateTime? start,
   DateTime? end,
 }) {
@@ -76,18 +77,18 @@ ProgressAnalysis analyzeProgress({
   final events = <_Event>[];
   DateTime? firstAudio;
   for (final card in cards) {
-    for (final cue in StudyCue.activeDirections) {
+    for (final cue in card.directions) {
       final unique = {for (final r in card.reviewHistoryFor(cue)) r.id: r};
       for (final review in unique.values) {
         if (review.reviewedAt.isAfter(now) ||
             !review.reviewedAt.isBefore(nextProgressDay(lastDay))) {
           continue;
         }
-        if (cue == StudyCue.fromAudio &&
+        if (cue.isListening &&
             (firstAudio == null || review.reviewedAt.isBefore(firstAudio))) {
           firstAudio = review.reviewedAt;
         }
-        if (directions.contains(cue)) {
+        if (selectedCues(card, directions).contains(cue)) {
           events.add((card: card, cue: cue, review: review));
         }
       }
@@ -120,12 +121,10 @@ ProgressAnalysis analyzeProgress({
       final id = event.card.id;
       final time = event.review.reviewedAt;
       started.putIfAbsent(id, () => time);
-      final window = history.putIfAbsent((id, event.cue), () => []);
-      window.add(event.review);
-      if (window.length > 10) window.removeAt(0);
-      final effectiveDirections = directions
-          .where(event.card.studiesCue)
-          .toList();
+      final recent = history.putIfAbsent((id, event.cue), () => []);
+      recent.add(event.review);
+      if (recent.length > window) recent.removeAt(0);
+      final effectiveDirections = selectedCues(event.card, directions).toList();
       final average = effectiveDirections.isEmpty
           ? 0.0
           : effectiveDirections
@@ -135,6 +134,7 @@ ProgressAnalysis analyzeProgress({
                       return RecallScore(
                         recalled: reviews.where((r) => r.rating >= 3).length,
                         attempts: reviews.length,
+                        denominator: window,
                       ).fraction;
                     })
                     .reduce((a, b) => a + b) /

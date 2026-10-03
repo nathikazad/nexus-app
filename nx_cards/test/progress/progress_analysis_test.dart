@@ -23,7 +23,10 @@ StudyCard progressCard(
     originalScript: '字$id',
     transliteration: 'zi',
   ),
-  schedules: const {},
+  schedules: {
+    for (final cue in history.keys)
+      cue: const CardSchedule.initial(enabled: true),
+  },
   reviewHistory: history,
   suspended: false,
   learningStatus: LearningStatus.recall,
@@ -90,11 +93,16 @@ void main() {
       final report = analyzeProgress(
         cards: [
           progressCard(1, {
-            StudyCue.fromLanguage: [review(1, 3), review(2, 3), review(3, 3)],
+            StudyCue.meaningToScript: [
+              review(1, 3),
+              review(2, 3),
+              review(3, 3),
+            ],
           }),
         ],
-        directions: {StudyCue.fromLanguage},
+        directions: {RecallComponent.meaning},
         targetPercent: 50,
+        window: 5,
         now: DateTime(2026, 9, 30, 12),
         start: DateTime(2026, 9, 7),
       );
@@ -111,17 +119,18 @@ void main() {
     },
   );
 
-  final english = {StudyCue.fromLanguage};
+  final english = {RecallComponent.meaning};
   ProgressAnalysis run(
     List<StudyCard> cards, {
     int target = 50,
     DateTime? start,
     DateTime? end,
-    Set<StudyCue>? directions,
+    Set<RecallComponent>? directions,
   }) => analyzeProgress(
     cards: cards,
     directions: directions ?? english,
     targetPercent: target,
+    window: 5,
     now: DateTime(2026, 9, 30, 18),
     start: start,
     end: end,
@@ -131,7 +140,7 @@ void main() {
     'replays earlier reviews before clipping and preserves zero-activity days',
     () {
       final card = progressCard(1, {
-        StudyCue.fromLanguage: [for (var d = 1; d <= 3; d++) review(d, 3)],
+        StudyCue.meaningToScript: [for (var d = 1; d <= 3; d++) review(d, 3)],
       });
       final result = run([card], start: DateTime(2026, 9, 10));
       expect(result.days.length, 21);
@@ -152,7 +161,7 @@ void main() {
       final r = review(1, 3);
       final result = run([
         progressCard(1, {
-          StudyCue.fromLanguage: [
+          StudyCue.meaningToScript: [
             review(3, 3),
             r,
             r,
@@ -172,7 +181,7 @@ void main() {
     () {
       final result = run([
         progressCard(1, {
-          StudyCue.fromLanguage: [
+          StudyCue.meaningToScript: [
             for (var d = 1; d <= 15; d++) review(d, d <= 5 ? 3 : 1),
           ],
         }),
@@ -184,42 +193,39 @@ void main() {
     },
   );
 
-  test('three directions average equally, missing direction is zero', () {
+  test('disabled directions are excluded from overall progress', () {
     final card = progressCard(1, {
-      StudyCue.fromLanguage: [for (var d = 1; d <= 5; d++) review(d, 3)],
-      StudyCue.toLanguage: [review(1, 3)],
+      StudyCue.meaningToScript: [for (var d = 1; d <= 5; d++) review(d, 3)],
+      StudyCue.scriptToMeaning: [review(1, 3)],
     });
     expect(
       run([
         card,
-      ], directions: StudyCue.activeDirections.toSet()).days.last.atTarget,
-      0,
+      ], directions: RecallComponent.values.toSet()).days.last.atTarget,
+      1,
     );
     expect(
       run(
         [card],
         target: 40,
-        directions: StudyCue.activeDirections.toSet(),
+        directions: RecallComponent.values.toSet(),
       ).days.last.atTarget,
       1,
     );
-    expect(
-      averageRetention(card, StudyCue.activeDirections),
-      closeTo(.4, 1e-9),
-    );
+    expect(averageRetention(card, RecallComponent.values), closeTo(.3, 1e-9));
   });
 
   test('inclusive threshold, unreviewed denominator, and zero target', () {
     final card = progressCard(1, {
-      StudyCue.fromLanguage: [
+      StudyCue.meaningToScript: [
         for (var d = 1; d <= 6; d++) review(d, d <= 3 ? 3 : 1),
       ],
     });
     final empty = progressCard(2, {});
-    final result = run([card, empty]);
+    final result = run([card, empty], target: 40);
     expect(result.cardCount, 2);
-    expect(result.days.last.atTarget, 1); // exactly 50%
-    expect(run([card, empty], target: 51).days.last.atTarget, 0);
+    expect(result.days.last.atTarget, 1); // exactly 40% of the last five
+    expect(run([card, empty], target: 41).days.last.atTarget, 0);
     expect(run([card, empty], target: 0).days.last.atTarget, 1);
   });
 
@@ -228,12 +234,12 @@ void main() {
     () {
       final cards = [
         progressCard(1, {
-          StudyCue.fromLanguage: [
+          StudyCue.meaningToScript: [
             for (var d = 1; d <= 12; d++) review(d, d <= 3 ? 3 : 1),
           ],
         }),
         progressCard(2, {
-          StudyCue.fromLanguage: [review(5, 3), review(7, 3), review(9, 3)],
+          StudyCue.meaningToScript: [review(5, 3), review(7, 3), review(9, 3)],
         }),
       ];
       final report = run(
@@ -254,11 +260,11 @@ void main() {
     () {
       final result = run([
         progressCard(1, {
-          StudyCue.fromLanguage: [
+          StudyCue.meaningToScript: [
             review(1, 3, hour: 23),
             review(2, 3, hour: 0),
           ],
-          StudyCue.transliteration: [review(1, 3)],
+          StudyCue.scriptToSound: [review(1, 3)],
         }),
       ]);
       expect(result.days[0].recalls, 1);
@@ -281,7 +287,7 @@ void main() {
       final cards = [
         for (var id = 0; id < 12; id++)
           progressCard(id, {
-            for (final cue in StudyCue.activeDirections)
+            for (final cue in StudyCue.languageDirections)
               cue: [
                 for (var day = 1; day <= 20; day++)
                   review(day, (day + id + cue.index) % 4 + 1),
@@ -290,16 +296,18 @@ void main() {
       ];
       for (final cues in [
         english,
-        {StudyCue.fromAudio},
-        {StudyCue.toLanguage},
-        StudyCue.activeDirections.toSet(),
+        {RecallComponent.sound},
+        {RecallComponent.script},
+        RecallComponent.values.toSet(),
       ]) {
         for (final threshold in [1, 33, 50, 67, 80, 90, 100]) {
           expect(
             run(cards, target: threshold, directions: cues).days.last.atTarget,
             cards
                 .where(
-                  (c) => averageRetention(c, cues) * 100 + 1e-9 >= threshold,
+                  (c) =>
+                      averageRetention(c, cues, window: 5) * 100 + 1e-9 >=
+                      threshold,
                 )
                 .length,
           );

@@ -22,7 +22,13 @@ StudyCard card(
     transliteration: 'sound',
     examples: examples,
   ),
-  schedules: const {StudyCue.fromLanguage: CardSchedule.initial(enabled: true)},
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
+  },
   reviewHistory: const {},
   suspended: false,
   linkedWordIds: links,
@@ -184,7 +190,7 @@ void main() {
               home: StudySessionPage(
                 title: 'Chinese',
                 prompts: [
-                  StudyPrompt(card: target, cue: StudyCue.fromLanguage),
+                  StudyPrompt(card: target, cue: StudyCue.meaningToScript),
                 ],
               ),
             ),

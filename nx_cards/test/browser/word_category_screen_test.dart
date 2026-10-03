@@ -31,7 +31,11 @@ void main() {
             transliteration: 'zi',
           ),
           schedules: {
-            StudyCue.fromLanguage: _schedule(
+            for (final direction in StudyCue.values)
+              direction: CardSchedule.initial(
+                enabled: direction != StudyCue.backToFront,
+              ),
+            StudyCue.meaningToScript: _schedule(
               DateTime.now().toUtc().subtract(const Duration(days: 1)),
             ),
           },
@@ -496,7 +500,7 @@ void main() {
     ].map((label) => tester.getCenter(find.text(label)).dy).toList();
     expect(order, orderedEquals([...order]..sort()));
     await tester.pumpAndSettle();
-    expect(find.text('27%'), findsOneWidget);
+    expect(find.text('2%'), findsOneWidget);
     expect(find.text('word 3'), findsOneWidget);
     expect(find.text('word 4'), findsNothing);
   });
@@ -581,8 +585,8 @@ void main() {
       expect(find.byKey(const ValueKey('future-score-1')), findsNothing);
       final phraseOrder = <String>[
         'word 103',
-        'word 102',
         'word 101',
+        'word 102',
       ].map((label) => tester.getCenter(find.text(label)).dy).toList();
       expect(phraseOrder, orderedEquals(<double>[...phraseOrder]..sort()));
     },
@@ -622,14 +626,18 @@ StudyCard _word({
     transliteration: id == 1 ? 'aashanka' : 'utharavaadithvam',
   ),
   schedules: {
-    StudyCue.fromLanguage: schedule,
-    StudyCue.toLanguage:
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    StudyCue.meaningToScript: schedule,
+    StudyCue.scriptToMeaning:
         toLanguageSchedule ?? const CardSchedule.initial(enabled: true),
-    StudyCue.transliteration: const CardSchedule.initial(enabled: true),
+    StudyCue.scriptToSound: const CardSchedule.initial(enabled: true),
   },
   reviewHistory: <StudyCue, List<CardReview>>{
     if (!schedule.isNew || recallRatings != null)
-      StudyCue.fromLanguage: [
+      StudyCue.meaningToScript: [
         for (var index = 0; index < (recallRatings ?? [1]).length; index++)
           CardReview(
             id: 'review-$id-$index',
@@ -660,7 +668,13 @@ StudyCard _bookCard(int id) => StudyCard(
     front: 'Why validate demand?',
     back: 'To avoid scaling an unproven model.',
   ),
-  schedules: const {StudyCue.fromLanguage: CardSchedule.initial(enabled: true)},
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
+  },
   reviewHistory: const {},
   suspended: false,
   sourceBookId: 4195,

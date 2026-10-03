@@ -346,7 +346,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                     padding: EdgeInsets.all(fast ? 18 : 28),
                     child:
                         widget.format != GroupedRecallFormat.fast &&
-                            !prompt.card.spokenOnly
+                            prompt.recallsTarget
                         ? SizedBox(
                             height: max(420, constraints.maxHeight - 160),
                             child: WritingRecallCard(
@@ -377,9 +377,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                                     ),
                                   if (_revealed) ...[
                                     Text(
-                                      content.spokenOnly
-                                          ? content.transliteration
-                                          : content.originalScript,
+                                      prompt.answer,
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: fast ? 28 : 40,
@@ -387,17 +385,11 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                                     ),
                                     const SizedBox(height: 14),
                                     Text(
-                                      content.english,
+                                      prompt.cue.label,
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(fontSize: 20),
                                     ),
                                     const SizedBox(height: 8),
-                                    if (!content.spokenOnly)
-                                      Text(
-                                        content.transliteration,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(fontSize: 20),
-                                      ),
                                   ],
                                   if ((prompt.isListening || _revealed) &&
                                       content.audioUrl?.isNotEmpty == true &&

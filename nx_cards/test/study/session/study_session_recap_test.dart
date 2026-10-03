@@ -42,20 +42,25 @@ void main() {
         originalScript: 'வீடு',
         transliteration: 'vīṭu',
       ),
-      schedules: const {},
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+      },
       reviewHistory: const {},
       suspended: false,
     );
     final latest = card.copyWith(learningStatus: LearningStatus.recall);
     final prompts = [
-      StudyPrompt(card: card, cue: StudyCue.toLanguage),
+      StudyPrompt(card: card, cue: StudyCue.scriptToMeaning),
       StudyPrompt(
         card: card,
-        cue: StudyCue.fromLanguage,
+        cue: StudyCue.meaningToScript,
         showEnglishAndTransliteration: true,
       ),
-      StudyPrompt(card: card, cue: StudyCue.transliteration),
-      StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+      StudyPrompt(card: card, cue: StudyCue.scriptToSound),
+      StudyPrompt(card: card, cue: StudyCue.meaningToScript),
     ];
     final repeated = retryRecallPrompts(
       prompts,
@@ -64,9 +69,9 @@ void main() {
     );
     expect(repeated, hasLength(2));
     expect(repeated.every((p) => identical(p.card, latest)), isTrue);
-    expect(repeated.every((p) => p.cue == StudyCue.fromLanguage), isTrue);
+    expect(repeated.every((p) => p.cue == StudyCue.meaningToScript), isTrue);
     expect(repeated.last.showEnglishAndTransliteration, isTrue);
-    expect(repeated.last.prompt, 'house\nvīṭu');
+    expect(repeated.last.prompt, 'house');
     expect(repeated.first.showEnglishAndTransliteration, isFalse);
   });
 
@@ -107,11 +112,16 @@ void main() {
           card: StudyCard(
             id: i,
             content: BasicCardContent(front: '$i', back: '$i'),
-            schedules: const {},
+            schedules: {
+              for (final direction in StudyCue.values)
+                direction: CardSchedule.initial(
+                  enabled: direction != StudyCue.backToFront,
+                ),
+            },
             reviewHistory: const {},
             suspended: false,
           ),
-          cue: StudyCue.fromAudio,
+          cue: StudyCue.soundToMeaning,
         ),
       );
       final ratings = {
@@ -129,7 +139,7 @@ void main() {
       expect(retry.map((p) => p.cardId).toList(), isNot([1, 3, 5, 6, 7, 8, 9]));
       expect(
         retry.every(
-          (p) => p.cue == StudyCue.fromAudio && p.reviewHistory.isEmpty,
+          (p) => p.cue == StudyCue.soundToMeaning && p.reviewHistory.isEmpty,
         ),
         isTrue,
       );
@@ -150,8 +160,12 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      schedules: const {
-        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
       },
       reviewHistory: const {},
       suspended: false,
@@ -169,7 +183,7 @@ void main() {
         child: MaterialApp(
           home: StudySessionPage(
             title: 'Malayalam',
-            prompts: [StudyPrompt(card: card, cue: StudyCue.fromLanguage)],
+            prompts: [StudyPrompt(card: card, cue: StudyCue.meaningToScript)],
           ),
         ),
       ),
@@ -195,8 +209,12 @@ void main() {
         originalScript: 'കഴിവ്',
         transliteration: 'kazhivu',
       ),
-      schedules: const {
-        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
       },
       reviewHistory: const {},
       suspended: false,
@@ -217,7 +235,7 @@ void main() {
           themeMode: ThemeMode.dark,
           home: StudySessionPage(
             title: 'Malayalam',
-            prompts: [StudyPrompt(card: card, cue: StudyCue.fromLanguage)],
+            prompts: [StudyPrompt(card: card, cue: StudyCue.meaningToScript)],
           ),
         ),
       ),

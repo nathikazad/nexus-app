@@ -27,15 +27,19 @@ void main() {
           ),
         ],
       ),
-      schedules: const <StudyCue, CardSchedule>{
-        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
-        StudyCue.toLanguage: CardSchedule.initial(enabled: true),
-        StudyCue.transliteration: CardSchedule.initial(enabled: true),
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
+        StudyCue.scriptToMeaning: CardSchedule.initial(enabled: true),
+        StudyCue.scriptToSound: CardSchedule.initial(enabled: true),
       },
       reviewHistory: const <StudyCue, List<CardReview>>{
-        StudyCue.fromLanguage: <CardReview>[],
-        StudyCue.toLanguage: <CardReview>[],
-        StudyCue.transliteration: <CardReview>[],
+        StudyCue.meaningToScript: <CardReview>[],
+        StudyCue.scriptToMeaning: <CardReview>[],
+        StudyCue.scriptToSound: <CardReview>[],
       },
       suspended: false,
     );
@@ -53,7 +57,7 @@ void main() {
           home: StudySessionPage(
             title: 'Malayalam words',
             prompts: <StudyPrompt>[
-              StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+              StudyPrompt(card: card, cue: StudyCue.meaningToScript),
             ],
           ),
         ),
@@ -65,9 +69,9 @@ void main() {
     await tester.tap(find.text('Show answer'));
     await tester.pumpAndSettle();
 
-    expect(find.text('fraud'), findsOneWidget);
+    expect(find.text('Meaning → Script'), findsOneWidget);
     expect(find.text('തട്ടിപ്പ്'), findsOneWidget);
-    expect(find.text('thattippu'), findsOneWidget);
+    expect(find.text('thattippu'), findsNothing);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
     expect(
       find.ancestor(of: find.text('Examples'), matching: find.byType(Card)),
@@ -104,8 +108,12 @@ void main() {
           originalScript: 'കഴിവ്',
           transliteration: 'kazhivu',
         ),
-        schedules: const {
-          StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+          StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
         },
         reviewHistory: const {},
         suspended: false,
@@ -122,7 +130,7 @@ void main() {
           child: MaterialApp(
             home: StudySessionPage(
               title: 'Malayalam words',
-              prompts: [StudyPrompt(card: card, cue: StudyCue.fromLanguage)],
+              prompts: [StudyPrompt(card: card, cue: StudyCue.meaningToScript)],
             ),
           ),
         ),

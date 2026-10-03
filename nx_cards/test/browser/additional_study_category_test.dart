@@ -14,7 +14,13 @@ void main() {
           originalScript: '字',
           transliteration: 'zì',
         ),
-        schedules: {StudyCue.fromLanguage: schedule},
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+          StudyCue.meaningToScript: schedule,
+        },
         reviewHistory: const {},
         suspended: false,
         learningStatus: LearningStatus.recall,
@@ -35,8 +41,8 @@ void main() {
       expect(card.categories, contains('Script'));
       expect(card.modelTypeName, 'LanguageFlashcard');
       expect(card.tags.keys, isNot(contains('Study Category')));
-      expect(card.scheduleFor(StudyCue.fromLanguage), same(schedule));
-      expect(card.prompts.length, 1);
+      expect(card.scheduleFor(StudyCue.meaningToScript), same(schedule));
+      expect(card.prompts.length, 4);
     });
   }
 }

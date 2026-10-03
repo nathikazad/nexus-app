@@ -5,7 +5,6 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/browser_error.dart';
 import 'package:nx_cards/scheduling/future_card_rank.dart';
-import 'package:nx_cards/scheduling/language_direction.dart';
 import 'bulk_card_selection.dart';
 import 'learning_cards.dart';
 
@@ -27,7 +26,6 @@ class BacklogPage extends ConsumerWidget {
     final data = ref.watch(
       cardsCollectionProvider((language: language, bookId: bookId)),
     );
-    final cue = ref.watch(languageDirectionProvider(language));
     return Scaffold(
       appBar: AppBar(title: Text('$title · Backlog')),
       body: data.when(
@@ -39,7 +37,7 @@ class BacklogPage extends ConsumerWidget {
         data: (dashboard) {
           final scores = futureCardScores(
             dashboard.cards,
-            cue: cue,
+            cue: null,
             historyWindow:
                 ref
                     .watch(reviewProgressionSettingsProvider)

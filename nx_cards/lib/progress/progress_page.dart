@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/review_progression.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -98,7 +99,7 @@ class ProgressPage extends ConsumerWidget {
             return const Center(child: Text('Sign in to view progress.'));
           }
           final key =
-              'progress.v1.${account.serverId}.${account.userId}.${account.domainId}.${bookId == null ? language : "book:$bookId"}';
+              'progress.v2.${account.serverId}.${account.userId}.${account.domainId}.${bookId == null ? language : "book:$bookId"}';
           return ref
               .watch(
                 bookId == null
@@ -130,6 +131,12 @@ class ProgressPage extends ConsumerWidget {
                   preferenceKey: key,
                   initialGroup: initialGroup,
                   isBook: bookId != null,
+                  window:
+                      ref
+                          .watch(reviewProgressionSettingsProvider)
+                          .value
+                          ?.historyWindow ??
+                      10,
                 ),
               );
         },
@@ -148,19 +155,20 @@ class ProgressView extends StatefulWidget {
     this.initialGroup,
     this.now,
     this.isBook = false,
+    this.window = 10,
   });
   final List<StudyCard> cards;
   final String language, preferenceKey;
   final LanguageGroup? initialGroup;
   final DateTime? now;
   final bool isBook;
+  final int window;
   @override
   State<ProgressView> createState() => _ProgressViewState();
 }
 
 class _ProgressViewState extends State<ProgressView> {
   LanguageGroup? group;
-  StudyCue? direction;
   int target = 80;
   String period = '30';
   ProgressInterval interval = ProgressInterval.day;
@@ -177,7 +185,6 @@ class _ProgressViewState extends State<ProgressView> {
   void initState() {
     super.initState();
     group = widget.initialGroup;
-    if (widget.isBook) direction = StudyCue.fromLanguage;
     unawaited(_restore());
   }
 
@@ -194,10 +201,6 @@ class _ProgressViewState extends State<ProgressView> {
                 .where((v) => v.name == saved['interval'])
                 .firstOrNull ??
             ProgressInterval.day;
-        direction = StudyCue.activeDirections
-            .where((c) => c.storageKey == saved['direction'])
-            .firstOrNull;
-        if (widget.isBook) direction = StudyCue.fromLanguage;
         period = ['7', '30', 'all', 'custom'].contains(saved['period'])
             ? saved['period']
             : '30';
@@ -229,7 +232,6 @@ class _ProgressViewState extends State<ProgressView> {
     });
     final raw = jsonEncode({
       'target': target,
-      'direction': direction?.storageKey,
       'period': period,
       'interval': interval.name,
       'start': custom?.start.toIso8601String(),
@@ -252,7 +254,6 @@ class _ProgressViewState extends State<ProgressView> {
       : group!.tagSystem == 'Collection'
       ? 'Collection · ${group!.name}'
       : (group!.path ?? [group!.name]).join(' › ');
-  String directionLabel(StudyCue? cue) => cue?.label ?? 'All three';
   String get periodLabel => switch (period) {
     '7' => 'Last 7 days',
     '30' => 'Last 30 days',
@@ -413,43 +414,6 @@ class _ProgressViewState extends State<ProgressView> {
     }
   }
 
-  Future<void> _chooseDirection() async {
-    final value = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (context) => SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Recall type',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            for (final cue in <StudyCue?>[null, ...StudyCue.activeDirections])
-              ListTile(
-                title: Text(directionLabel(cue)),
-                trailing: cue == direction ? const Icon(Icons.check) : null,
-                onTap: () =>
-                    Navigator.pop(context, cue?.storageKey ?? 'average'),
-              ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-    if (value != null && mounted) {
-      _change(
-        () => direction = StudyCue.activeDirections
-            .where((c) => c.storageKey == value)
-            .firstOrNull,
-      );
-    }
-  }
-
   Future<void> _targetMenu() async {
     final value = await showModalBottomSheet<int>(
       context: context,
@@ -585,7 +549,7 @@ class _ProgressViewState extends State<ProgressView> {
     final columns = largeText
         ? 1
         : availableWidth >= 760
-        ? (widget.isBook ? 3 : 4)
+        ? 3
         : 2;
     final width = (availableWidth - (columns - 1) * 10) / columns;
     return Wrap(
@@ -601,16 +565,6 @@ class _ProgressViewState extends State<ProgressView> {
             _chooseCategory,
           ),
         ),
-        if (!widget.isBook)
-          SizedBox(
-            width: width,
-            child: _filter(
-              'Recall type',
-              directionLabel(direction),
-              'progress-direction',
-              _chooseDirection,
-            ),
-          ),
         SizedBox(
           width: width,
           child: _filter(
@@ -633,7 +587,7 @@ class _ProgressViewState extends State<ProgressView> {
       groupLabel,
       group?.tagSystem,
       target,
-      direction?.storageKey,
+      widget.window,
       period,
       custom?.start.toIso8601String(),
       custom?.end.toIso8601String(),
@@ -651,10 +605,9 @@ class _ProgressViewState extends State<ProgressView> {
     _cachedQuery = query;
     return _cachedAnalysis = analyzeProgress(
       cards: widget.cards.where((c) => group?.contains(c) ?? true).toList(),
-      directions: direction == null
-          ? StudyCue.activeDirections.toSet()
-          : {direction!},
+      directions: RecallComponent.values.toSet(),
       targetPercent: target,
+      window: widget.window,
       now: now,
       start: start,
       end: period == 'custom' ? custom!.end : null,

@@ -16,23 +16,26 @@ void main() {
     expect(await queue.prepare(0), 'card 0');
     expect(reads, [0, 1, 2]);
   });
-  test('navigation shares in-flight prefetch and failed loads can retry', () async {
-    var calls = 0;
-    final gate = Completer<String>();
-    final queue = LazyStudyQueue(3, (_) {
-      calls++;
-      return calls == 1 ? gate.future : Future.value('loaded');
-    });
-    final prefetch = queue.prepare(1);
-    final navigation = queue.prepare(1);
-    expect(identical(prefetch, navigation), isTrue);
-    final failure = expectLater(navigation, throwsStateError);
-    await Future<void>.delayed(Duration.zero);
-    gate.completeError(StateError('read failed'));
-    await failure;
-    expect(await queue.prepare(1), 'loaded');
-    expect(calls, 2);
-  });
+  test(
+    'navigation shares in-flight prefetch and failed loads can retry',
+    () async {
+      var calls = 0;
+      final gate = Completer<String>();
+      final queue = LazyStudyQueue(3, (_) {
+        calls++;
+        return calls == 1 ? gate.future : Future.value('loaded');
+      });
+      final prefetch = queue.prepare(1);
+      final navigation = queue.prepare(1);
+      expect(identical(prefetch, navigation), isTrue);
+      final failure = expectLater(navigation, throwsStateError);
+      await Future<void>.delayed(Duration.zero);
+      gate.completeError(StateError('read failed'));
+      await failure;
+      expect(await queue.prepare(1), 'loaded');
+      expect(calls, 2);
+    },
+  );
   test('closing rejects in-flight results and further requests', () async {
     final gate = Completer<String>();
     final queue = LazyStudyQueue(3, (_) => gate.future);

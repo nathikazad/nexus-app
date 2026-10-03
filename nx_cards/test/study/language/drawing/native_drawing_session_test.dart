@@ -28,13 +28,18 @@ void main() {
         ),
       ],
     ),
-    schedules: const {},
+    schedules: {
+      for (final direction in StudyCue.values)
+        direction: CardSchedule.initial(
+          enabled: direction != StudyCue.backToFront,
+        ),
+    },
     reviewHistory: const {},
     suspended: false,
   );
   test('native reveal carries complete similar groups with display titles', () {
     final payload = NativeDrawingSession.recallCard(
-      StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+      StudyPrompt(card: card, cue: StudyCue.meaningToScript),
       similar: [
         SimilarSoundGroup([card], label: 'particle-other'),
       ],
@@ -72,7 +77,7 @@ void main() {
           title: 'Test',
           cards: [
             NativeDrawingSession.recallCard(
-              StudyPrompt(card: card, cue: StudyCue.fromAudio),
+              StudyPrompt(card: card, cue: StudyCue.soundToMeaning),
             ),
           ],
           recall: true,
@@ -89,11 +94,11 @@ void main() {
     final from = NativeDrawingSession.recallCard(
       StudyPrompt(
         card: card,
-        cue: StudyCue.fromLanguage,
+        cue: StudyCue.meaningToScript,
         showEnglishAndTransliteration: true,
       ),
     );
-    expect(from['prompt'], 'a long sentence\nhěn cháng de jùzi');
+    expect(from['prompt'], 'a long sentence');
     expect(from['answer'], '很长的句子');
     expect(
       from['examples'],
@@ -107,7 +112,7 @@ void main() {
       audioUrl: '/long.mp3',
     );
     final withParts = NativeDrawingSession.recallCard(
-      StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+      StudyPrompt(card: card, cue: StudyCue.meaningToScript),
       characters: [part],
     );
     expect(
@@ -115,31 +120,32 @@ void main() {
       NativeDrawingSession.practiceCard(card, characters: [part])['characters'],
     );
     final to = NativeDrawingSession.recallCard(
-      StudyPrompt(card: card, cue: StudyCue.toLanguage),
+      StudyPrompt(card: card, cue: StudyCue.scriptToMeaning),
     );
     expect(to['prompt'], '很长的句子');
-    expect(to['answer'], '很长的句子');
+    expect(to['answer'], 'a long sentence');
     expect(NativeDrawingSession.practiceCard(card)['audio'], isTrue);
   });
   test(
     'native audio recall hides hints and reveals target script above English',
     () {
       final payload = NativeDrawingSession.recallCard(
-        StudyPrompt(card: card, cue: StudyCue.fromAudio),
+        StudyPrompt(card: card, cue: StudyCue.soundToMeaning),
       );
       expect(payload['prompt'], 'Listen');
       expect(payload['listening'], isTrue);
-      expect(payload['answer'], '很长的句子');
-      expect(payload['subtitle'], 'a long sentence\nhěn cháng de jùzi');
+      expect(payload['answer'], 'a long sentence');
+      expect(payload['subtitle'], 'Sound → Meaning');
     },
   );
-  test('native reveal always contains script, meaning, and pronunciation', () {
-    for (final cue in StudyCue.values) {
-      final payload = NativeDrawingSession.recallCard(
-        StudyPrompt(card: card, cue: cue),
-      );
-      expect(payload['answer'], '很长的句子');
-      expect(payload['subtitle'], 'a long sentence\nhěn cháng de jùzi');
+  test('native targets and drawing flags follow all six directions', () {
+    for (final cue in StudyCue.languageDirections) {
+      final prompt = StudyPrompt(card: card, cue: cue);
+      final payload = NativeDrawingSession.recallCard(prompt);
+      expect(payload['answer'], prompt.answer);
+      expect(payload['subtitle'], cue.label);
+      expect(payload['writing'], cue.target == RecallComponent.script);
+      expect(payload['listening'], cue.source == RecallComponent.sound);
     }
   });
   test('Android opens a native session with its complete queue', () async {
@@ -176,7 +182,7 @@ void main() {
     ]);
     expect(
       NativeDrawingSession.recallCard(
-        StudyPrompt(card: card, cue: StudyCue.toLanguage),
+        StudyPrompt(card: card, cue: StudyCue.scriptToMeaning),
       )['examples'],
       practice['examples'],
     );
@@ -191,7 +197,12 @@ void main() {
         audioUrl: '/$id.mp3',
       ),
       linkedWordIds: links,
-      schedules: const {},
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+      },
       reviewHistory: const {},
       suspended: false,
     );
@@ -225,7 +236,7 @@ void main() {
     });
     expect(
       NativeDrawingSession.recallCard(
-        StudyPrompt(card: phrase, cue: StudyCue.toLanguage),
+        StudyPrompt(card: phrase, cue: StudyCue.scriptToMeaning),
         characters: parts,
         characterCardIds: ids,
       )['characters'],
@@ -246,7 +257,12 @@ void main() {
           audioUrl: '/$id.mp3',
         ),
         linkedWordIds: links,
-        schedules: const {},
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+        },
         reviewHistory: const {},
         suspended: false,
       );

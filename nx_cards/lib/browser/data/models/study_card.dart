@@ -54,7 +54,10 @@ class StudyCard {
   bool get spokenOnly =>
       content is LanguageCardContent &&
       (content as LanguageCardContent).spokenOnly;
-  bool studiesCue(StudyCue cue) => !(spokenOnly && cue == StudyCue.toLanguage);
+  List<StudyCue> get directions =>
+      isLanguageCard ? StudyCue.languageDirections : StudyCue.genericDirections;
+  bool studiesCue(StudyCue cue) =>
+      directions.contains(cue) && !(spokenOnly && cue.involvesScript);
   bool get isPhraseCard => hasCategory('Phrase');
   bool get isScriptCard => hasCategory('Script');
   bool get isWordCard => isLanguageCard && hasCategory('Word');
@@ -93,18 +96,11 @@ class StudyCard {
   final DateTime? updatedAt;
 
   CardSchedule scheduleFor(StudyCue cue) =>
-      schedules[cue] ??
-      CardSchedule.initial(
-        enabled:
-            cue == StudyCue.fromAudio &&
-            content is LanguageCardContent &&
-            (schedules[StudyCue.fromLanguage]?.enabled == true ||
-                schedules[StudyCue.toLanguage]?.enabled == true),
-      );
+      schedules[cue] ?? CardSchedule.initial(enabled: false);
 
   bool supportsCue(StudyCue cue) =>
       studiesCue(cue) &&
-      (cue != StudyCue.fromAudio ||
+      (!cue.isListening ||
           (content is LanguageCardContent &&
               (content as LanguageCardContent).audioUrl?.trim().isNotEmpty ==
                   true));
@@ -114,7 +110,7 @@ class StudyCard {
 
   Iterable<StudyPrompt> get prompts sync* {
     if (suspended) return;
-    for (final cue in StudyCue.activeDirections) {
+    for (final cue in directions) {
       if (supportsCue(cue) && scheduleFor(cue).enabled) {
         yield StudyPrompt(card: this, cue: cue);
       }
@@ -123,7 +119,7 @@ class StudyCard {
 
   DateTime? get nextDueAt {
     final dueDates = <DateTime>[
-      for (final cue in StudyCue.activeDirections)
+      for (final cue in directions)
         if (supportsCue(cue) &&
             scheduleFor(cue).enabled &&
             scheduleFor(cue).dueAt != null)

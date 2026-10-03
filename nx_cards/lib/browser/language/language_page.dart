@@ -5,7 +5,6 @@ import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:nx_cards/browser/language/similar_sounds_page.dart';
 import 'package:nx_cards/browser/card_list/current_cards_tab.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
-import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -219,11 +218,10 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
     final children = allCards || tagSystem == 'Collection'
         ? <LanguageGroup>[]
         : languageGroups(cards, parent: widget.categoryPath ?? [category]);
-    final cue = ref.watch(languageDirectionProvider(language));
     final window =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
     int count(LearningStage stage) => cards
-        .where((card) => learningStage(card, cue, window: window) == stage)
+        .where((card) => learningStage(card, null, window: window) == stage)
         .length;
     final current = count(LearningStage.current);
     final learnt = count(LearningStage.past);

@@ -24,12 +24,12 @@ void main() {
     final dashboard = CardsDashboard(cards: cards);
     final prompts = retentionPrompts(
       cards,
-      StudyCue.activeDirections.toSet(),
+      RecallComponent.values.toSet(),
     ).where((p) => p.isDueAt(now)).toList();
-    expect(prompts.length, 5);
+    expect(prompts.length, 10);
     expect(dashboard.dueCount(now), 2);
     expect(summarizeLibrary(dashboard).single.due, 2);
     expect(summarizeLibrary(dashboard).single.current, 4);
-    expect(dashboard.dueCount(now, cue: StudyCue.fromLanguage), 2);
+    expect(dashboard.dueCount(now, cue: StudyCue.meaningToScript), 2);
   });
 }

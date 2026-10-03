@@ -92,9 +92,11 @@ final class DriftCardsMapper {
             )
           : BasicCardContent(front: row.front, back: row.back),
       schedules: <StudyCue, CardSchedule>{
-        for (final cue in StudyCue.values)
-          if (cue != StudyCue.fromAudio || _cueNode(schedule, cue) != null)
-            cue: _scheduleFrom(_cueNode(schedule, cue)),
+        for (final cue
+            in (isLanguageCardModelType(row.modelType)
+                ? StudyCue.languageDirections
+                : StudyCue.genericDirections))
+          cue: _scheduleFrom(_cueNode(schedule, cue)),
       },
       reviewHistory: <StudyCue, List<CardReview>>{
         for (final cue in StudyCue.values) cue: _historyForCue(history, cue),

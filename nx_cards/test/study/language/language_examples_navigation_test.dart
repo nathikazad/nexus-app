@@ -24,7 +24,12 @@ void main() {
           transliteration: 'xuésheng',
           english: 'student',
         ),
-        schedules: {},
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+        },
         reviewHistory: {},
         suspended: false,
       );

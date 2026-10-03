@@ -24,6 +24,10 @@ StudyCard card(
     transliteration: 'sol $id',
   ),
   schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
     for (final cue in StudyCue.values)
       cue: const CardSchedule.initial(enabled: true),
   },

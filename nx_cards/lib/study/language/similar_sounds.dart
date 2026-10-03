@@ -53,23 +53,32 @@ List<SimilarSoundGroup> manualSimilarSoundGroups(
 List<SimilarRecallGroup> manualRecallSession(
   Iterable<StudyCard> cards, {
   required bool sound,
-  required Set<StudyCue> directions,
+  required Set<RecallComponent> directions,
   required int groupLimit,
+  bool writing = true,
   Random? random,
 }) {
   if (groupLimit < 1) return [];
-  final cues = sound
-      ? {StudyCue.fromAudio}
-      : directions.intersection({StudyCue.fromLanguage, StudyCue.toLanguage});
+  final cues = StudyCue.languageDirections
+      .where(
+        (cue) => sound
+            ? cue.isListening
+            : directions.contains(cue.source) ||
+                  directions.contains(cue.target),
+      )
+      .toSet();
   if (cues.isEmpty) return [];
   final groups = manualSimilarSoundGroups(cards.where((c) => c.active));
   final sessions = <SimilarRecallGroup>[];
   for (final group in groups) {
     if (!group.label.endsWith(sound ? '-sound' : '-write')) continue;
-    for (final cue in StudyCue.activeDirections.where(cues.contains)) {
+    for (final cue in StudyCue.languageDirections.where(cues.contains)) {
       final prompts = [
         for (final card in group.cards)
-          if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
+          if (card.supportsCue(cue) &&
+              card.scheduleFor(cue).enabled &&
+              (writing || cue.target != RecallComponent.script))
+            StudyPrompt(card: card, cue: cue),
       ];
       if (prompts.isEmpty) continue;
       prompts.shuffle(random);
@@ -121,11 +130,12 @@ SimilarGroupKind similarGroupKind(String id) => id.endsWith('-sound')
 String similarGroupTitle(String id) =>
     id.replaceFirst(RegExp(r'-(sound|write|other)$'), '');
 
-Iterable<StudyCue> similarGroupCues(SimilarGroupKind kind) => switch (kind) {
-  SimilarGroupKind.sound => [StudyCue.fromAudio],
-  SimilarGroupKind.written => [StudyCue.fromLanguage, StudyCue.toLanguage],
-  SimilarGroupKind.other => StudyCue.activeDirections,
-};
+Iterable<RecallComponent> similarGroupCues(SimilarGroupKind kind) =>
+    switch (kind) {
+      SimilarGroupKind.sound => [RecallComponent.sound],
+      SimilarGroupKind.written => [RecallComponent.script],
+      SimilarGroupKind.other => RecallComponent.values,
+    };
 
 double similarWordRetention(StudyCard card, SimilarGroupKind kind) =>
     averageRetention(card, similarGroupCues(kind));

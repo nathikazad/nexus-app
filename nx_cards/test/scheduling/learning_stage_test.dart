@@ -12,11 +12,15 @@ StudyCard card(List<int> ratings, {bool active = true}) => StudyCard(
   suspended: false,
   learningStatus: active ? LearningStatus.recall : LearningStatus.future,
   schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
     for (final cue in StudyCue.values)
       cue: const CardSchedule.initial(enabled: true),
   },
   reviewHistory: {
-    StudyCue.fromLanguage: [
+    StudyCue.meaningToScript: [
       for (final (i, rating) in ratings.indexed)
         CardReview(
           id: 'r$i',
@@ -33,131 +37,154 @@ void main() {
     'activation shared, zero attempts distinct from failure, directions independent',
     () {
       expect(
-        learningStage(card([]), StudyCue.fromLanguage),
+        learningStage(card([]), StudyCue.meaningToScript),
         LearningStage.current,
       );
       expect(
-        learningStage(card([1]), StudyCue.fromLanguage),
+        learningStage(card([1]), StudyCue.meaningToScript),
         LearningStage.current,
       );
       expect(
-        learningStage(card([3]), StudyCue.toLanguage),
+        learningStage(card([3]), StudyCue.scriptToMeaning),
         LearningStage.current,
       );
       expect(
         learningStage(
           card(List.filled(10, 3), active: false),
-          StudyCue.fromLanguage,
+          StudyCue.meaningToScript,
         ),
         LearningStage.future,
       );
     },
   );
-  test('score denominator grows from five to ten, then rolls over', () {
-    for (var attempts = 0; attempts <= 12; attempts++) {
-      final score = recallScore(
-        card(List.filled(attempts, 3)),
-        StudyCue.fromLanguage,
+  test(
+    'score denominator uses the configured fixed window and then rolls over',
+    () {
+      for (var attempts = 0; attempts <= 12; attempts++) {
+        final score = recallScore(
+          card(List.filled(attempts, 3)),
+          StudyCue.meaningToScript,
+        );
+        expect(score.attempts, attempts.clamp(0, 10));
+        expect(score.denominator, 10);
+        expect(score.percentage, attempts.clamp(0, 10) * 10);
+      }
+      final mixed = recallScore(
+        card([3, 3, 3, 1, 1]),
+        StudyCue.meaningToScript,
       );
-      expect(score.attempts, attempts.clamp(0, 10));
-      expect(score.denominator, attempts.clamp(5, 10));
-      expect(score.percentage, attempts < 5 ? attempts * 20 : 100);
-    }
-    final mixed = recallScore(card([3, 3, 3, 1, 1]), StudyCue.fromLanguage);
-    expect(mixed.percentage, 60);
-    expect(
-      recallScore(card([3, 3, 3, 3, 3, 1]), StudyCue.fromLanguage).percentage,
-      83,
-    );
-    expect(
-      recallScore(
-        card([...List.filled(10, 3), ...List.filled(10, 1)]),
-        StudyCue.fromLanguage,
-      ).percentage,
-      0,
-    );
-    expect(
-      recallScore(
-        card([...List.filled(10, 1), ...List.filled(8, 3), 1, 1]),
-        StudyCue.fromLanguage,
-      ).percentage,
-      80,
-    );
-    expect(
-      learningStage(card([3, 3, 3, 3]), StudyCue.fromLanguage),
-      LearningStage.past,
-    );
-    expect(
-      learningStage(card([3, 3, 3, 3, 1, 1]), StudyCue.fromLanguage),
-      LearningStage.current,
-    );
-  });
+      expect(mixed.percentage, 30);
+      expect(
+        recallScore(
+          card([3, 3, 3, 3, 3, 1]),
+          StudyCue.meaningToScript,
+        ).percentage,
+        50,
+      );
+      expect(
+        recallScore(
+          card([...List.filled(10, 3), ...List.filled(10, 1)]),
+          StudyCue.meaningToScript,
+        ).percentage,
+        0,
+      );
+      expect(
+        recallScore(
+          card([...List.filled(10, 1), ...List.filled(8, 3), 1, 1]),
+          StudyCue.meaningToScript,
+        ).percentage,
+        80,
+      );
+      expect(
+        learningStage(card([3, 3, 3, 3]), StudyCue.meaningToScript),
+        LearningStage.current,
+      );
+      expect(
+        learningStage(card([3, 3, 3, 3, 1, 1]), StudyCue.meaningToScript),
+        LearningStage.current,
+      );
+    },
+  );
   test('score deduplicates reviews and keeps directions separate', () {
     final original = card([3]);
     final duplicate = original.copyWith(
       reviewHistory: {
-        StudyCue.fromLanguage: [
-          original.reviewHistoryFor(StudyCue.fromLanguage).single,
-          original.reviewHistoryFor(StudyCue.fromLanguage).single,
+        StudyCue.meaningToScript: [
+          original.reviewHistoryFor(StudyCue.meaningToScript).single,
+          original.reviewHistoryFor(StudyCue.meaningToScript).single,
         ],
-        StudyCue.fromAudio: card(
+        StudyCue.soundToMeaning: card(
           List.filled(10, 3),
-        ).reviewHistoryFor(StudyCue.fromLanguage),
+        ).reviewHistoryFor(StudyCue.meaningToScript),
       },
     );
-    expect(recallScore(duplicate, StudyCue.fromLanguage).percentage, 20);
-    expect(recallScore(duplicate, StudyCue.fromAudio).percentage, 100);
-    expect(recallScore(duplicate, StudyCue.toLanguage).percentage, 0);
+    expect(recallScore(duplicate, StudyCue.meaningToScript).percentage, 10);
+    expect(recallScore(duplicate, StudyCue.soundToMeaning).percentage, 100);
+    expect(recallScore(duplicate, StudyCue.scriptToMeaning).percentage, 0);
   });
   test('Prep remains Upcoming even with past history', () {
     final prep = card(
       List.filled(10, 3),
     ).copyWith(learningStatus: LearningStatus.practice);
-    expect(learningStage(prep, StudyCue.fromLanguage), LearningStage.upcoming);
     expect(
-      availableForRecall(prep, StudyCue.fromLanguage, DateTime.now()),
+      learningStage(prep, StudyCue.meaningToScript),
+      LearningStage.upcoming,
+    );
+    expect(
+      availableForRecall(prep, StudyCue.meaningToScript, DateTime.now()),
       isFalse,
     );
   });
   test('adaptive denominator, exact 80%, and rolling replacement', () {
     expect(
-      learningStage(card([3, 3]), StudyCue.fromLanguage),
+      learningStage(card([3, 3]), StudyCue.meaningToScript),
       LearningStage.current,
     );
     expect(
-      learningStage(card(List.filled(8, 3)), StudyCue.fromLanguage),
+      learningStage(card(List.filled(8, 3)), StudyCue.meaningToScript),
       LearningStage.past,
     );
     expect(
-      learningStage(card([...List.filled(10, 3), 1, 1]), StudyCue.fromLanguage),
+      learningStage(
+        card([...List.filled(10, 3), 1, 1]),
+        StudyCue.meaningToScript,
+      ),
       LearningStage.past,
     );
     expect(
       learningStage(
         card([...List.filled(10, 3), 1, 1, 1]),
-        StudyCue.fromLanguage,
+        StudyCue.meaningToScript,
       ),
       LearningStage.current,
     );
     expect(
-      learningStage(card([3, 3, 3, 3]), StudyCue.fromLanguage, window: 5),
+      learningStage(card([3, 3, 3, 3]), StudyCue.meaningToScript, window: 5),
       LearningStage.past,
     );
   });
-  test('old transliteration stays readable but is never queued', () {
+  test('missing audio excludes source sound, but not target sound', () {
     final c = card([3]);
-    expect(c.prompts.map((p) => p.cue), [
-      StudyCue.fromLanguage,
-      StudyCue.toLanguage,
-    ]);
-    expect(c.schedules.containsKey(StudyCue.transliteration), isTrue);
+    expect(c.prompts.map((p) => p.cue).toSet(), {
+      StudyCue.meaningToSound,
+      StudyCue.meaningToScript,
+      StudyCue.scriptToMeaning,
+      StudyCue.scriptToSound,
+    });
   });
   test('Current ignores future schedule; Past respects it', () {
     final now = DateTime.utc(2026, 9, 23);
-    expect(availableForRecall(card([1]), StudyCue.fromLanguage, now), isTrue);
+    expect(
+      availableForRecall(card([1]), StudyCue.meaningToScript, now),
+      isTrue,
+    );
     // An initial schedule has no graded timestamp, so it cannot be due.
     expect(
-      availableForRecall(card(List.filled(8, 3)), StudyCue.fromLanguage, now),
+      availableForRecall(
+        card(List.filled(8, 3)),
+        StudyCue.meaningToScript,
+        now,
+      ),
       isFalse,
     );
   });

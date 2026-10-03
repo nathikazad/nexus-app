@@ -43,7 +43,7 @@ void main() {
               sourceProgressCardsProvider.overrideWith(
                 (ref, source) async => [
                   progressCard(1, {
-                    StudyCue.fromLanguage: [
+                    StudyCue.meaningToScript: [
                       if (yesterday)
                         CardReview(
                           id: 'yesterday',
@@ -174,13 +174,13 @@ void main() {
       final a = r('a', DateTime(2026, 10, 2, 0));
       final cards = [
         progressCard(1, {
-          StudyCue.fromLanguage: [
+          StudyCue.meaningToScript: [
             a,
             a,
             r('old', DateTime(2026, 10, 1, 23, 59)),
             r('future', DateTime(2026, 10, 3)),
           ],
-          StudyCue.fromAudio: [r('b', now)],
+          StudyCue.soundToMeaning: [r('b', now)],
         }),
       ];
       expect(recallsToday(cards, now), 2);
@@ -201,7 +201,7 @@ void main() {
             sourceProgressCardsProvider.overrideWith(
               (ref, source) async => [
                 progressCard(1, {
-                  StudyCue.fromLanguage: [
+                  StudyCue.meaningToScript: [
                     for (var i = 0; i < 2; i++)
                       CardReview(
                         id: '$i',

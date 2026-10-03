@@ -71,7 +71,7 @@ class BookPage extends ConsumerWidget {
                       preferenceKey: 'book:$bookId',
                       prompts: [
                         for (final card in current)
-                          StudyPrompt(card: card, cue: StudyCue.fromLanguage),
+                          StudyPrompt(card: card, cue: StudyCue.frontToBack),
                       ],
                       studyCards: current,
                       sourceKind: StudySourceKind.book,

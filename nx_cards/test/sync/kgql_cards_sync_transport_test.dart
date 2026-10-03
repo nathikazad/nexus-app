@@ -139,12 +139,12 @@ void main() {
     );
     final scheduleValue = schedule['value'] as Map<String, dynamic>;
     expect(
-      ((scheduleValue['cues'] as Map<String, dynamic>)['from_language']
+      ((scheduleValue['cues'] as Map<String, dynamic>)['meaning_to_script']
           as Map<String, dynamic>)['review_count'],
       1,
     );
     expect(
-      ((scheduleValue['cues'] as Map<String, dynamic>)['to_language']
+      ((scheduleValue['cues'] as Map<String, dynamic>)['script_to_meaning']
           as Map<String, dynamic>)['review_count'],
       0,
     );
@@ -197,8 +197,12 @@ StudyCard _card() => StudyCard(
       ),
     ],
   ),
-  schedules: <StudyCue, CardSchedule>{
-    StudyCue.fromLanguage: CardSchedule(
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    StudyCue.meaningToScript: CardSchedule(
       enabled: true,
       dueAt: DateTime.utc(2026, 8, 5),
       lastReviewedAt: DateTime.utc(2026, 8, 4),
@@ -209,13 +213,13 @@ StudyCard _card() => StudyCard(
       reviewCount: 1,
       lapseCount: 0,
     ),
-    StudyCue.toLanguage: const CardSchedule.initial(enabled: true),
-    StudyCue.transliteration: const CardSchedule.initial(enabled: true),
+    StudyCue.scriptToMeaning: const CardSchedule.initial(enabled: true),
+    StudyCue.scriptToSound: const CardSchedule.initial(enabled: true),
   },
   reviewHistory: const <StudyCue, List<CardReview>>{
-    StudyCue.fromLanguage: <CardReview>[],
-    StudyCue.toLanguage: <CardReview>[],
-    StudyCue.transliteration: <CardReview>[],
+    StudyCue.meaningToScript: <CardReview>[],
+    StudyCue.scriptToMeaning: <CardReview>[],
+    StudyCue.scriptToSound: <CardReview>[],
   },
   suspended: false,
   updatedAt: DateTime.utc(2026, 8, 4),

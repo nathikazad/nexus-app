@@ -49,8 +49,12 @@ void main() {
         front: 'What is customer discovery?',
         back: 'Testing hypotheses outside the building.',
       ),
-      schedules: const {
-        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
       },
       reviewHistory: const {},
       suspended: false,
@@ -97,15 +101,19 @@ StudyCard _card(int id, String english, String script, String transliteration) {
         ),
       ],
     ),
-    schedules: const <StudyCue, CardSchedule>{
-      StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
-      StudyCue.toLanguage: CardSchedule.initial(enabled: true),
-      StudyCue.transliteration: CardSchedule.initial(enabled: true),
+    schedules: {
+      for (final direction in StudyCue.values)
+        direction: CardSchedule.initial(
+          enabled: direction != StudyCue.backToFront,
+        ),
+      StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
+      StudyCue.scriptToMeaning: CardSchedule.initial(enabled: true),
+      StudyCue.scriptToSound: CardSchedule.initial(enabled: true),
     },
     reviewHistory: const <StudyCue, List<CardReview>>{
-      StudyCue.fromLanguage: [],
-      StudyCue.toLanguage: [],
-      StudyCue.transliteration: [],
+      StudyCue.meaningToScript: [],
+      StudyCue.scriptToMeaning: [],
+      StudyCue.scriptToSound: [],
     },
     suspended: false,
   );

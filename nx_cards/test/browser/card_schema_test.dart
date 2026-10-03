@@ -87,14 +87,10 @@ void main() {
         scheduleJsonSchema['properties'] as Map<String, dynamic>;
     final historyProperties =
         reviewHistoryJsonSchema['properties'] as Map<String, dynamic>;
-    expect(scheduleProperties['version'], {'type': 'integer', 'const': 3});
-    expect(historyProperties['version'], {'type': 'integer', 'const': 3});
+    expect(scheduleProperties['version'], {'type': 'integer', 'const': 4});
+    expect(historyProperties['version'], {'type': 'integer', 'const': 4});
     final cues = scheduleProperties['cues'] as Map<String, dynamic>;
-    expect(cues['required'], [
-      'from_language',
-      'to_language',
-      'transliteration',
-    ]);
+    expect(cues['required'], ['front_to_back', 'back_to_front']);
     expect(relations.map((row) => row['link']), contains(bookModelType));
     expect(relations, hasLength(1));
     expect(json['tag_systems'], isNull);
@@ -106,7 +102,7 @@ void main() {
 
     expect(json['name'], languageCardModelType);
     expect(json['parent'], {'link': cardModelType});
-    expect(definitions, hasLength(2));
+    expect(definitions, hasLength(4));
     final spoken = definitions.singleWhere(
       (row) => row['key'] == attrSpokenOnly,
     );

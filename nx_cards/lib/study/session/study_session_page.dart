@@ -240,7 +240,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                               _interaction ==
                                                       RecallInteraction
                                                           .writing &&
-                                                  !_card.spokenOnly
+                                                  _prompt.recallsTarget
                                               ? LayoutBuilder(
                                                   builder:
                                                       (
@@ -292,6 +292,17 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                             MainAxisAlignment
                                                                 .center,
                                                         children: [
+                                                          Text(
+                                                            _prompt.instruction,
+                                                            style: const TextStyle(
+                                                              color:
+                                                                  RecallColors
+                                                                      .faint,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 16,
+                                                          ),
                                                           Row(
                                                             mainAxisAlignment:
                                                                 MainAxisAlignment
@@ -299,16 +310,9 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                             children: [
                                                               Flexible(
                                                                 child: Text(
-                                                                  _revealed &&
-                                                                          _card.content
-                                                                              is LanguageCardContent
-                                                                      ? (_card.spokenOnly
-                                                                            ? (_prompt.isListening
-                                                                                  ? _card.front
-                                                                                  : (_card.content
-                                                                                            as LanguageCardContent)
-                                                                                        .transliteration)
-                                                                            : _card.back)
+                                                                  _revealed
+                                                                      ? _prompt
+                                                                            .answer
                                                                       : _prompt
                                                                             .prompt,
                                                                   textAlign:
@@ -409,73 +413,12 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                     Divider(),
                                                               ),
                                                             ),
-                                                            if (_card.content
-                                                                case LanguageCardContent(
-                                                                  :final english,
-                                                                  :final transliteration,
-                                                                )) ...[
-                                                              if (!_card
-                                                                      .spokenOnly ||
-                                                                  !_prompt
-                                                                      .isListening)
-                                                                Text(
-                                                                  english,
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                  style: const TextStyle(
-                                                                    fontSize:
-                                                                        21,
-                                                                    height:
-                                                                        1.45,
-                                                                    color:
-                                                                        RecallColors
-                                                                            .ink,
-                                                                  ),
-                                                                ),
-                                                              const SizedBox(
-                                                                height: 8,
-                                                              ),
-                                                              if ((!_card.spokenOnly ||
-                                                                      _prompt
-                                                                          .isListening) &&
-                                                                  transliteration
-                                                                      .isNotEmpty) ...[
-                                                                const SizedBox(
-                                                                  height: 10,
-                                                                ),
-                                                                Text(
-                                                                  transliteration,
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                  style: const TextStyle(
-                                                                    fontSize:
-                                                                        16,
-                                                                    height:
-                                                                        1.35,
-                                                                    fontStyle:
-                                                                        FontStyle
-                                                                            .italic,
-                                                                    color: RecallColors
-                                                                        .faint,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ] else
-                                                              Text(
-                                                                _card.back,
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                style: const TextStyle(
-                                                                  fontSize: 21,
-                                                                  height: 1.45,
-                                                                  color:
-                                                                      RecallColors
-                                                                          .muted,
-                                                                ),
-                                                              ),
+                                                            Text(
+                                                              _prompt.cue.label,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                            ),
                                                             if (_card.content
                                                                 case LanguageCardContent(
                                                                   examples: final examples,

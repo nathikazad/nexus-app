@@ -83,8 +83,8 @@ void main() {
         [
           SimilarRecallGroup(
             prompts: [
-              StudyPrompt(card: spoken, cue: StudyCue.fromLanguage),
-              StudyPrompt(card: written, cue: StudyCue.fromLanguage),
+              StudyPrompt(card: spoken, cue: StudyCue.meaningToSound),
+              StudyPrompt(card: written, cue: StudyCue.meaningToScript),
             ],
             comparisonCards: [spoken, written],
           ),
@@ -97,7 +97,7 @@ void main() {
       await answerWord(tester);
       expect(library.saved.single.spokenOnly, isTrue);
       expect(
-        library.saved.single.reviewHistoryFor(StudyCue.toLanguage),
+        library.saved.single.reviewHistoryFor(StudyCue.scriptToMeaning),
         isEmpty,
       );
       expect(
@@ -117,7 +117,7 @@ void main() {
           SimilarRecallGroup(
             prompts: [
               for (final card in cards.take(2))
-                StudyPrompt(card: card, cue: StudyCue.fromAudio),
+                StudyPrompt(card: card, cue: StudyCue.soundToMeaning),
             ],
             comparisonCards: cards,
           ),
@@ -127,11 +127,17 @@ void main() {
         await answerWord(tester, correct: false);
         expect(library.saved.map((c) => c.id), [1, 2]);
         expect(
-          library.saved[0].reviewHistoryFor(StudyCue.fromAudio).single.rating,
+          library.saved[0]
+              .reviewHistoryFor(StudyCue.soundToMeaning)
+              .single
+              .rating,
           3,
         );
         expect(
-          library.saved[1].reviewHistoryFor(StudyCue.fromAudio).single.rating,
+          library.saved[1]
+              .reviewHistoryFor(StudyCue.soundToMeaning)
+              .single
+              .rating,
           1,
         );
         expect(find.text('Compare words'), findsNothing);
@@ -155,7 +161,7 @@ void main() {
       final library = RecordingLibrary()..failId = 1;
       final card = soundCard(1, 'a');
       await showGroups(tester, library, [
-        for (final cue in [StudyCue.fromLanguage, StudyCue.toLanguage])
+        for (final cue in [StudyCue.meaningToScript, StudyCue.scriptToMeaning])
           SimilarRecallGroup(
             prompts: [StudyPrompt(card: card, cue: cue)],
             comparisonCards: [card],
@@ -174,13 +180,16 @@ void main() {
       expect(library.saved, hasLength(2));
       expect(
         library.saved.last
-            .reviewHistoryFor(StudyCue.fromLanguage)
+            .reviewHistoryFor(StudyCue.meaningToScript)
             .single
             .rating,
         3,
       );
       expect(
-        library.saved.last.reviewHistoryFor(StudyCue.toLanguage).single.rating,
+        library.saved.last
+            .reviewHistoryFor(StudyCue.scriptToMeaning)
+            .single
+            .rating,
         1,
       );
     },
@@ -194,7 +203,7 @@ void main() {
       SimilarRecallGroup(
         prompts: [
           for (final card in cards)
-            StudyPrompt(card: card, cue: StudyCue.fromAudio),
+            StudyPrompt(card: card, cue: StudyCue.soundToMeaning),
         ],
         comparisonCards: cards,
       ),

@@ -4,45 +4,44 @@ Study turns cards plus a person's choices into an active learning session.
 
 ```text
 study.dart / study_queue.dart
-  -> study_setup_page.dart   selecting mode, prompts, filters, order, and count
-  -> session/    conducting a review and showing its recap
-  -> language/          language sheets, examples, audio, and fast recall
-     -> drawing/        handwriting practice and script-specific recall
+  -> study_setup_page.dart   selecting mode, recall components, filters and count
+  -> session/               conducting a review and showing its recap
+  -> language/              language sheets, examples, audio and fast recall
+     -> drawing/            handwriting practice and script-specific recall
 ```
 
 Study delegates review timing to `scheduling/` and voice delivery to `tutor/`.
 
-Language direction is chosen on `LanguagePage` and shared by its lists and
-sessions. English text → target language, target-language audio → target language,
-and target script → English are selectable. Each has independent history,
-strength, and FSRS state. Study is ungraded. Recall writes one attempt for the
-selected direction regardless of presentation.
+A language card has six independent directed histories and FSRS schedules:
+Meaning → Sound, Meaning → Script, Sound → Meaning, Sound → Script,
+Script → Meaning and Script → Sound. A question presents one source and asks
+for one target. Yes/No updates only that direction. Book cards retain generic
+Front → Back and optional Back → Front schedules.
 
-`learning_stage.dart` derives Practice/Weak/Strong from activation and the
-latest ten attempts per direction, using a denominator of at least five and an
-80% Strong threshold. The old account window setting no longer controls scoring.
-Future means inactive.
-Do not manually persist Weak/Strong or activate replacement cards after recall.
-Cards store Future, Practice, or Recall. Weak/Strong are calculated from recall history; session completion does not run a separate progression service.
+The recall setup's **Recall for** choices are Meaning, Sound and Script.
+Selecting a component includes every direction involving it as source or target.
+Selections form a union, so overlapping directions are never counted twice.
+Spoken-only cards exclude all script directions, without deleting their history
+or schedules. Sound-source questions require an audio asset.
 
-Language recall includes all cards matching the selected stages and score range,
-just like Practice. When Strong is selected, recall setup shows its due count.
-Due Strong cards are queued first (weaker scores first), then the remaining matching
-cards fill the requested session size. Future-due Strong cards remain selectable.
-Scoring is derived from existing history; no history migration or FSRS reset is needed.
+The device-local **Writing** setting excludes Meaning → Script and Sound → Script
+when off. Script-source questions remain available. It filters questions only;
+it does not change retained scores or histories. Script answers use the drawing
+surface; meaning and sound answers use the standard response presentation.
 
-English and audio recall offer Standard, Fast and Write. Target script → English
-offers Standard and Fast. Standard/Fast imply a spoken response; there is no
-separate response selector or Read/Listen toggle. Writing is optional.
+`learning_stage.dart` derives Practice/Weak/Strong from activation and recall
+history. Each direction's score is successful attempts among the latest N,
+divided by N (the account's recall window, default ten). Unattempted slots count
+as zero. Overall scores average all enabled eligible directions: six for regular
+language cards, two for spoken-only cards. Card filters and Progress use this
+overall score. The Strong threshold is 80%.
 
-Audio uses `StudyCue.fromAudio` (`from_audio`), shows only “Listen” before reveal,
-and excludes cards without audio. Standard and Write autoplay; Fast uses per-row
-playback. Revealed cards put target script above English. Existing `to_language`
-history stays unchanged; historical listening cannot be distinguished from read
-reviews. Missing audio schedules start fresh; explicit disabled schedules remain
-disabled. No SQLite schema bump is needed; cue maps are JSON.
+Do not persist Weak/Strong or activate replacement cards after recall. Cards
+store Future, Practice or Recall; Weak/Strong are calculated. Recall setup can
+filter by retention or due schedules. AI sessions exclude script questions.
 
-Deploy the server validator update in
-`servers/nexus/apps/nx_cards/maintenance/three_recall_types.sql` before updated
-clients write. Upgrade other clients editing the same cards, since legacy clients
-can discard unrecognized audio entries when replacing whole cue maps.
+The server's schedule/history contract is version 4. Clients write directed cue
+keys and reject legacy envelopes. SQLite schema 17 invalidates the old card
+cache for a fresh pull and archives old queued card writes in
+`rejected_card_outbox_v3`; those writes are not submitted or converted.
+Cache and outbox partitions remain scoped to server, user, domain and app.

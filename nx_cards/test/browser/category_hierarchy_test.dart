@@ -30,7 +30,12 @@ StudyCard card(
     originalScript: 'texto $id',
     transliteration: '',
   ),
-  schedules: const {},
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+  },
   reviewHistory: const {},
   suspended: false,
   tags: {
@@ -168,7 +173,7 @@ void main() {
     expect(question.isPhraseCard, true);
     final scores = futureCardScores(
       cards,
-      cue: StudyCue.fromLanguage,
+      cue: StudyCue.meaningToScript,
       historyWindow: 10,
     );
     expect(scores[1], greaterThan(0));

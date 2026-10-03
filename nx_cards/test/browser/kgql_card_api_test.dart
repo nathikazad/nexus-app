@@ -29,7 +29,12 @@ void main() {
           originalScript: '字',
           transliteration: 'zi',
         ),
-        schedules: {},
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+        },
         reviewHistory: {},
         suspended: false,
       );
@@ -136,11 +141,17 @@ void main() {
             as Map<String, dynamic>;
     final scheduleValue = schedule['value'] as Map<String, dynamic>;
     final cues = scheduleValue['cues'] as Map<String, dynamic>;
-    expect((cues['from_language'] as Map<String, dynamic>)['enabled'], isTrue);
-    expect((cues['to_language'] as Map<String, dynamic>)['enabled'], isTrue);
     expect(
-      (cues['transliteration'] as Map<String, dynamic>)['enabled'],
-      isFalse,
+      (cues['meaning_to_script'] as Map<String, dynamic>)['enabled'],
+      isTrue,
+    );
+    expect(
+      (cues['script_to_meaning'] as Map<String, dynamic>)['enabled'],
+      isTrue,
+    );
+    expect(
+      (cues['meaning_to_sound'] as Map<String, dynamic>)['enabled'],
+      isTrue,
     );
   });
 
@@ -182,15 +193,15 @@ void main() {
                 },
               'suspended': false,
               'schedule': {
-                'version': 3,
+                'version': 4,
                 'algorithm': 'fsrs',
                 'cues': {
-                  'from_language': _emptySchedule(enabled: true),
-                  'to_language': _emptySchedule(enabled: true),
+                  'meaning_to_script': _emptySchedule(enabled: true),
+                  'script_to_meaning': _emptySchedule(enabled: true),
                   'transliteration': _emptySchedule(enabled: true),
                 },
               },
-              'review_history': {'version': 3, 'items': <Object?>[]},
+              'review_history': {'version': 4, 'items': <Object?>[]},
               'learning_state': 'practice',
               'model_type': {'id': 67, 'name': wordCardModelType},
               'tags': <String, dynamic>{
@@ -213,8 +224,8 @@ void main() {
     expect(content.originalScript, 'കഴിവ്');
     expect(content.transliteration, 'kazhivu');
     expect(content.examples.single.translation, 'He has good talent.');
-    expect(cards.single.scheduleFor(StudyCue.fromLanguage).enabled, isTrue);
-    expect(cards.single.scheduleFor(StudyCue.toLanguage).enabled, isTrue);
+    expect(cards.single.scheduleFor(StudyCue.meaningToScript).enabled, isTrue);
+    expect(cards.single.scheduleFor(StudyCue.scriptToMeaning).enabled, isTrue);
     expect(cards.single.learningStatus, LearningStatus.practice);
     expect(cards.single.tags['Category'], ['Noun']);
     expect(requestedTypes.toSet(), {cardModelType, languageCardModelType});

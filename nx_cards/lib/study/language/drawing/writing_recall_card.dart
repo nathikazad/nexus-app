@@ -60,7 +60,8 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
         children: [
           Flexible(
             child:
-                !widget.revealed && widget.prompt.cue == StudyCue.fromLanguage
+                !widget.revealed &&
+                    widget.prompt.cue.source == RecallComponent.meaning
                 ? FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -106,14 +107,6 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
             ],
         ],
       ),
-      if (!widget.revealed && widget.prompt.showEnglishAndTransliteration) ...[
-        const SizedBox(height: 8),
-        Text(
-          _content.transliteration,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 24),
-        ),
-      ],
       if (widget.revealed) ...[
         const SizedBox(height: 8),
         Text(_content.english, textAlign: TextAlign.center),
@@ -124,7 +117,7 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
       Text(
         widget.revealed
             ? 'Compare your drawing with the answer'
-            : 'Recall the answer · writing is optional',
+            : widget.prompt.instruction,
         style: const TextStyle(color: RecallColors.faint, fontSize: 12),
       ),
       Expanded(

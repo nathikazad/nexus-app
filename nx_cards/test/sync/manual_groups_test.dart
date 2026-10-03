@@ -115,8 +115,11 @@ void main() {
         await db.customSelect('SELECT * FROM card_sync_hashes').get(),
         isEmpty,
       );
-      expect((await store().pendingMutations()).single.operationId, 'pending');
-      expect((await store().getCard(1))!.suspended, true);
+      expect(await store().pendingMutations(), isEmpty);
+      expect(await store().getCard(1), isNull);
+      await store().applyCardBatch([
+        HashedCard(card(1, ['shi']), 'v4'),
+      ]);
       expect(
         ((await store().getCard(1))!.content as LanguageCardContent)
             .similarWordGroups,

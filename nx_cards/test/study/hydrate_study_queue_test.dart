@@ -6,7 +6,12 @@ import 'package:nx_cards/study/hydrate_study_queue.dart';
 StudyCard summary(int id) => StudyCard(
   id: id,
   content: BasicCardContent(front: '$id', back: '$id'),
-  schedules: const {},
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+  },
   reviewHistory: const {},
   suspended: false,
 ).copyWith(isSummary: true);

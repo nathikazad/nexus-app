@@ -282,7 +282,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                         key: ValueKey<String>(
                                           'draw-practice-audio-${_card.id}-${_cue?.storageKey}',
                                         ),
-                                        autoPlay: _cue == StudyCue.fromAudio,
+                                        autoPlay: _cue?.isListening == true,
                                         audioUrl: audioUrl,
                                         repository: widget.audioRepository!,
                                       ),

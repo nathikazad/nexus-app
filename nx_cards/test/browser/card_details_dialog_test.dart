@@ -75,7 +75,12 @@ void main() {
       learningStatus: LearningStatus.recall,
       tags: base.tags,
       suspended: false,
-      schedules: const {},
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+      },
       reviewHistory: const {},
       content: (base.content as LanguageCardContent).copyWith(
         english: 'peer meaning',
@@ -121,7 +126,12 @@ void main() {
         transliteration: text,
         examples: examples,
       ),
-      schedules: {},
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+      },
       reviewHistory: {},
       suspended: false,
       linkedWordIds: contains,
@@ -353,17 +363,21 @@ void main() {
     final reviewedAt = DateTime.now().toUtc().subtract(const Duration(days: 2));
     final card = _card(
       schedules: {
-        StudyCue.fromLanguage: _schedule(reviewedAt, reviewCount: 2),
-        StudyCue.toLanguage: _schedule(reviewedAt, reviewCount: 1),
-        StudyCue.transliteration: const CardSchedule.initial(enabled: true),
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: _schedule(reviewedAt, reviewCount: 2),
+        StudyCue.scriptToMeaning: _schedule(reviewedAt, reviewCount: 1),
+        StudyCue.scriptToSound: const CardSchedule.initial(enabled: true),
       },
       reviewHistory: {
-        StudyCue.fromLanguage: [
+        StudyCue.meaningToScript: [
           _review('from-1', reviewedAt, rating: 1),
           _review('from-2', reviewedAt.add(const Duration(days: 1)), rating: 3),
         ],
-        StudyCue.toLanguage: [_review('to-1', reviewedAt, rating: 3)],
-        StudyCue.transliteration: const [],
+        StudyCue.scriptToMeaning: [_review('to-1', reviewedAt, rating: 3)],
+        StudyCue.scriptToSound: const [],
       },
     );
 
@@ -391,10 +405,10 @@ void main() {
       findsNothing,
     );
     expect(find.text('Meaning'), findsOneWidget);
-    expect(find.text('1 yes · 1 no'), findsOneWidget);
+    expect(find.text('2 yes · 1 no'), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -900));
     await tester.pumpAndSettle();
-    expect(find.text('2 reviews'), findsOneWidget);
+    expect(find.text('3 reviews'), findsOneWidget);
     expect(find.byKey(const ValueKey('review-history-graph')), findsOneWidget);
   });
 
@@ -404,14 +418,18 @@ void main() {
     final reviewedAt = DateTime.now().toUtc().subtract(const Duration(days: 1));
     final card = _card(
       schedules: {
-        StudyCue.fromLanguage: _schedule(reviewedAt, reviewCount: 1),
-        StudyCue.toLanguage: const CardSchedule.initial(enabled: true),
-        StudyCue.transliteration: const CardSchedule.initial(enabled: true),
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: _schedule(reviewedAt, reviewCount: 1),
+        StudyCue.scriptToMeaning: const CardSchedule.initial(enabled: true),
+        StudyCue.scriptToSound: const CardSchedule.initial(enabled: true),
       },
       reviewHistory: {
-        StudyCue.fromLanguage: [_review('one', reviewedAt, rating: 3)],
-        StudyCue.toLanguage: const [],
-        StudyCue.transliteration: const [],
+        StudyCue.meaningToScript: [_review('one', reviewedAt, rating: 3)],
+        StudyCue.scriptToMeaning: const [],
+        StudyCue.scriptToSound: const [],
       },
     );
 
@@ -442,7 +460,11 @@ void main() {
     final now = DateTime.now().toUtc();
     final card = _card(
       schedules: {
-        StudyCue.fromLanguage: CardSchedule(
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: CardSchedule(
           enabled: true,
           dueAt: now.add(const Duration(minutes: 10)),
           lastReviewedAt: now,
@@ -453,18 +475,18 @@ void main() {
           reviewCount: 4,
           lapseCount: 0,
         ),
-        StudyCue.toLanguage: const CardSchedule.initial(enabled: true),
-        StudyCue.transliteration: const CardSchedule.initial(enabled: true),
+        StudyCue.scriptToMeaning: const CardSchedule.initial(enabled: true),
+        StudyCue.scriptToSound: const CardSchedule.initial(enabled: true),
       },
       reviewHistory: {
-        StudyCue.fromLanguage: [
+        StudyCue.meaningToScript: [
           _review('failed-1', now.subtract(const Duration(days: 3)), rating: 1),
           _review('failed-2', now.subtract(const Duration(days: 2)), rating: 1),
           _review('failed-3', now.subtract(const Duration(days: 1)), rating: 2),
           _review('failed-4', now, rating: 1),
         ],
-        StudyCue.toLanguage: const [],
-        StudyCue.transliteration: const [],
+        StudyCue.scriptToMeaning: const [],
+        StudyCue.scriptToSound: const [],
       },
     );
 
@@ -483,7 +505,7 @@ void main() {
     expect(find.text('Backlog'), findsOneWidget);
     expect(find.text('Learning step 2 of 2'), findsNothing);
     expect(find.text('0%'), findsOneWidget);
-    expect(find.text('0/5 · 4 recent attempts'), findsOneWidget);
+    expect(find.text('0/40 · 4 recent attempts'), findsOneWidget);
     expect(find.text('estimated recall'), findsNothing);
   });
 }
@@ -508,16 +530,16 @@ StudyCard _card({
   schedules:
       schedules ??
       const <StudyCue, CardSchedule>{
-        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
-        StudyCue.toLanguage: CardSchedule.initial(enabled: true),
-        StudyCue.transliteration: CardSchedule.initial(enabled: true),
+        StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
+        StudyCue.scriptToMeaning: CardSchedule.initial(enabled: true),
+        StudyCue.scriptToSound: CardSchedule.initial(enabled: true),
       },
   reviewHistory:
       reviewHistory ??
       const <StudyCue, List<CardReview>>{
-        StudyCue.fromLanguage: <CardReview>[],
-        StudyCue.toLanguage: <CardReview>[],
-        StudyCue.transliteration: <CardReview>[],
+        StudyCue.meaningToScript: <CardReview>[],
+        StudyCue.scriptToMeaning: <CardReview>[],
+        StudyCue.scriptToSound: <CardReview>[],
       },
   tags: const <String, List<String>>{
     'Language': ['Malayalam'],

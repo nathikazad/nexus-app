@@ -19,7 +19,7 @@ import 'progress_analysis_test.dart' show progressCard, review;
 final demoCards = [
   for (var id = 0; id < 12; id++)
     progressCard(id, {
-      for (final cue in StudyCue.activeDirections)
+      for (final cue in StudyCue.languageDirections)
         cue: [
           for (var day = id + 1; day <= 30; day++)
             review(day, (day + id + cue.index) % 5 == 0 ? 1 : 3),
@@ -183,7 +183,8 @@ void main() {
     tester,
   ) async {
     await showProgress(tester);
-    expect(find.text('All three'), findsOneWidget);
+    expect(find.text('Recall type'), findsNothing);
+    expect(find.byKey(const ValueKey('progress-direction')), findsNothing);
     expect(find.text('Percent'), findsNothing);
     expect(find.textContaining('First reached target'), findsNothing);
     expect(find.text('How progress is calculated'), findsNothing);
@@ -301,7 +302,7 @@ void main() {
     'category entry overrides remembered scope and restores other filters',
     (tester) async {
       SharedPreferences.setMockInitialValues({
-        'progress.v1.server.user.4.Chinese':
+        'progress.v2.server.user.4.Chinese':
             '{"target":90,"direction":"from_language","period":"7","category":"Word","path":["Word"]}',
       });
       await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -340,7 +341,7 @@ void main() {
       expect(find.text('Chinese · Progress'), findsOneWidget);
       expect(find.text('Script › Basics'), findsOneWidget);
       expect(find.text('At least 90%'), findsOneWidget);
-      expect(find.text('Meaning'), findsOneWidget);
+      expect(find.text('Recall type'), findsNothing);
       expect(find.text('Last 7 days'), findsOneWidget);
 
       expect(tester.takeException(), isNull);

@@ -36,7 +36,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Meaning'), findsNWidgets(2));
     expect(find.text('Script'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('recall-direction-from_audio')));
+    await tester.tap(find.byKey(const ValueKey('recall-direction-sound')));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Recall direction: Sound'), findsOneWidget);
     expect(find.byIcon(Icons.volume_up_outlined), findsOneWidget);
@@ -45,7 +45,7 @@ void main() {
     );
     expect(
       container.read(languageDirectionProvider('Chinese')),
-      StudyCue.fromAudio,
+      RecallComponent.sound,
     );
   });
 
@@ -61,9 +61,9 @@ void main() {
                 ['Word'],
               ], language: 'Chinese')
               .copyWith(
-                content: sample(1, 8).content,
-                schedules: sample(1, 8).schedules,
-                reviewHistory: sample(1, 8).reviewHistory,
+                content: sample(1, 6).content,
+                schedules: sample(1, 6).schedules,
+                reviewHistory: sample(1, 6).reviewHistory,
                 learningStatus: LearningStatus.recall,
               ),
         ],
@@ -89,12 +89,9 @@ void main() {
       expect(find.byTooltip('Recall'), findsOneWidget);
       expect(find.byKey(const ValueKey('practice-select')), findsOneWidget);
       expect(find.byType(TabBar), findsNothing);
-      expect(find.text('33%'), findsOneWidget);
+      expect(find.text('60%'), findsOneWidget);
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
-      expect(
-        find.text('Weak (1) · All directions', findRichText: true),
-        findsOneWidget,
-      );
+      expect(find.text('Weak (1)', findRichText: true), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('current-filter-toggle')));
       await tester.pumpAndSettle();
       final slider = tester.widget<Slider>(
@@ -103,29 +100,13 @@ void main() {
       expect(slider.value, .8);
       slider.onChanged!(1);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('direction-from_audio')));
-      await tester.pumpAndSettle();
-      expect(find.text('50%'), findsOneWidget);
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('direction-to_language')),
-      );
-      await tester.tap(find.byKey(const ValueKey('direction-to_language')));
-      await tester.pumpAndSettle();
-      expect(find.text('100%'), findsOneWidget);
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('direction-from_language')),
-      );
-      await tester.tap(find.byKey(const ValueKey('direction-from_language')));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('100%'),
-        findsOneWidget,
-      ); // Last direction cannot be cleared.
+      expect(find.byType(DirectionChoices), findsNothing);
+      expect(find.text('60%'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
       await tester.tap(find.text('All'));
       await tester.pumpAndSettle();
-      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('60%'), findsOneWidget);
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('open-backlog')));
       await tester.pumpAndSettle();

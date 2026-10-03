@@ -11,7 +11,7 @@ void main() {
       for (var i = 0; i < ids.length; i++)
         StudyPrompt(
           card: sample(ids[i], 0),
-          cue: StudyCue.activeDirections[i % 3],
+          cue: StudyCue.languageDirections[i % 3],
         ),
     ];
     final spaced = spaceRepeatedRecallCards(prompts);
@@ -34,7 +34,7 @@ void main() {
                 for (var n = 0; n < [a, b, c][id]; n++)
                   StudyPrompt(
                     card: sample(id, 0),
-                    cue: StudyCue.activeDirections[n],
+                    cue: StudyCue.languageDirections[n],
                   ),
             ]..shuffle(Random(seed));
             final result = spaceRepeatedRecallCards(prompts);
@@ -53,7 +53,7 @@ void main() {
   test('selects weakest items before shuffling, preserving cues and count', () {
     final prompts = [
       for (var id = 1; id <= 10; id++)
-        StudyPrompt(card: sample(id, id - 1), cue: StudyCue.fromLanguage),
+        StudyPrompt(card: sample(id, id - 1), cue: StudyCue.meaningToScript),
     ];
     prioritizeRecallPrompts(prompts, DateTime.utc(2026), historyWindow: 10);
     final selected = shuffledRecallSelection(prompts, 5, random: Random(8));
@@ -72,9 +72,13 @@ void main() {
     return StudyPrompt(
       card: card.copyWith(
         schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
           ...card.schedules,
-          StudyCue.fromLanguage: card
-              .scheduleFor(StudyCue.fromLanguage)
+          StudyCue.meaningToScript: card
+              .scheduleFor(StudyCue.meaningToScript)
               .copyWith(
                 stability: stability,
                 lastReviewedAt: now.subtract(Duration(days: days)),
@@ -82,7 +86,7 @@ void main() {
               ),
         },
       ),
-      cue: StudyCue.fromLanguage,
+      cue: StudyCue.meaningToScript,
     );
   }
 
@@ -92,7 +96,7 @@ void main() {
     final weakerCard = base.card.copyWith(
       reviewHistory: {
         ...base.card.reviewHistory,
-        StudyCue.fromLanguage: [
+        StudyCue.meaningToScript: [
           ...base.reviewHistory,
           for (var i = 0; i < 2; i++)
             CardReview(
@@ -144,7 +148,7 @@ void main() {
     () {
       final original = [
         for (var id = 1; id <= 30; id++)
-          for (final cue in StudyCue.activeDirections)
+          for (final cue in StudyCue.languageDirections)
             StudyPrompt(card: sample(id, 0), cue: cue),
       ];
       final selections = <String>{};
@@ -180,11 +184,14 @@ void main() {
       for (var id = 1; id <= 12; id++)
         StudyPrompt(
           card: sample(id, id < 7 ? 0 : 2),
-          cue: StudyCue.fromLanguage,
+          cue: StudyCue.meaningToScript,
         ),
       for (var id = 13; id <= 16; id++)
-        StudyPrompt(card: sample(id, 8), cue: StudyCue.fromLanguage),
-      StudyPrompt(card: sample(17, 10, due: false), cue: StudyCue.fromLanguage),
+        StudyPrompt(card: sample(id, 8), cue: StudyCue.meaningToScript),
+      StudyPrompt(
+        card: sample(17, 10, due: false),
+        cue: StudyCue.meaningToScript,
+      ),
     ];
     prioritizeRecallPrompts(prompts, DateTime.now(), historyWindow: 10);
     expect(prompts.length, 17);
@@ -200,7 +207,17 @@ void main() {
     expect(prompts.map((p) => p.cardId), contains(17));
   });
   test('due priority follows the selected direction', () {
-    final prompt = StudyPrompt(card: sample(1, 8), cue: StudyCue.toLanguage);
+    final prompt = StudyPrompt(
+      card: sample(1, 8).copyWith(
+        reviewHistory: {
+          StudyCue.meaningToScript: sample(
+            1,
+            8,
+          ).reviewHistoryFor(StudyCue.meaningToScript),
+        },
+      ),
+      cue: StudyCue.scriptToMeaning,
+    );
     expect(isPastDue(prompt, DateTime.now(), historyWindow: 10), isFalse);
   });
 }

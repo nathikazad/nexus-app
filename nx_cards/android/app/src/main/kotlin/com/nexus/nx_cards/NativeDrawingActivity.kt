@@ -151,7 +151,10 @@ class NativeDrawingActivity : Activity() {
         prompt.visibility = if (!recall && !visibleAnswer && card["practiceDirection"] != true) View.INVISIBLE else View.VISIBLE
         prompt.textSize = if (!recall && card["practiceDirection"] != true && card["multiCharacter"] == false) 64f else 32f
         subtitle.text = if (recall && !revealed || !recall && card["practiceDirection"] == true && !visibleAnswer) "" else value("subtitle")
-        hint.text = if (recall) { if (revealed) "Compare your drawing with the answer" else "Recall the answer · writing is optional" } else "Practice only"
+        val writing = !recall || card["writing"] == true
+        ink?.getView()?.visibility = if (writing) View.VISIBLE else View.INVISIBLE
+        ink?.setResumed(writing && !busy)
+        hint.text = if (recall) { if (revealed) "Did you recall the answer?" else value("instruction") } else "Practice only"
         val showContext = !recall || revealed
         // Reserve the context area before reveal. GONE resizes NoteView when
         // the answer appears; the firmware can discard pen records during that
@@ -176,8 +179,10 @@ class NativeDrawingActivity : Activity() {
         control("Refresh screen", "refresh") { refreshScreen() }
         if (!recall) control("Study sheet", "list") { finish() }
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
-        control("Undo", "undo") { ink?.undo() }
-        control("Erase", "erase") { ink?.clear {} }
+        if (writing) {
+            control("Undo", "undo") { ink?.undo() }
+            control("Erase", "erase") { ink?.clear {} }
+        }
         if (card["audio"] == true && (!recall || revealed || card["listening"] == true)) control("Play", "play") { play() }
         if (!recall) {
             control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
@@ -465,7 +470,7 @@ class NativeDrawingActivity : Activity() {
             val control = controls.getChildAt(i)
             control.isEnabled = !value && control.tag != false
         }
-        ink?.setResumed(!value)
+        ink?.setResumed(!value && (!recall || cards.getOrNull(index)?.get("writing") == true))
     }
     private fun openExample(cardId: Int) {
         stopAudio()
@@ -595,8 +600,8 @@ class NativeDrawingActivity : Activity() {
     }
     private fun stopAudio() { audioGeneration++; player?.release(); player = null; audioFile?.delete(); audioFile = null }
     private fun report(message: String) { if (::hint.isInitialized) hint.text = message; Log.e("NxCardsNative", message) }
-    override fun onResume() { super.onResume(); ink?.setResumed(!busy) }
+    override fun onResume() { super.onResume(); ink?.setResumed(!busy && (!recall || cards.getOrNull(index)?.get("writing") == true)) }
     override fun onPause() { ink?.setResumed(false); stopAudio(); super.onPause() }
-    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy) }
+    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy && (!recall || cards.getOrNull(index)?.get("writing") == true)) }
     override fun onDestroy() { if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
 }

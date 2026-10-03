@@ -493,45 +493,24 @@ Keep spoken responses short unless the learner asks for more detail.
         'pronunciation_hint': _pronunciationHint(prompt),
       'cue': prompt.cue.storageKey,
       'spoken_only': prompt.card.spokenOnly,
-      if (prompt.card.spokenOnly)
+      if (prompt.isListening)
         'spoken_prompt': _languageContent(prompt)?.transliteration,
       'question_instruction': _questionInstruction(prompt, languages),
       'already_assessed': _currentCardAssessed,
     };
   }
 
-  String _expectedAnswer(StudyPrompt prompt) => switch (prompt.cue) {
-    StudyCue.fromAudio when prompt.card.spokenOnly => prompt.card.front,
-    StudyCue.fromLanguage when prompt.card.spokenOnly =>
-      _languageContent(prompt)?.transliteration ?? '',
-    StudyCue.fromLanguage || StudyCue.fromAudio => prompt.card.back,
-    StudyCue.toLanguage || StudyCue.transliteration => prompt.card.front,
-  };
+  String _expectedAnswer(StudyPrompt prompt) => prompt.answer;
 
-  String _pronunciationHint(StudyPrompt prompt) => switch (prompt.cue) {
-    StudyCue.fromLanguage ||
-    StudyCue.fromAudio => _languageContent(prompt)?.transliteration ?? '',
-    StudyCue.toLanguage || StudyCue.transliteration => '',
-  };
+  String _pronunciationHint(StudyPrompt prompt) =>
+      prompt.cue.target == RecallComponent.sound ? prompt.answer : '';
 
   String _questionInstruction(
     StudyPrompt prompt,
     VoiceStudyLanguages? languages,
-  ) {
-    final from = languages?.from;
-    final to = languages?.to;
-    return switch (prompt.cue) {
-      StudyCue.fromAudio when prompt.card.spokenOnly =>
-        'Say the spoken_prompt aloud in the target language and ask for its English meaning. Do not reveal the meaning or ask for characters or writing.',
-      StudyCue.fromAudio =>
-        'Say the expected answer aloud in the target language, then ask the learner to repeat it. Do not translate it.',
-      StudyCue.fromLanguage when to != null =>
-        'Ask: How do you say ${prompt.prompt} in $to?',
-      StudyCue.toLanguage || StudyCue.transliteration when from != null =>
-        'Ask: What does ${prompt.prompt} mean in $from?',
-      _ => 'Ask the learner to recall the answer to ${prompt.prompt}.',
-    };
-  }
+  ) => prompt.isListening
+      ? 'Say the spoken_prompt aloud in ${languages?.to ?? 'the target language'} and ask for its meaning. Do not reveal the meaning.'
+      : 'Ask the learner to say ${prompt.prompt} in ${languages?.to ?? 'the target language'}. Assess pronunciation only.';
 
   String _contextForCurrentCard({required bool firstCard}) {
     final prompt = currentPrompt!;

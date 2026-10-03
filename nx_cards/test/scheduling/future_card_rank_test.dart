@@ -17,7 +17,12 @@ StudyCard item(
     originalScript: '$id',
     transliteration: '',
   ),
-  schedules: const {},
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+  },
   suspended: false,
   learningStatus: active ? LearningStatus.recall : LearningStatus.future,
   tags: {
@@ -26,7 +31,7 @@ StudyCard item(
   },
   linkedWordIds: links,
   reviewHistory: {
-    StudyCue.fromLanguage: [
+    StudyCue.meaningToScript: [
       for (var i = 0; i < successes; i++)
         CardReview(
           id: '$id-$i',
@@ -40,7 +45,7 @@ StudyCard item(
 );
 Map<int, double> score(
   List<StudyCard> cards, {
-  StudyCue cue = StudyCue.fromLanguage,
+  StudyCue cue = StudyCue.meaningToScript,
   int window = 10,
 }) => futureCardScores(cards, cue: cue, historyWindow: window);
 void main() {
@@ -65,13 +70,10 @@ void main() {
       item(4, category: 'Phrase', links: {2}),
     ];
     final u = (math.log(2) / math.log(3) + 1) / 2;
-    expect(
-      score(cards)[3],
-      closeTo(100 * u, 1e-9),
-    );
+    expect(score(cards)[3], closeTo(100 * u * .91, 1e-9));
     expect(score(cards, window: 5)[3], closeTo(100 * u, 1e-9));
     expect(
-      score(cards, cue: StudyCue.toLanguage)[3],
+      score(cards, cue: StudyCue.scriptToMeaning)[3],
       closeTo(100 * u * .64, 1e-9),
     );
   });

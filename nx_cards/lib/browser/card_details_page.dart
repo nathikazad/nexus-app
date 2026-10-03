@@ -101,12 +101,12 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     invalidate();
   }
 
-  List<StudyCue> get _reviewedCues => [
-    for (final cue in StudyCue.activeDirections)
-      if ((_loadedCard ?? widget.card).reviewHistoryFor(cue).isNotEmpty) cue,
+  List<RecallComponent> get _reviewedCues => [
+    for (final cue in RecallComponent.values)
+      if (selectionReviews(_loadedCard ?? widget.card, cue).isNotEmpty) cue,
   ];
 
-  StudyCue get _visibleCue => ref.read(
+  RecallComponent get _visibleCue => ref.read(
     languageDirectionProvider((_loadedCard ?? widget.card).language),
   );
 
@@ -379,7 +379,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                     const SizedBox(height: 16),
                     _RecallSummary(card: card, cue: visibleCue),
                     const SizedBox(height: 24),
-                    _ReviewHistory(reviews: card.reviewHistoryFor(visibleCue)),
+                    _ReviewHistory(reviews: selectionReviews(card, visibleCue)),
                   ] else if (visibleTab == CardDetailsTab.similar)
                     SimilarWordGroups(groups: similarGroups)
                   else if (languageContent != null)
@@ -402,11 +402,17 @@ class _RecallStrengthPill extends ConsumerWidget {
   const _RecallStrengthPill({required this.card, required this.cue});
 
   final StudyCard card;
-  final StudyCue cue;
+  final RecallComponent cue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final average = averageRetention(card, StudyCue.activeDirections);
+    final average = averageRetention(
+      card,
+      RecallComponent.values,
+      window:
+          ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
+          10,
+    );
     final strong = average >= .8;
     final percentage = (average * 100).round();
     return Container(
@@ -524,12 +530,15 @@ class _RecallSummary extends ConsumerWidget {
   const _RecallSummary({required this.card, required this.cue});
 
   final StudyCard card;
-  final StudyCue cue;
+  final RecallComponent cue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final schedule = card.scheduleFor(cue);
-    final reviews = card.reviewHistoryFor(cue);
+    final schedules = selectionCues(card, cue).map(card.scheduleFor).toList();
+    final dueDates = schedules.map((s) => s.dueAt).nonNulls.toList()..sort();
+    final reviewDates = schedules.map((s) => s.lastReviewedAt).nonNulls.toList()
+      ..sort();
+    final reviews = selectionReviews(card, cue);
     final now = DateTime.now().toUtc();
     final successes = reviews.where((review) => review.rating >= 3).length;
     final failures = reviews.length - successes;
@@ -540,8 +549,8 @@ class _RecallSummary extends ConsumerWidget {
     final window =
         ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
     final stage = learningStage(card, cue, window: window);
-    final score = recallScore(card, cue);
-    final due = schedule.dueAt;
+    final score = recallScore(card, cue, window: window);
+    final due = dueDates.firstOrNull;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -569,7 +578,7 @@ class _RecallSummary extends ConsumerWidget {
                   width: width,
                   child: _StatTile(
                     label: 'Last reviewed',
-                    value: _relativeDate(schedule.lastReviewedAt, now),
+                    value: _relativeDate(reviewDates.lastOrNull, now),
                   ),
                 ),
                 SizedBox(
@@ -594,7 +603,8 @@ class _RecallSummary extends ConsumerWidget {
                   child: _StatTile(
                     label: 'Consistency',
                     value: '$streak current streak',
-                    detail: '${schedule.lapseCount} lapses',
+                    detail:
+                        '${schedules.fold(0, (sum, s) => sum + s.lapseCount)} lapses',
                   ),
                 ),
               ],
@@ -1085,14 +1095,8 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-String _cueLabel(StudyCue cue, StudyCard card) => card.isLanguageCard
-    ? cue.label
-    : switch (cue) {
-        StudyCue.fromLanguage => 'Front → Back',
-        StudyCue.toLanguage => 'Back → Front',
-        StudyCue.transliteration => 'Transliteration → Front',
-        StudyCue.fromAudio => 'Audio → Back',
-      };
+String _cueLabel(RecallComponent cue, StudyCard card) =>
+    card.isLanguageCard ? cue.label : 'Front / Back';
 
 String _cardSource(StudyCard card) =>
     card.sourceBookName ?? card.language ?? 'Flashcard';

@@ -26,13 +26,17 @@ StudyCard soundCard(
   learningStatus: status,
   suspended: false,
   schedules: {
-    for (final cue in StudyCue.activeDirections)
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    for (final cue in StudyCue.languageDirections)
       cue: const CardSchedule.initial(enabled: true),
   },
   reviewHistory: {
     for (final (cue, score) in [
-      (StudyCue.fromLanguage, englishScore),
-      (StudyCue.fromAudio, audioScore),
+      (StudyCue.meaningToScript, englishScore),
+      (StudyCue.soundToMeaning, audioScore),
     ])
       cue: [
         for (var i = 0; i < score; i++)
@@ -59,7 +63,7 @@ void main() {
         final rounds = manualRecallSession(
           cards,
           sound: false,
-          directions: {StudyCue.fromLanguage, StudyCue.toLanguage},
+          directions: {RecallComponent.meaning, RecallComponent.script},
           groupLimit: 3,
           random: Random(seed),
         );
@@ -75,11 +79,11 @@ void main() {
       final weakest = manualRecallSession(
         [one],
         sound: false,
-        directions: {StudyCue.fromLanguage, StudyCue.toLanguage},
+        directions: {RecallComponent.meaning, RecallComponent.script},
         groupLimit: 1,
         random: Random(1),
       );
-      expect(weakest.single.prompts.single.cue, StudyCue.toLanguage);
+      expect(weakest.single.prompts.single.cue, StudyCue.scriptToMeaning);
     },
   );
 
@@ -89,22 +93,26 @@ void main() {
     final both = english.copyWith(
       reviewHistory: {
         ...english.reviewHistory,
-        StudyCue.toLanguage: chinese.reviewHistoryFor(StudyCue.fromLanguage),
+        StudyCue.scriptToMeaning: chinese.reviewHistoryFor(
+          StudyCue.meaningToScript,
+        ),
       },
     );
     final group = SimilarSoundGroup([both, chinese], label: 'pair-write');
     expect(
       similarWordRetention(both, SimilarGroupKind.written),
-      closeTo(.8, 1e-9),
+      closeTo(.2, 1e-9),
     );
     expect(
       similarWordRetention(chinese, SimilarGroupKind.written),
-      closeTo(.3, 1e-9),
+      closeTo(.075, 1e-9),
     );
-    expect(similarGroupRetention(group), closeTo(.55, 1e-9));
+    expect(similarGroupRetention(group), closeTo(.1375, 1e-9));
     final reverseOnly = english.copyWith(
       reviewHistory: {
-        StudyCue.toLanguage: english.reviewHistoryFor(StudyCue.fromLanguage),
+        StudyCue.scriptToMeaning: english.reviewHistoryFor(
+          StudyCue.meaningToScript,
+        ),
       },
     );
     expect(
@@ -177,31 +185,37 @@ void main() {
       final groups = manualRecallSession(
         cards,
         sound: false,
-        directions: {StudyCue.fromLanguage, StudyCue.toLanguage},
-        groupLimit: 4,
+        directions: {RecallComponent.meaning, RecallComponent.script},
+        groupLimit: 12,
         random: Random(1),
       );
-      expect(groups, hasLength(4));
+      expect(groups, hasLength(12));
       for (final group in groups) {
         expect(group.prompts.map((p) => p.cue).toSet(), hasLength(1));
       }
       final full = groups.where((g) => g.label == 'a-write');
-      expect(full, hasLength(2));
+      expect(full, hasLength(6));
       expect(
         full
             .expand((g) => g.prompts)
             .map((p) => '${p.cardId}:${p.cue.name}')
             .toSet(),
-        {'1:fromLanguage', '1:toLanguage', '2:fromLanguage', '2:toLanguage'},
+        {
+          for (final id in [1, 2])
+            for (final cue in StudyCue.languageDirections) '$id:${cue.name}',
+        },
       );
       final weakest = manualRecallSession(
         cards,
         sound: false,
-        directions: {StudyCue.fromLanguage},
+        directions: {RecallComponent.meaning},
         groupLimit: 1,
         random: Random(4),
       );
-      expect(weakest.single.label, 'b-write');
+      expect(
+        weakest.single.prompts.every((p) => p.reviewHistory.isEmpty),
+        isTrue,
+      );
       final sound = manualRecallSession(
         cards,
         sound: true,
@@ -210,10 +224,7 @@ void main() {
       );
       expect(sound.single.label, 'sound-sound');
       expect(sound.single.prompts, hasLength(2));
-      expect(
-        sound.single.prompts.every((p) => p.cue == StudyCue.fromAudio),
-        isTrue,
-      );
+      expect(sound.single.prompts.every((p) => p.cue.isListening), isTrue);
     },
   );
   test(
@@ -233,7 +244,7 @@ void main() {
       final groups = manualRecallSession(
         cards,
         sound: false,
-        directions: {StudyCue.fromLanguage},
+        directions: {RecallComponent.meaning},
         groupLimit: 1,
       );
       expect(
@@ -244,7 +255,7 @@ void main() {
         manualRecallSession(
           [soundCard(4, 'anything')],
           sound: false,
-          directions: {StudyCue.fromLanguage},
+          directions: {RecallComponent.meaning},
           groupLimit: 5,
         ),
         isEmpty,

@@ -18,7 +18,7 @@ CardScheduleStatus? cardScheduleStatus(
   StudyCard card,
   DateTime now, {
   int historyWindow = 10,
-  StudyCue cue = StudyCue.fromLanguage,
+  RecallSelection? cue,
 }) {
   final stage = learningStage(card, cue, window: historyWindow);
   return CardScheduleStatus(
@@ -26,7 +26,10 @@ CardScheduleStatus? cardScheduleStatus(
     isDue:
         !card.suspended &&
         stage == LearningStage.past &&
-        card.scheduleFor(cue).isDueAt(now),
+        selectionCues(
+          card,
+          cue,
+        ).any((direction) => card.scheduleFor(direction).isDueAt(now)),
     sortPriority: stage.index,
     recallPercentage: cueRecallPercentage(
       card,
@@ -39,13 +42,13 @@ CardScheduleStatus? cardScheduleStatus(
 int cardRecallPercentage(
   StudyCard card, {
   int historyWindow = 10,
-  StudyCue cue = StudyCue.fromLanguage,
+  RecallSelection? cue,
 }) => cueRecallPercentage(card, cue, historyWindow: historyWindow);
 int cueRecallPercentage(
   StudyCard card,
-  StudyCue cue, {
+  RecallSelection? cue, {
   int historyWindow = 10,
-}) => recallScore(card, cue).percentage;
+}) => recallScore(card, cue, window: historyWindow).percentage;
 typedef WordScheduleStatus = CardScheduleStatus;
 CardScheduleStatus? wordScheduleStatus(
   StudyCard card,
@@ -58,7 +61,7 @@ List<StudyCard> sortCardsByScheduleState(
   Iterable<StudyCard> cards,
   DateTime now, {
   int historyWindow = 10,
-  StudyCue cue = StudyCue.fromLanguage,
+  RecallSelection? cue,
 }) {
   return cards.toList()..sort((a, b) {
     final byStage = learningStage(
@@ -70,7 +73,7 @@ List<StudyCard> sortCardsByScheduleState(
     final byRecall = recallScore(
       a,
       cue,
-    ).fraction.compareTo(recallScore(b, cue).fraction);
+    ).fraction.compareTo(recallScore(b, cue, window: historyWindow).fraction);
     return byRecall != 0
         ? byRecall
         : a.front.toLowerCase().compareTo(b.front.toLowerCase());
@@ -81,7 +84,7 @@ List<StudyCard> sortWordsByScheduleState(
   Iterable<StudyCard> cards,
   DateTime now, {
   int historyWindow = 10,
-  StudyCue cue = StudyCue.fromLanguage,
+  RecallSelection? cue,
 }) => sortCardsByScheduleState(
   cards,
   now,

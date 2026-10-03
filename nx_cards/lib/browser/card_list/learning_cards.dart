@@ -1,7 +1,6 @@
 import 'package:nx_cards/browser/card_list/scroll_position_indicator.dart';
 import 'package:nx_cards/browser/card_list/bulk_card_selection.dart';
 import 'package:nx_cards/scheduling/retention.dart';
-import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -29,7 +28,7 @@ class LearningCardsTab extends ConsumerWidget {
 
   final List<StudyCard> cards;
   final Map<int, double> priorityScores;
-  final Set<StudyCue>? scoreDirections;
+  final Set<RecallComponent>? scoreDirections;
   final String emptyText;
   final CardsDashboard dashboard;
   final bool showScheduleStatus;
@@ -137,7 +136,7 @@ class _LearningStatusRow extends ConsumerStatefulWidget {
 
   final StudyCard card;
   final double? priorityScore;
-  final Set<StudyCue>? scoreDirections;
+  final Set<RecallComponent>? scoreDirections;
   final bool showScheduleStatus;
   final bool showLearningStatus;
   final LearningStatus? nextStatus;
@@ -227,16 +226,11 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final originalStatus = cardScheduleStatus(
       widget.card,
       DateTime.now().toUtc(),
-      cue: ref.watch(languageDirectionProvider(widget.card.language)),
       historyWindow:
           ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
           10,
     );
-    final directions =
-        widget.scoreDirections ??
-        ref.watch<Set<StudyCue>>(
-          selectedDirectionsProvider(widget.card.language),
-        );
+    final directions = RecallComponent.values.toSet();
     final scheduleStatus = originalStatus == null
         ? null
         : CardScheduleStatus(
@@ -245,8 +239,19 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                 : widget.card.learningStatus.label,
             isDue: false,
             sortPriority: originalStatus.sortPriority,
-            recallPercentage: (averageRetention(widget.card, directions) * 100)
-                .round(),
+            recallPercentage:
+                (averageRetention(
+                          widget.card,
+                          directions,
+                          window:
+                              ref
+                                  .watch(reviewProgressionSettingsProvider)
+                                  .value
+                                  ?.historyWindow ??
+                              10,
+                        ) *
+                        100)
+                    .round(),
           );
     return ClipRRect(
       borderRadius: BorderRadius.circular(13),

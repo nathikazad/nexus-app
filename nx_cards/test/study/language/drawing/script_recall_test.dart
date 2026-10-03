@@ -10,7 +10,7 @@ import 'package:nx_cards/study/session/study_session_page.dart';
 import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 
 void main() {
-  for (final cue in [StudyCue.fromLanguage, StudyCue.fromAudio]) {
+  for (final cue in [StudyCue.meaningToSound, StudyCue.soundToMeaning]) {
     testWidgets('spoken-only skips drawing even in writing mode: $cue', (
       tester,
     ) async {
@@ -26,8 +26,7 @@ void main() {
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
       expect(find.text('ക'), findsNothing);
-      expect(find.text('Letter ka'), findsWidgets);
-      expect(find.text('ka'), findsWidgets);
+      expect(find.text(StudyPrompt(card: card, cue: cue).answer), findsWidgets);
       expect(find.text('Yes'), findsOneWidget);
     });
   }
@@ -40,7 +39,7 @@ void main() {
         await _pumpRecall(
           tester,
           _scriptCard(),
-          StudyCue.fromAudio,
+          StudyCue.soundToMeaning,
           writing: writing,
         );
         expect(find.text('ക'), findsNothing);
@@ -51,11 +50,7 @@ void main() {
         await tester.tap(find.text('Show answer'));
         await tester.pumpAndSettle();
         expect(find.text('Letter ka'), findsOneWidget);
-        expect(find.text('ക'), findsOneWidget);
-        expect(
-          tester.getTopLeft(find.text('ക')).dy,
-          lessThan(tester.getTopLeft(find.text('Letter ka')).dy),
-        );
+        expect(find.text('ക'), findsNothing);
       },
     );
   }
@@ -65,7 +60,7 @@ void main() {
     (tester) async {
       final card = _scriptCard();
       _FakeAudioRepository.requests = 0;
-      await _pumpRecall(tester, card, StudyCue.fromLanguage, writing: true);
+      await _pumpRecall(tester, card, StudyCue.meaningToScript, writing: true);
 
       expect(find.text('Letter ka'), findsOneWidget);
       expect(find.byTooltip('Play pronunciation'), findsNothing);
@@ -124,7 +119,7 @@ void main() {
 
   for (final language in ['Chinese', 'Malayalam', 'Spanish']) {
     for (final type in ['Word', 'Verb', 'Phrase', 'Script']) {
-      for (final cue in StudyCue.values) {
+      for (final cue in [StudyCue.meaningToScript, StudyCue.soundToScript]) {
         testWidgets('$language $type can write with ${cue.name}', (
           tester,
         ) async {
@@ -140,6 +135,10 @@ void main() {
               transliteration: 'xuésheng',
             ),
             schedules: {
+              for (final direction in StudyCue.values)
+                direction: CardSchedule.initial(
+                  enabled: direction != StudyCue.backToFront,
+                ),
               for (final c in StudyCue.values)
                 c: const CardSchedule.initial(enabled: true),
             },
@@ -179,33 +178,28 @@ void main() {
     }
   }
 
-  for (final cue in StudyCue.values) {
-    testWidgets(
-      'standard reveal shows all three forms in order for ${cue.name}',
-      (tester) async {
-        await _pumpRecall(tester, _scriptCard(), cue);
-        await tester.tap(find.text('Show answer'));
-        await tester.pumpAndSettle();
-        expect(find.text('ക'), findsOneWidget);
-        expect(find.text('Letter ka'), findsOneWidget);
-        expect(find.text('ka'), findsOneWidget);
-        expect(
-          tester.getTopLeft(find.text('ക')).dy,
-          lessThan(tester.getTopLeft(find.text('Letter ka')).dy),
-        );
-        expect(
-          tester.getTopLeft(find.text('Letter ka')).dy,
-          lessThan(tester.getTopLeft(find.text('ka')).dy),
-        );
-      },
-    );
+  for (final cue in StudyCue.languageDirections) {
+    testWidgets('standard recall tests just the target of ${cue.name}', (
+      tester,
+    ) async {
+      final card = _scriptCard();
+      final prompt = StudyPrompt(card: card, cue: cue);
+      await _pumpRecall(tester, card, cue);
+      expect(find.text(prompt.prompt), findsOneWidget);
+      expect(find.text(prompt.instruction), findsOneWidget);
+      expect(find.text(prompt.answer), findsNothing);
+      await tester.tap(find.text('Show answer'));
+      await tester.pumpAndSettle();
+      expect(find.text(prompt.answer), findsOneWidget);
+      expect(find.text(cue.label), findsOneWidget);
+    });
   }
 
   testWidgets('Malayalam Script recall keeps the standard reveal flow', (
     tester,
   ) async {
     final card = _scriptCard();
-    await _pumpRecall(tester, card, StudyCue.toLanguage);
+    await _pumpRecall(tester, card, StudyCue.scriptToMeaning);
 
     expect(find.text('ക'), findsOneWidget);
     expect(
@@ -232,7 +226,7 @@ Future<void> _pumpRecall(
       overrides: [
         cardWorkspaceProvider.overrideWithValue(null),
         cardAudioRepositoryProvider.overrideWithValue(
-          cue == StudyCue.fromLanguage || cue == StudyCue.fromAudio
+          cue == StudyCue.meaningToScript || cue == StudyCue.soundToMeaning
               ? _FakeAudioRepository()
               : null,
         ),
@@ -262,13 +256,17 @@ StudyCard _scriptCard() => StudyCard(
     transliteration: 'ka',
     audioUrl: '/audio/ka.mp3',
   ),
-  schedules: const <StudyCue, CardSchedule>{
-    StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
-    StudyCue.toLanguage: CardSchedule.initial(enabled: true),
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
+    StudyCue.scriptToMeaning: CardSchedule.initial(enabled: true),
   },
   reviewHistory: const <StudyCue, List<CardReview>>{
-    StudyCue.fromLanguage: <CardReview>[],
-    StudyCue.toLanguage: <CardReview>[],
+    StudyCue.meaningToScript: <CardReview>[],
+    StudyCue.scriptToMeaning: <CardReview>[],
   },
   suspended: false,
   learningStatus: LearningStatus.recall,

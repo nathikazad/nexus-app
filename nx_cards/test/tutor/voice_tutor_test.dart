@@ -81,7 +81,7 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
 }
 
 void main() {
-  for (final cue in [StudyCue.fromLanguage, StudyCue.fromAudio]) {
+  for (final cue in [StudyCue.meaningToSound, StudyCue.soundToMeaning]) {
     test('spoken-only tutor asks for pronunciation or meaning: $cue', () async {
       final original = _card(1);
       final content = (original.content as LanguageCardContent).copyWith(
@@ -109,10 +109,12 @@ void main() {
       expect(card['spoken_only'], isTrue);
       expect(
         card['expected_answer'],
-        cue == StudyCue.fromAudio ? content.english : content.transliteration,
+        cue == StudyCue.soundToMeaning
+            ? content.english
+            : content.transliteration,
       );
-      if (cue == StudyCue.fromAudio) {
-        expect(card['question_instruction'], contains('English meaning'));
+      if (cue == StudyCue.soundToMeaning) {
+        expect(card['question_instruction'], contains('its meaning'));
       }
       controller.dispose();
     });
@@ -136,8 +138,8 @@ void main() {
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
       prompts: [
-        StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
-        StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
+        StudyPrompt(card: _card(1), cue: StudyCue.meaningToSound),
+        StudyPrompt(card: _card(2), cue: StudyCue.meaningToSound),
       ],
       languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
@@ -172,7 +174,7 @@ void main() {
     expect(controller.answerReveal?.transliteration, 'kazhivu');
     verify(() => repository.saveSchedule(any())).called(1);
     final assessment = transport.toolResults['assess-1'] as Map;
-    expect(assessment['answer'], 'കഴിവ്');
+    expect(assessment['answer'], 'kazhivu');
     expect(assessment['pronunciation_hint'], 'kazhivu');
     expect(assessment, isNot(contains('answer_transliteration')));
 
@@ -214,8 +216,8 @@ void main() {
         repository: repository,
         scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
         prompts: [
-          StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
-          StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
+          StudyPrompt(card: _card(1), cue: StudyCue.meaningToSound),
+          StudyPrompt(card: _card(2), cue: StudyCue.meaningToSound),
         ],
         languages: (from: 'English', to: 'Malayalam'),
         onScheduleSaved: () {},
@@ -263,7 +265,7 @@ void main() {
       session: LiveAgentSession(transport: transport),
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
-      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
+      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.meaningToSound)],
       languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
     );
@@ -305,8 +307,8 @@ void main() {
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
       prompts: [
-        StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage),
-        StudyPrompt(card: _card(2), cue: StudyCue.fromLanguage),
+        StudyPrompt(card: _card(1), cue: StudyCue.meaningToSound),
+        StudyPrompt(card: _card(2), cue: StudyCue.meaningToSound),
       ],
       languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
@@ -369,7 +371,7 @@ void main() {
       session: LiveAgentSession(transport: transport),
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
-      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
+      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.meaningToSound)],
       languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
     );
@@ -394,7 +396,7 @@ void main() {
       session: LiveAgentSession(transport: transport),
       repository: repository,
       scheduler: FsrsCardScheduler(reviewId: () => 'review-id'),
-      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.fromLanguage)],
+      prompts: [StudyPrompt(card: _card(1), cue: StudyCue.meaningToSound)],
       languages: (from: 'English', to: 'Malayalam'),
       onScheduleSaved: () {},
     );
@@ -456,15 +458,19 @@ StudyCard _card(int id) => StudyCard(
       ),
     ],
   ),
-  schedules: const {
-    StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
-    StudyCue.toLanguage: CardSchedule.initial(enabled: false),
-    StudyCue.transliteration: CardSchedule.initial(enabled: false),
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    StudyCue.meaningToSound: CardSchedule.initial(enabled: true),
+    StudyCue.scriptToMeaning: CardSchedule.initial(enabled: false),
+    StudyCue.scriptToSound: CardSchedule.initial(enabled: false),
   },
   reviewHistory: const {
-    StudyCue.fromLanguage: <CardReview>[],
-    StudyCue.toLanguage: <CardReview>[],
-    StudyCue.transliteration: <CardReview>[],
+    StudyCue.meaningToSound: <CardReview>[],
+    StudyCue.scriptToMeaning: <CardReview>[],
+    StudyCue.scriptToSound: <CardReview>[],
   },
   suspended: false,
 );

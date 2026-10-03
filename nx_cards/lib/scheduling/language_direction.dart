@@ -5,19 +5,17 @@ import 'package:nx_db/nx_db.dart';
 import 'package:nx_cards/browser/browser.dart';
 
 // Watching the authenticated account disposes direction choices on account change.
-final languageDirectionProvider = StateProvider.family<StudyCue, String?>((
-  ref,
-  language,
-) {
-  if (ref.exists(authProvider)) {
-    ref.watch(
-      authProvider.select(
-        (state) => '${state.value?.preset.serverId}:${state.value?.userId}',
-      ),
-    );
-  }
-  return StudyCue.fromLanguage;
-});
+final languageDirectionProvider =
+    StateProvider.family<RecallComponent, String?>((ref, language) {
+      if (ref.exists(authProvider)) {
+        ref.watch(
+          authProvider.select(
+            (state) => '${state.value?.preset.serverId}:${state.value?.userId}',
+          ),
+        );
+      }
+      return RecallComponent.meaning;
+    });
 
 /// Compact display only; direction identity still uses the full language name.
 String compactLanguageLabel(String language) =>
@@ -35,24 +33,24 @@ class LanguageDirectionButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cue = ref.watch(languageDirectionProvider(language));
-    String label(StudyCue value) => value.label;
-    Widget compactLabel(StudyCue value) => Row(
+    String label(RecallComponent value) => value.label;
+    Widget compactLabel(RecallComponent value) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (value == StudyCue.fromAudio) ...[
+        if (value == RecallComponent.sound) ...[
           const Icon(Icons.volume_up_outlined, size: 18),
           const SizedBox(width: 6),
         ],
         Text(value.label),
       ],
     );
-    return PopupMenuButton<StudyCue>(
+    return PopupMenuButton<RecallComponent>(
       tooltip: 'Recall direction: ${label(cue)}',
       initialValue: cue,
       onSelected: (value) =>
           ref.read(languageDirectionProvider(language).notifier).state = value,
       itemBuilder: (_) => [
-        for (final value in StudyCue.activeDirections)
+        for (final value in RecallComponent.values)
           PopupMenuItem(
             key: ValueKey('recall-direction-${value.storageKey}'),
             value: value,
@@ -68,18 +66,17 @@ class LanguageDirectionButton extends ConsumerWidget {
 }
 
 /// Session-only view selection; never changes stored schedules or history.
-final selectedDirectionsProvider = StateProvider.family<Set<StudyCue>, String?>(
-  (ref, language) {
-    if (ref.exists(authProvider)) {
-      ref.watch(
-        authProvider.select(
-          (state) => '${state.value?.preset.serverId}:${state.value?.userId}',
-        ),
-      );
-    }
-    return StudyCue.activeDirections.toSet();
-  },
-);
+final selectedDirectionsProvider =
+    StateProvider.family<Set<RecallComponent>, String?>((ref, language) {
+      if (ref.exists(authProvider)) {
+        ref.watch(
+          authProvider.select(
+            (state) => '${state.value?.preset.serverId}:${state.value?.userId}',
+          ),
+        );
+      }
+      return RecallComponent.values.toSet();
+    });
 
 class DirectionChoices extends StatelessWidget {
   const DirectionChoices({
@@ -87,14 +84,14 @@ class DirectionChoices extends StatelessWidget {
     required this.language,
     required this.selected,
     required this.onChanged,
-    this.allowed = StudyCue.activeDirections,
+    this.allowed = RecallComponent.values,
     this.frontOnly = false,
   });
   final String language;
-  final List<StudyCue> allowed;
+  final List<RecallComponent> allowed;
   final bool frontOnly;
-  final Set<StudyCue> selected;
-  final ValueChanged<Set<StudyCue>> onChanged;
+  final Set<RecallComponent> selected;
+  final ValueChanged<Set<RecallComponent>> onChanged;
 
   @override
   Widget build(BuildContext context) => Wrap(
@@ -107,7 +104,7 @@ class DirectionChoices extends StatelessWidget {
           label: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (cue == StudyCue.fromAudio) ...[
+              if (cue == RecallComponent.sound) ...[
                 const Icon(Icons.volume_up_outlined, size: 18),
                 const SizedBox(width: 6),
               ],
@@ -115,9 +112,9 @@ class DirectionChoices extends StatelessWidget {
             ],
           ),
           tooltip: switch (cue) {
-            StudyCue.fromLanguage => 'Show English meaning',
-            StudyCue.fromAudio => 'Play $language sound',
-            _ => 'Show $language script',
+            RecallComponent.meaning => 'Practice involving meaning',
+            RecallComponent.sound => 'Practice involving sound',
+            _ => 'Practice involving script',
           },
           selected: selected.contains(cue),
           onSelected: (enabled) {

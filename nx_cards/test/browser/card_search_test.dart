@@ -15,9 +15,14 @@ StudyCard card(int id, LearningStatus status, {String category = 'Noun'}) =>
         originalScript: '之后$id',
         transliteration: 'zhī hòu',
       ),
-      schedules: const {},
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+      },
       reviewHistory: {
-        StudyCue.fromLanguage: [
+        StudyCue.meaningToScript: [
           for (
             var i = 0;
             i < (status == LearningStatus.recall ? (id == 1 ? 1 : 8) : 0);

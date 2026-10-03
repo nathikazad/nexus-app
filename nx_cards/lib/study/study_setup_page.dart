@@ -81,14 +81,15 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   late StudyMode _mode;
   StudyPresentation _studyPresentation = StudyPresentation.sheet;
   RecallPresentation _recallPresentation = RecallPresentation.standard;
-  late Set<StudyCue> _directions;
-  bool get _allowsWriting => _supportsDrawing;
-  Set<StudyCue>? _regularDirections;
+  late Set<RecallComponent> _directions;
+  bool _writing = true;
+  bool get _allowsWriting => _writing && _supportsDrawing;
+  Set<RecallComponent>? _regularDirections;
   RecallPresentation get _effectiveRecallPresentation =>
       !_allowsSimilar && _recallPresentation == RecallPresentation.similar
       ? RecallPresentation.standard
       : _recallPresentation;
-  StudyCue? get _cue => _directions.firstOrNull;
+  RecallComponent? get _cue => _directions.firstOrNull;
   final bool _combinedPrompt = false;
 
   List<StudyCard> get _studyCards {
@@ -111,7 +112,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   int _count = 10;
   bool _starting = false;
   SimilarGroupType _similarType = SimilarGroupType.written;
-  Set<StudyCue> _writtenDirections = {StudyCue.fromLanguage};
+  Set<RecallComponent> _writtenDirections = {RecallComponent.meaning};
   int _groupCount = 5;
   List<SimilarRecallGroup> _similarSessions(
     Iterable<StudyCard> cards, {
@@ -122,6 +123,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     sound: sound ?? _effectiveSimilarType == SimilarGroupType.sound,
     directions: _writtenDirections,
     groupLimit: limit ?? 1000000,
+    writing: _writing,
   );
   Set<SimilarGroupType> get _similarTypes => {
     if (_similarSessions(_studyCards, sound: false).isNotEmpty)
@@ -141,13 +143,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   int _preferenceRevision = 0;
 
   String get _storedPreferenceKey =>
-      'study_setup.v3.${widget.flow.name}.${widget.preferenceKey ?? widget.title}';
+      'study_setup.v4.${widget.flow.name}.${widget.preferenceKey ?? widget.title}';
 
   @override
   void initState() {
     super.initState();
     _directions = _isBookStudy
-        ? {StudyCue.fromLanguage}
+        ? {RecallComponent.meaning}
         : {
             ...ref.read(
               selectedDirectionsProvider(
@@ -210,6 +212,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           100,
         );
         _weakOnly = saved['weakOnly'] == true;
+        _writing = saved['writing'] != false;
         _timing =
             _enumByName(RecallTiming.values, saved['timing']) ??
             RecallTiming.allMatching;
@@ -219,7 +222,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         final savedDirections = saved['writtenDirections'];
         if (savedDirections is List) {
           final selected = {
-            for (final cue in [StudyCue.fromLanguage, StudyCue.toLanguage])
+            for (final cue in [RecallComponent.meaning, RecallComponent.script])
               if (savedDirections.contains(cue.name)) cue,
           };
           if (selected.isNotEmpty) _writtenDirections = selected;
@@ -254,6 +257,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'retainedMinPercentage': _retainedMinPercentage,
         'dueMinPercentage': _dueMinPercentage,
         'weakOnly': _weakOnly,
+        'writing': _writing,
         'timing': _timing.name,
         'similarType': _similarType.name,
         'writtenDirections': _writtenDirections.map((cue) => cue.name).toList(),
@@ -282,13 +286,17 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       retentionPrompts(
             _studyCards,
             _directions,
+            window: _reviewHistoryWindow,
+            writing: _writing,
             minimum:
                 (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
             maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
             weakOnly: !_dueOnly && _weakOnly,
           )
           .where(
-            (prompt) => !_dueOnly || prompt.schedule.isDueAt(DateTime.now()),
+            (prompt) =>
+                (!_dueOnly || prompt.schedule.isDueAt(DateTime.now())) &&
+                (_mode != StudyMode.ai || !prompt.cue.involvesScript),
           )
           .toList();
 
@@ -299,9 +307,15 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     if (_dueOnly) {
       return card.active &&
           card.learningStatus == LearningStatus.recall &&
-          averageRetention(card, _directions) + 1e-9 >= _dueMinPercentage / 100;
+          averageRetention(card, _directions, window: _reviewHistoryWindow) +
+                  1e-9 >=
+              _dueMinPercentage / 100;
     }
-    final score = averageRetention(card, _directions);
+    final score = averageRetention(
+      card,
+      _directions,
+      window: _reviewHistoryWindow,
+    );
     return card.active &&
         card.learningStatus == LearningStatus.recall &&
         score + 1e-9 >= _retainedMinPercentage / 100 &&
@@ -312,8 +326,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   List<StudyPrompt> get _practiceCandidates => [
     for (final card in _studyCards)
       if (!card.suspended && _matchesRecallBaseFilters(card))
-        for (final cue
-            in (_isBookStudy ? {StudyCue.fromLanguage} : _directions))
+        for (final cue in selectedCues(card, _directions))
           if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
   ];
   int get _availableCount => _mode == StudyMode.study
@@ -334,7 +347,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _studyCards.every((card) => card.isLanguageCard);
 
   String get _selectionTitle =>
-      _mode == StudyMode.study ? 'Which cards?' : 'What to show on the front?';
+      _mode == StudyMode.study ? 'Which cards?' : 'Recall for';
 
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
@@ -362,10 +375,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   void _normalizeAiDirections() {
     if (_mode != StudyMode.ai || _isBookStudy) return;
     _directions = _directions
-        .where((cue) => cue != StudyCue.toLanguage)
+        .where((cue) => cue != RecallComponent.script)
         .toSet();
     if (_directions.isEmpty) {
-      _directions = {StudyCue.fromLanguage, StudyCue.fromAudio};
+      _directions = {RecallComponent.meaning, RecallComponent.sound};
     }
   }
 
@@ -1008,7 +1021,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               !card.spokenOnly &&
               !card.suspended &&
               _matchesRecallBaseFilters(card))
-            for (final cue in _directions)
+            for (final cue in selectedCues(
+              card,
+              _directions,
+            ).where((c) => c.target == RecallComponent.script))
               if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
       ]..shuffle(Random.secure());
       final chosen = candidates.take(min(_count, candidates.length)).toList();
@@ -1294,8 +1310,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                             language: widget.toLanguage,
                             selected: _writtenDirections,
                             allowed: const [
-                              StudyCue.fromLanguage,
-                              StudyCue.toLanguage,
+                              RecallComponent.meaning,
+                              RecallComponent.script,
                             ],
                             onChanged: (value) {
                               setState(() {
@@ -1308,6 +1324,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         ),
                         const SizedBox(height: 16),
                       ],
+                      _writingToggle(),
                       _SetupCard(
                         title: 'How many recall groups?',
                         child: _countControl(maxCount),
@@ -1416,18 +1433,44 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     );
   }
 
-  Widget _directionChoices() => DirectionChoices(
-    frontOnly: _mode != StudyMode.study,
-    language: widget.toLanguage,
-    selected: _directions,
-    allowed: _mode == StudyMode.ai
-        ? const [StudyCue.fromLanguage, StudyCue.fromAudio]
-        : StudyCue.activeDirections,
-    onChanged: (value) => setState(() {
-      _directions = value;
-      _clampCount();
-    }),
+  Widget _directionChoices() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      DirectionChoices(
+        frontOnly: _mode != StudyMode.study,
+        language: widget.toLanguage,
+        selected: _directions,
+        allowed: _mode == StudyMode.ai
+            ? const [RecallComponent.meaning, RecallComponent.sound]
+            : RecallComponent.values,
+        onChanged: (value) => setState(() {
+          _directions = value;
+          _clampCount();
+        }),
+      ),
+      if (_mode == StudyMode.recall) _writingToggle(),
+    ],
   );
+
+  Widget _writingToggle() =>
+      _studyCards.any((card) => card.isLanguageCard && !card.spokenOnly)
+      ? SwitchListTile.adaptive(
+          key: const ValueKey('recall-writing'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Writing'),
+          subtitle: const Text(
+            'Include questions that ask you to produce the script',
+          ),
+          value: _writing,
+          onChanged: (value) {
+            setState(() {
+              _writing = value;
+              _clampCount();
+            });
+            _rememberPreferences();
+          },
+        )
+      : const SizedBox.shrink();
 
   Widget _dueFilterChoices() {
     final colors = Theme.of(context).colorScheme;
@@ -1521,16 +1564,19 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  _dueOnly
-                      ? '$maxCount cards due'
-                      : '$maxCount ${_usesSimilar
-                            ? 'recall groups'
-                            : _usesRecallFilters
-                            ? 'recall items'
-                            : 'cards'} available',
-                  style: const TextStyle(color: RecallColors.muted),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    _dueOnly
+                        ? '$maxCount cards due'
+                        : '$maxCount ${_usesSimilar
+                              ? 'recall groups'
+                              : _usesRecallFilters
+                              ? 'recall items'
+                              : 'cards'} available',
+                    style: const TextStyle(color: RecallColors.muted),
+                    textAlign: TextAlign.end,
+                  ),
                 ),
               ],
             ),

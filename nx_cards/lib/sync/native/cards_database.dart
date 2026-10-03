@@ -44,7 +44,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   Future<void> createHashSchema() => customStatement('''
     CREATE TABLE IF NOT EXISTS card_sync_hashes (
@@ -54,135 +54,30 @@ class CardsDatabase extends _$CardsDatabase {
     )
   ''');
 
-  Future<void> createStatusMigrationSchema() => customStatement('''
-    CREATE TABLE IF NOT EXISTS card_status_body_migrations (
-      account_key TEXT NOT NULL, reference TEXT NOT NULL,
-      PRIMARY KEY(account_key,reference)
-    )
-  ''');
-
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await createHashSchema();
-      await createStatusMigrationSchema();
       await DriftOutboxPersistence.createSchema(this);
     },
     onUpgrade: (migrator, from, to) async {
-      if (from < 16) {
-        await migrator.addColumn(
-          localStudyCards,
-          localStudyCards.similarWordGroupsJson,
-        );
-        // Earlier clients accepted hashes without retaining manual memberships.
-        // Force a fresh pull while preserving pending edits and card histories.
-        if (from >= 12) await customStatement('DELETE FROM card_sync_hashes');
-      }
-      if (from < 15) {
-        await migrator.addColumn(localStudyCards, localStudyCards.audioSha256);
-        await migrator.addColumn(localStudyCards, localStudyCards.audioBytes);
-        // Reload metadata even if a previous client saw the new server hash
-        // but could only persist the URL. Pending user edits stay intact.
-        if (from >= 12) await customStatement('DELETE FROM card_sync_hashes');
-      }
-      if (from < 12) await createHashSchema();
-      if (from < 11) {
-        await migrator.addColumn(localStudyCards, localStudyCards.notes);
-      }
-      if (from < 10) {
-        await migrator.addColumn(localStudyCards, localStudyCards.contentRef);
-      }
-      if (from < 2) {
-        await migrator.addColumn(localStudyCards, localStudyCards.examplesJson);
-      }
-      if (from < 3) {
-        // Older app code could accept the current server hash while dropping
-        // structured card fields. Invalidate those hashes once so the next
-        // lifecycle sync replaces every cached card with the canonical bundle.
-        await customStatement('SELECT 1');
-      }
-      if (from < 4) {
-        await customStatement('SELECT 1');
-      }
-      if (from < 5) {
-        // Cue-based schedule/history JSON must be reloaded canonically.
-        await customStatement('SELECT 1');
-      }
-      if (from < 6) {
-        await migrator.addColumn(
-          localStudyCards,
-          localStudyCards.learningStatus,
-        );
-        await customStatement('SELECT 1');
-      }
-      if (from == 6) {
-        final columns = {
-          for (final row in await customSelect(
-            'PRAGMA table_info(local_study_cards)',
-          ).get())
-            row.read<String>('name'),
-        };
-        if (columns.contains('currently_learning')) {
-          await customStatement(
-            'ALTER TABLE local_study_cards '
-            'RENAME COLUMN currently_learning TO learning_status',
-          );
-        } else if (!columns.contains('learning_status')) {
-          await migrator.addColumn(
-            localStudyCards,
-            localStudyCards.learningStatus,
-          );
-        }
-        await customStatement(
-          "UPDATE local_study_cards SET learning_status = CASE "
-          "WHEN learning_status IN ('learning', 'learnt', 'not_started') "
-          "THEN learning_status "
-          "WHEN learning_status IN (1, '1', 'true') THEN 'learning' "
-          "ELSE 'not_started' END",
-        );
-      }
-      if (from < 7) {
-        await customStatement('SELECT 1');
-      }
-      if (from < 8) {
-        await migrator.alterTable(TableMigration(localStudyCards));
-        await customStatement('DROP TABLE IF EXISTS local_card_decks');
-      }
-      if (from < 9) {
-        await migrator.addColumn(
-          localStudyCards,
-          localStudyCards.linkedWordIdsJson,
-        );
-      }
-      if (from < 13) {
-        await customStatement(r"""
-          UPDATE local_study_cards SET learning_status = CASE
-            WHEN learning_status IN ('inactive','prep','active') THEN learning_status
-            WHEN learning_status IN ('learning','learnt') THEN CASE WHEN EXISTS (
-              SELECT 1 FROM json_each(CASE WHEN json_valid(review_history_json)
-                THEN json_extract(review_history_json, '$.items') ELSE '[]' END)
-              WHERE json_extract(value, '$.cue') IN ('from_language','to_language')
-            ) THEN 'active' ELSE 'prep' END
-            ELSE 'inactive' END
-        """);
-      }
-      if (from < 14) {
-        await createStatusMigrationSchema();
-        await customStatement(
-          "INSERT OR IGNORE INTO card_status_body_migrations SELECT account_key,content_ref FROM local_study_cards WHERE content_ref IS NOT NULL",
-        );
-        await customStatement(r"""
-          INSERT OR IGNORE INTO card_status_body_migrations
-          SELECT account_key,json_extract(payload_json,'$.body_ref') FROM offline_outbox
-          WHERE json_extract(payload_json,'$.body_ref') IS NOT NULL
-        """);
-        await customStatement(
-          "UPDATE local_study_cards SET learning_status = CASE learning_status "
-          "WHEN 'inactive' THEN 'future' WHEN 'prep' THEN 'practice' "
-          "WHEN 'active' THEN 'recall' ELSE learning_status END",
-        );
-      }
+      // Hard v4 cutover. Retain rejected writes for diagnosis, never replay them.
+      await customStatement(
+        "CREATE TABLE rejected_card_outbox_v3 AS SELECT * FROM offline_outbox WHERE collection = 'cards'",
+      );
+      await customStatement(
+        "DELETE FROM offline_outbox WHERE collection = 'cards'",
+      );
+      await customStatement('DROP TABLE local_study_cards');
+      await migrator.createAll();
+      await createHashSchema();
+      await customStatement('DELETE FROM card_sync_hashes');
+      await customStatement('DELETE FROM offline_sync_metadata');
+      await customStatement(
+        "DELETE FROM offline_conflicts WHERE collection = 'cards'",
+      );
+      await customStatement('DROP TABLE IF EXISTS card_status_body_migrations');
     },
   );
 }

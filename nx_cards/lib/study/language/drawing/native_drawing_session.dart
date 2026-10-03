@@ -134,7 +134,7 @@ class NativeDrawingSession {
     final content = card.content as LanguageCardContent;
     return {
       'practiceDirection': cue != null,
-      'listening': cue == StudyCue.fromAudio,
+      'listening': cue?.isListening == true,
       'prompt': cue == null
           ? content.originalScript
           : StudyPrompt(card: card, cue: cue).prompt,
@@ -214,8 +214,10 @@ class NativeDrawingSession {
       ),
       'prompt': prompt.prompt,
       'listening': prompt.isListening,
-      'answer': content.originalScript,
-      'subtitle': '${content.english}\n${content.transliteration}',
+      'answer': prompt.answer,
+      'subtitle': prompt.cue.label,
+      'writing': prompt.recallsTarget,
+      'instruction': prompt.instruction,
       'audio': content.audioUrl?.isNotEmpty == true,
     };
   }

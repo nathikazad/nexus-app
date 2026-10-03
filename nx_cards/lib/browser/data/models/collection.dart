@@ -89,7 +89,7 @@ class CardsDashboard {
             (prompt) =>
                 prompt.card.learningStatus == LearningStatus.recall &&
                 (prompt.card.isLanguageCard ||
-                    prompt.cue == StudyCue.fromLanguage) &&
+                    prompt.cue == StudyCue.frontToBack) &&
                 (cue == null || prompt.cue == cue) &&
                 prompt.isDueAt(now),
           )

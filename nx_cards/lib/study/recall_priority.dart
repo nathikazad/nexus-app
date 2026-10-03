@@ -27,7 +27,11 @@ double pastRecallPriority(
 }) {
   final schedule = prompt.schedule;
   final stability = schedule.stability;
-  final accuracy = recallScore(prompt.card, prompt.cue).fraction;
+  final accuracy = recallScore(
+    prompt.card,
+    prompt.cue,
+    window: historyWindow,
+  ).fraction;
   var forgetting = 1.0;
   if (stability != null &&
       stability.isFinite &&
@@ -62,10 +66,8 @@ void prioritizeRecallPrompts(
   prompts.shuffle(random ?? Random.secure());
   final order = {for (var i = 0; i < prompts.length; i++) prompts[i]: i};
   prompts.sort((a, b) {
-    final score = recallScore(
-      a.card,
-      a.cue,
-    ).fraction.compareTo(recallScore(b.card, b.cue).fraction);
+    final score = recallScore(a.card, a.cue, window: historyWindow).fraction
+        .compareTo(recallScore(b.card, b.cue, window: historyWindow).fraction);
     return score != 0 ? score : order[a]!.compareTo(order[b]!);
   });
 }

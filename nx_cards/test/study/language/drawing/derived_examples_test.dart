@@ -18,7 +18,12 @@ StudyCard card(int id, String text, List<LanguageExample> examples) =>
         transliteration: 'sound $id',
         examples: examples,
       ),
-      schedules: const {},
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+      },
       reviewHistory: const {},
       suspended: false,
     );
@@ -74,7 +79,7 @@ void main() {
         derived: derived,
       );
       final recall = NativeDrawingSession.recallCard(
-        StudyPrompt(card: root, cue: StudyCue.fromLanguage),
+        StudyPrompt(card: root, cue: StudyCue.meaningToScript),
         derived: derived,
       );
       expect(recall['derivedExamples'], practice['derivedExamples']);

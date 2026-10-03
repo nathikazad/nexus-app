@@ -10,6 +10,14 @@ StudyCard? studyCardFromModel(
 }) {
   final book = _relatedModels(model, bookModelType).firstOrNull;
   final schedule = _jsonMap(model.attributes?[attrSchedule]);
+  for (final key in [attrSchedule, attrReviewHistory]) {
+    final raw = model.attributes?[key];
+    if (raw != null && _jsonMap(raw)['version'] != 4) {
+      throw const FormatException(
+        'Unsupported recall data. Sync the updated card before reviewing.',
+      );
+    }
+  }
   final history = _reviewHistoryByCueFrom(model.attributes?[attrReviewHistory]);
   final cardDetails = _jsonMap(model.attributes?[attrCardDetails]);
   final front = cardDetails['front']?.toString().trim() ?? '';
@@ -39,10 +47,11 @@ StudyCard? studyCardFromModel(
           )
         : BasicCardContent(front: front, back: back),
     schedules: <StudyCue, CardSchedule>{
-      for (final cue in StudyCue.values)
-        if (cue != StudyCue.fromAudio ||
-            _jsonMap(schedule['cues']).containsKey(cue.storageKey))
-          cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
+      for (final cue
+          in (isLanguageCardModelType(modelTypeName)
+              ? StudyCue.languageDirections
+              : StudyCue.genericDirections))
+        cue: _scheduleFrom(_jsonMap(schedule['cues'])[cue.storageKey]),
     },
     reviewHistory: history,
     suspended: model.attrBool(attrSuspended) ?? false,
@@ -187,46 +196,45 @@ final class _RelatedModel {
   final String name;
 }
 
-Map<String, dynamic> emptyScheduleJson({
-  required bool languageCard,
-}) => <String, dynamic>{
-  'version': 3,
-  'algorithm': 'fsrs',
-  'cues': <String, Object?>{
-    for (final cue in StudyCue.values)
-      cue.storageKey: _scheduleNodeJson(
-        CardSchedule.initial(
-          enabled:
-              cue == StudyCue.fromLanguage ||
-              (languageCard &&
-                  (cue == StudyCue.toLanguage || cue == StudyCue.fromAudio)),
-        ),
-      ),
-  },
-};
+Map<String, dynamic> emptyScheduleJson({required bool languageCard}) =>
+    <String, dynamic>{
+      'version': 4,
+      'algorithm': 'fsrs',
+      'cues': <String, Object?>{
+        for (final cue
+            in (languageCard
+                ? StudyCue.languageDirections
+                : StudyCue.genericDirections))
+          cue.storageKey: _scheduleNodeJson(
+            CardSchedule.initial(
+              enabled: languageCard || cue == StudyCue.frontToBack,
+            ),
+          ),
+      },
+    };
 
 Map<String, dynamic> scheduleJson(StudyCard card) => <String, dynamic>{
-  'version': 3,
+  'version': 4,
   'algorithm': 'fsrs',
   'cues': <String, Object?>{
-    for (final cue in StudyCue.values)
+    for (final cue in card.directions)
       cue.storageKey: _scheduleNodeJson(card.scheduleFor(cue)),
   },
 };
 
 Map<String, dynamic> emptyReviewHistoryJson() => <String, dynamic>{
-  'version': 3,
+  'version': 4,
   'items': <Object?>[],
 };
 
 Map<String, dynamic> reviewHistoryJson(StudyCard card) => <String, dynamic>{
-  'version': 3,
+  'version': 4,
   'items': _reviewHistoryItems(card),
 };
 
 List<Map<String, Object?>> _reviewHistoryItems(StudyCard card) {
   final items = <Map<String, Object?>>[
-    for (final cue in StudyCue.values)
+    for (final cue in card.directions)
       for (final review in card.reviewHistoryFor(cue))
         <String, Object?>{'cue': cue.storageKey, ...review.toJson()},
   ];

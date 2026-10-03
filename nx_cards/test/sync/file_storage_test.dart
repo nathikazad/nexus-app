@@ -41,7 +41,12 @@ void main() {
           audioSha256: 'abc',
           audioBytes: 123,
         ),
-        schedules: const {},
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+        },
         reviewHistory: const {},
         suspended: false,
       );
@@ -117,8 +122,13 @@ void main() {
         id: 1,
         notes: 'Shared explanation survives offline storage.',
         content: BasicCardContent(front: 'front' * 1000, back: 'back' * 1000),
-        schedules: const {},
-        reviewHistory: {StudyCue.fromLanguage: history},
+        schedules: {
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+        },
+        reviewHistory: {StudyCue.frontToBack: history},
         suspended: false,
       );
       await legacy.applyCardSnapshot([card]);
@@ -134,7 +144,7 @@ void main() {
       expect(dashboard.cards.single.isSummary, isTrue);
       expect(dashboard.cards.single.front.length, 320);
       expect(
-        dashboard.cards.single.reviewHistoryFor(StudyCue.fromLanguage),
+        dashboard.cards.single.reviewHistoryFor(StudyCue.frontToBack),
         hasLength(10),
       );
       final full = (await store.getCard(1))!;
@@ -143,7 +153,7 @@ void main() {
       expect(full.front, card.front);
       expect(full.back, card.back);
       expect(full.notes, card.notes);
-      expect(full.reviewHistoryFor(StudyCue.fromLanguage), hasLength(30));
+      expect(full.reviewHistoryFor(StudyCue.frontToBack), hasLength(30));
       await store.saveCardAndEnqueue(
         full.copyWith(suspended: true),
         operationId: 'edit',
@@ -152,7 +162,7 @@ void main() {
       );
       expect((await store.pendingMutations()).single.operationId, 'edit');
       expect(
-        (await store.getCard(1))!.reviewHistoryFor(StudyCue.fromLanguage),
+        (await store.getCard(1))!.reviewHistoryFor(StudyCue.frontToBack),
         hasLength(30),
       );
       final claimed = (await store.claimNext(

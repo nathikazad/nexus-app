@@ -7,15 +7,19 @@ void main() {
     final now = DateTime.utc(2026, 8, 11, 12);
     final card = _card(
       schedules: {
-        StudyCue.fromLanguage: _schedule(
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: _schedule(
           state: 'learning',
           dueAt: now.subtract(const Duration(minutes: 5)),
         ),
-        StudyCue.toLanguage: _schedule(
+        StudyCue.scriptToMeaning: _schedule(
           state: 'relearning',
           dueAt: now.subtract(const Duration(minutes: 1)),
         ),
-        StudyCue.transliteration: _schedule(
+        StudyCue.scriptToSound: _schedule(
           state: 'learning',
           dueAt: now.add(const Duration(minutes: 10)),
         ),
@@ -32,11 +36,15 @@ void main() {
     final now = DateTime.utc(2026, 8, 11, 12);
     final card = _card(
       schedules: {
-        StudyCue.fromLanguage: _schedule(
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: _schedule(
           state: 'review',
           dueAt: now.add(const Duration(days: 2)),
         ),
-        StudyCue.toLanguage: _schedule(
+        StudyCue.scriptToMeaning: _schedule(
           state: 'relearning',
           dueAt: now.subtract(const Duration(minutes: 10)),
         ),
@@ -51,8 +59,12 @@ void main() {
 
   test('identifies an unreviewed direction as new', () {
     final card = _card(
-      schedules: const {
-        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
       },
     );
 
@@ -67,7 +79,11 @@ void main() {
     () {
       final card = _card(
         schedules: {
-          StudyCue.fromLanguage: _schedule(
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+          StudyCue.meaningToScript: _schedule(
             state: 'review',
             dueAt: DateTime.utc(2026, 8, 12),
           ),
@@ -77,14 +93,18 @@ void main() {
 
       final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-      expect(status?.recallPercentage, 50);
+      expect(status?.recallPercentage, 5);
     },
   );
 
   test('recall percentage ignores the legacy fixed-window setting', () {
     final card = _card(
       schedules: {
-        StudyCue.fromLanguage: _schedule(
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: _schedule(
           state: 'review',
           dueAt: DateTime.utc(2026, 8, 12),
         ),
@@ -98,13 +118,17 @@ void main() {
       historyWindow: 3,
     );
 
-    expect(status?.recallPercentage, 60);
+    expect(status?.recallPercentage, 6);
   });
 
   test('recall percentage uses a five-attempt minimum denominator', () {
     final oneOfTwo = _card(
       schedules: {
-        StudyCue.fromLanguage: _schedule(
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: _schedule(
           state: 'review',
           dueAt: DateTime.utc(2026, 8, 12),
         ),
@@ -112,12 +136,16 @@ void main() {
       recallRatings: const [3, 1],
     );
     final neverReviewed = _card(
-      schedules: const {
-        StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+      schedules: {
+        for (final direction in StudyCue.values)
+          direction: CardSchedule.initial(
+            enabled: direction != StudyCue.backToFront,
+          ),
+        StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
       },
     );
 
-    expect(frontToBackRecallPercentage(oneOfTwo), 20);
+    expect(frontToBackRecallPercentage(oneOfTwo), 2);
     expect(frontToBackRecallPercentage(neverReviewed), 0);
   });
 }
@@ -135,7 +163,7 @@ StudyCard _card({
   schedules: schedules,
   reviewHistory: <StudyCue, List<CardReview>>{
     if (recallRatings.isNotEmpty)
-      StudyCue.fromLanguage: <CardReview>[
+      StudyCue.meaningToScript: <CardReview>[
         for (var index = 0; index < recallRatings.length; index++)
           CardReview(
             id: 'review-$index',

@@ -40,7 +40,12 @@ void main() {
         ),
       ],
     ),
-    schedules: const {},
+    schedules: {
+      for (final direction in StudyCue.values)
+        direction: CardSchedule.initial(
+          enabled: direction != StudyCue.backToFront,
+        ),
+    },
     reviewHistory: const {},
     suspended: false,
   );

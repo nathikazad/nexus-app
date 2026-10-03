@@ -17,7 +17,11 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final card = _card().copyWith(
         schedules: {
-          for (final cue in StudyCue.activeDirections)
+          for (final direction in StudyCue.values)
+            direction: CardSchedule.initial(
+              enabled: direction != StudyCue.backToFront,
+            ),
+          for (final cue in StudyCue.languageDirections)
             cue: const CardSchedule.initial(enabled: true),
         },
       );
@@ -35,7 +39,7 @@ void main() {
             home: LanguageFastRecallPage(
               title: 'Mixed recall',
               prompts: [
-                for (final cue in StudyCue.activeDirections)
+                for (final cue in StudyCue.languageDirections)
                   StudyPrompt(card: card, cue: cue),
               ],
             ),
@@ -43,7 +47,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      for (final cue in StudyCue.activeDirections) {
+      for (final cue in StudyCue.languageDirections) {
         final row = find.byKey(ValueKey('fast-row-1-${cue.storageKey}'));
         final reveal = find.descendant(
           of: row,
@@ -60,20 +64,20 @@ void main() {
         await tester.tap(yes);
         await tester.pumpAndSettle();
       }
-      expect(repository.saved, hasLength(3));
+      expect(repository.saved, hasLength(6));
       expect(
-        repository.saved.last.reviewHistoryFor(StudyCue.fromLanguage),
+        repository.saved.last.reviewHistoryFor(StudyCue.meaningToScript),
         hasLength(2),
       );
       expect(
-        repository.saved.last.reviewHistoryFor(StudyCue.fromAudio),
+        repository.saved.last.reviewHistoryFor(StudyCue.soundToMeaning),
         hasLength(1),
       );
       expect(
-        repository.saved.last.reviewHistoryFor(StudyCue.toLanguage),
+        repository.saved.last.reviewHistoryFor(StudyCue.scriptToMeaning),
         hasLength(1),
       );
-      expect(find.text('3 of 3 cards reviewed'), findsOneWidget);
+      expect(find.text('6 of 6 cards reviewed'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -96,7 +100,7 @@ void main() {
           child: MaterialApp(
             home: LanguageFastRecallPage(
               title: 'Chinese',
-              prompts: [StudyPrompt(card: card, cue: StudyCue.fromAudio)],
+              prompts: [StudyPrompt(card: card, cue: StudyCue.soundToMeaning)],
             ),
           ),
         ),
@@ -138,7 +142,7 @@ void main() {
         child: MaterialApp(
           home: LanguageFastRecallPage(
             title: 'Malayalam nouns',
-            prompts: [StudyPrompt(card: card, cue: StudyCue.fromLanguage)],
+            prompts: [StudyPrompt(card: card, cue: StudyCue.meaningToScript)],
           ),
         ),
       ),
@@ -157,7 +161,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('ആശ്വാസം'), findsOneWidget);
-    expect(find.text('āśvāsaṃ'), findsOneWidget);
+    expect(find.text('Meaning → Script'), findsOneWidget);
     expect(find.byTooltip('Did not recall'), findsOneWidget);
     expect(find.byTooltip('Recalled'), findsOneWidget);
     expect(
@@ -183,7 +187,7 @@ void main() {
 
     expect(repository.saved, hasLength(1));
     expect(
-      repository.saved.single.scheduleFor(StudyCue.fromLanguage).reviewCount,
+      repository.saved.single.scheduleFor(StudyCue.meaningToScript).reviewCount,
       1,
     );
     expect(find.text('Session complete'), findsOneWidget);
@@ -202,7 +206,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.saved, hasLength(2));
     expect(
-      repository.saved.last.scheduleFor(StudyCue.fromLanguage).reviewCount,
+      repository.saved.last.scheduleFor(StudyCue.meaningToScript).reviewCount,
       2,
     );
     expect(find.text('CORRECT'), findsOneWidget);
@@ -231,15 +235,17 @@ void main() {
           home: LanguageFastRecallPage(
             title: 'Malayalam nouns',
             prompts: [
-              StudyPrompt(card: card, cue: StudyCue.fromLanguage),
-              StudyPrompt(card: secondCard, cue: StudyCue.fromLanguage),
+              StudyPrompt(card: card, cue: StudyCue.meaningToScript),
+              StudyPrompt(card: secondCard, cue: StudyCue.meaningToScript),
             ],
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    final row = find.byKey(const ValueKey<String>('fast-row-1-from_language'));
+    final row = find.byKey(
+      const ValueKey<String>('fast-row-1-meaning_to_script'),
+    );
     await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
     await tester.pumpAndSettle();
     expect(find.text('ആശ്വാസം'), findsOneWidget);
@@ -273,8 +279,8 @@ void main() {
           home: LanguageFastRecallPage(
             title: 'Malayalam nouns',
             prompts: [
-              StudyPrompt(card: first, cue: StudyCue.fromLanguage),
-              StudyPrompt(card: second, cue: StudyCue.fromLanguage),
+              StudyPrompt(card: first, cue: StudyCue.meaningToScript),
+              StudyPrompt(card: second, cue: StudyCue.meaningToScript),
             ],
           ),
         ),
@@ -284,7 +290,7 @@ void main() {
 
     final firstGesture = await tester.startGesture(
       tester.getCenter(
-        find.byKey(const ValueKey<String>('fast-row-1-from_language')),
+        find.byKey(const ValueKey<String>('fast-row-1-meaning_to_script')),
       ),
     );
     await firstGesture.moveBy(const Offset(40, 0));
@@ -297,7 +303,7 @@ void main() {
     expect(repository.saved, hasLength(1));
     expect(
       repository.saved.first
-          .reviewHistoryFor(StudyCue.fromLanguage)
+          .reviewHistoryFor(StudyCue.meaningToScript)
           .last
           .rating,
       3,
@@ -305,7 +311,7 @@ void main() {
 
     final secondGesture = await tester.startGesture(
       tester.getCenter(
-        find.byKey(const ValueKey<String>('fast-row-2-from_language')),
+        find.byKey(const ValueKey<String>('fast-row-2-meaning_to_script')),
       ),
     );
     await secondGesture.moveBy(const Offset(-40, 0));
@@ -317,7 +323,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.saved, hasLength(2));
     expect(
-      repository.saved.last.reviewHistoryFor(StudyCue.fromLanguage).last.rating,
+      repository.saved.last
+          .reviewHistoryFor(StudyCue.meaningToScript)
+          .last
+          .rating,
       1,
     );
   });
@@ -344,8 +353,8 @@ void main() {
           home: LanguageFastRecallPage(
             title: 'Malayalam nouns',
             prompts: [
-              StudyPrompt(card: first, cue: StudyCue.fromLanguage),
-              StudyPrompt(card: second, cue: StudyCue.fromLanguage),
+              StudyPrompt(card: first, cue: StudyCue.meaningToScript),
+              StudyPrompt(card: second, cue: StudyCue.meaningToScript),
             ],
           ),
         ),
@@ -353,7 +362,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final row = find.byKey(const ValueKey<String>('fast-row-1-from_language'));
+    final row = find.byKey(
+      const ValueKey<String>('fast-row-1-meaning_to_script'),
+    );
     final gesture = await tester.startGesture(tester.getCenter(row));
     await gesture.moveBy(const Offset(40, 0));
     await tester.pump();
@@ -410,11 +421,15 @@ StudyCard _card({int id = 1}) => StudyCard(
       ),
     ],
   ),
-  schedules: const <StudyCue, CardSchedule>{
-    StudyCue.fromLanguage: CardSchedule.initial(enabled: true),
+  schedules: {
+    for (final direction in StudyCue.values)
+      direction: CardSchedule.initial(
+        enabled: direction != StudyCue.backToFront,
+      ),
+    StudyCue.meaningToScript: CardSchedule.initial(enabled: true),
   },
   reviewHistory: <StudyCue, List<CardReview>>{
-    StudyCue.fromLanguage: <CardReview>[
+    StudyCue.meaningToScript: <CardReview>[
       CardReview(
         id: 'existing-review',
         reviewedAt: DateTime.utc(2026, 8, 1),

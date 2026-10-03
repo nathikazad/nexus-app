@@ -27,26 +27,27 @@ StudyCard spokenCard({bool? spokenOnly}) => studyCardFromModel(
       'spoken_only': ?spokenOnly,
       'learning_state': 'recall',
       'schedule': {
+        'version': 4,
         'cues': {
-          for (final cue in StudyCue.activeDirections)
+          for (final cue in StudyCue.languageDirections)
             cue.storageKey: {
               'enabled': true,
-              'due_at': cue == StudyCue.toLanguage
+              'due_at': cue == StudyCue.scriptToMeaning
                   ? '2026-09-01T00:00:00Z'
                   : '2026-10-01T00:00:00Z',
             },
         },
       },
       'review_history': {
-        'version': 3,
+        'version': 4,
         'items': [
-          for (final cue in StudyCue.activeDirections)
+          for (final cue in StudyCue.languageDirections)
             for (var i = 1; i <= 5; i++)
               {
                 'id': '${cue.name}-$i',
                 'cue': cue.storageKey,
                 'reviewed_at': '2026-09-0${i}T12:00:00Z',
-                'rating': cue == StudyCue.toLanguage ? 1 : 3,
+                'rating': cue == StudyCue.scriptToMeaning ? 1 : 3,
                 'elapsed_seconds': 0,
                 'scheduled_seconds': 0,
               },
@@ -110,39 +111,43 @@ void main() {
       for (final value in [null, false]) {
         final card = spokenCard(spokenOnly: value);
         expect(card.spokenOnly, isFalse);
-        expect(card.prompts.length, 3);
+        expect(card.prompts.length, 6);
         expect(
-          averageRetention(card, StudyCue.activeDirections),
-          closeTo(2 / 3, .001),
+          averageRetention(card, RecallComponent.values),
+          closeTo(5 / 12, .001),
         );
       }
       final card = spokenCard(spokenOnly: true);
       expect(card.prompts.map((p) => p.cue), [
-        StudyCue.fromLanguage,
-        StudyCue.fromAudio,
+        StudyCue.meaningToSound,
+        StudyCue.soundToMeaning,
       ]);
       expect(card.nextDueAt, DateTime.utc(2026, 10));
       expect(
-        availableForRecall(card, StudyCue.toLanguage, DateTime.utc(2026, 10)),
+        availableForRecall(
+          card,
+          StudyCue.scriptToMeaning,
+          DateTime.utc(2026, 10),
+        ),
         isFalse,
       );
       expect(
         StudyPrompt(
           card: card,
-          cue: StudyCue.fromLanguage,
+          cue: StudyCue.meaningToSound,
           showEnglishAndTransliteration: true,
         ).prompt,
         'house',
       );
-      expect(averageRetention(card, StudyCue.activeDirections), 1);
-      expect(retentionPrompts([card], {StudyCue.toLanguage}), isEmpty);
+      expect(averageRetention(card, RecallComponent.values), .5);
+      expect(retentionPrompts([card], {RecallComponent.script}), isEmpty);
     },
   );
 
   test('character history and schedules survive toggling and oral review', () {
     final original = spokenCard().copyWith(
       reviewHistory: {
-        StudyCue.toLanguage: [
+        StudyCue.scriptToMeaning: [
           for (var i = 0; i < 5; i++)
             CardReview(
               id: '$i',
@@ -159,33 +164,33 @@ void main() {
         spokenOnly: true,
       ),
     );
-    expect(recallScore(spoken, StudyCue.toLanguage).percentage, 0);
+    expect(recallScore(spoken, StudyCue.scriptToMeaning).percentage, 0);
     expect(reviewHistoryJson(spoken), reviewHistoryJson(original));
     expect(scheduleJson(spoken), scheduleJson(original));
     final scheduler = FsrsCardScheduler(reviewId: () => 'new');
     expect(
       () => scheduler.preview(
-        StudyPrompt(card: spoken, cue: StudyCue.toLanguage),
+        StudyPrompt(card: spoken, cue: StudyCue.scriptToMeaning),
         DateTime.utc(2026, 10),
       ),
       throwsStateError,
     );
     final reviewed = scheduler
         .preview(
-          StudyPrompt(card: spoken, cue: StudyCue.fromLanguage),
+          StudyPrompt(card: spoken, cue: StudyCue.meaningToSound),
           DateTime.utc(2026, 10),
         )[CardRating.good]!
         .card;
     expect(
-      reviewed.reviewHistoryFor(StudyCue.toLanguage),
-      original.reviewHistoryFor(StudyCue.toLanguage),
+      reviewed.reviewHistoryFor(StudyCue.scriptToMeaning),
+      original.reviewHistoryFor(StudyCue.scriptToMeaning),
     );
     final restored = reviewed.copyWith(
       content: (reviewed.content as LanguageCardContent).copyWith(
         spokenOnly: false,
       ),
     );
-    expect(recallScore(restored, StudyCue.toLanguage).percentage, 100);
+    expect(recallScore(restored, StudyCue.scriptToMeaning).percentage, 50);
   });
 
   test(
@@ -193,20 +198,20 @@ void main() {
     () {
       final report = analyzeProgress(
         cards: [spokenCard(spokenOnly: true)],
-        directions: StudyCue.activeDirections.toSet(),
-        targetPercent: 80,
+        directions: RecallComponent.values.toSet(),
+        targetPercent: 50,
         now: DateTime.utc(2026, 9, 6),
       );
       expect(report.days.last.atTarget, 1);
-      expect(report.recalls, 15);
+      expect(report.recalls, 10);
       final written = analyzeProgress(
         cards: [spokenCard(spokenOnly: true)],
-        directions: {StudyCue.toLanguage},
+        directions: {RecallComponent.script},
         targetPercent: 0,
         now: DateTime.utc(2026, 9, 6),
       );
       expect(written.days.last.atTarget, 0);
-      expect(written.recalls, 5);
+      expect(written.recalls, 0);
     },
   );
 
@@ -242,7 +247,7 @@ void main() {
       );
       expect((await store.getCard(1))!.spokenOnly, isFalse);
       expect(
-        (await store.getCard(1))!.reviewHistoryFor(StudyCue.toLanguage),
+        (await store.getCard(1))!.reviewHistoryFor(StudyCue.scriptToMeaning),
         hasLength(5),
       );
     },

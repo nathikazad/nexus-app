@@ -87,103 +87,220 @@ const languageDetailsJsonSchema = <String, dynamic>{
 };
 
 const scheduleJsonSchema = <String, dynamic>{
-  'type': 'object',
-  'additionalProperties': false,
-  r'$defs': {'cue_schedule': _cueScheduleJsonSchema},
-  'required': ['version', 'algorithm', 'cues'],
-  'properties': {
-    'version': {'type': 'integer', 'const': 3},
-    'algorithm': {'type': 'string', 'const': 'fsrs'},
-    'cues': {
-      'type': 'object',
-      'additionalProperties': false,
-      'required': ['from_language', 'to_language', 'transliteration'],
-      'properties': {
-        'from_language': {r'$ref': r'#/$defs/cue_schedule'},
-        'to_language': {r'$ref': r'#/$defs/cue_schedule'},
-        'transliteration': {r'$ref': r'#/$defs/cue_schedule'},
+  r'additionalProperties': false,
+  r'properties': {
+    r'algorithm': {r'const': r'fsrs', r'type': r'string'},
+    r'cues': {
+      r'type': r'object',
+      r'additionalProperties': false,
+      r'properties': {
+        r'front_to_back': {r'$ref': r'#/$defs/cue_schedule'},
+        r'back_to_front': {r'$ref': r'#/$defs/cue_schedule'},
       },
+      r'required': [r'front_to_back', r'back_to_front'],
     },
+    r'version': {r'const': 4, r'type': r'integer'},
   },
-};
-
-const _cueScheduleJsonSchema = <String, dynamic>{
-  'type': 'object',
-  'additionalProperties': false,
-  'required': [
-    'enabled',
-    'state',
-    'step',
-    'due_at',
-    'last_reviewed_at',
-    'stability',
-    'difficulty',
-    'review_count',
-    'lapse_count',
-  ],
-  'properties': {
-    'enabled': {'type': 'boolean'},
-    'state': {
-      'type': 'string',
-      'enum': ['learning', 'review', 'relearning'],
-    },
-    'step': {
-      'type': ['integer', 'null'],
-      'minimum': 0,
-    },
-    'due_at': {
-      'type': ['string', 'null'],
-      'format': 'date-time',
-    },
-    'last_reviewed_at': {
-      'type': ['string', 'null'],
-      'format': 'date-time',
-    },
-    'stability': {
-      'type': ['number', 'null'],
-      'minimum': 0,
-    },
-    'difficulty': {
-      'type': ['number', 'null'],
-    },
-    'review_count': {'type': 'integer', 'minimum': 0},
-    'lapse_count': {'type': 'integer', 'minimum': 0},
-  },
-};
-
-const reviewHistoryJsonSchema = <String, dynamic>{
-  'type': 'object',
-  'additionalProperties': false,
-  'required': ['version', 'items'],
-  'properties': {
-    'version': {'type': 'integer', 'const': 3},
-    'items': {
-      'type': 'array',
-      'items': {
-        'type': 'object',
-        'additionalProperties': false,
-        'required': [
-          'id',
-          'cue',
-          'reviewed_at',
-          'rating',
-          'elapsed_seconds',
-          'scheduled_seconds',
-        ],
-        'properties': {
-          'id': {'type': 'string', 'minLength': 1},
-          'cue': {
-            'type': 'string',
-            'enum': ['from_language', 'to_language', 'transliteration'],
-          },
-          'reviewed_at': {'type': 'string', 'format': 'date-time'},
-          'rating': {'type': 'integer', 'minimum': 1, 'maximum': 4},
-          'elapsed_seconds': {'type': 'integer', 'minimum': 0},
-          'scheduled_seconds': {'type': 'integer', 'minimum': 0},
+  r'required': [r'version', r'algorithm', r'cues'],
+  r'type': r'object',
+  r'$defs': {
+    r'cue_schedule': {
+      r'additionalProperties': false,
+      r'properties': {
+        r'difficulty': {
+          r'type': [r'number', r'null'],
+          r'minimum': 1,
+          r'maximum': 10,
+        },
+        r'due_at': {
+          r'format': r'date-time',
+          r'type': [r'string', r'null'],
+        },
+        r'enabled': {r'type': r'boolean'},
+        r'lapse_count': {r'minimum': 0, r'type': r'integer'},
+        r'last_reviewed_at': {
+          r'format': r'date-time',
+          r'type': [r'string', r'null'],
+        },
+        r'review_count': {r'minimum': 0, r'type': r'integer'},
+        r'stability': {
+          r'minimum': 0,
+          r'type': [r'number', r'null'],
+        },
+        r'state': {
+          r'enum': [r'learning', r'review', r'relearning'],
+          r'type': r'string',
+        },
+        r'step': {
+          r'minimum': 0,
+          r'type': [r'integer', r'null'],
         },
       },
+      r'required': [
+        r'enabled',
+        r'state',
+        r'step',
+        r'due_at',
+        r'last_reviewed_at',
+        r'stability',
+        r'difficulty',
+        r'review_count',
+        r'lapse_count',
+      ],
+      r'type': r'object',
     },
   },
+};
+const reviewHistoryJsonSchema = <String, dynamic>{
+  r'additionalProperties': false,
+  r'properties': {
+    r'items': {
+      r'items': {
+        r'additionalProperties': false,
+        r'properties': {
+          r'cue': {
+            r'enum': [r'front_to_back', r'back_to_front'],
+            r'type': r'string',
+          },
+          r'elapsed_seconds': {r'minimum': 0, r'type': r'integer'},
+          r'id': {r'minLength': 1, r'type': r'string'},
+          r'rating': {r'maximum': 4, r'minimum': 1, r'type': r'integer'},
+          r'reviewed_at': {r'format': r'date-time', r'type': r'string'},
+          r'scheduled_seconds': {r'minimum': 0, r'type': r'integer'},
+        },
+        r'required': [
+          r'id',
+          r'cue',
+          r'reviewed_at',
+          r'rating',
+          r'elapsed_seconds',
+          r'scheduled_seconds',
+        ],
+        r'type': r'object',
+      },
+      r'type': r'array',
+    },
+    r'version': {r'const': 4, r'type': r'integer'},
+  },
+  r'required': [r'version', r'items'],
+  r'type': r'object',
+};
+const languageScheduleJsonSchema = <String, dynamic>{
+  r'additionalProperties': false,
+  r'properties': {
+    r'algorithm': {r'const': r'fsrs', r'type': r'string'},
+    r'cues': {
+      r'type': r'object',
+      r'additionalProperties': false,
+      r'properties': {
+        r'meaning_to_sound': {r'$ref': r'#/$defs/cue_schedule'},
+        r'meaning_to_script': {r'$ref': r'#/$defs/cue_schedule'},
+        r'sound_to_meaning': {r'$ref': r'#/$defs/cue_schedule'},
+        r'sound_to_script': {r'$ref': r'#/$defs/cue_schedule'},
+        r'script_to_meaning': {r'$ref': r'#/$defs/cue_schedule'},
+        r'script_to_sound': {r'$ref': r'#/$defs/cue_schedule'},
+      },
+      r'required': [
+        r'meaning_to_sound',
+        r'meaning_to_script',
+        r'sound_to_meaning',
+        r'sound_to_script',
+        r'script_to_meaning',
+        r'script_to_sound',
+      ],
+    },
+    r'version': {r'const': 4, r'type': r'integer'},
+  },
+  r'required': [r'version', r'algorithm', r'cues'],
+  r'type': r'object',
+  r'$defs': {
+    r'cue_schedule': {
+      r'additionalProperties': false,
+      r'properties': {
+        r'difficulty': {
+          r'type': [r'number', r'null'],
+          r'minimum': 1,
+          r'maximum': 10,
+        },
+        r'due_at': {
+          r'format': r'date-time',
+          r'type': [r'string', r'null'],
+        },
+        r'enabled': {r'type': r'boolean'},
+        r'lapse_count': {r'minimum': 0, r'type': r'integer'},
+        r'last_reviewed_at': {
+          r'format': r'date-time',
+          r'type': [r'string', r'null'],
+        },
+        r'review_count': {r'minimum': 0, r'type': r'integer'},
+        r'stability': {
+          r'minimum': 0,
+          r'type': [r'number', r'null'],
+        },
+        r'state': {
+          r'enum': [r'learning', r'review', r'relearning'],
+          r'type': r'string',
+        },
+        r'step': {
+          r'minimum': 0,
+          r'type': [r'integer', r'null'],
+        },
+      },
+      r'required': [
+        r'enabled',
+        r'state',
+        r'step',
+        r'due_at',
+        r'last_reviewed_at',
+        r'stability',
+        r'difficulty',
+        r'review_count',
+        r'lapse_count',
+      ],
+      r'type': r'object',
+    },
+  },
+};
+const languageReviewHistoryJsonSchema = <String, dynamic>{
+  r'additionalProperties': false,
+  r'properties': {
+    r'items': {
+      r'items': {
+        r'additionalProperties': false,
+        r'properties': {
+          r'cue': {
+            r'enum': [
+              r'meaning_to_sound',
+              r'meaning_to_script',
+              r'sound_to_meaning',
+              r'sound_to_script',
+              r'script_to_meaning',
+              r'script_to_sound',
+            ],
+            r'type': r'string',
+          },
+          r'elapsed_seconds': {r'minimum': 0, r'type': r'integer'},
+          r'id': {r'minLength': 1, r'type': r'string'},
+          r'rating': {r'maximum': 4, r'minimum': 1, r'type': r'integer'},
+          r'reviewed_at': {r'format': r'date-time', r'type': r'string'},
+          r'scheduled_seconds': {r'minimum': 0, r'type': r'integer'},
+        },
+        r'required': [
+          r'id',
+          r'cue',
+          r'reviewed_at',
+          r'rating',
+          r'elapsed_seconds',
+          r'scheduled_seconds',
+        ],
+        r'type': r'object',
+      },
+      r'type': r'array',
+    },
+    r'version': {r'const': 4, r'type': r'integer'},
+  },
+  r'required': [r'version', r'items'],
+  r'type': r'object',
 };
 
 class CardsSchemaStatus {
@@ -191,7 +308,6 @@ class CardsSchemaStatus {
     required this.cardReady,
     required this.languageCardReady,
   });
-
   final bool cardReady;
   final bool languageCardReady;
   bool get ready => cardReady && languageCardReady;
@@ -422,6 +538,18 @@ SetModelTypeRequest buildLanguageCardSchemaRequest() {
         'A language-learning flashcard with structured language details and optional reinforcement examples.',
     parent: ParentLink.fromName(cardModelType),
     attributeDefinitions: [
+      AttributeDefinition(
+        key: 'schedule',
+        valueType: 'json',
+        constraints: const {'json_schema': languageScheduleJsonSchema},
+      ),
+
+      AttributeDefinition(
+        key: 'review_history',
+        valueType: 'json',
+        constraints: const {'json_schema': languageReviewHistoryJsonSchema},
+      ),
+
       AttributeDefinition(
         key: attrSpokenOnly,
         valueType: 'boolean',

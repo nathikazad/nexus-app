@@ -369,6 +369,13 @@ class _FastRecallRowState extends ConsumerState<_FastRecallRow> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
+                                    Text(
+                                      widget.prompt.instruction,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: RecallColors.faint,
+                                      ),
+                                    ),
                                     Row(
                                       children: [
                                         Flexible(
@@ -626,12 +633,8 @@ class _FastAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = content.spokenOnly
-        ? (prompt.isListening ? content.english : content.transliteration)
-        : content.originalScript;
-    final secondary = content.spokenOnly && prompt.isListening
-        ? content.transliteration
-        : content.english;
+    final primary = prompt.answer;
+    final secondary = prompt.cue.label;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -655,11 +658,6 @@ class _FastAnswer extends StatelessWidget {
             color: RecallColors.faint,
           ),
         ),
-        if (!content.spokenOnly && content.transliteration.isNotEmpty)
-          Text(
-            content.transliteration,
-            style: const TextStyle(fontSize: 14, color: RecallColors.faint),
-          ),
       ],
     );
   }
