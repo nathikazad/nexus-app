@@ -94,11 +94,33 @@ void main() {
       expect(find.text('Weak (1)', findRichText: true), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('current-filter-toggle')));
       await tester.pumpAndSettle();
-      final slider = tester.widget<Slider>(
+      final slider = tester.widget<RangeSlider>(
         find.byKey(const ValueKey('current-retention')),
       );
-      expect(slider.value, .8);
-      slider.onChanged!(1);
+      expect(slider.values, const RangeValues(0, .6));
+      await tester.tap(find.text('Strong'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<RangeSlider>(
+              find.byKey(const ValueKey('current-retention')),
+            )
+            .values,
+        const RangeValues(.8, 1),
+      );
+      expect(find.text('60%'), findsNothing);
+      await tester.tap(find.text('Weak'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<RangeSlider>(
+              find.byKey(const ValueKey('current-retention')),
+            )
+            .values,
+        const RangeValues(0, .6),
+      );
+      expect(find.text('60%'), findsOneWidget);
+      slider.onChanged!(const RangeValues(.5, .7));
       await tester.pumpAndSettle();
       expect(find.byType(DirectionChoices), findsNothing);
       expect(find.text('60%'), findsOneWidget);

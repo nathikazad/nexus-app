@@ -212,6 +212,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           100,
         );
         _weakOnly = saved['weakOnly'] == true;
+        if (_weakOnly) {
+          _retainedMinPercentage = 0;
+          _retainedMaxPercentage = 60;
+        }
         _writing = saved['writing'] != false;
         _timing =
             _enumByName(RecallTiming.values, saved['timing']) ??
@@ -351,10 +355,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   bool get _isBookStudy => widget.sourceKind == StudySourceKind.book;
 
-  void _selectRetainedMaxPercentage(double percentage) {
+  void _selectRetainedRange(RangeValues range) {
     setState(() {
-      _retainedMaxPercentage = percentage.round();
-      _retainedMinPercentage = 0;
+      _retainedMaxPercentage = range.end.round();
+      _retainedMinPercentage = range.start.round();
       _weakOnly = false;
       _clampCount();
     });
@@ -1511,26 +1515,35 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     children: [
       Text(
         _weakOnly
-            ? 'Below 80%'
+            ? '0–60%'
             : '$_retainedMinPercentage–$_retainedMaxPercentage%',
       ),
       Row(
         children: [
           Expanded(
-            child: Slider(
-              value: _retainedMaxPercentage.toDouble(),
+            child: RangeSlider(
+              key: const ValueKey('recall-retention'),
+              values: RangeValues(
+                _retainedMinPercentage.toDouble(),
+                _retainedMaxPercentage.toDouble(),
+              ),
+              labels: RangeLabels(
+                '$_retainedMinPercentage%',
+                '$_retainedMaxPercentage%',
+              ),
               min: 0,
               max: 100,
               divisions: 100,
-              onChanged: _selectRetainedMaxPercentage,
+              onChanged: _selectRetainedRange,
             ),
           ),
           TextButton(
             onPressed: () => setState(() {
               _retainedMinPercentage = 0;
-              _retainedMaxPercentage = 80;
+              _retainedMaxPercentage = 60;
               _weakOnly = true;
               _clampCount();
+              _rememberPreferences();
             }),
             child: const Text('Weak'),
           ),
@@ -1540,6 +1553,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               _retainedMaxPercentage = 100;
               _weakOnly = false;
               _clampCount();
+              _rememberPreferences();
             }),
             child: const Text('Strong'),
           ),

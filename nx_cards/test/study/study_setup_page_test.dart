@@ -284,8 +284,10 @@ void main() {
         studyCards: [sample(1, 0), sample(2, 10), sample(3, 0, due: false)],
       );
       expect(find.text('9 recall items available'), findsOneWidget);
-      final retention = tester.widgetList<Slider>(find.byType(Slider)).first;
-      retention.onChanged!(0);
+      final retention = tester.widget<RangeSlider>(
+        find.byKey(const ValueKey('recall-retention')),
+      );
+      retention.onChanged!(const RangeValues(0, 0));
       await tester.pumpAndSettle();
       expect(find.text('6 recall items available'), findsOneWidget);
       await tester.tap(find.text('Due'));
@@ -305,7 +307,7 @@ void main() {
       await tester.tap(find.text('Retention'));
       await tester.pumpAndSettle();
       expect(find.text('6 recall items available'), findsOneWidget);
-      expect(find.byType(Slider), findsNWidgets(2));
+      expect(find.byType(RangeSlider), findsOneWidget);
     },
   );
 

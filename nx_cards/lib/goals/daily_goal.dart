@@ -1,3 +1,5 @@
+import 'package:nx_cards/goals/goal_day_clock.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:nx_cards/goals/streak_badge.dart';
 import 'package:flutter/material.dart';
@@ -54,10 +56,15 @@ int dailyGoalStreak(Map<DateTime, int> counts, int goal, DateTime now) {
   return streak;
 }
 
+final goalNowProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
 // Recompute on return from study, new synced histories, and a local day change.
 final goalClockProvider = StreamProvider.autoDispose<DateTime>((ref) async* {
-  yield DateTime.now();
-  yield* Stream.periodic(const Duration(seconds: 30), (_) => DateTime.now());
+  final preferences = await SharedPreferences.getInstance();
+  if (!ref.mounted) return;
+  final clock = GoalDayClock(preferences, now: ref.watch(goalNowProvider));
+  ref.onDispose(clock.dispose);
+  yield* clock.changes;
 });
 
 class DailyGoalBar extends ConsumerWidget {
@@ -70,21 +77,19 @@ class DailyGoalBar extends ConsumerWidget {
     final cards = ref.watch(sourceProgressCardsProvider(source));
     final settings = ref.watch(reviewProgressionSettingsProvider);
     final goal =
-        settings.asData?.value.dailyGoals[goalKey(
-          language: name,
-          bookId: bookId,
-        )] ??
+        settings.value?.dailyGoals[goalKey(language: name, bookId: bookId)] ??
         0;
-    final now = ref.watch(goalClockProvider).asData?.value ?? DateTime.now();
-    final counts = cards.asData == null
+    ref.watch(goalClockProvider);
+    final now = ref.watch(goalNowProvider)().toLocal();
+    final counts = cards.value == null
         ? null
-        : dailyRecallCounts(cards.asData!.value, now);
+        : dailyRecallCounts(cards.value!, now);
     final count = counts == null
         ? null
         : counts[DateTime(now.year, now.month, now.day)] ?? 0;
     final streak = counts == null ? 0 : dailyGoalStreak(counts, goal, now);
     final theme = Theme.of(context);
-    final subtitle = cards.hasError
+    final subtitle = cards.hasError && !cards.hasValue
         ? 'Recall count unavailable · View progress'
         : count == null
         ? 'Loading today’s recalls…'
@@ -120,7 +125,7 @@ class DailyGoalBar extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                settings.isLoading
+                !settings.hasValue && settings.isLoading
                     ? 'Loading goal…'
                     : goal == 0
                     ? 'No goal set'

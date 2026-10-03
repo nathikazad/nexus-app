@@ -213,7 +213,7 @@ final class DriftLocalCardsStore
                   table.deletedLocally.equals(false),
             ))
             .watch();
-    yield* cardStream.asyncMap(_dashboard);
+    yield* cardStream.distinct(listEquals).asyncMap(_dashboard);
   }
 
   @override

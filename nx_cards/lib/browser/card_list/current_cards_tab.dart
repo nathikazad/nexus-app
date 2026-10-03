@@ -23,7 +23,7 @@ class CurrentCardsTab extends ConsumerStatefulWidget {
 }
 
 class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
-  double maximum = .8;
+  double maximum = .6;
   double minimum = 0;
   bool weakOnly = true;
   bool expanded = false;
@@ -53,6 +53,10 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
         maximum = maxValue;
         minimum = minValue;
         weakOnly = saved['weakOnly'] == true;
+        if (weakOnly) {
+          minimum = 0;
+          maximum = .6;
+        }
       });
     } catch (_) {
       // Ignore obsolete or malformed preferences.
@@ -90,7 +94,7 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
       weakOnly: weakOnly,
     );
     final range = weakOnly
-        ? 'Below 80%'
+        ? '0–60%'
         : '${(minimum * 100).round()}–${(maximum * 100).round()}%';
     final summary = '${weakOnly ? 'Weak' : range} (${cards.length})';
     return Column(
@@ -148,13 +152,17 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
                         Row(
                           children: [
                             Expanded(
-                              child: Slider(
+                              child: RangeSlider(
                                 key: const ValueKey('current-retention'),
-                                value: maximum,
+                                values: RangeValues(minimum, maximum),
+                                labels: RangeLabels(
+                                  '${(minimum * 100).round()}%',
+                                  '${(maximum * 100).round()}%',
+                                ),
                                 divisions: 100,
                                 onChanged: (value) => _change(() {
-                                  maximum = value;
-                                  minimum = 0;
+                                  maximum = value.end;
+                                  minimum = value.start;
                                   weakOnly = false;
                                 }),
                               ),
@@ -162,7 +170,7 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
                             TextButton(
                               onPressed: () => _change(() {
                                 minimum = 0;
-                                maximum = .8;
+                                maximum = .6;
                                 weakOnly = true;
                               }),
                               child: const Text('Weak'),

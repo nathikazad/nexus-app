@@ -61,6 +61,9 @@ void main() {
                   dailyGoals: {'language:Chinese': 1},
                 ),
               ),
+              goalNowProvider.overrideWithValue(
+                () => DateTime(2026, 10, 2, 12),
+              ),
               goalClockProvider.overrideWith(
                 (ref) => Stream.value(DateTime(2026, 10, 2, 12)),
               ),
@@ -115,6 +118,7 @@ void main() {
             reviewProgressionSettingsProvider.overrideWith(
               (ref) async => const ReviewProgressionSettings(),
             ),
+            goalNowProvider.overrideWithValue(() => DateTime(2026, 10, 2)),
             goalClockProvider.overrideWith(
               (ref) => Stream.value(DateTime(2026, 10, 2)),
             ),
@@ -219,6 +223,7 @@ void main() {
                 dailyGoals: {'language:Chinese': goal},
               ),
             ),
+            goalNowProvider.overrideWithValue(() => DateTime(2026, 10, 2, 12)),
             goalClockProvider.overrideWith(
               (ref) => Stream.value(DateTime(2026, 10, 2, 12)),
             ),

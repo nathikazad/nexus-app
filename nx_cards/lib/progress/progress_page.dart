@@ -110,6 +110,8 @@ class ProgressPage extends ConsumerWidget {
                       )),
               )
               .when(
+                skipLoadingOnReload: true,
+                skipError: true,
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => BrowserLoadError(
                   error: e,
