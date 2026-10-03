@@ -2,6 +2,7 @@
 library;
 
 import 'dart:io';
+import 'package:http/http.dart' as http;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexus_voice_assistant/data/battery/battery_chart_service.dart';
@@ -18,8 +19,7 @@ void main() {
     test(
       'HTTP image/battery integration skipped',
       () {},
-      skip:
-          'Set RUN_NX_MAIN_HTTP_INTEGRATION=true and NX_MAIN_IMAGE_BASE=…',
+      skip: 'Set RUN_NX_MAIN_HTTP_INTEGRATION=true and NX_MAIN_IMAGE_BASE=…',
     );
     return;
   }
@@ -40,7 +40,9 @@ void main() {
   });
 
   test('fetchBatteryDates returns a list', () async {
-    final dates = await fetchBatteryDates(base, uid);
+    final client = http.Client();
+    addTearDown(client.close);
+    final dates = await fetchBatteryDates(base, uid, httpClient: client);
     expect(dates, isA<List<DateTime>>());
   });
 }

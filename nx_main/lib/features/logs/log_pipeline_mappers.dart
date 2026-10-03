@@ -1,5 +1,5 @@
 import 'package:nexus_voice_assistant/features/logs/log_pipeline_models.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nexus_voice_assistant/domain/logs/log_records.dart';
 
 const _necklacePipelineStages = [
   _StageDef('mic', 'Mic', [

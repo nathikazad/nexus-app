@@ -1,3 +1,4 @@
+import 'package:nexus_voice_assistant/domain/schema/schema_model_list_query.dart';
 import 'package:nx_db/nx_db.dart' as nx;
 
 import 'package:nexus_voice_assistant/domain/schema/attribute_definition_draft.dart';
@@ -140,5 +141,29 @@ SchemaModel schemaModelFromNx(nx.Model m) {
     relationsList: m.relationsList?.map(schemaRelationFromNx).toList(),
     tags: m.tags,
     modelType: m.modelType != null ? schemaModelTypeFromNx(m.modelType!) : null,
+  );
+}
+
+/// Translate app query semantics at the database boundary, including the extra
+/// row used to detect whether another page exists.
+nx.ModelListQuery schemaModelListQueryToNx(SchemaModelListQuery query) {
+  return nx.ModelListQuery(
+    modelTypeId: query.modelTypeId,
+    search: query.search,
+    filters: query.filters
+        .map((filter) => nx.ModelListFilter(
+              key: filter.key,
+              op: filter.operator.kgqlOp,
+              value: filter.operator == SchemaModelFilterOperator.like
+                  ? '%${filter.value}%'
+                  : filter.value,
+            ))
+        .toList(),
+    sort: query.sort == null
+        ? null
+        : nx.ModelListSort(
+            key: query.sort!.key, descending: query.sort!.descending),
+    limit: schemaModelListPageSize + 1,
+    offset: query.offset,
   );
 }

@@ -119,7 +119,8 @@ final schemaModelListQueryProvider = NotifierProvider.family<
 final schemaModelsForQueryProvider =
     FutureProvider.family<SchemaModelListPage, SchemaModelListQuery>(
         (ref, query) async {
-  final list = await ref.watch(nx.modelListProvider(query.toNx()).future);
+  final list = await ref
+      .watch(nx.modelListProvider(schemaModelListQueryToNx(query)).future);
   return SchemaModelListPage.fromProbe(
     models: list.map(schemaModelFromNx).toList(),
     page: query.page,

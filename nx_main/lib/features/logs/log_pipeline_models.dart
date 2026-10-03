@@ -1,4 +1,4 @@
-import 'package:nx_db/nx_db.dart';
+import 'package:nexus_voice_assistant/domain/logs/log_records.dart';
 
 enum LogsViewMode {
   audioPipeline('Audio Pipeline'),

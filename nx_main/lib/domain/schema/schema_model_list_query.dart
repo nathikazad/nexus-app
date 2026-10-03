@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:nx_db/nx_db.dart' as nx;
 import 'package:nexus_voice_assistant/domain/schema/attribute_definition_draft.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_model.dart';
 import 'package:nexus_voice_assistant/domain/schema/schema_model_type.dart';
@@ -43,14 +42,6 @@ class SchemaModelFilter {
 
   String get label => '$key ${operator.label} $value';
 
-  nx.ModelListFilter toNx() {
-    return nx.ModelListFilter(
-      key: key,
-      op: operator.kgqlOp,
-      value: operator == SchemaModelFilterOperator.like ? '%$value%' : value,
-    );
-  }
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -76,10 +67,6 @@ class SchemaModelSort {
   final bool descending;
 
   String get label => '$key ${descending ? 'desc' : 'asc'}';
-
-  nx.ModelListSort toNx() {
-    return nx.ModelListSort(key: key, descending: descending);
-  }
 
   @override
   bool operator ==(Object other) =>
@@ -131,17 +118,6 @@ class SchemaModelListQuery {
       filters: filters ?? this.filters,
       sort: clearSort ? null : sort ?? this.sort,
       page: page ?? this.page,
-    );
-  }
-
-  nx.ModelListQuery toNx() {
-    return nx.ModelListQuery(
-      modelTypeId: modelTypeId,
-      search: search,
-      filters: filters.map((filter) => filter.toNx()).toList(),
-      sort: sort?.toNx(),
-      limit: schemaModelListPageSize + 1,
-      offset: offset,
     );
   }
 

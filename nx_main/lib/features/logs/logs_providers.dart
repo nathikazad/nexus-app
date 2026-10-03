@@ -1,7 +1,8 @@
+import 'package:nexus_voice_assistant/data/logs/kgql_log_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexus_voice_assistant/features/logs/log_pipeline_mappers.dart';
 import 'package:nexus_voice_assistant/features/logs/log_pipeline_models.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nexus_voice_assistant/domain/logs/log_records.dart';
 
 enum DbChangeFilter {
   all('All DB changes'),
@@ -60,8 +61,8 @@ final dbChangeFilterProvider =
 
 final logsForDayProvider =
     FutureProvider.family<List<NexusLogRow>, DateTime>((ref, date) async {
-  final client = ref.watch(graphqlClientProvider);
-  return fetchLogsForDay(client, date: normalizeLogDate(date));
+  final repository = ref.watch(logRepositoryProvider);
+  return repository.logsForDay(normalizeLogDate(date));
 }, name: 'logsForDayProvider');
 
 final audioPipelineTurnsProvider =
@@ -137,22 +138,7 @@ Future<void> _updateAgentRunPayload(
     throw StateError('Agent run ${run.runId} has no correction target id.');
   }
 
-  final client = ref.read(graphqlClientProvider);
-  final exactTarget = await fetchLogById(client, id: target.id);
-  if (exactTarget == null) {
-    throw StateError('Log row ${target.id} not found for ${run.runId}.');
-  }
-  final exactTime = exactTarget.time;
-  if (exactTime == null) {
-    throw StateError('Log row ${target.id} has no exact update time.');
-  }
-
-  await updateLogPayload(
-    client,
-    time: exactTime,
-    id: exactTarget.id,
-    payload: payload,
-  );
+  await ref.read(logRepositoryProvider).updatePayload(target.id, payload);
 
   final normalizedDate = normalizeLogDate(date);
   ref.invalidate(logsForDayProvider(normalizedDate));
@@ -161,9 +147,8 @@ Future<void> _updateAgentRunPayload(
 
 final dbChangeOperationsProvider =
     FutureProvider.family<List<DbChangeOperation>, DateTime>((ref, date) async {
-  final client = ref.watch(graphqlClientProvider);
-  final operations =
-      await fetchChangeOperationsForDay(client, date: normalizeLogDate(date));
+  final repository = ref.watch(logRepositoryProvider);
+  final operations = await repository.operationsForDay(normalizeLogDate(date));
   operations.sort((a, b) {
     final time = (b.createdAt?.millisecondsSinceEpoch ?? 0)
         .compareTo(a.createdAt?.millisecondsSinceEpoch ?? 0);
@@ -209,15 +194,15 @@ final filteredDbChangeOperationsProvider = Provider.family<
 }, name: 'filteredDbChangeOperationsProvider');
 
 final dbChangeMetadataProvider = FutureProvider<DbChangeMetadata>((ref) async {
-  final client = ref.watch(graphqlClientProvider);
-  return fetchDbChangeMetadata(client);
+  final repository = ref.watch(logRepositoryProvider);
+  return repository.metadata();
 }, name: 'dbChangeMetadataProvider');
 
 final dbChangeEventsProvider =
     FutureProvider.family<List<DbChangeEvent>, String>(
         (ref, operationId) async {
-  final client = ref.watch(graphqlClientProvider);
-  return fetchChangeEvents(client, operationId: operationId);
+  final repository = ref.watch(logRepositoryProvider);
+  return repository.events(operationId);
 }, name: 'dbChangeEventsProvider');
 
 final dbChangeDetailProvider =
@@ -226,11 +211,8 @@ final dbChangeDetailProvider =
       await ref.watch(dbChangeOperationsProvider(key.date).future);
   var operation = _findChangeOperation(operations, key.operationId);
   if (operation == null) {
-    final client = ref.watch(graphqlClientProvider);
-    operation = await fetchChangeOperation(
-      client,
-      operationId: key.operationId,
-    );
+    final repository = ref.watch(logRepositoryProvider);
+    operation = await repository.operation(key.operationId);
   }
   if (operation == null) {
     throw StateError('Change operation ${key.operationId} not found');

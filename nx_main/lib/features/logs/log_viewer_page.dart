@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexus_voice_assistant/features/logs/log_pipeline_models.dart';
 import 'package:nexus_voice_assistant/features/logs/logs_providers.dart';
-import 'package:nx_db/nx_db.dart';
+import 'package:nexus_voice_assistant/domain/logs/log_records.dart';
 
 class LogViewerPage extends ConsumerWidget {
   const LogViewerPage({super.key});
