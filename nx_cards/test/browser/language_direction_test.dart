@@ -1,3 +1,4 @@
+import 'package:nx_cards/progress/progress_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:flutter/material.dart';
@@ -73,6 +74,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+
             cardsCollectionProvider.overrideWith(
               (ref, source) => Stream.value(dashboard),
             ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/app/adaptive_card_grid.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -72,8 +74,11 @@ void main() {
     ]) {
       await tester.binding.setSurfaceSize(size);
       await tester.pumpWidget(
-        MaterialApp(
-          home: ScriptDrawPracticePage(title: 'Chinese', cards: [card]),
+        ProviderScope(
+          overrides: [cardLibraryProvider.overrideWithValue(_EmptyLibrary())],
+          child: MaterialApp(
+            home: ScriptDrawPracticePage(title: 'Chinese', cards: [card]),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -114,4 +119,11 @@ void main() {
       await tester.pump();
     }
   });
+}
+
+class _EmptyLibrary implements CardLibrary {
+  @override
+  Future<List<StudyCard>> listCards() async => [];
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

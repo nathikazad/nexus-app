@@ -150,13 +150,13 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
               final content = card.content;
               return _StudySheetRow(
                 number: index,
-                onDraw: content is! LanguageCardContent
+                onDraw: card.spokenOnly || content is! LanguageCardContent
                     ? null
                     : () async {
                         if (_activeCardId != null) await _player.stop();
                         if (!context.mounted) return;
                         final drawingCards = cards
-                            .where((c) => c.isLanguageCard)
+                            .where((c) => c.isLanguageCard && !c.spokenOnly)
                             .toList();
                         await openSheetDrawing(
                           context,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -80,6 +81,43 @@ class _FakeLiveAgentTransport implements LiveAgentTransport {
 }
 
 void main() {
+  for (final cue in [StudyCue.fromLanguage, StudyCue.fromAudio]) {
+    test('spoken-only tutor asks for pronunciation or meaning: $cue', () async {
+      final original = _card(1);
+      final content = (original.content as LanguageCardContent).copyWith(
+        spokenOnly: true,
+      );
+      final transport = _FakeLiveAgentTransport();
+      final controller = VoiceTutorController(
+        session: LiveAgentSession(transport: transport),
+        repository: _MockCardLibrary(),
+        scheduler: FsrsCardScheduler(),
+        prompts: [
+          StudyPrompt(
+            card: original.copyWith(content: content),
+            cue: cue,
+          ),
+        ],
+        languages: (from: 'English', to: 'Malayalam'),
+        onScheduleSaved: () {},
+      );
+      await controller.start(
+        const StaticLiveAgentCredentialProvider('test-key'),
+      );
+      final context = jsonDecode(transport.instructions.last) as Map;
+      final card = context['card'] as Map;
+      expect(card['spoken_only'], isTrue);
+      expect(
+        card['expected_answer'],
+        cue == StudyCue.fromAudio ? content.english : content.transliteration,
+      );
+      if (cue == StudyCue.fromAudio) {
+        expect(card['question_instruction'], contains('English meaning'));
+      }
+      controller.dispose();
+    });
+  }
+
   setUpAll(() => registerFallbackValue(_card(99)));
 
   test('tutor results map to conservative FSRS ratings', () {

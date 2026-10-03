@@ -26,6 +26,9 @@ class FsrsCardScheduler implements CardScheduler {
 
   @override
   Map<CardRating, ScheduledOutcome> preview(StudyPrompt prompt, DateTime now) {
+    if (!prompt.card.studiesCue(prompt.cue)) {
+      throw StateError('Character recall is disabled for spoken-only cards.');
+    }
     final reviewedAt = now.toUtc();
     return {
       for (final rating in CardRating.values)

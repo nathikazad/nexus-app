@@ -10,6 +10,28 @@ import 'package:nx_cards/study/session/study_session_page.dart';
 import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 
 void main() {
+  for (final cue in [StudyCue.fromLanguage, StudyCue.fromAudio]) {
+    testWidgets('spoken-only skips drawing even in writing mode: $cue', (
+      tester,
+    ) async {
+      final original = _scriptCard();
+      final card = original.copyWith(
+        content: (original.content as LanguageCardContent).copyWith(
+          spokenOnly: true,
+        ),
+      );
+      await _pumpRecall(tester, card, cue, writing: true);
+      expect(find.byKey(const ValueKey('script-drawing-canvas')), findsNothing);
+      expect(find.text('ക'), findsNothing);
+      await tester.tap(find.text('Show answer'));
+      await tester.pumpAndSettle();
+      expect(find.text('ക'), findsNothing);
+      expect(find.text('Letter ka'), findsWidgets);
+      expect(find.text('ka'), findsWidgets);
+      expect(find.text('Yes'), findsOneWidget);
+    });
+  }
+
   for (final writing in [false, true]) {
     testWidgets(
       'Listening hides script and autoplays before reveal (writing=$writing)',

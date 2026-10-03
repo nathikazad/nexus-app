@@ -9,6 +9,8 @@ void main() {
       'app',
       'audio',
       'browser',
+      'goals',
+      'progress',
       'scheduling',
       'settings',
       'study',

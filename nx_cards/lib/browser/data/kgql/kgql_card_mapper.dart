@@ -22,6 +22,7 @@ StudyCard? studyCardFromModel(
     notes: model.description,
     content: isLanguageCardModelType(modelTypeName)
         ? LanguageCardContent(
+            spokenOnly: model.attrBool(attrSpokenOnly) ?? false,
             similarWordGroups: similarWordGroupsFromJson(
               model.attributes?[attrSimilarWordGroups],
             ),

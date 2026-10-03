@@ -1,3 +1,5 @@
+import 'package:nx_cards/scheduling/review_progression.dart';
+import 'package:nx_cards/progress/progress_page.dart';
 import 'dart:convert';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -64,6 +66,13 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sourceProgressCardsProvider.overrideWith(
+                (ref, source) async => [],
+              ),
+              reviewProgressionSettingsProvider.overrideWith(
+                (ref) async => const ReviewProgressionSettings(),
+              ),
+
               cardsCollectionProvider.overrideWith(
                 (ref, source) => Stream.value(data),
               ),
@@ -82,7 +91,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      const priority = ['total', 'current', 'upcoming', 'backlog'];
+      const priority = ['current', 'due'];
       int visible() {
         var count = 0;
         for (final label in priority) {
@@ -101,7 +110,7 @@ void main() {
       }
 
       await show(1500, 1);
-      expect(visible(), 4);
+      expect(visible(), 2);
       expect(
         tester.getTopLeft(find.text('Words')).dx,
         tester.getTopLeft(find.text('Phrases')).dx,
@@ -113,7 +122,7 @@ void main() {
       expect(find.byIcon(Icons.chevron_right), findsNothing);
       await show(390, 1);
       final phoneCount = visible();
-      expect(phoneCount, inInclusiveRange(1, 3));
+      expect(phoneCount, inInclusiveRange(1, 2));
       await show(280, 1);
       expect(visible(), inInclusiveRange(1, phoneCount));
       await show(390, 2);
@@ -248,6 +257,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+            reviewProgressionSettingsProvider.overrideWith(
+              (ref) async => const ReviewProgressionSettings(),
+            ),
+
             cardsCollectionProvider.overrideWith(
               (ref, source) => Stream.value(data),
             ),
@@ -263,8 +277,8 @@ void main() {
       );
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey('language-category-all-total')),
-          matching: find.text('2'),
+          of: find.byKey(const ValueKey('language-category-all-current')),
+          matching: find.text('0'),
         ),
         findsOneWidget,
       );
@@ -277,7 +291,12 @@ void main() {
             .allCards,
         isTrue,
       );
-      expect(find.text('Backlog  2'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('open-backlog')));
+      await tester.pumpAndSettle();
+      expect(find.text('item 1'), findsOneWidget);
+      expect(find.text('item 2'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('Words'), findsOneWidget);
@@ -291,8 +310,8 @@ void main() {
       expect(find.text('Noun'), findsNothing);
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey('language-category-word-total')),
-          matching: find.text('1'),
+          of: find.byKey(const ValueKey('language-category-word-current')),
+          matching: find.text('0'),
         ),
         findsOneWidget,
       );
@@ -303,7 +322,10 @@ void main() {
       await tester.tap(find.text('Words'));
       await tester.pumpAndSettle();
       expect(find.byType(LanguageCategoryPage), findsOneWidget);
-      expect(find.text('Backlog  1'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('open-backlog')));
+      await tester.pumpAndSettle();
+      expect(find.text('item 1'), findsOneWidget);
+      expect(find.text('item 2'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

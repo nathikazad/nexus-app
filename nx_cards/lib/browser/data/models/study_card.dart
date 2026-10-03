@@ -51,6 +51,10 @@ class StudyCard {
   String get front => content.front;
   String get back => content.back;
   bool get isLanguageCard => content is LanguageCardContent;
+  bool get spokenOnly =>
+      content is LanguageCardContent &&
+      (content as LanguageCardContent).spokenOnly;
+  bool studiesCue(StudyCue cue) => !(spokenOnly && cue == StudyCue.toLanguage);
   bool get isPhraseCard => hasCategory('Phrase');
   bool get isScriptCard => hasCategory('Script');
   bool get isWordCard => isLanguageCard && hasCategory('Word');
@@ -99,9 +103,11 @@ class StudyCard {
       );
 
   bool supportsCue(StudyCue cue) =>
-      cue != StudyCue.fromAudio ||
-      (content is LanguageCardContent &&
-          (content as LanguageCardContent).audioUrl?.trim().isNotEmpty == true);
+      studiesCue(cue) &&
+      (cue != StudyCue.fromAudio ||
+          (content is LanguageCardContent &&
+              (content as LanguageCardContent).audioUrl?.trim().isNotEmpty ==
+                  true));
 
   List<CardReview> reviewHistoryFor(StudyCue cue) =>
       reviewHistory[cue] ?? const <CardReview>[];
@@ -118,7 +124,9 @@ class StudyCard {
   DateTime? get nextDueAt {
     final dueDates = <DateTime>[
       for (final cue in StudyCue.activeDirections)
-        if (scheduleFor(cue).enabled && scheduleFor(cue).dueAt != null)
+        if (supportsCue(cue) &&
+            scheduleFor(cue).enabled &&
+            scheduleFor(cue).dueAt != null)
           scheduleFor(cue).dueAt!,
     ]..sort();
     return dueDates.firstOrNull;

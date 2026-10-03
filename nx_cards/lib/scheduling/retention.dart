@@ -4,6 +4,7 @@ import 'package:nx_cards/scheduling/learning_stage.dart';
 /// Average direction scores, without pooling attempts or rounding first.
 double averageRetention(StudyCard card, Iterable<StudyCue> directions) {
   final cues = (card.isLanguageCard ? directions : [StudyCue.fromLanguage])
+      .where(card.studiesCue)
       .toSet();
   if (cues.isEmpty) return 0;
   return cues

@@ -113,10 +113,21 @@ final class NativeCardLibrary implements CardWorkspace {
   }
 
   @override
-  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
+  Future<void> setLearningStatus(
+    StudyCard card,
+    LearningStatus status, {
+    bool? spokenOnly,
+  }) async {
     final existing = await _requireCard(card.id);
     await _enqueue(
-      existing.copyWith(learningStatus: status),
+      existing.copyWith(
+        learningStatus: status,
+        content: existing.content is LanguageCardContent && spokenOnly != null
+            ? (existing.content as LanguageCardContent).copyWith(
+                spokenOnly: spokenOnly,
+              )
+            : existing.content,
+      ),
       offline.MutationType.update,
     );
   }

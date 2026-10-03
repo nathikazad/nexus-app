@@ -55,6 +55,7 @@ final class DriftCardsMapper {
       tagsJson: jsonEncode({
         'tags': card.tags,
         'category_paths': card.categoryPaths,
+        'spoken_only': card.spokenOnly,
       }),
       learningStatus: Value(card.learningStatus.storageValue),
       dueAt: Value(card.nextDueAt),
@@ -77,6 +78,7 @@ final class DriftCardsMapper {
       notes: row.notes,
       content: isLanguageCardModelType(row.modelType)
           ? LanguageCardContent(
+              spokenOnly: _jsonMap(row.tagsJson)['spoken_only'] == true,
               similarWordGroups: similarWordGroupsFromJson(
                 jsonDecode(row.similarWordGroupsJson),
               ),

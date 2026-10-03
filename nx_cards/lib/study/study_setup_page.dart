@@ -560,6 +560,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     List<StudyPrompt>? prompts,
     List<StudyPrompt>? practicePrompts,
   }) async {
+    if ((cards ?? prompts?.map((p) => p.card).toList() ?? []).any(
+      (c) => c.spokenOnly,
+    )) {
+      return false;
+    }
     if (!await NativeDrawingSession.isAvailable() || !mounted) return false;
     _startupStep('native_available');
     final recall = prompts != null;
@@ -979,6 +984,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         for (final card in dashboard.cards)
           if (ids.contains(card.id) &&
               card.isLanguageCard &&
+              !card.spokenOnly &&
               !card.suspended &&
               _matchesRecallBaseFilters(card))
             for (final cue in _directions)

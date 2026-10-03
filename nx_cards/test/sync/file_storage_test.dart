@@ -33,6 +33,7 @@ void main() {
         id: 1,
         modelTypeName: 'LanguageFlashcard',
         content: const LanguageCardContent(
+          spokenOnly: true,
           english: 'student',
           originalScript: '学生',
           transliteration: 'xuésheng',
@@ -62,6 +63,8 @@ void main() {
       await store.applyCardBatch([HashedCard(card, hash.hash)]);
 
       final audio = (await store.getCard(1))!.content as LanguageCardContent;
+      expect(audio.spokenOnly, isTrue);
+      expect((await store.readDashboard()).cards.single.spokenOnly, isTrue);
       expect(audio.audioSha256, 'abc');
       expect(audio.audioBytes, 123);
       expect(await store.verifiedCard(const CardHash(1, 'changed')), false);

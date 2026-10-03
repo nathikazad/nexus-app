@@ -1,3 +1,5 @@
+import 'package:nx_cards/scheduling/review_progression.dart';
+import 'package:nx_cards/progress/progress_page.dart';
 import 'package:nx_cards/browser/data/models/library_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,6 +55,13 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sourceProgressCardsProvider.overrideWith(
+                (ref, source) async => [],
+              ),
+              reviewProgressionSettingsProvider.overrideWith(
+                (ref) async => const ReviewProgressionSettings(),
+              ),
+
               cardsCollectionProvider.overrideWith(
                 (ref, source) =>
                     Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
@@ -132,6 +141,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+
           cardsCollectionProvider.overrideWith(
             (ref, source) =>
                 Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
@@ -166,7 +180,9 @@ void main() {
     final nounTitle = tester.getCenter(find.text('Noun'));
     expect(
       tester
-          .getCenter(find.byKey(const ValueKey('language-category-noun-current')))
+          .getCenter(
+            find.byKey(const ValueKey('language-category-noun-current')),
+          )
           .dy,
       greaterThanOrEqualTo(nounTitle.dy),
     );
@@ -231,6 +247,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+
           cardsCollectionProvider.overrideWith(
             (ref, source) =>
                 Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
@@ -290,6 +311,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+
           cardsCollectionProvider.overrideWith(
             (ref, source) =>
                 Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
@@ -350,6 +376,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+
           cardsCollectionProvider.overrideWith(
             (ref, source) =>
                 Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
@@ -431,6 +462,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+
           cardsCollectionProvider.overrideWith(
             (ref, source) =>
                 Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
@@ -512,6 +548,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+            reviewProgressionSettingsProvider.overrideWith(
+              (ref) async => const ReviewProgressionSettings(),
+            ),
+
             cardsCollectionProvider.overrideWith(
               (ref, source) =>
                   Stream.fromFuture(ref.watch(cardsDashboardProvider.future)),
@@ -552,7 +593,11 @@ final class _RecordingCardLibrary implements CardLibrary {
   final changes = <(int, LearningStatus)>[];
 
   @override
-  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
+  Future<void> setLearningStatus(
+    StudyCard card,
+    LearningStatus status, {
+    bool? spokenOnly,
+  }) async {
     changes.add((card.id, status));
   }
 

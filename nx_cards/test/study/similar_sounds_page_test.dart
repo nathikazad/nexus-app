@@ -1,3 +1,5 @@
+import 'package:nx_cards/scheduling/review_progression.dart';
+import 'package:nx_cards/progress/progress_page.dart';
 import 'package:nx_cards/browser/language/similar_sounds_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +27,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+            reviewProgressionSettingsProvider.overrideWith(
+              (ref) async => const ReviewProgressionSettings(),
+            ),
+
             cardsCollectionProvider.overrideWith(
               (ref, source) => Stream.value(CardsDashboard(cards: cards)),
             ),
@@ -60,6 +67,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+          reviewProgressionSettingsProvider.overrideWith(
+            (ref) async => const ReviewProgressionSettings(),
+          ),
+
           cardsCollectionProvider.overrideWith(
             (ref, source) => Stream.value(CardsDashboard(cards: cards)),
           ),
@@ -94,6 +106,13 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sourceProgressCardsProvider.overrideWith(
+                (ref, source) async => [],
+              ),
+              reviewProgressionSettingsProvider.overrideWith(
+                (ref) async => const ReviewProgressionSettings(),
+              ),
+
               cardsCollectionProvider.overrideWith(
                 (ref, source) => Stream.value(CardsDashboard(cards: cards)),
               ),

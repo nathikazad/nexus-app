@@ -55,6 +55,10 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
         maxValue,
       );
       if (directions.isEmpty) return;
+      // Restoring a cached Future can complete during route construction.
+      // Publish shared state only once the current frame has finished.
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || changed) return;
       ref.read(selectedDirectionsProvider(widget.language).notifier).state =
           directions;
       setState(() {

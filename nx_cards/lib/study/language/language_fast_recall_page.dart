@@ -626,8 +626,12 @@ class _FastAnswer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = content.originalScript;
-    final secondary = content.english;
+    final primary = content.spokenOnly
+        ? (prompt.isListening ? content.english : content.transliteration)
+        : content.originalScript;
+    final secondary = content.spokenOnly && prompt.isListening
+        ? content.transliteration
+        : content.english;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -651,7 +655,7 @@ class _FastAnswer extends StatelessWidget {
             color: RecallColors.faint,
           ),
         ),
-        if (content.transliteration.isNotEmpty)
+        if (!content.spokenOnly && content.transliteration.isNotEmpty)
           Text(
             content.transliteration,
             style: const TextStyle(fontSize: 14, color: RecallColors.faint),

@@ -13,13 +13,26 @@ class Library implements CardLibrary {
   final changes = <(int, LearningStatus)>[];
   final failures = <int>{};
   @override
-  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
+  Future<void> setLearningStatus(
+    StudyCard card,
+    LearningStatus status, {
+    bool? spokenOnly,
+  }) async {
     if (failures.contains(card.id)) throw StateError('offline');
     changes.add((card.id, status));
     cards = [
       for (final existing in cards)
         existing.id == card.id
-            ? existing.copyWith(learningStatus: status)
+            ? existing.copyWith(
+                learningStatus: status,
+                content:
+                    existing.content is LanguageCardContent &&
+                        spokenOnly != null
+                    ? (existing.content as LanguageCardContent).copyWith(
+                        spokenOnly: spokenOnly,
+                      )
+                    : existing.content,
+              )
             : existing,
     ];
   }
@@ -28,9 +41,14 @@ class Library implements CardLibrary {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-Future<void> showCollection(WidgetTester tester, Library library) async {
+Future<void> showCollection(
+  WidgetTester tester,
+  Library library, {
+  double width = 390,
+  double scale = 1,
+}) async {
   SharedPreferences.setMockInitialValues({});
-  await tester.binding.setSurfaceSize(const Size(390, 900));
+  await tester.binding.setSurfaceSize(Size(width, 900));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     ProviderScope(
@@ -44,8 +62,14 @@ Future<void> showCollection(WidgetTester tester, Library library) async {
               () => ref.invalidate(cardsCollectionProvider),
         ),
       ],
-      child: const MaterialApp(
-        home: LanguageCategoryPage(
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        ),
+        home: const LanguageCategoryPage(
           category: 'All',
           allCards: true,
           language: 'Chinese',
@@ -57,6 +81,69 @@ Future<void> showCollection(WidgetTester tester, Library library) async {
 }
 
 void main() {
+  testWidgets('unchecked bulk add preserves an existing spoken-only choice', (
+    tester,
+  ) async {
+    final original = card(1, LearningStatus.future);
+    final library = Library([
+      original.copyWith(
+        content: (original.content as LanguageCardContent).copyWith(
+          spokenOnly: true,
+        ),
+      ),
+    ]);
+    await showCollection(tester, library);
+    await tester.tap(find.byKey(const ValueKey('open-backlog')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('spoken-only-1')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('bulk-select')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('select-card-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bulk-move')));
+    await tester.pumpAndSettle();
+    expect(library.cards.single.spokenOnly, isTrue);
+    expect(library.cards.single.learningStatus, LearningStatus.recall);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final (width, scale) in [(390.0, 1.0), (320.0, 1.7), (1024.0, 1.0)]) {
+    testWidgets(
+      'spoken-only bulk selection and list badge at $width / $scale',
+      (tester) async {
+        final library = Library([
+          card(1, LearningStatus.future),
+          card(2, LearningStatus.future),
+        ]);
+        await showCollection(tester, library, width: width, scale: scale);
+        await tester.tap(find.byKey(const ValueKey('open-backlog')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('bulk-select')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('spoken-only-2')), findsNothing);
+        final flag = find.byKey(const ValueKey('bulk-spoken-only'));
+        expect(tester.widget<Checkbox>(flag).value, isFalse);
+        await tester.tap(find.byKey(const ValueKey('select-card-1')));
+        await tester.tap(flag);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('bulk-move')));
+        await tester.pumpAndSettle();
+        expect(library.cards[0].spokenOnly, isTrue);
+        expect(library.cards[0].learningStatus, LearningStatus.recall);
+        expect(library.cards[1].spokenOnly, isFalse);
+        expect(library.cards[1].learningStatus, LearningStatus.future);
+        await tester.tap(find.byKey(const ValueKey('bulk-select')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Checkbox>(flag).value, isFalse);
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('spoken-only-1')), findsOneWidget);
+        expect(find.byTooltip('Spoken only'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'Add selects cards and sends only the selection directly to Current',
     (tester) async {
@@ -78,6 +165,7 @@ void main() {
         (3, LearningStatus.recall),
       ]);
       expect(library.cards[1].learningStatus, LearningStatus.future);
+      expect(library.cards.every((card) => !card.spokenOnly), isTrue);
       expect(tester.takeException(), isNull);
     },
   );
@@ -95,11 +183,20 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('select-card-1')));
     await tester.tap(find.byKey(const ValueKey('select-card-2')));
+    await tester.tap(find.byKey(const ValueKey('bulk-spoken-only')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send to Current'));
     await tester.pumpAndSettle();
     expect(library.changes, [(1, LearningStatus.recall)]);
     expect(find.text('1 selected'), findsOneWidget);
+    expect(library.cards[0].spokenOnly, isTrue);
+    expect(library.cards[1].spokenOnly, isFalse);
+    expect(
+      tester
+          .widget<Checkbox>(find.byKey(const ValueKey('bulk-spoken-only')))
+          .value,
+      isTrue,
+    );
     library.failures.clear();
     await tester.tap(find.text('Send to Current'));
     await tester.pumpAndSettle();
@@ -107,6 +204,7 @@ void main() {
       (1, LearningStatus.recall),
       (2, LearningStatus.recall),
     ]);
+    expect(library.cards.every((card) => card.spokenOnly), isTrue);
     expect(tester.takeException(), isNull);
   });
 }

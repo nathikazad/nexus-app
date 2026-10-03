@@ -1,3 +1,5 @@
+import 'package:nx_cards/scheduling/review_progression.dart';
+import 'package:nx_cards/progress/progress_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +14,7 @@ StudyCard card(
   String language = 'Tamil',
   String type = 'Word',
   Map<String, List<String>> tags = const {},
-  LearningStatus status = LearningStatus.practice,
+  LearningStatus status = LearningStatus.recall,
 }) => StudyCard(
   id: id,
   modelTypeName: type,
@@ -40,6 +42,11 @@ Future<void> showPage(WidgetTester tester, List<StudyCard> cards) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        sourceProgressCardsProvider.overrideWith((ref, source) async => []),
+        reviewProgressionSettingsProvider.overrideWith(
+          (ref) async => const ReviewProgressionSettings(),
+        ),
+
         cardsCollectionProvider.overrideWith(
           (_, _) => Stream.value(CardsDashboard(cards: cards)),
         ),
@@ -161,16 +168,15 @@ void main() {
     ]);
     await tester.tap(find.text('Travel'));
     await tester.pumpAndSettle();
-    expect(find.text('2 cards · 0 current'), findsOneWidget);
-    await tester.tap(find.textContaining('Upcoming  '));
-    await tester.pumpAndSettle();
+    expect(find.text('Travel'), findsOneWidget);
     expect(find.text('item 1'), findsOneWidget);
     expect(find.text('item 3'), findsNothing);
     expect(find.text('item 4'), findsNothing);
     final launcher = tester.widget<StudyLauncher>(find.byType(StudyLauncher));
     expect(launcher.studyCards.map((c) => c.id), [1]);
-    expect(launcher.prompts, isEmpty);
-    await tester.tap(find.text('Backlog  1'));
+    expect(launcher.prompts, isNotEmpty);
+    expect(launcher.prompts.every((prompt) => prompt.cardId == 1), isTrue);
+    await tester.tap(find.byKey(const ValueKey('open-backlog')));
     await tester.pumpAndSettle();
     expect(find.text('item 2'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -198,7 +204,8 @@ void main() {
       ]);
       await tester.tap(find.text('Husband Conversations 1'));
       await tester.pumpAndSettle();
-      expect(find.text('1 cards · 0 current'), findsOneWidget);
+      expect(find.text('item 1'), findsOneWidget);
+      expect(find.text('item 2'), findsNothing);
       expect(
         tester
             .widget<StudyLauncher>(find.byType(StudyLauncher))

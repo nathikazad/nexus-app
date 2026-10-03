@@ -20,6 +20,7 @@ class _CardEditDialogState extends State<CardEditDialog> {
         ? (widget.card.content as LanguageCardContent).transliteration
         : '',
   );
+  late bool _spokenOnly = widget.card.spokenOnly;
   bool _saving = false;
   String? _error;
 
@@ -36,6 +37,7 @@ class _CardEditDialogState extends State<CardEditDialog> {
     final old = widget.card.content;
     final content = old is LanguageCardContent
         ? old.copyWith(
+            spokenOnly: _spokenOnly,
             english: _front.text.trim(),
             originalScript: _back.text.trim(),
             transliteration: _transliteration.text.trim(),
@@ -101,6 +103,18 @@ class _CardEditDialogState extends State<CardEditDialog> {
                 if (widget.card.content is LanguageCardContent) ...[
                   const SizedBox(height: 16),
                   _field('Transliteration', _transliteration),
+                  const SizedBox(height: 16),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Spoken only'),
+                    subtitle: const Text(
+                      'Practice meaning and pronunciation without character recall or writing.',
+                    ),
+                    value: _spokenOnly,
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(() => _spokenOnly = value),
+                  ),
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 16),

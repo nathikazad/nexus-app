@@ -308,6 +308,23 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                                   ),
                                 ),
                               ),
+                              if (widget.card.spokenOnly) ...[
+                                const SizedBox(width: 6),
+                                Tooltip(
+                                  message: 'Spoken only',
+                                  child: Icon(
+                                    Icons.volume_up_rounded,
+                                    key: ValueKey(
+                                      'spoken-only-${widget.card.id}',
+                                    ),
+                                    size: 16,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                    semanticLabel: 'Spoken only',
+                                  ),
+                                ),
+                              ],
                               if (widget.priorityScore case final score?) ...[
                                 const SizedBox(width: 9),
                                 Tooltip(

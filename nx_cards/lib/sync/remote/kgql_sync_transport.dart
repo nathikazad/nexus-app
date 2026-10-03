@@ -40,6 +40,8 @@ final class KgqlCardsSyncTransport
             key: attrReviewHistory,
             value: reviewHistoryJson(card),
           ),
+          if (content is LanguageCardContent)
+            SetModelAttribute(key: attrSpokenOnly, value: content.spokenOnly),
           if (content case final LanguageCardContent languageContent)
             SetModelAttribute(
               key: attrLanguageDetails,
@@ -92,6 +94,8 @@ final class KgqlCardsSyncTransport
           key: attrReviewHistory,
           value: emptyReviewHistoryJson(),
         ),
+        if (content is LanguageCardContent)
+          SetModelAttribute(key: attrSpokenOnly, value: content.spokenOnly),
         if (content case final LanguageCardContent languageContent)
           SetModelAttribute(
             key: attrLanguageDetails,

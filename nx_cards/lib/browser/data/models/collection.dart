@@ -25,7 +25,11 @@ abstract interface class CardLibrary {
 
   Future<void> saveSchedule(StudyCard card);
   Future<void> setSuspended(StudyCard card, bool suspended);
-  Future<void> setLearningStatus(StudyCard card, LearningStatus status);
+  Future<void> setLearningStatus(
+    StudyCard card,
+    LearningStatus status, {
+    bool? spokenOnly,
+  });
   Future<void> deleteCard(int id);
 }
 

@@ -7,6 +7,46 @@ import 'package:nx_cards/browser/browser.dart';
 
 void main() {
   test(
+    'bulk spoken-only activation sends one mutation with both attributes',
+    () async {
+      final requests = <Request>[];
+      final repository = KgqlCardApi(
+        _client((request) {
+          requests.add(request);
+          return const {
+            '__typename': 'Mutation',
+            'setKgqlModels': {
+              '__typename': 'SetKgqlModelsPayload',
+              'json': {'id': 42},
+            },
+          };
+        }),
+      );
+      final card = StudyCard(
+        id: 42,
+        content: const LanguageCardContent(
+          english: 'word',
+          originalScript: '字',
+          transliteration: 'zi',
+        ),
+        schedules: {},
+        reviewHistory: {},
+        suspended: false,
+      );
+      await repository.setLearningStatus(
+        card,
+        LearningStatus.recall,
+        spokenOnly: true,
+      );
+      final data = (requests.single.variables['input'] as Map)['data'] as Map;
+      expect(data['attributes'], [
+        {'key': 'spoken_only', 'value': true},
+        {'key': 'learning_state', 'value': 'recall'},
+      ]);
+    },
+  );
+
+  test(
     'simultaneous dashboard and language reads share one request, then refresh',
     () async {
       final gate = Completer<void>();

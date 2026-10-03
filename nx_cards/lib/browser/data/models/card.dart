@@ -32,6 +32,7 @@ final class LanguageCardContent extends CardContent {
     required String english,
     required String originalScript,
     required this.transliteration,
+    this.spokenOnly = false,
     this.audioUrl,
     this.audioSha256,
     this.audioBytes,
@@ -45,6 +46,7 @@ final class LanguageCardContent extends CardContent {
   String get english => front;
   String get originalScript => back;
 
+  final bool spokenOnly;
   final List<String> similarWordGroups;
   final String transliteration;
   final String? audioUrl;
@@ -53,6 +55,7 @@ final class LanguageCardContent extends CardContent {
   final List<LanguageExample> _examples;
 
   LanguageCardContent copyWith({
+    bool? spokenOnly,
     List<String>? similarWordGroups,
     String? english,
     String? originalScript,
@@ -61,6 +64,7 @@ final class LanguageCardContent extends CardContent {
     String? audioSha256,
     int? audioBytes,
   }) => LanguageCardContent(
+    spokenOnly: spokenOnly ?? this.spokenOnly,
     english: english ?? this.english,
     originalScript: originalScript ?? this.originalScript,
     transliteration: transliteration ?? this.transliteration,

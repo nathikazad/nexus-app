@@ -106,7 +106,12 @@ void main() {
 
     expect(json['name'], languageCardModelType);
     expect(json['parent'], {'link': cardModelType});
-    expect(definitions, hasLength(1));
+    expect(definitions, hasLength(2));
+    final spoken = definitions.singleWhere(
+      (row) => row['key'] == attrSpokenOnly,
+    );
+    expect(spoken['value_type'], 'boolean');
+    expect(spoken['constraints'], {'default': false});
     expect(
       definitions.singleWhere((row) => row['key'] == attrLanguageDetails),
       {

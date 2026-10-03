@@ -29,6 +29,7 @@ class RecallScore {
 final _scoreCache = Expando<Map<StudyCue, RecallScore>>('recall scores');
 
 RecallScore recallScore(StudyCard card, StudyCue cue) {
+  if (!card.studiesCue(cue)) return const RecallScore(recalled: 0, attempts: 0);
   final scores = _scoreCache[card] ??= {};
   final cached = scores[cue];
   if (cached != null) return cached;

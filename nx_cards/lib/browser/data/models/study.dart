@@ -34,7 +34,9 @@ class StudyPrompt {
   int get cardId => card.id;
   String get prompt => switch (cue) {
     StudyCue.fromLanguage =>
-      showEnglishAndTransliteration && card.content is LanguageCardContent
+      showEnglishAndTransliteration &&
+              !card.spokenOnly &&
+              card.content is LanguageCardContent
           ? '${card.front}\n${(card.content as LanguageCardContent).transliteration}'
           : card.front,
     StudyCue.toLanguage => card.back,

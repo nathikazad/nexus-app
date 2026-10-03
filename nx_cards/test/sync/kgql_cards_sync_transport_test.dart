@@ -31,6 +31,7 @@ void main() {
                     'model_type_id': 3,
                     'model_type': {'id': 3, 'name': 'Word'},
                     'attributes': {
+                      'spoken_only': true,
                       'card_details': {'front': 'day', 'back': '日'},
                       'language_details': {'transliteration': 'rì'},
                     },
@@ -79,6 +80,7 @@ void main() {
       );
       expect(captured!.variables['itemIds'], [11]);
       final card = bundle.cards.single.card;
+      expect(card.spokenOnly, isTrue);
       expect(card.sourceBookId, 50);
       expect(card.tags['Category'], ['Noun']);
       final example = (card.content as LanguageCardContent).examples.single;
@@ -114,7 +116,11 @@ void main() {
     );
 
     final result = await transport.mutateCard(
-      _card(),
+      _card().copyWith(
+        content: (_card().content as LanguageCardContent).copyWith(
+          spokenOnly: true,
+        ),
+      ),
       clientUpdatedAt: DateTime.utc(2026, 8, 4, 12),
     );
 
@@ -124,6 +130,10 @@ void main() {
     );
     final data = captured!.variables['data'] as Map<String, dynamic>;
     final attributes = data['attributes'] as List<dynamic>;
+    expect(
+      attributes.singleWhere((a) => a['key'] == 'spoken_only')['value'],
+      isTrue,
+    );
     final schedule = attributes.cast<Map<String, dynamic>>().singleWhere(
       (value) => value['key'] == 'schedule',
     );

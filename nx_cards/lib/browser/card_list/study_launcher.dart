@@ -260,7 +260,7 @@ class LibraryActions extends StatelessWidget {
                   if (selecting || constraints.maxWidth < 440)
                     Expanded(child: actions[i])
                   else
-                    actions[i],
+                    Flexible(child: actions[i]),
                 ],
               ],
             ),

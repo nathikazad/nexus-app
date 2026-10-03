@@ -238,7 +238,9 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                         Expanded(
                                           child:
                                               _interaction ==
-                                                  RecallInteraction.writing
+                                                      RecallInteraction
+                                                          .writing &&
+                                                  !_card.spokenOnly
                                               ? LayoutBuilder(
                                                   builder:
                                                       (
@@ -300,9 +302,13 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                   _revealed &&
                                                                           _card.content
                                                                               is LanguageCardContent
-                                                                      ? (_card.content
-                                                                                as LanguageCardContent)
-                                                                            .originalScript
+                                                                      ? (_card.spokenOnly
+                                                                            ? (_prompt.isListening
+                                                                                  ? _card.front
+                                                                                  : (_card.content
+                                                                                            as LanguageCardContent)
+                                                                                        .transliteration)
+                                                                            : _card.back)
                                                                       : _prompt
                                                                             .prompt,
                                                                   textAlign:
@@ -408,24 +414,33 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                   :final english,
                                                                   :final transliteration,
                                                                 )) ...[
-                                                              Text(
-                                                                english,
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                style: const TextStyle(
-                                                                  fontSize: 21,
-                                                                  height: 1.45,
-                                                                  color:
-                                                                      RecallColors
-                                                                          .ink,
+                                                              if (!_card
+                                                                      .spokenOnly ||
+                                                                  !_prompt
+                                                                      .isListening)
+                                                                Text(
+                                                                  english,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: const TextStyle(
+                                                                    fontSize:
+                                                                        21,
+                                                                    height:
+                                                                        1.45,
+                                                                    color:
+                                                                        RecallColors
+                                                                            .ink,
+                                                                  ),
                                                                 ),
-                                                              ),
                                                               const SizedBox(
                                                                 height: 8,
                                                               ),
-                                                              if (transliteration
-                                                                  .isNotEmpty) ...[
+                                                              if ((!_card.spokenOnly ||
+                                                                      _prompt
+                                                                          .isListening) &&
+                                                                  transliteration
+                                                                      .isNotEmpty) ...[
                                                                 const SizedBox(
                                                                   height: 10,
                                                                 ),

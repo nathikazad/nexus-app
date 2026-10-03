@@ -143,7 +143,8 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
   }
 
   Future<void> _startNativeIfAvailable() async {
-    if (_summary ||
+    if (_questions.any((p) => p.card.spokenOnly) ||
+        _summary ||
         widget.format == GroupedRecallFormat.fast ||
         !_sameSession) {
       return;
@@ -347,7 +348,9 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                 Card(
                   child: Padding(
                     padding: EdgeInsets.all(fast ? 18 : 28),
-                    child: widget.format != GroupedRecallFormat.fast
+                    child:
+                        widget.format != GroupedRecallFormat.fast &&
+                            !prompt.card.spokenOnly
                         ? SizedBox(
                             height: max(420, constraints.maxHeight - 160),
                             child: WritingRecallCard(
@@ -378,7 +381,9 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                                     ),
                                   if (_revealed) ...[
                                     Text(
-                                      content.originalScript,
+                                      content.spokenOnly
+                                          ? content.transliteration
+                                          : content.originalScript,
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: fast ? 28 : 40,
@@ -391,11 +396,12 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                                       style: const TextStyle(fontSize: 20),
                                     ),
                                     const SizedBox(height: 8),
-                                    Text(
-                                      content.transliteration,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 20),
-                                    ),
+                                    if (!content.spokenOnly)
+                                      Text(
+                                        content.transliteration,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
                                   ],
                                   if ((prompt.isListening || _revealed) &&
                                       content.audioUrl?.isNotEmpty == true &&

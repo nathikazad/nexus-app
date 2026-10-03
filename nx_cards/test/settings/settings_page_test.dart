@@ -17,6 +17,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          cardsSourcesProvider.overrideWith((ref) => Stream.value([])),
           authProvider.overrideWith(
             () => AuthController(initialDelay: Duration.zero),
           ),
@@ -53,6 +54,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          cardsSourcesProvider.overrideWith((ref) => Stream.value([])),
           authProvider.overrideWith(
             () => AuthController(initialDelay: Duration.zero),
           ),
@@ -84,6 +86,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          cardsSourcesProvider.overrideWith((ref) => Stream.value([])),
           authProvider.overrideWith(
             () => AuthController(initialDelay: Duration.zero),
           ),

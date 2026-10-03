@@ -28,6 +28,7 @@ const attrSchedule = 'schedule';
 const attrReviewHistory = 'review_history';
 const attrCardDetails = 'card_details';
 const attrLanguageDetails = 'language_details';
+const attrSpokenOnly = 'spoken_only';
 const attrSimilarWordGroups = 'similar_word_groups';
 const attrLearningState = 'learning_state';
 
@@ -421,6 +422,12 @@ SetModelTypeRequest buildLanguageCardSchemaRequest() {
         'A language-learning flashcard with structured language details and optional reinforcement examples.',
     parent: ParentLink.fromName(cardModelType),
     attributeDefinitions: [
+      AttributeDefinition(
+        key: attrSpokenOnly,
+        valueType: 'boolean',
+        required: false,
+        constraints: const {'default': false},
+      ),
       AttributeDefinition(
         key: attrLanguageDetails,
         valueType: 'json',

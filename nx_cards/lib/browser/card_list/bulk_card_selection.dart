@@ -9,6 +9,14 @@ class BulkCardSelection extends ChangeNotifier {
   bool practiceOnly = false;
   bool selecting = false;
   bool busy = false;
+  bool spokenOnly = false;
+
+  void setSpokenOnly(bool value) {
+    if (busy) return;
+    spokenOnly = value;
+    notifyListeners();
+  }
+
   final selected = <int>{};
   LearningStatus get source => practiceOnly
       ? LearningStatus.recall
@@ -23,12 +31,16 @@ class BulkCardSelection extends ChangeNotifier {
     tab = value;
     selecting = false;
     selected.clear();
+    spokenOnly = false;
     notifyListeners();
   }
 
   void setBusy(bool value) {
     busy = value;
-    if (!busy && selected.isEmpty) selecting = false;
+    if (!busy && selected.isEmpty) {
+      selecting = false;
+      spokenOnly = false;
+    }
     notifyListeners();
   }
 
@@ -36,6 +48,7 @@ class BulkCardSelection extends ChangeNotifier {
     if (busy) return;
     selecting = !selecting;
     selected.clear();
+    spokenOnly = false;
     notifyListeners();
   }
 
@@ -122,7 +135,14 @@ class _BulkCardSelectionScopeState
       // Never continue a batch into a replacement account/domain session.
       if (!identical(library, ref.read(cardLibraryProvider))) break;
       try {
-        await library.setLearningStatus(card, destination);
+        await library.setLearningStatus(
+          card,
+          destination,
+          spokenOnly:
+              widget.backlogOnly && selection.spokenOnly && card.isLanguageCard
+              ? true
+              : null,
+        );
         moved++;
         selection.selected.remove(card.id);
       } catch (_) {
@@ -163,6 +183,7 @@ class _BulkCardSelectionScopeState
     child: AnimatedBuilder(
       animation: selection,
       builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             child: AbsorbPointer(
@@ -178,52 +199,101 @@ class _BulkCardSelectionScopeState
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
+                    horizontal: 16,
                     vertical: 12,
                   ),
-                  child: Row(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
-                      Expanded(
-                        child: Text('${selection.selected.length} selected'),
+                      Text(
+                        '${selection.selected.length} selected',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      if (widget.practiceActionBuilder != null)
-                        widget.practiceActionBuilder!(
-                          widget.cards
-                              .where(
-                                (card) => selection.selected.contains(card.id),
-                              )
-                              .toList(),
-                        )
-                      else
-                        FilledButton.icon(
-                          key: const ValueKey('bulk-move'),
-                          onPressed:
-                              selection.busy || selection.selected.isEmpty
-                              ? null
-                              : _move,
-                          icon: selection.busy
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (widget.backlogOnly &&
+                              widget.cards.any((card) => card.isLanguageCard))
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Checkbox(
+                                  key: const ValueKey('bulk-spoken-only'),
+                                  value: selection.spokenOnly,
+                                  onChanged: selection.busy
+                                      ? null
+                                      : (value) => selection.setSpokenOnly(
+                                          value ?? false,
+                                        ),
+                                ),
+                                Flexible(
+                                  child: GestureDetector(
+                                    onTap: selection.busy
+                                        ? null
+                                        : () => selection.setSpokenOnly(
+                                            !selection.spokenOnly,
+                                          ),
+                                    child: Text(
+                                      'Spoken only',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
+                                    ),
                                   ),
-                                )
-                              : const Icon(Icons.arrow_forward),
-                          label: Text('Send to ${selection.destination.label}'),
-                        ),
-                      if (widget.practiceActionBuilder != null) ...[
-                        const SizedBox(width: 8),
-                        TextButton.icon(
-                          key: const ValueKey('cancel-practice-selection'),
-                          style: TextButton.styleFrom(
-                            fixedSize: const Size(112, 48),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          onPressed: selection.toggleMode,
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('Cancel'),
-                        ),
-                      ],
+                                ),
+                              ],
+                            ),
+                          if (widget.practiceActionBuilder != null)
+                            widget.practiceActionBuilder!(
+                              widget.cards
+                                  .where(
+                                    (card) =>
+                                        selection.selected.contains(card.id),
+                                  )
+                                  .toList(),
+                            )
+                          else
+                            FilledButton.icon(
+                              key: const ValueKey('bulk-move'),
+                              onPressed:
+                                  selection.busy || selection.selected.isEmpty
+                                  ? null
+                                  : _move,
+                              icon: selection.busy
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.arrow_forward),
+                              label: Text(
+                                'Send to ${selection.destination.label}',
+                              ),
+                            ),
+                          if (widget.practiceActionBuilder != null) ...[
+                            const SizedBox(width: 8),
+                            TextButton.icon(
+                              key: const ValueKey('cancel-practice-selection'),
+                              style: TextButton.styleFrom(
+                                fixedSize: const Size(112, 48),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              onPressed: selection.toggleMode,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancel'),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 ),

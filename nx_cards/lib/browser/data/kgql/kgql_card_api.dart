@@ -24,6 +24,7 @@ const baseCardStruct = <String, dynamic>{
 const languageCardStruct = <String, dynamic>{
   ...baseCardStruct,
   attrLanguageDetails: true,
+  attrSpokenOnly: true,
   attrSimilarWordGroups: true,
   'relations': {
     'relation_id': true,
@@ -154,6 +155,8 @@ class KgqlCardApi implements CardLibrary {
             key: attrReviewHistory,
             value: emptyReviewHistoryJson(),
           ),
+          if (content is LanguageCardContent)
+            SetModelAttribute(key: attrSpokenOnly, value: content.spokenOnly),
           if (content case final LanguageCardContent languageContent)
             SetModelAttribute(
               key: attrLanguageDetails,
@@ -186,6 +189,8 @@ class KgqlCardApi implements CardLibrary {
             key: attrCardDetails,
             value: cardDetailsJson(content),
           ),
+          if (content is LanguageCardContent)
+            SetModelAttribute(key: attrSpokenOnly, value: content.spokenOnly),
           if (content case final LanguageCardContent languageContent)
             SetModelAttribute(
               key: attrLanguageDetails,
@@ -236,12 +241,18 @@ class KgqlCardApi implements CardLibrary {
   }
 
   @override
-  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
+  Future<void> setLearningStatus(
+    StudyCard card,
+    LearningStatus status, {
+    bool? spokenOnly,
+  }) async {
     await setKgqlModel(
       _client,
       SetModelRequest(
         id: card.id,
         attributes: [
+          if (card.isLanguageCard && spokenOnly != null)
+            SetModelAttribute(key: attrSpokenOnly, value: spokenOnly),
           SetModelAttribute(key: attrLearningState, value: status.storageValue),
         ],
       ),

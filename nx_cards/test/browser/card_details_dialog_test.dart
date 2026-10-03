@@ -500,7 +500,11 @@ final class _StatusLibrary implements CardLibrary {
   Completer<void>? pending;
 
   @override
-  Future<void> setLearningStatus(StudyCard card, LearningStatus status) async {
+  Future<void> setLearningStatus(
+    StudyCard card,
+    LearningStatus status, {
+    bool? spokenOnly,
+  }) async {
     if (pending case final operation?) await operation.future;
     savedCard = card;
     savedStatus = status;

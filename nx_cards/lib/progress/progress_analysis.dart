@@ -123,18 +123,24 @@ ProgressAnalysis analyzeProgress({
       final window = history.putIfAbsent((id, event.cue), () => []);
       window.add(event.review);
       if (window.length > 10) window.removeAt(0);
-      final average =
-          directions
-              .map((cue) {
-                final reviews = history[(id, cue)] ?? const <CardReview>[];
-                return RecallScore(
-                  recalled: reviews.where((r) => r.rating >= 3).length,
-                  attempts: reviews.length,
-                ).fraction;
-              })
-              .reduce((a, b) => a + b) /
-          directions.length;
-      if (average * 100 + 1e-9 >= targetPercent) {
+      final effectiveDirections = directions
+          .where(event.card.studiesCue)
+          .toList();
+      final average = effectiveDirections.isEmpty
+          ? 0.0
+          : effectiveDirections
+                    .map((cue) {
+                      final reviews =
+                          history[(id, cue)] ?? const <CardReview>[];
+                      return RecallScore(
+                        recalled: reviews.where((r) => r.rating >= 3).length,
+                        attempts: reviews.length,
+                      ).fraction;
+                    })
+                    .reduce((a, b) => a + b) /
+                effectiveDirections.length;
+      if (effectiveDirections.isNotEmpty &&
+          average * 100 + 1e-9 >= targetPercent) {
         atTarget.add(id);
         reached.putIfAbsent(
           id,

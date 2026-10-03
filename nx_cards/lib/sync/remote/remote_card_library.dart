@@ -35,8 +35,11 @@ final class RemoteCardLibrary implements CardWorkspace {
   Future<void> setSuspended(StudyCard card, bool suspended) =>
       _repository.setSuspended(card, suspended);
   @override
-  Future<void> setLearningStatus(StudyCard card, LearningStatus status) =>
-      _repository.setLearningStatus(card, status);
+  Future<void> setLearningStatus(
+    StudyCard card,
+    LearningStatus status, {
+    bool? spokenOnly,
+  }) => _repository.setLearningStatus(card, status, spokenOnly: spokenOnly);
   @override
   Future<void> deleteCard(int id) => _repository.deleteCard(id);
   @override

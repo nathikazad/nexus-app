@@ -66,6 +66,47 @@ Future<void> answerWord(WidgetTester tester, {bool correct = true}) async {
 }
 
 void main() {
+  testWidgets(
+    'mixed writing group skips the spoken card canvas and grades only its oral cue',
+    (tester) async {
+      final original = soundCard(1, 'a');
+      final spoken = original.copyWith(
+        content: (original.content as LanguageCardContent).copyWith(
+          spokenOnly: true,
+        ),
+      );
+      final written = soundCard(2, 'b');
+      final library = RecordingLibrary();
+      await showGroups(
+        tester,
+        library,
+        [
+          SimilarRecallGroup(
+            prompts: [
+              StudyPrompt(card: spoken, cue: StudyCue.fromLanguage),
+              StudyPrompt(card: written, cue: StudyCue.fromLanguage),
+            ],
+            comparisonCards: [spoken, written],
+          ),
+        ],
+        GroupedRecallFormat.values.firstWhere(
+          (v) => v != GroupedRecallFormat.fast,
+        ),
+      );
+      expect(find.byKey(const ValueKey('script-drawing-canvas')), findsNothing);
+      await answerWord(tester);
+      expect(library.saved.single.spokenOnly, isTrue);
+      expect(
+        library.saved.single.reviewHistoryFor(StudyCue.toLanguage),
+        isEmpty,
+      );
+      expect(
+        find.byKey(const ValueKey('script-drawing-canvas')),
+        findsOneWidget,
+      );
+    },
+  );
+
   for (final format in GroupedRecallFormat.values) {
     testWidgets(
       '${format.name} grades each word immediately; comparison writes nothing',
