@@ -52,10 +52,10 @@ void prioritizeRecallPrompts(
   prompts.shuffle(random ?? Random.secure());
   final order = {for (var i = 0; i < prompts.length; i++) prompts[i]: i};
   prompts.sort((a, b) {
-    final score = recallScore(
-      a.card,
-      a.cue,
-    ).fraction.compareTo(recallScore(b.card, b.cue).fraction);
+    double weakest(StudyPrompt p) => p.testedCues
+        .map((cue) => recallScore(p.card, cue).fraction)
+        .reduce(min);
+    final score = weakest(a).compareTo(weakest(b));
     return score != 0 ? score : order[a]!.compareTo(order[b]!);
   });
 }

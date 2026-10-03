@@ -14,8 +14,11 @@ Study delegates review timing to `scheduling/` and voice delivery to `tutor/`.
 
 A language card has six independent directed histories and FSRS schedules:
 Meaning → Sound, Meaning → Script, Sound → Meaning, Sound → Script,
-Script → Meaning and Script → Sound. A question presents one source and asks
-for one target. Yes/No updates only that direction. Book cards retain generic
+Script → Meaning and Script → Sound. Eligible directions sharing a card and source are combined into one question.
+Yes/No updates every tested direction with its own FSRS calculation, in one
+card save. Untested directions stay unchanged. Writing off removes script
+targets; spoken-only also removes script prompts. Filters and due dates apply
+before grouping, and the weakest included direction sets question priority. Book cards retain generic
 Front → Back and optional Back → Front schedules.
 
 The recall setup's **Recall for** choices are Meaning, Sound and Script.

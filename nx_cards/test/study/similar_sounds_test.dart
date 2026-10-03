@@ -189,16 +189,16 @@ void main() {
         groupLimit: 12,
         random: Random(1),
       );
-      expect(groups, hasLength(12));
+      expect(groups, hasLength(6));
       for (final group in groups) {
         expect(group.prompts.map((p) => p.cue).toSet(), hasLength(1));
       }
       final full = groups.where((g) => g.label == 'a-write');
-      expect(full, hasLength(6));
+      expect(full, hasLength(3));
       expect(
         full
             .expand((g) => g.prompts)
-            .map((p) => '${p.cardId}:${p.cue.name}')
+            .expand((p) => p.testedCues.map((cue) => '${p.cardId}:${cue.name}'))
             .toSet(),
         {
           for (final id in [1, 2])

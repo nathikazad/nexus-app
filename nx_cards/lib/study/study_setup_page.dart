@@ -286,23 +286,21 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return _recallBaseCandidates;
   }
 
-  List<StudyPrompt> get _recallBaseCandidates =>
-      retentionPrompts(
-            _studyCards,
-            _directions,
+  List<StudyPrompt> get _recallBaseCandidates => combineRecallPrompts(
+    retentionPrompts(
+      _studyCards,
+      _directions,
 
-            writing: _writing,
-            minimum:
-                (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
-            maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
-            weakOnly: !_dueOnly && _weakOnly,
-          )
-          .where(
-            (prompt) =>
-                (!_dueOnly || prompt.schedule.isDueAt(DateTime.now())) &&
-                (_mode != StudyMode.ai || !prompt.cue.involvesScript),
-          )
-          .toList();
+      writing: _writing,
+      minimum: (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
+      maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
+      weakOnly: !_dueOnly && _weakOnly,
+    ).where(
+      (prompt) =>
+          (!_dueOnly || prompt.schedule.isDueAt(DateTime.now())) &&
+          (_mode != StudyMode.ai || !prompt.cue.involvesScript),
+    ),
+  );
 
   bool _matchesRecallBaseFilters(StudyCard card, [StudyCue? cue]) {
     if (_mode == StudyMode.study) return true;
@@ -885,31 +883,32 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       final cardsById = <int, StudyCard>{
         for (final card in dashboard.cards) card.id: card,
       };
-      final selected =
-          <StudyPrompt>[
-                for (final queued in _candidates)
-                  if (cardsById[queued.cardId] case final latestCard?
+      final selected = combineRecallPrompts(
+        <StudyPrompt>[
+              for (final combined in _candidates)
+                for (final cue in combined.testedCues)
+                  if (cardsById[combined.cardId] case final latestCard?
                       when !latestCard.suspended &&
+                          latestCard.supportsCue(cue) &&
+                          (_writing || cue.target != RecallComponent.script) &&
                           (!_usesRecallFilters ||
-                              _matchesRecallBaseFilters(
-                                latestCard,
-                                queued.cue,
-                              )) &&
-                          latestCard.scheduleFor(queued.cue).enabled &&
+                              _matchesRecallBaseFilters(latestCard, cue)) &&
+                          latestCard.scheduleFor(cue).enabled &&
                           (!_dueOnly ||
                               latestCard
-                                  .scheduleFor(queued.cue)
+                                  .scheduleFor(cue)
                                   .isDueAt(DateTime.now())))
-                    StudyPrompt(card: latestCard, cue: queued.cue),
-              ]
-              .where(
-                (prompt) =>
-                    _isBookStudy ||
-                    _usesRecallFilters ||
-                    prompt.isNew ||
-                    prompt.isDueAt(DateTime.now().toUtc()),
-              )
-              .toList();
+                    StudyPrompt(card: latestCard, cue: cue),
+            ]
+            .where(
+              (prompt) =>
+                  _isBookStudy ||
+                  _usesRecallFilters ||
+                  prompt.isNew ||
+                  prompt.isDueAt(DateTime.now().toUtc()),
+            )
+            .toList(),
+      );
 
       if (selected.isEmpty) {
         if (mounted) {
@@ -951,6 +950,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           StudyPrompt(
             card: bodies[i],
             cue: chosen[i].cue,
+            additionalCues: chosen[i].additionalCues,
             showEnglishAndTransliteration: _combinedPrompt,
           ),
       ];

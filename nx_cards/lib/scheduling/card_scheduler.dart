@@ -26,14 +26,35 @@ class FsrsCardScheduler implements CardScheduler {
 
   @override
   Map<CardRating, ScheduledOutcome> preview(StudyPrompt prompt, DateTime now) {
-    if (!prompt.card.studiesCue(prompt.cue) || !prompt.schedule.enabled) {
-      throw StateError('This review direction is not enabled for this card.');
+    for (final cue in prompt.testedCues) {
+      if (cue.source != prompt.cue.source ||
+          !prompt.card.studiesCue(cue) ||
+          !prompt.card.scheduleFor(cue).enabled) {
+        throw StateError('This review direction is not enabled for this card.');
+      }
     }
     final reviewedAt = now.toUtc();
     return {
       for (final rating in CardRating.values)
-        rating: _schedule(prompt, rating, reviewedAt),
+        rating: _scheduleCombined(prompt, rating, reviewedAt),
     };
+  }
+
+  ScheduledOutcome _scheduleCombined(
+    StudyPrompt prompt,
+    CardRating rating,
+    DateTime now,
+  ) {
+    var card = prompt.card;
+    Duration? earliest;
+    for (final cue in prompt.testedCues) {
+      final outcome = _schedule(StudyPrompt(card: card, cue: cue), rating, now);
+      card = outcome.card;
+      if (earliest == null || outcome.interval < earliest) {
+        earliest = outcome.interval;
+      }
+    }
+    return ScheduledOutcome(card: card, interval: earliest!);
   }
 
   ScheduledOutcome _schedule(

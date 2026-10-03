@@ -72,14 +72,17 @@ List<SimilarRecallGroup> manualRecallSession(
   final sessions = <SimilarRecallGroup>[];
   for (final group in groups) {
     if (!group.label.endsWith(sound ? '-sound' : '-write')) continue;
-    for (final cue in StudyCue.languageDirections.where(cues.contains)) {
-      final prompts = [
-        for (final card in group.cards)
-          if (card.supportsCue(cue) &&
-              card.scheduleFor(cue).enabled &&
-              (writing || cue.target != RecallComponent.script))
-            StudyPrompt(card: card, cue: cue),
-      ];
+    for (final source in RecallComponent.values) {
+      final prompts = combineRecallPrompts([
+        for (final cue in StudyCue.languageDirections.where(
+          (cue) => cues.contains(cue) && cue.source == source,
+        ))
+          for (final card in group.cards)
+            if (card.supportsCue(cue) &&
+                card.scheduleFor(cue).enabled &&
+                (writing || cue.target != RecallComponent.script))
+              StudyPrompt(card: card, cue: cue),
+      ]);
       if (prompts.isEmpty) continue;
       prompts.shuffle(random);
       sessions.add(
@@ -95,7 +98,11 @@ List<SimilarRecallGroup> manualRecallSession(
   double score(SimilarRecallGroup g) =>
       g.prompts.fold<double>(
         0,
-        (sum, p) => sum + recallScore(p.card, p.cue).fraction,
+        (sum, p) =>
+            sum +
+            p.testedCues
+                .map((cue) => recallScore(p.card, cue).fraction)
+                .reduce(min),
       ) /
       g.prompts.length;
   sessions.shuffle(random);

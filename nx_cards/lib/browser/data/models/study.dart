@@ -104,12 +104,16 @@ class StudyPrompt {
     required this.card,
     required this.cue,
     this.showEnglishAndTransliteration = false,
+    this.additionalCues = const {},
   });
   final StudyCard card;
   final StudyCue cue;
+  final Set<StudyCue> additionalCues;
+  Set<StudyCue> get testedCues => {cue, ...additionalCues};
   final bool showEnglishAndTransliteration;
   bool get isListening => cue.isListening;
-  bool get recallsTarget => cue.target == RecallComponent.script;
+  bool get recallsTarget =>
+      testedCues.any((c) => c.target == RecallComponent.script);
   int get cardId => card.id;
   String get prompt => switch (cue.source) {
     RecallComponent.meaning => card.front,
@@ -124,12 +128,14 @@ class StudyPrompt {
       (card.content as LanguageCardContent).transliteration,
     null => cue == StudyCue.frontToBack ? card.back : card.front,
   };
-  String get instruction => switch (cue.target) {
-    RecallComponent.meaning => 'Recall the meaning',
-    RecallComponent.sound => 'Say the pronunciation',
-    RecallComponent.script => 'Recall the script · writing is optional',
-    null => 'Recall the answer',
-  };
+  String get instruction => testedCues.length > 1
+      ? 'Recall ${testedCues.map((c) => c.target!.label.toLowerCase()).join(' and ')}'
+      : switch (cue.target) {
+          RecallComponent.meaning => 'Recall the meaning',
+          RecallComponent.sound => 'Say the pronunciation',
+          RecallComponent.script => 'Recall the script · writing is optional',
+          null => 'Recall the answer',
+        };
   CardSchedule get schedule => card.scheduleFor(cue);
   List<CardReview> get reviewHistory => card.reviewHistoryFor(cue);
   bool get isNew => schedule.isNew;
@@ -137,6 +143,25 @@ class StudyPrompt {
   StudyPrompt withCard(StudyCard value) => StudyPrompt(
     card: value,
     cue: cue,
+    additionalCues: additionalCues,
     showEnglishAndTransliteration: showEnglishAndTransliteration,
   );
+}
+
+/// Combine only eligible directions already selected, never add hidden tests.
+List<StudyPrompt> combineRecallPrompts(Iterable<StudyPrompt> prompts) {
+  final groups = <(int, Object), StudyPrompt>{};
+  for (final prompt in prompts) {
+    final key = (prompt.cardId, prompt.cue.source ?? prompt.cue);
+    final previous = groups[key];
+    final cues = {...?previous?.testedCues, ...prompt.testedCues};
+    final first = previous ?? prompt;
+    groups[key] = StudyPrompt(
+      card: first.card,
+      cue: first.cue,
+      additionalCues: Set.unmodifiable(cues..remove(first.cue)),
+      showEnglishAndTransliteration: first.showEnglishAndTransliteration,
+    );
+  }
+  return groups.values.toList();
 }
