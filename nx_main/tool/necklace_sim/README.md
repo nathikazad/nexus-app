@@ -123,7 +123,7 @@ configuration stores paths, not secrets.
 From the necklace-simulator workspace root:
 
 ```sh
-servers/docker/necklace-test/test.sh software
+devices/necklace/firmware/shared/tests/end_to_end/test.sh software
 ```
 
 This runs software unit tests before firmware scenarios and a real local-server
