@@ -32,16 +32,13 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.byTooltip('Recall direction: English → Chinese'));
+    await tester.tap(find.byTooltip('Recall direction: Meaning'));
     await tester.pumpAndSettle();
-    expect(find.text('EN → 中'), findsNWidgets(2));
-    expect(find.text('中 → EN'), findsOneWidget);
+    expect(find.text('Meaning'), findsNWidgets(2));
+    expect(find.text('Script'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('recall-direction-from_audio')));
     await tester.pumpAndSettle();
-    expect(
-      find.byTooltip('Recall direction: Chinese audio → Chinese'),
-      findsOneWidget,
-    );
+    expect(find.byTooltip('Recall direction: Sound'), findsOneWidget);
     expect(find.byIcon(Icons.volume_up_outlined), findsOneWidget);
     final container = ProviderScope.containerOf(
       tester.element(find.byType(LanguageDirectionButton)),

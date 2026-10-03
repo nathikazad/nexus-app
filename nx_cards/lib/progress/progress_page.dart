@@ -252,12 +252,7 @@ class _ProgressViewState extends State<ProgressView> {
       : group!.tagSystem == 'Collection'
       ? 'Collection · ${group!.name}'
       : (group!.path ?? [group!.name]).join(' › ');
-  String directionLabel(StudyCue? cue) => switch (cue) {
-    null => 'All three',
-    StudyCue.fromLanguage => 'English → ${widget.language}',
-    StudyCue.fromAudio => '${widget.language} audio → ${widget.language}',
-    _ => '${widget.language} text → English',
-  };
+  String directionLabel(StudyCue? cue) => cue?.label ?? 'All three';
   String get periodLabel => switch (period) {
     '7' => 'Last 7 days',
     '30' => 'Last 30 days',

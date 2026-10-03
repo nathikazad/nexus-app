@@ -12,6 +12,13 @@ enum StudyCue {
 
   final String storageKey;
 
+  String get label => switch (this) {
+    fromLanguage => 'Meaning',
+    fromAudio => 'Sound',
+    toLanguage => 'Script',
+    transliteration => 'Transliteration',
+  };
+
   /// Transliteration remains decodable for archived history only.
   static const activeDirections = [fromLanguage, fromAudio, toLanguage];
 }

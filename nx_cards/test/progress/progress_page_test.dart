@@ -340,7 +340,7 @@ void main() {
       expect(find.text('Chinese · Progress'), findsOneWidget);
       expect(find.text('Script › Basics'), findsOneWidget);
       expect(find.text('At least 90%'), findsOneWidget);
-      expect(find.text('English → Chinese'), findsOneWidget);
+      expect(find.text('Meaning'), findsOneWidget);
       expect(find.text('Last 7 days'), findsOneWidget);
 
       expect(tester.takeException(), isNull);

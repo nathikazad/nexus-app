@@ -538,21 +538,42 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       }
     }
     if (!mounted) return;
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => StudySessionPage(
-          studyScope: widget.studyScope,
-          title: widget.title,
-          prompts: prompts,
-          interaction:
-              _allowsWriting &&
-                  _effectiveRecallPresentation == RecallPresentation.standard
-              ? RecallInteraction.writing
-              : RecallInteraction.standard,
+    setState(() => _starting = true);
+    try {
+      // Native sessions load bodies lazily. Any Flutter fallback needs the full
+      // histories before previewing grades, otherwise saving would lose them.
+      final cards = await hydrateStudyQueue(
+        prompts.map((prompt) => prompt.card).toList(),
+        (card) => hydrateStudyCard(ref, card),
+      );
+      if (!mounted) return;
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => StudySessionPage(
+            studyScope: widget.studyScope,
+            title: widget.title,
+            prompts: [
+              for (var i = 0; i < prompts.length; i++)
+                prompts[i].withCard(cards[i]),
+            ],
+            interaction:
+                _allowsWriting &&
+                    _effectiveRecallPresentation == RecallPresentation.standard
+                ? RecallInteraction.writing
+                : RecallInteraction.standard,
+          ),
         ),
-      ),
-    );
-    await _refreshSetup();
+      );
+      await _refreshSetup();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start recall: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
   }
 
   Future<bool> _openNativeDrawing({

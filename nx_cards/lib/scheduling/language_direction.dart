@@ -35,27 +35,16 @@ class LanguageDirectionButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cue = ref.watch(languageDirectionProvider(language));
-    String label(StudyCue value) => switch (value) {
-      StudyCue.fromLanguage => 'English → $language',
-      StudyCue.fromAudio => '$language audio → $language',
-      _ => '$language text → English',
-    };
-    Widget compactLabel(StudyCue value) => Semantics(
-      label: label(value),
-      excludeSemantics: true,
-      child: value == StudyCue.fromAudio
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.volume_up_outlined, size: 20),
-                Text(' → ${compactLanguageLabel(language)}'),
-              ],
-            )
-          : Text(
-              value == StudyCue.fromLanguage
-                  ? 'EN → ${compactLanguageLabel(language)}'
-                  : '${compactLanguageLabel(language)} → EN',
-            ),
+    String label(StudyCue value) => value.label;
+    Widget compactLabel(StudyCue value) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (value == StudyCue.fromAudio) ...[
+          const Icon(Icons.volume_up_outlined, size: 18),
+          const SizedBox(width: 6),
+        ],
+        Text(value.label),
+      ],
     );
     return PopupMenuButton<StudyCue>(
       tooltip: 'Recall direction: ${label(cue)}',
@@ -122,34 +111,14 @@ class DirectionChoices extends StatelessWidget {
                 const Icon(Icons.volume_up_outlined, size: 18),
                 const SizedBox(width: 6),
               ],
-              Text(
-                frontOnly
-                    ? switch (cue) {
-                        StudyCue.fromLanguage => 'English',
-                        StudyCue.fromAudio => 'Sound',
-                        _ => language,
-                      }
-                    : switch (cue) {
-                        StudyCue.fromLanguage =>
-                          'EN → ${compactLanguageLabel(language)}',
-                        StudyCue.fromAudio =>
-                          '→ ${compactLanguageLabel(language)}',
-                        _ => '${compactLanguageLabel(language)} → EN',
-                      },
-              ),
+              Text(cue.label),
             ],
           ),
-          tooltip: frontOnly
-              ? switch (cue) {
-                  StudyCue.fromLanguage => 'Show English',
-                  StudyCue.fromAudio => 'Play $language sound',
-                  _ => 'Show $language text',
-                }
-              : switch (cue) {
-                  StudyCue.fromLanguage => 'English text to $language',
-                  StudyCue.fromAudio => '$language audio to $language',
-                  _ => '$language text to English',
-                },
+          tooltip: switch (cue) {
+            StudyCue.fromLanguage => 'Show English meaning',
+            StudyCue.fromAudio => 'Play $language sound',
+            _ => 'Show $language script',
+          },
           selected: selected.contains(cue),
           onSelected: (enabled) {
             final next = {...selected};

@@ -10,6 +10,57 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
 
 void main() {
+  testWidgets(
+    'Spoken only is below Active, saves and retains value after a failed save',
+    (tester) async {
+      final library = _StatusLibrary();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardAudioRepositoryProvider.overrideWithValue(null),
+            cardLibraryProvider.overrideWithValue(library),
+            cardsInvalidationProvider.overrideWithValue(() {}),
+          ],
+          child: MaterialApp(home: CardDetailsPage(card: _card())),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final toggle = find.byKey(const ValueKey('card-spoken-only'));
+      SwitchListTile selector() => tester.widget(toggle);
+      expect(selector().value, false);
+      expect(
+        tester.getTopLeft(toggle).dy,
+        greaterThanOrEqualTo(
+          tester
+              .getBottomLeft(find.byKey(const ValueKey('card-learning-status')))
+              .dy,
+        ),
+      );
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(selector().value, true);
+      expect(library.savedSpokenOnly, true);
+      expect(library.savedStatus, _card().learningStatus);
+      library.pending = Completer<void>();
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(selector().onChanged, isNull);
+      library.pending!.completeError(StateError('offline'));
+      await tester.pumpAndSettle();
+      expect(selector().value, true);
+      expect(
+        find.textContaining('Could not update spoken only'),
+        findsOneWidget,
+      );
+      library.pending = null;
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(selector().value, false);
+      expect(library.savedSpokenOnly, false);
+    },
+  );
+
   testWidgets('Similar shows every group with no category suffix', (
     tester,
   ) async {
@@ -205,6 +256,8 @@ void main() {
     await tester.tap(find.text('Notes'));
     await tester.pumpAndSettle();
     expect(find.text('Learn this expression as a whole.'), findsOneWidget);
+    await tester.ensureVisible(find.text('തട്ടിപ്പ്'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('തട്ടിപ്പ്'));
     await tester.pumpAndSettle();
     expect(find.text('fraud'), findsOneWidget);
@@ -337,7 +390,7 @@ void main() {
       find.byKey(const ValueKey('review-direction-selector')),
       findsNothing,
     );
-    expect(find.text('Front → Malayalam'), findsOneWidget);
+    expect(find.text('Meaning'), findsOneWidget);
     expect(find.text('1 yes · 1 no'), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -900));
     await tester.pumpAndSettle();
@@ -376,7 +429,7 @@ void main() {
       find.byKey(const ValueKey('single-review-direction')),
       findsOneWidget,
     );
-    expect(find.text('Front → Malayalam'), findsOneWidget);
+    expect(find.text('Meaning'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('review-direction-selector')),
       findsNothing,
@@ -497,6 +550,7 @@ CardReview _review(String id, DateTime reviewedAt, {required int rating}) =>
 final class _StatusLibrary implements CardLibrary {
   StudyCard? savedCard;
   LearningStatus? savedStatus;
+  bool? savedSpokenOnly;
   Completer<void>? pending;
 
   @override
@@ -506,6 +560,7 @@ final class _StatusLibrary implements CardLibrary {
     bool? spokenOnly,
   }) async {
     if (pending case final operation?) await operation.future;
+    savedSpokenOnly = spokenOnly;
     savedCard = card;
     savedStatus = status;
   }

@@ -65,17 +65,6 @@ void main() {
       final library = EditingLibrary();
       await open(tester, library);
       expect(find.byType(TextFormField), findsNWidgets(3));
-      expect(
-        tester
-            .widget<SwitchListTile>(
-              find.widgetWithText(SwitchListTile, 'Spoken only'),
-            )
-            .value,
-        isFalse,
-      );
-      await tester.ensureVisible(find.text('Spoken only'));
-      await tester.tap(find.text('Spoken only'));
-      await tester.pump();
       await tester.enterText(find.byType(TextFormField).at(0), 'home');
       await tester.enterText(find.byType(TextFormField).at(1), 'வீட்டில்');
       await tester.enterText(find.byType(TextFormField).at(2), 'vīṭṭil');
@@ -87,7 +76,7 @@ void main() {
         [content.front, content.back, content.transliteration],
         ['home', 'வீட்டில்', 'vīṭṭil'],
       );
-      expect(content.spokenOnly, isTrue);
+      expect(content.spokenOnly, isFalse);
       expect(content.audioUrl, '/house.mp3');
       expect(content.examples.single.text, 'example');
       expect(find.byType(AlertDialog), findsNothing);

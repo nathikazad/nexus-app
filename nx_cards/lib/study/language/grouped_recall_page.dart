@@ -338,11 +338,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                   'Group ${_groupIndex + 1} of ${widget.groups.length} · Word ${_wordIndex + 1} of ${_questions.length}',
                 ),
                 const SizedBox(height: 8),
-                Text(switch (prompt.cue) {
-                  StudyCue.fromAudio => 'Sound',
-                  StudyCue.toLanguage => prompt.card.language ?? 'Text',
-                  _ => 'English',
-                }),
+                Text(prompt.cue.label),
                 const SizedBox(height: 16),
                 if (_error != null) Text(_error!),
                 Card(
@@ -531,11 +527,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '${similarGroupTitle(widget.groups[g].label)} · ${switch (widget.groups[g].prompts.first.cue) {
-                        StudyCue.fromAudio => 'Sound',
-                        StudyCue.toLanguage => widget.groups[g].prompts.first.card.language ?? 'Text',
-                        _ => 'English',
-                      }}',
+                      '${similarGroupTitle(widget.groups[g].label)} · ${widget.groups[g].prompts.first.cue.label}',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),

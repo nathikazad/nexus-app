@@ -65,6 +65,29 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     }
   }
 
+  Future<void> _changeSpokenOnly(StudyCard card, bool value) async {
+    final content = card.content;
+    if (_savingStatus || content is! LanguageCardContent) return;
+    setState(() => _savingStatus = true);
+    try {
+      await ref
+          .read(cardLibraryProvider)
+          .setLearningStatus(card, card.learningStatus, spokenOnly: value);
+      ref.read(cardsInvalidationProvider)();
+      if (mounted) {
+        setState(() => _editedContent = content.copyWith(spokenOnly: value));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update spoken only: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingStatus = false);
+    }
+  }
+
   Future<void> _edit(StudyCard card) async {
     final invalidate = ref.read(cardsInvalidationProvider);
     final library = ref.read(cardLibraryProvider);
@@ -148,7 +171,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
             ? [
                 IconButton(
                   tooltip: 'Edit card',
-                  onPressed: () => _edit(card),
+                  onPressed: _savingStatus ? null : () => _edit(card),
                   icon: const Icon(Icons.edit_outlined),
                 ),
                 const SizedBox(width: 6),
@@ -198,6 +221,16 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                               : LearningStatus.future,
                         ),
                 ),
+                if (languageContent != null && widget.allowEdit)
+                  SwitchListTile.adaptive(
+                    key: const ValueKey('card-spoken-only'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Spoken only'),
+                    value: card.spokenOnly,
+                    onChanged: _savingStatus
+                        ? null
+                        : (value) => _changeSpokenOnly(card, value),
+                  ),
                 if (audioUrl?.isNotEmpty == true &&
                     audioRepository != null) ...[
                   const SizedBox(height: 14),
@@ -1052,12 +1085,14 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-String _cueLabel(StudyCue cue, StudyCard card) => switch (cue) {
-  StudyCue.fromLanguage => 'Front → ${card.language ?? 'Back'}',
-  StudyCue.toLanguage => '${card.language ?? 'Back'} → Front',
-  StudyCue.transliteration => 'Transliteration → Front',
-  StudyCue.fromAudio => 'Audio → ${card.language ?? 'Back'}',
-};
+String _cueLabel(StudyCue cue, StudyCard card) => card.isLanguageCard
+    ? cue.label
+    : switch (cue) {
+        StudyCue.fromLanguage => 'Front → Back',
+        StudyCue.toLanguage => 'Back → Front',
+        StudyCue.transliteration => 'Transliteration → Front',
+        StudyCue.fromAudio => 'Audio → Back',
+      };
 
 String _cardSource(StudyCard card) =>
     card.sourceBookName ?? card.language ?? 'Flashcard';
