@@ -72,6 +72,10 @@ RecallScore pooledRecallScore(
   );
 }
 
+final _combinedScoreCache = Expando<Map<int, RecallScore>>(
+  'combined skill scores',
+);
+
 /// Average selected skill scores; each skill pools its latest five recalls.
 /// An event may inform two skills, but is only one event in the history graph.
 RecallScore combinedRecallScore(
@@ -90,6 +94,10 @@ RecallScore combinedRecallScore(
     ..removeWhere(
       (component) => card.spokenOnly && component == RecallComponent.script,
     );
+  final mask = selected.fold<int>(0, (bits, c) => bits | (1 << c.index));
+  final cache = history == null ? (_combinedScoreCache[card] ??= {}) : null;
+  final cached = cache?[mask];
+  if (cached != null) return cached;
   final scores = [
     for (final component in selected)
       history == null
@@ -100,11 +108,13 @@ RecallScore combinedRecallScore(
               history: history,
             ),
   ];
-  return RecallScore(
+  final result = RecallScore(
     recalled: scores.fold(0, (sum, score) => sum + score.recalled),
     attempts: scores.fold(0, (sum, score) => sum + score.attempts),
     denominator: recallWindow * scores.length,
   );
+  if (cache != null) cache[mask] = result;
+  return result;
 }
 
 final _scoreCache = Expando<Map<RecallSelection?, RecallScore>>(

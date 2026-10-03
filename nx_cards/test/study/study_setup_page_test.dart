@@ -178,8 +178,9 @@ void main() {
           saved.reviewHistoryFor(cue).length,
           tested.contains(cue) ? 1 : 0,
         );
-        if (tested.contains(cue))
+        if (tested.contains(cue)) {
           expect(saved.reviewHistoryFor(cue).single.rating, 1);
+        }
       }
     },
   );

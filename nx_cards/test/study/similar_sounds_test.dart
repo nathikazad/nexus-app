@@ -52,6 +52,60 @@ StudyCard soundCard(
 );
 void main() {
   test(
+    'cheap availability matches full sessions across directions and writing modes',
+    () {
+      final cards = [
+        soundCard(1, 'a', groups: ['group-write', 'group-sound']),
+        soundCard(2, 'b', groups: ['group-write']).copyWith(
+          content:
+              (soundCard(2, 'b', groups: ['group-write']).content
+                      as LanguageCardContent)
+                  .copyWith(spokenOnly: true),
+        ),
+        soundCard(3, 'c', groups: ['invalid-write ']),
+        soundCard(
+          4,
+          'd',
+          groups: ['future-sound'],
+          status: LearningStatus.future,
+        ),
+      ];
+      for (final subset in [
+        cards,
+        ...cards.map((c) => [c]),
+      ]) {
+        for (final writing in [false, true]) {
+          for (var mask = 0; mask < 8; mask++) {
+            final directions = {
+              for (final c in RecallComponent.values)
+                if (mask & (1 << c.index) != 0) c,
+            };
+            final expected = {
+              for (final type in SimilarGroupType.values)
+                if (manualRecallSession(
+                  subset,
+                  sound: type == SimilarGroupType.sound,
+                  directions: directions,
+                  writing: writing,
+                  groupLimit: 1,
+                ).isNotEmpty)
+                  type,
+            };
+            expect(
+              availableSimilarGroupTypes(
+                subset,
+                directions: directions,
+                writing: writing,
+              ),
+              expected,
+            );
+          }
+        }
+      }
+    },
+  );
+
+  test(
     'tied group rounds are sampled before the limit with independent front scores',
     () {
       final cards = [

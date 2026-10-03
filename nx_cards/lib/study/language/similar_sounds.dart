@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 
+enum SimilarGroupType { written, sound }
+
 class SimilarSoundGroup {
   const SimilarSoundGroup(this.cards, {required this.label});
   final List<StudyCard> cards;
@@ -46,6 +48,46 @@ List<SimilarSoundGroup> manualSimilarSoundGroups(
     final size = b.cards.length.compareTo(a.cards.length);
     return size == 0 ? a.label.compareTo(b.label) : size;
   });
+}
+
+/// Availability needs only one eligible member, never full sessions or sorting.
+Set<SimilarGroupType> availableSimilarGroupTypes(
+  Iterable<StudyCard> cards, {
+  required Set<RecallComponent> directions,
+  required bool writing,
+}) {
+  final result = <SimilarGroupType>{};
+  for (final card in cards) {
+    if (!card.active || card.learningStatus != LearningStatus.recall) continue;
+    final content = card.content;
+    if (content is! LanguageCardContent) continue;
+    final groups = content.similarWordGroups.where(
+      (id) => id.isNotEmpty && id.trim() == id,
+    );
+    bool eligible(StudyCue cue) =>
+        card.supportsCue(cue) &&
+        card.scheduleFor(cue).enabled &&
+        (writing || cue.target != RecallComponent.script);
+    if (!result.contains(SimilarGroupType.sound) &&
+        groups.any((id) => id.endsWith('-sound')) &&
+        StudyCue.languageDirections.any(
+          (cue) => cue.isListening && eligible(cue),
+        )) {
+      result.add(SimilarGroupType.sound);
+    }
+    if (!result.contains(SimilarGroupType.written) &&
+        groups.any((id) => id.endsWith('-write')) &&
+        StudyCue.languageDirections.any(
+          (cue) =>
+              (directions.contains(cue.source) ||
+                  directions.contains(cue.target)) &&
+              eligible(cue),
+        )) {
+      result.add(SimilarGroupType.written);
+    }
+    if (result.length == 2) break;
+  }
+  return result;
 }
 
 /// Select complete rounds, each with one front type and its own average score.

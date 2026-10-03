@@ -43,8 +43,6 @@ enum StudyPresentation { sheet, draw }
 
 enum RecallPresentation { standard, fast, similar }
 
-enum SimilarGroupType { written, sound }
-
 enum RecallCardState { learning, relearning, retained, newCard }
 
 enum RecallTiming { allMatching, dueNow }
@@ -92,11 +90,18 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   RecallComponent? get _cue => _directions.firstOrNull;
   final bool _combinedPrompt = false;
 
+  List<StudyCard>? _dashboardCards, _inputCards, _scopedCards;
   List<StudyCard> get _studyCards {
     final latest = ref.read(cardsDashboardProvider).value?.cards;
     if (latest == null) return widget.studyCards;
-    final ids = widget.studyCards.map((card) => card.id).toSet();
-    return latest.where((card) => ids.contains(card.id)).toList();
+    if (!identical(latest, _dashboardCards) ||
+        !identical(widget.studyCards, _inputCards)) {
+      _dashboardCards = latest;
+      _inputCards = widget.studyCards;
+      final ids = widget.studyCards.map((card) => card.id).toSet();
+      _scopedCards = latest.where((card) => ids.contains(card.id)).toList();
+    }
+    return _scopedCards!;
   }
 
   RecallTiming _timing = RecallTiming.allMatching;
@@ -125,12 +130,26 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     groupLimit: limit ?? 1000000,
     writing: _writing,
   );
-  Set<SimilarGroupType> get _similarTypes => {
-    if (_similarSessions(_studyCards, sound: false).isNotEmpty)
-      SimilarGroupType.written,
-    if (_similarSessions(_studyCards, sound: true).isNotEmpty)
-      SimilarGroupType.sound,
-  };
+  (List<StudyCard>, int, bool)? _similarTypesKey;
+  Set<SimilarGroupType> _cachedSimilarTypes = {};
+  Set<SimilarGroupType> get _similarTypes {
+    final cards = _studyCards;
+    final mask = _writtenDirections.fold<int>(
+      0,
+      (bits, c) => bits | (1 << c.index),
+    );
+    final key = (cards, mask, _writing);
+    if (_similarTypesKey != key) {
+      _similarTypesKey = key;
+      _cachedSimilarTypes = availableSimilarGroupTypes(
+        cards,
+        directions: _writtenDirections,
+        writing: _writing,
+      );
+    }
+    return _cachedSimilarTypes;
+  }
+
   SimilarGroupType get _effectiveSimilarType =>
       _similarTypes.contains(_similarType)
       ? _similarType
@@ -286,21 +305,25 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     return _recallBaseCandidates;
   }
 
-  List<StudyPrompt> get _recallBaseCandidates => combineRecallPrompts(
-    retentionPrompts(
-      _studyCards,
-      _directions,
+  List<StudyPrompt> get _recallBaseCandidates {
+    final dueOnly = _dueOnly;
+    final now = DateTime.now();
+    return combineRecallPrompts(
+      retentionPrompts(
+        _studyCards,
+        _directions,
 
-      writing: _writing,
-      minimum: (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
-      maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
-      weakOnly: !_dueOnly && _weakOnly,
-    ).where(
-      (prompt) =>
-          (!_dueOnly || prompt.schedule.isDueAt(DateTime.now())) &&
-          (_mode != StudyMode.ai || !prompt.cue.involvesScript),
-    ),
-  );
+        writing: _writing,
+        minimum: (dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
+        maximum: dueOnly ? 1 : _retainedMaxPercentage / 100,
+        weakOnly: !dueOnly && _weakOnly,
+      ).where(
+        (prompt) =>
+            (!dueOnly || prompt.schedule.isDueAt(now)) &&
+            (_mode != StudyMode.ai || !prompt.cue.involvesScript),
+      ),
+    );
+  }
 
   bool _matchesRecallBaseFilters(StudyCard card, [StudyCue? cue]) {
     if (_mode == StudyMode.study) return true;
