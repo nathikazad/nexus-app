@@ -1,3 +1,4 @@
+import '../file_transfer/relay.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -9,7 +10,7 @@ import 'package:nexus_voice_assistant/data/ble/bg_ble_client.dart'
     show BleClient;
 import 'package:nexus_voice_assistant/data/gps/gps_upload_manager.dart';
 import 'package:nexus_voice_assistant/data/socket/bg_socket_client.dart';
-import 'package:nexus_voice_assistant/data/telemetry/telemetry_upload_manager.dart';
+import '../file_transfer/protocol.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_observability/nx_observability.dart';
 import '../../application/devices/device_command.dart';
@@ -43,7 +44,7 @@ class BackgroundRuntime {
 
     final bleClient = device ?? BleClient();
     final socketClient = socket ?? SocketClient();
-    TelemetryUploadManager? telemetryUploadManager;
+    FileRelay? fileRelay;
     GpsUploadManager? gpsUploadManager;
     http.Client? authenticatedHttpClient;
     int sessionGeneration = 0;
@@ -68,7 +69,10 @@ class BackgroundRuntime {
       final gps = gpsUploadManager;
       final client = authenticatedHttpClient;
       gpsUploadManager = null;
-      telemetryUploadManager = null;
+      final files = fileRelay;
+      fileRelay = null;
+      socketClient.onFilePacket = null;
+      await files?.close();
       authenticatedHttpClient = null;
       gpsHttpBaseUrl = null;
       gpsTimezoneLabel = null;
@@ -329,14 +333,17 @@ class BackgroundRuntime {
       );
       authenticatedHttpClient = client;
       unawaited(printServerClockDrift(uploadBase, client));
-      telemetryUploadManager = TelemetryUploadManager(
-        httpBaseUrl: uploadBase,
-        client: client,
-        onCommitted: (transferId) async {
-          await bleClient.writeFileRx(telemetryCommittedAck(transferId));
-          debugPrint('Telemetry upload committed transfer=$transferId');
+      fileRelay = FileRelay(
+        sendToServer: socketClient.sendFilePacket,
+        sendToDevice: (bytes) async {
+          if (generation != sessionGeneration || !bleClient.isConnected) return;
+          if (!await bleClient.writeFileRx(bytes)) {
+            throw StateError('File reply failed');
+          }
         },
       );
+      socketClient.onFilePacket = fileRelay!.fromServer;
+      await bleClient.writeFileRx(Uint8List.fromList(fileHello));
       gpsHttpBaseUrl = uploadBase;
       gpsTimezoneLabel = localTimezoneOffsetLabel();
       await startGpsIfBackground('socket.connect');
@@ -545,12 +552,14 @@ class BackgroundRuntime {
       }
     });
 
-    // File TX stream handler - forward to socket with image header, and to main app for display
+    // Relay all file kinds to the authoritative backend receiver.
     bleClient.onFileTxDataReceived = (data) {
-      if (data.length >= 5 && data[0] == 0x00 && data[1] == 0x01) {
-        relay.onImagePacket(data);
-      } else if (data.length >= 19 && data[0] == 0x00 && data[1] == 0x02) {
-        telemetryUploadManager?.handlePacket(data);
+      if (data.length >= 4 && data[0] == 0 && data[1] == 0x84) {
+        try {
+          fileRelay?.fromDevice(data);
+        } catch (error) {
+          debugPrint('[File transfer] $error');
+        }
       }
       service.invoke('ble.fileTx.data', {'data': data.toList()});
     };

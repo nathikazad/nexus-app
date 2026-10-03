@@ -17,8 +17,10 @@ class FirmwareProcess implements NecklaceDevicePort, NecklaceAudioControlPort {
   Object? failure;
   bool _closed = false;
 
-  static Future<FirmwareProcess> start(String binary, String output) async {
-    final process = await Process.start(binary, ['-', output, '0']);
+  static Future<FirmwareProcess> start(String binary, String output,
+      {String? restoreSd, int seed = 0}) async {
+    final process = await Process.start(
+        binary, ['-', output, '$seed', if (restoreSd != null) restoreSd]);
     process.stderr.transform(utf8.decoder).listen(stderr.write);
     final self = FirmwareProcess._(
         process,
@@ -79,9 +81,9 @@ class FirmwareProcess implements NecklaceDevicePort, NecklaceAudioControlPort {
   }
 
   @override
-  Future<bool> writeBackgroundAudio(int operation) async {
+  Future<bool> writeBackgroundAudio(int operation, {Uint8List? fileId}) async {
     if (operation < 0 || operation > 2) return false;
-    await write('background', Uint8List.fromList([operation]));
+    await write('background', Uint8List.fromList([operation, ...?fileId]));
     return true;
   }
 

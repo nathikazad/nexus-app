@@ -32,6 +32,17 @@ class SocketClient implements NecklaceSocketPort {
   static const int maxQueueSize =
       1000; // Limit queue size to prevent memory issues
 
+  Future<void> Function(Uint8List)? onFilePacket;
+  bool sendFilePacket(Uint8List packet) {
+    if (!_isConnected || _channel == null) return false;
+    try {
+      _channel!.sink.add(packet);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Callback to forward packets from server to BLE
   Future<void> Function(Uint8List)? onPacketFromServer;
   set onAudioReceptionSummary(void Function(Map<String, dynamic>)? callback) {
@@ -138,6 +149,14 @@ class SocketClient implements NecklaceSocketPort {
         (message) async {
           if (generation != _generation) return;
           if (message is Uint8List) {
+            if (message.length >= 4 && message[0] == 0 && message[1] == 0x84) {
+              try {
+                await onFilePacket?.call(message);
+              } catch (error) {
+                debugPrint('[File relay] $error');
+              }
+              return;
+            }
             // Intercept DEVICE_REQUEST packets - handle and respond, don't forward to BLE
             if (await _deviceProtocol.handle(message,
                 isCurrent: () => generation == _generation,

@@ -959,13 +959,13 @@ class BleClient {
   }
 
   /// Queues background audio start/stop/rotation in the nRF firmware.
-  Future<bool> writeBackgroundAudio(int operation) async {
+  Future<bool> writeBackgroundAudio(int operation, {Uint8List? fileId}) async {
     final characteristic = _backgroundAudioCharacteristic;
     if (!isConnected || characteristic == null || operation < 0 || operation > 2) {
       return false;
     }
     try {
-      await characteristic.write([operation], withoutResponse: false);
+      await characteristic.write([operation, ...?fileId], withoutResponse: false);
       return true;
     } catch (_) {
       return false;

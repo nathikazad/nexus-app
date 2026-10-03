@@ -11,6 +11,17 @@ class NecklaceCommandHandler {
   Future<String?> handle(
       int requestId, String action, Map<String, dynamic> params) async {
     try {
+      Uint8List? fileId;
+      final rawId = params['file_id'];
+      if (rawId != null) {
+        if (rawId is! String ||
+            !RegExp(r'^[0-9a-f]{32}$').hasMatch(rawId) ||
+            rawId == '0' * 32) {
+          return jsonEncode({'success': false, 'error': 'Invalid file ID'});
+        }
+        fileId = Uint8List.fromList(List.generate(16,
+            (i) => int.parse(rawId.substring(i * 2, i * 2 + 2), radix: 16)));
+      }
       switch (action) {
         case 'audio.start':
         case 'audio.stop':
@@ -28,14 +39,14 @@ class NecklaceCommandHandler {
                   ? 1
                   : 2;
           final accepted = await (target as NecklaceAudioControlPort)
-              .writeBackgroundAudio(operation);
+              .writeBackgroundAudio(operation, fileId: fileId);
           return jsonEncode({
             'success': accepted,
             'status': accepted ? 'accepted' : 'failed'
           });
         case 'take_photo':
-          final success =
-              await device.writeCamera(CameraCommand.capture.toBytes());
+          final success = await device.writeCamera(Uint8List.fromList(
+              [...CameraCommand.capture.toBytes(), ...?fileId]));
           return jsonEncode({'success': success});
         case 'get_camera_status':
           final st = await device.readCameraStatus();

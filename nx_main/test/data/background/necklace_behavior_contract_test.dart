@@ -119,13 +119,11 @@ void main() {
     ]);
   });
   test(
-      'only image file packets go to image socket; downlink bytes go unchanged to device',
+      'legacy file packets never bypass durable ingestion; downlink stays live',
       () async {
     device.onFileTxDataReceived!(Uint8List.fromList([0, 1, 0, 1, 65, 0, 9]));
     device.onFileTxDataReceived!(Uint8List.fromList([0, 2, 0, 1, 65, 0, 9]));
-    expect(socket.images, [
-      [0, 1, 0, 1, 65, 0, 9]
-    ]);
+    expect(socket.images, isEmpty);
     await socket.onPacketFromServer!(Uint8List.fromList([0, 0x87, 1, 0, 9]));
     expect(device.audio, [
       [0, 0x87, 1, 0, 9]
