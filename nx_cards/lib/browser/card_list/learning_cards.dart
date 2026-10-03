@@ -10,7 +10,6 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_list/card_schedule_status.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
-import 'package:nx_cards/scheduling/review_progression.dart';
 
 class LearningCardsTab extends ConsumerWidget {
   const LearningCardsTab({
@@ -226,9 +225,6 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
     final originalStatus = cardScheduleStatus(
       widget.card,
       DateTime.now().toUtc(),
-      historyWindow:
-          ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
-          10,
     );
     final directions = RecallComponent.values.toSet();
     final scheduleStatus = originalStatus == null
@@ -239,19 +235,8 @@ class _LearningStatusRowState extends ConsumerState<_LearningStatusRow> {
                 : widget.card.learningStatus.label,
             isDue: false,
             sortPriority: originalStatus.sortPriority,
-            recallPercentage:
-                (averageRetention(
-                          widget.card,
-                          directions,
-                          window:
-                              ref
-                                  .watch(reviewProgressionSettingsProvider)
-                                  .value
-                                  ?.historyWindow ??
-                              10,
-                        ) *
-                        100)
-                    .round(),
+            recallPercentage: (averageRetention(widget.card, directions) * 100)
+                .round(),
           );
     return ClipRRect(
       borderRadius: BorderRadius.circular(13),

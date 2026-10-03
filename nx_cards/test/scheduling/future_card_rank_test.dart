@@ -46,8 +46,7 @@ StudyCard item(
 Map<int, double> score(
   List<StudyCard> cards, {
   StudyCue cue = StudyCue.meaningToScript,
-  int window = 10,
-}) => futureCardScores(cards, cue: cue, historyWindow: window);
+}) => futureCardScores(cards, cue: cue);
 void main() {
   test('counts each phrase once through nested and repeated paths', () {
     final cards = [
@@ -70,8 +69,7 @@ void main() {
       item(4, category: 'Phrase', links: {2}),
     ];
     final u = (math.log(2) / math.log(3) + 1) / 2;
-    expect(score(cards)[3], closeTo(100 * u * .91, 1e-9));
-    expect(score(cards, window: 5)[3], closeTo(100 * u, 1e-9));
+    expect(score(cards)[3], closeTo(100 * u, 1e-9));
     expect(
       score(cards, cue: StudyCue.scriptToMeaning)[3],
       closeTo(100 * u * .64, 1e-9),

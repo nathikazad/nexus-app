@@ -82,7 +82,6 @@ class CardsDashboard {
     String? language,
     int? bookId,
     StudyCue? cue,
-    int historyWindow = 10,
   }) =>
       _prompts(studyCategory: studyCategory, language: language, bookId: bookId)
           .where(

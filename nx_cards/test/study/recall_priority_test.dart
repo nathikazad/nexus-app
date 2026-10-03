@@ -55,7 +55,7 @@ void main() {
       for (var id = 1; id <= 10; id++)
         StudyPrompt(card: sample(id, id - 1), cue: StudyCue.meaningToScript),
     ];
-    prioritizeRecallPrompts(prompts, DateTime.utc(2026), historyWindow: 10);
+    prioritizeRecallPrompts(prompts, DateTime.utc(2026));
     final selected = shuffledRecallSelection(prompts, 5, random: Random(8));
     expect(selected.map((p) => p.cardId), unorderedEquals([1, 2, 3, 4, 5]));
     expect(selected.map((p) => p.cardId).toList(), isNot([1, 2, 3, 4, 5]));
@@ -90,8 +90,8 @@ void main() {
     );
   }
 
-  test('80 percent accuracy gives a 20 percent boost at equal FSRS risk', () {
-    final perfect = pastRecallPriority(past(1, 10), now, historyWindow: 10);
+  test('60 percent accuracy gives a 40 percent boost at equal FSRS risk', () {
+    final perfect = pastRecallPriority(past(1, 10), now);
     final base = past(2, 8);
     final weakerCard = base.card.copyWith(
       reviewHistory: {
@@ -109,17 +109,10 @@ void main() {
         ],
       },
     );
-    final weaker = pastRecallPriority(
-      base.withCard(weakerCard),
-      now,
-      historyWindow: 10,
-    );
+    final weaker = pastRecallPriority(base.withCard(weakerCard), now);
     expect(perfect, greaterThan(0));
-    expect(weaker, closeTo(perfect * 1.2, 0.000001));
-    expect(
-      pastRecallPriority(past(3, 8), now, historyWindow: 8),
-      closeTo(perfect, 0.000001),
-    );
+    expect(weaker, closeTo(perfect * 1.4, 0.000001));
+    expect(pastRecallPriority(past(3, 8), now), closeTo(perfect, 0.000001));
   });
 
   test(
@@ -129,12 +122,7 @@ void main() {
         for (var id = 1; id <= 30; id++) past(id, 10, stability: id.toDouble()),
       ];
       final expected = List<StudyPrompt>.of(prompts)..shuffle(Random(17));
-      prioritizeRecallPrompts(
-        prompts,
-        now,
-        historyWindow: 10,
-        random: Random(17),
-      );
+      prioritizeRecallPrompts(prompts, now, random: Random(17));
       expect(prompts, orderedEquals(expected));
       expect(
         prompts.take(7).map((p) => p.cardId).toList(),
@@ -154,12 +142,7 @@ void main() {
       final selections = <String>{};
       for (var seed = 0; seed < 10; seed++) {
         final prompts = List<StudyPrompt>.of(original);
-        prioritizeRecallPrompts(
-          prompts,
-          now,
-          historyWindow: 10,
-          random: Random(seed),
-        );
+        prioritizeRecallPrompts(prompts, now, random: Random(seed));
         final chosen = shuffledRecallSelection(
           prompts,
           7,
@@ -193,15 +176,12 @@ void main() {
         cue: StudyCue.meaningToScript,
       ),
     ];
-    prioritizeRecallPrompts(prompts, DateTime.now(), historyWindow: 10);
+    prioritizeRecallPrompts(prompts, DateTime.now());
     expect(prompts.length, 17);
     expect(prompts.take(6).map((p) => p.cardId).toSet(), {1, 2, 3, 4, 5, 6});
     expect(prompts.take(10).length, 10);
     expect(
-      prompts
-          .take(10)
-          .where((p) => isPastDue(p, DateTime.now(), historyWindow: 10))
-          .length,
+      prompts.take(10).where((p) => isPastDue(p, DateTime.now())).length,
       0,
     );
     expect(prompts.map((p) => p.cardId), contains(17));
@@ -218,6 +198,6 @@ void main() {
       ),
       cue: StudyCue.scriptToMeaning,
     );
-    expect(isPastDue(prompt, DateTime.now(), historyWindow: 10), isFalse);
+    expect(isPastDue(prompt, DateTime.now()), isFalse);
   });
 }

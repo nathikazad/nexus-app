@@ -30,11 +30,13 @@ it does not change retained scores or histories. Script answers use the drawing
 surface; meaning and sound answers use the standard response presentation.
 
 `learning_stage.dart` derives Practice/Weak/Strong from activation and recall
-history. Each direction's score is successful attempts among the latest N,
-divided by N (the account's recall window, default ten). Unattempted slots count
-as zero. Overall scores average all enabled eligible directions: six for regular
-language cards, two for spoken-only cards. Card filters and Progress use this
-overall score. The Strong threshold is 80%.
+history. Each direction uses successes among its latest five recalls divided by
+five, with missing slots counted as zero. Each skill (Meaning, Sound, Script)
+pools the latest five recalls across directions involving that skill, using the
+same denominator. Overall scores average those three skills, or Meaning and
+Sound for spoken-only cards. Card details, card filters and Progress use this
+average. Recall filters and priority use each individual direction's score.
+FSRS determines due dates independently. The Strong threshold is 80%.
 
 Do not persist Weak/Strong or activate replacement cards after recall. Cards
 store Future, Practice or Recall; Weak/Strong are calculated. Recall setup can

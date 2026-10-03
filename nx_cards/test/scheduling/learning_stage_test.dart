@@ -57,54 +57,48 @@ void main() {
       );
     },
   );
-  test(
-    'score denominator uses the configured fixed window and then rolls over',
-    () {
-      for (var attempts = 0; attempts <= 12; attempts++) {
-        final score = recallScore(
-          card(List.filled(attempts, 3)),
-          StudyCue.meaningToScript,
-        );
-        expect(score.attempts, attempts.clamp(0, 10));
-        expect(score.denominator, 10);
-        expect(score.percentage, attempts.clamp(0, 10) * 10);
-      }
-      final mixed = recallScore(
-        card([3, 3, 3, 1, 1]),
+  test('score denominator uses the fixed five slots and then rolls over', () {
+    for (var attempts = 0; attempts <= 12; attempts++) {
+      final score = recallScore(
+        card(List.filled(attempts, 3)),
         StudyCue.meaningToScript,
       );
-      expect(mixed.percentage, 30);
-      expect(
-        recallScore(
-          card([3, 3, 3, 3, 3, 1]),
-          StudyCue.meaningToScript,
-        ).percentage,
-        50,
-      );
-      expect(
-        recallScore(
-          card([...List.filled(10, 3), ...List.filled(10, 1)]),
-          StudyCue.meaningToScript,
-        ).percentage,
-        0,
-      );
-      expect(
-        recallScore(
-          card([...List.filled(10, 1), ...List.filled(8, 3), 1, 1]),
-          StudyCue.meaningToScript,
-        ).percentage,
-        80,
-      );
-      expect(
-        learningStage(card([3, 3, 3, 3]), StudyCue.meaningToScript),
-        LearningStage.current,
-      );
-      expect(
-        learningStage(card([3, 3, 3, 3, 1, 1]), StudyCue.meaningToScript),
-        LearningStage.current,
-      );
-    },
-  );
+      expect(score.attempts, attempts.clamp(0, 5));
+      expect(score.denominator, 5);
+      expect(score.percentage, attempts.clamp(0, 5) * 20);
+    }
+    final mixed = recallScore(card([3, 3, 3, 1, 1]), StudyCue.meaningToScript);
+    expect(mixed.percentage, 60);
+    expect(
+      recallScore(
+        card([3, 3, 3, 3, 3, 1]),
+        StudyCue.meaningToScript,
+      ).percentage,
+      80,
+    );
+    expect(
+      recallScore(
+        card([...List.filled(10, 3), ...List.filled(10, 1)]),
+        StudyCue.meaningToScript,
+      ).percentage,
+      0,
+    );
+    expect(
+      recallScore(
+        card([...List.filled(10, 1), ...List.filled(8, 3), 1, 1]),
+        StudyCue.meaningToScript,
+      ).percentage,
+      60,
+    );
+    expect(
+      learningStage(card([3, 3, 3, 3]), StudyCue.meaningToScript),
+      LearningStage.past,
+    );
+    expect(
+      learningStage(card([3, 3, 3, 3, 1, 1]), StudyCue.meaningToScript),
+      LearningStage.current,
+    );
+  });
   test('score deduplicates reviews and keeps directions separate', () {
     final original = card([3]);
     final duplicate = original.copyWith(
@@ -118,7 +112,7 @@ void main() {
         ).reviewHistoryFor(StudyCue.meaningToScript),
       },
     );
-    expect(recallScore(duplicate, StudyCue.meaningToScript).percentage, 10);
+    expect(recallScore(duplicate, StudyCue.meaningToScript).percentage, 20);
     expect(recallScore(duplicate, StudyCue.soundToMeaning).percentage, 100);
     expect(recallScore(duplicate, StudyCue.scriptToMeaning).percentage, 0);
   });
@@ -135,7 +129,7 @@ void main() {
       isFalse,
     );
   });
-  test('adaptive denominator, exact 80%, and rolling replacement', () {
+  test('fixed denominator, exact 80%, and rolling replacement', () {
     expect(
       learningStage(card([3, 3]), StudyCue.meaningToScript),
       LearningStage.current,
@@ -149,7 +143,7 @@ void main() {
         card([...List.filled(10, 3), 1, 1]),
         StudyCue.meaningToScript,
       ),
-      LearningStage.past,
+      LearningStage.current,
     );
     expect(
       learningStage(
@@ -159,7 +153,7 @@ void main() {
       LearningStage.current,
     );
     expect(
-      learningStage(card([3, 3, 3, 3]), StudyCue.meaningToScript, window: 5),
+      learningStage(card([3, 3, 3, 3]), StudyCue.meaningToScript),
       LearningStage.past,
     );
   });

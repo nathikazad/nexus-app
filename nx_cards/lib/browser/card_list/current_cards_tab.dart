@@ -1,4 +1,3 @@
-import 'package:nx_cards/scheduling/review_progression.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -86,9 +85,7 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
     final cards = retentionCards(
       widget.cards,
       directions,
-      window:
-          ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
-          10,
+
       minimum: minimum,
       maximum: maximum,
       weakOnly: weakOnly,

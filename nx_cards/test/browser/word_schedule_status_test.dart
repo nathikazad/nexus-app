@@ -93,7 +93,7 @@ void main() {
 
       final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-      expect(status?.recallPercentage, 5);
+      expect(status?.recallPercentage, 27);
     },
   );
 
@@ -112,13 +112,9 @@ void main() {
       recallRatings: const [4, 4, 1, 1, 3],
     );
 
-    final status = wordScheduleStatus(
-      card,
-      DateTime.utc(2026, 8, 11),
-      historyWindow: 3,
-    );
+    final status = wordScheduleStatus(card, DateTime.utc(2026, 8, 11));
 
-    expect(status?.recallPercentage, 6);
+    expect(status?.recallPercentage, 40);
   });
 
   test('recall percentage uses a five-attempt minimum denominator', () {
@@ -145,7 +141,7 @@ void main() {
       },
     );
 
-    expect(frontToBackRecallPercentage(oneOfTwo), 2);
+    expect(frontToBackRecallPercentage(oneOfTwo), 13);
     expect(frontToBackRecallPercentage(neverReviewed), 0);
   });
 }

@@ -114,7 +114,7 @@ void main() {
         expect(card.prompts.length, 6);
         expect(
           averageRetention(card, RecallComponent.values),
-          closeTo(5 / 12, .001),
+          closeTo(13 / 15, .001),
         );
       }
       final card = spokenCard(spokenOnly: true);
@@ -139,7 +139,7 @@ void main() {
         ).prompt,
         'house',
       );
-      expect(averageRetention(card, RecallComponent.values), .5);
+      expect(averageRetention(card, RecallComponent.values), 1);
       expect(retentionPrompts([card], {RecallComponent.script}), isEmpty);
     },
   );
@@ -190,7 +190,7 @@ void main() {
         spokenOnly: false,
       ),
     );
-    expect(recallScore(restored, StudyCue.scriptToMeaning).percentage, 50);
+    expect(recallScore(restored, StudyCue.scriptToMeaning).percentage, 100);
   });
 
   test(

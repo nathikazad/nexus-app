@@ -161,7 +161,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('ആശ്വാസം'), findsOneWidget);
-    expect(find.text('Meaning → Script'), findsOneWidget);
+    expect(find.text('Meaning → Script'), findsNothing);
     expect(find.byTooltip('Did not recall'), findsOneWidget);
     expect(find.byTooltip('Recalled'), findsOneWidget);
     expect(

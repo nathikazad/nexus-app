@@ -67,7 +67,6 @@ ProgressAnalysis analyzeProgress({
   required Set<RecallComponent> directions,
   required int targetPercent,
   required DateTime now,
-  int window = 10,
   DateTime? start,
   DateTime? end,
 }) {
@@ -123,22 +122,15 @@ ProgressAnalysis analyzeProgress({
       started.putIfAbsent(id, () => time);
       final recent = history.putIfAbsent((id, event.cue), () => []);
       recent.add(event.review);
-      if (recent.length > window) recent.removeAt(0);
+      if (recent.length > recallWindow) recent.removeAt(0);
       final effectiveDirections = selectedCues(event.card, directions).toList();
-      final average = effectiveDirections.isEmpty
-          ? 0.0
-          : effectiveDirections
-                    .map((cue) {
-                      final reviews =
-                          history[(id, cue)] ?? const <CardReview>[];
-                      return RecallScore(
-                        recalled: reviews.where((r) => r.rating >= 3).length,
-                        attempts: reviews.length,
-                        denominator: window,
-                      ).fraction;
-                    })
-                    .reduce((a, b) => a + b) /
-                effectiveDirections.length;
+      final average = combinedRecallScore(
+        event.card,
+        directions,
+        history: {
+          for (final cue in effectiveDirections) cue: history[(id, cue)] ?? [],
+        },
+      ).fraction;
       if (effectiveDirections.isNotEmpty &&
           average * 100 + 1e-9 >= targetPercent) {
         atTarget.add(id);

@@ -43,9 +43,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('8%'), findsOneWidget);
-      expect(find.text('13%'), findsOneWidget);
-      expect(find.text('3%'), findsOneWidget);
+      expect(find.text('60%'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('20%'), findsOneWidget);
       await tester.tap(find.text('meaning 2'));
       await tester.pumpAndSettle();
       expect(find.text('Card details'), findsNothing);

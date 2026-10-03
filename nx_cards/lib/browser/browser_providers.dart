@@ -189,14 +189,12 @@ Future<StudyCard> hydrateStudyCard(WidgetRef ref, StudyCard card) async {
 }
 
 final cardsSourcesProvider = StreamProvider<List<LibrarySource>>((ref) async* {
-  final window =
-      ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
   final reader = ref.watch(appReadsProvider('cards'));
   final workspace = ref.watch(cardWorkspaceProvider);
   if (ref.watch(cardsOfflineEnabledProvider) && workspace != null) {
     final cached = await workspace.watchDashboard().first;
     if (cached.cards.isNotEmpty) {
-      yield summarizeLibrary(cached, historyWindow: window);
+      yield summarizeLibrary(cached);
     }
   }
   if (reader != null) {
@@ -212,9 +210,7 @@ final cardsSourcesProvider = StreamProvider<List<LibrarySource>>((ref) async* {
     }
   }
   if (workspace != null) {
-    yield* workspace.watchDashboard().map(
-      (data) => summarizeLibrary(data, historyWindow: window),
-    );
+    yield* workspace.watchDashboard().map((data) => summarizeLibrary(data));
   }
 });
 

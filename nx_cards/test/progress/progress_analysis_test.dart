@@ -38,6 +38,59 @@ StudyCard progressCard(
 );
 
 void main() {
+  test(
+    'historical progress matches the live skill average after every recall',
+    () {
+      for (final spokenOnly in [false, true]) {
+        final full = progressCard(44, {
+          for (final cue in StudyCue.languageDirections)
+            cue: [
+              for (var day = 1; day <= 9; day++)
+                review(
+                  day,
+                  (day + cue.index) % 3 == 0 ? 1 : 3,
+                  id: '${cue.name}-$day',
+                  hour: cue.index,
+                ),
+            ],
+        });
+        final card = full.copyWith(
+          content: (full.content as LanguageCardContent).copyWith(
+            spokenOnly: spokenOnly,
+          ),
+        );
+        for (final threshold in [20, 50, 80, 100]) {
+          final report = analyzeProgress(
+            cards: [card],
+            directions: RecallComponent.values.toSet(),
+            targetPercent: threshold,
+            now: DateTime(2026, 9, 9, 23),
+          );
+          for (final day in report.days) {
+            final snapshot = card.copyWith(
+              reviewHistory: {
+                for (final entry in card.reviewHistory.entries)
+                  entry.key: entry.value
+                      .where(
+                        (r) => r.reviewedAt.isBefore(
+                          day.date.add(const Duration(days: 1)),
+                        ),
+                      )
+                      .toList(),
+              },
+            );
+            final score = averageRetention(snapshot, RecallComponent.values);
+            expect(
+              day.atTarget,
+              score + 1e-9 >= threshold / 100 ? 1 : 0,
+              reason: 'spoken=$spokenOnly target=$threshold day=${day.date}',
+            );
+          }
+        }
+      }
+    },
+  );
+
   test('weekly and monthly buckets sum recalls but retain ending balances', () {
     final report = ProgressAnalysis(
       days: [
@@ -102,7 +155,7 @@ void main() {
         ],
         directions: {RecallComponent.meaning},
         targetPercent: 50,
-        window: 5,
+
         now: DateTime(2026, 9, 30, 12),
         start: DateTime(2026, 9, 7),
       );
@@ -130,7 +183,7 @@ void main() {
     cards: cards,
     directions: directions ?? english,
     targetPercent: target,
-    window: 5,
+
     now: DateTime(2026, 9, 30, 18),
     start: start,
     end: end,
@@ -212,7 +265,10 @@ void main() {
       ).days.last.atTarget,
       1,
     );
-    expect(averageRetention(card, RecallComponent.values), closeTo(.3, 1e-9));
+    expect(
+      averageRetention(card, RecallComponent.values),
+      closeTo(2 / 3, 1e-9),
+    );
   });
 
   test('inclusive threshold, unreviewed denominator, and zero target', () {
@@ -305,9 +361,7 @@ void main() {
             run(cards, target: threshold, directions: cues).days.last.atTarget,
             cards
                 .where(
-                  (c) =>
-                      averageRetention(c, cues, window: 5) * 100 + 1e-9 >=
-                      threshold,
+                  (c) => averageRetention(c, cues) * 100 + 1e-9 >= threshold,
                 )
                 .length,
           );

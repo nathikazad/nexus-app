@@ -123,7 +123,7 @@ void main() {
       StudyPrompt(card: card, cue: StudyCue.scriptToMeaning),
     );
     expect(to['prompt'], '很长的句子');
-    expect(to['answer'], 'a long sentence');
+    expect(to['answer'], '很长的句子');
     expect(NativeDrawingSession.practiceCard(card)['audio'], isTrue);
   });
   test(
@@ -134,16 +134,16 @@ void main() {
       );
       expect(payload['prompt'], 'Listen');
       expect(payload['listening'], isTrue);
-      expect(payload['answer'], 'a long sentence');
-      expect(payload['subtitle'], 'Sound → Meaning');
+      expect(payload['answer'], '很长的句子');
+      expect(payload['subtitle'], 'hěn cháng de jùzi\na long sentence');
     },
   );
   test('native targets and drawing flags follow all six directions', () {
     for (final cue in StudyCue.languageDirections) {
       final prompt = StudyPrompt(card: card, cue: cue);
       final payload = NativeDrawingSession.recallCard(prompt);
-      expect(payload['answer'], prompt.answer);
-      expect(payload['subtitle'], cue.label);
+      expect(payload['answer'], '很长的句子');
+      expect(payload['subtitle'], 'hěn cháng de jùzi\na long sentence');
       expect(payload['writing'], cue.target == RecallComponent.script);
       expect(payload['listening'], cue.source == RecallComponent.sound);
     }

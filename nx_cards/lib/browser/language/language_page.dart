@@ -15,7 +15,6 @@ import 'package:nx_cards/browser/card_list/learning_cards.dart';
 import 'package:nx_cards/browser/card_list/card_search.dart';
 import 'package:nx_cards/browser/card_list/study_launcher.dart';
 import 'package:nx_cards/browser/language/language_groups.dart';
-import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:nx_cards/goals/daily_goal.dart';
 
 class LanguagePage extends ConsumerWidget {
@@ -218,11 +217,8 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
     final children = allCards || tagSystem == 'Collection'
         ? <LanguageGroup>[]
         : languageGroups(cards, parent: widget.categoryPath ?? [category]);
-    final window =
-        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
-    int count(LearningStage stage) => cards
-        .where((card) => learningStage(card, null, window: window) == stage)
-        .length;
+    int count(LearningStage stage) =>
+        cards.where((card) => learningStage(card, null) == stage).length;
     final current = count(LearningStage.current);
     final learnt = count(LearningStage.past);
     final labelStyle = TextStyle(

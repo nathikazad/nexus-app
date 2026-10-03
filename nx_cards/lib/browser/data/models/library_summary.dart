@@ -23,10 +23,7 @@ final class LibrarySource {
   );
 }
 
-List<LibrarySource> summarizeLibrary(
-  CardsDashboard data, {
-  int historyWindow = 10,
-}) {
+List<LibrarySource> summarizeLibrary(CardsDashboard data) {
   final now = DateTime.now();
   final books = <int, String>{
     for (final card in data.cards)
@@ -43,11 +40,7 @@ List<LibrarySource> summarizeLibrary(
         name: language,
         total: data.cardsForLanguage(language).length,
         current: current(data.cardsForLanguage(language)),
-        due: data.dueCount(
-          now,
-          language: language,
-          historyWindow: historyWindow,
-        ),
+        due: data.dueCount(now, language: language),
       ),
     for (final book in books.entries)
       LibrarySource(

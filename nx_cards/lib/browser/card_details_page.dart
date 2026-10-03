@@ -3,7 +3,6 @@ import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:nx_cards/scheduling/retention.dart';
 import 'package:nx_cards/scheduling/language_direction.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
-import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/app/theme.dart';
@@ -384,16 +383,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                         allowed: availableComponents,
                         retentionPercentages: {
                           for (final component in availableComponents)
-                            component: recallScore(
-                              card,
-                              component,
-                              window:
-                                  ref
-                                      .watch(reviewProgressionSettingsProvider)
-                                      .value
-                                      ?.historyWindow ??
-                                  10,
-                            ).percentage,
+                            component: recallScore(card, component).percentage,
                         },
                         selected: components,
                         onChanged: (value) =>
@@ -412,7 +402,12 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
                         style: TextStyle(color: RecallColors.muted),
                       ),
                     const SizedBox(height: 16),
-                    _RecallSummary(card: card, cues: cues, reviews: reviews),
+                    _RecallSummary(
+                      card: card,
+                      components: components,
+                      cues: cues,
+                      reviews: reviews,
+                    ),
                     const SizedBox(height: 24),
                     if (reviews.isEmpty)
                       const Text(
@@ -446,13 +441,7 @@ class _RecallStrengthPill extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final average = averageRetention(
-      card,
-      RecallComponent.values,
-      window:
-          ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ??
-          10,
-    );
+    final average = averageRetention(card, RecallComponent.values);
     final strong = average >= .8;
     final percentage = (average * 100).round();
     return Container(
@@ -556,11 +545,13 @@ class _PlainField extends StatelessWidget {
 class _RecallSummary extends ConsumerWidget {
   const _RecallSummary({
     required this.card,
+    required this.components,
     required this.cues,
     required this.reviews,
   });
 
   final StudyCard card;
+  final Set<RecallComponent> components;
   final Set<StudyCue> cues;
   final List<CardReview> reviews;
 
@@ -577,16 +568,7 @@ class _RecallSummary extends ConsumerWidget {
         ? 0
         : (successes / reviews.length * 100).round();
     final streak = _successStreak(reviews);
-    final window =
-        ref.watch(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
-    final scores = [
-      for (final cue in cues) recallScore(card, cue, window: window),
-    ];
-    final score = RecallScore(
-      recalled: scores.fold(0, (sum, score) => sum + score.recalled),
-      attempts: scores.fold(0, (sum, score) => sum + score.attempts),
-      denominator: cues.length * window,
-    );
+    final score = combinedRecallScore(card, components);
     final stage = switch (card.learningStatus) {
       LearningStatus.future => LearningStage.future,
       LearningStatus.practice => LearningStage.upcoming,
@@ -594,6 +576,9 @@ class _RecallSummary extends ConsumerWidget {
         score.strong ? LearningStage.past : LearningStage.current,
     };
     final due = dueDates.firstOrNull;
+    final skillCount = components
+        .where((c) => !card.spokenOnly || c != RecallComponent.script)
+        .length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -602,8 +587,9 @@ class _RecallSummary extends ConsumerWidget {
           status: stage.label,
           progress: null,
           metricValue: '${score.percentage}%',
-          metricLabel:
-              '${score.recalled}/${score.denominator} · ${score.attempts} recent attempts',
+          metricLabel: card.isLanguageCard
+              ? 'Average of $skillCount ${skillCount == 1 ? 'skill' : 'skills'}'
+              : '${score.recalled}/5 · ${score.attempts} recent attempts',
           due: due,
           now: now,
         ),

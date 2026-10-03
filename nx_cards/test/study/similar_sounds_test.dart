@@ -101,13 +101,13 @@ void main() {
     final group = SimilarSoundGroup([both, chinese], label: 'pair-write');
     expect(
       similarWordRetention(both, SimilarGroupKind.written),
-      closeTo(.2, 1e-9),
+      closeTo(1, 1e-9),
     );
     expect(
       similarWordRetention(chinese, SimilarGroupKind.written),
-      closeTo(.075, 1e-9),
+      closeTo(.6, 1e-9),
     );
-    expect(similarGroupRetention(group), closeTo(.1375, 1e-9));
+    expect(similarGroupRetention(group), closeTo(.8, 1e-9));
     final reverseOnly = english.copyWith(
       reviewHistory: {
         StudyCue.scriptToMeaning: english.reviewHistoryFor(

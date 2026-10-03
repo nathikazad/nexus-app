@@ -8,7 +8,6 @@ import 'package:nx_cards/scheduling/learning_stage.dart';
 Map<int, double> futureCardScores(
   Iterable<StudyCard> cards, {
   required RecallSelection? cue,
-  required int historyWindow,
 }) {
   final languages = <String?, List<StudyCard>>{};
   for (final card in cards.where((c) => c.isLanguageCard)) {
@@ -40,12 +39,11 @@ Map<int, double> futureCardScores(
     };
     final knowledge = <int, double>{};
     for (final c in collection) {
-      knowledge[c.id] = switch (learningStage(c, cue, window: historyWindow)) {
+      knowledge[c.id] = switch (learningStage(c, cue)) {
         LearningStage.future => 0,
         LearningStage.upcoming => .1,
         LearningStage.past => 1,
-        LearningStage.current =>
-          .1 + .9 * (recallScore(c, cue, window: historyWindow).fraction / .8),
+        LearningStage.current => .1 + .9 * (recallScore(c, cue).fraction / .8),
       };
     }
     for (final c in collection) {

@@ -17,10 +17,9 @@ class CardScheduleStatus {
 CardScheduleStatus? cardScheduleStatus(
   StudyCard card,
   DateTime now, {
-  int historyWindow = 10,
   RecallSelection? cue,
 }) {
-  final stage = learningStage(card, cue, window: historyWindow);
+  final stage = learningStage(card, cue);
   return CardScheduleStatus(
     label: card.suspended ? 'Suspended' : stage.label,
     isDue:
@@ -31,49 +30,33 @@ CardScheduleStatus? cardScheduleStatus(
           cue,
         ).any((direction) => card.scheduleFor(direction).isDueAt(now)),
     sortPriority: stage.index,
-    recallPercentage: cueRecallPercentage(
-      card,
-      cue,
-      historyWindow: historyWindow,
-    ),
+    recallPercentage: cueRecallPercentage(card, cue),
   );
 }
 
-int cardRecallPercentage(
-  StudyCard card, {
-  int historyWindow = 10,
-  RecallSelection? cue,
-}) => cueRecallPercentage(card, cue, historyWindow: historyWindow);
-int cueRecallPercentage(
-  StudyCard card,
-  RecallSelection? cue, {
-  int historyWindow = 10,
-}) => recallScore(card, cue, window: historyWindow).percentage;
+int cardRecallPercentage(StudyCard card, {RecallSelection? cue}) =>
+    cueRecallPercentage(card, cue);
+int cueRecallPercentage(StudyCard card, RecallSelection? cue) =>
+    recallScore(card, cue).percentage;
 typedef WordScheduleStatus = CardScheduleStatus;
-CardScheduleStatus? wordScheduleStatus(
-  StudyCard card,
-  DateTime now, {
-  int historyWindow = 10,
-}) => cardScheduleStatus(card, now, historyWindow: historyWindow);
-int frontToBackRecallPercentage(StudyCard card, {int historyWindow = 10}) =>
-    cardRecallPercentage(card, historyWindow: historyWindow);
+CardScheduleStatus? wordScheduleStatus(StudyCard card, DateTime now) =>
+    cardScheduleStatus(card, now);
+int frontToBackRecallPercentage(StudyCard card) => cardRecallPercentage(card);
 List<StudyCard> sortCardsByScheduleState(
   Iterable<StudyCard> cards,
   DateTime now, {
-  int historyWindow = 10,
   RecallSelection? cue,
 }) {
   return cards.toList()..sort((a, b) {
     final byStage = learningStage(
       a,
       cue,
-      window: historyWindow,
-    ).index.compareTo(learningStage(b, cue, window: historyWindow).index);
+    ).index.compareTo(learningStage(b, cue).index);
     if (byStage != 0) return byStage;
     final byRecall = recallScore(
       a,
       cue,
-    ).fraction.compareTo(recallScore(b, cue, window: historyWindow).fraction);
+    ).fraction.compareTo(recallScore(b, cue).fraction);
     return byRecall != 0
         ? byRecall
         : a.front.toLowerCase().compareTo(b.front.toLowerCase());
@@ -83,11 +66,5 @@ List<StudyCard> sortCardsByScheduleState(
 List<StudyCard> sortWordsByScheduleState(
   Iterable<StudyCard> cards,
   DateTime now, {
-  int historyWindow = 10,
   RecallSelection? cue,
-}) => sortCardsByScheduleState(
-  cards,
-  now,
-  historyWindow: historyWindow,
-  cue: cue,
-);
+}) => sortCardsByScheduleState(cards, now, cue: cue);

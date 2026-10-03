@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/language_examples_page.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/foundation.dart';
@@ -11,7 +12,7 @@ import 'package:nx_cards/scheduling/scheduling.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
-import 'package:nx_cards/study/language/language_examples_page.dart';
+import 'package:nx_cards/study/language/revealed_language_answer.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
 import 'package:nx_cards/study/language/drawing/writing_recall_card.dart';
 import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
@@ -292,133 +293,84 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                             MainAxisAlignment
                                                                 .center,
                                                         children: [
-                                                          Text(
-                                                            _prompt.instruction,
-                                                            style: const TextStyle(
-                                                              color:
-                                                                  RecallColors
-                                                                      .faint,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 16,
-                                                          ),
-                                                          Row(
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .center,
-                                                            children: [
-                                                              Flexible(
-                                                                child: Text(
-                                                                  _revealed
-                                                                      ? _prompt
-                                                                            .answer
-                                                                      : _prompt
-                                                                            .prompt,
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                  style: TextStyle(
-                                                                    fontSize:
-                                                                        _revealed
-                                                                        ? 22
-                                                                        : 38,
-                                                                    height: 1.2,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    letterSpacing:
-                                                                        -0.8,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              if (_revealed &&
-                                                                  audioRepository !=
-                                                                      null &&
+                                                          if (_revealed &&
+                                                              _card.content
+                                                                  is LanguageCardContent)
+                                                            RevealedLanguageAnswer(
+                                                              content:
                                                                   _card.content
-                                                                      is LanguageCardContent)
-                                                                if ((_card.content
-                                                                            as LanguageCardContent)
-                                                                        .audioUrl
-                                                                    case final url?
-                                                                    when url
-                                                                        .isNotEmpty)
-                                                                  Padding(
-                                                                    padding:
-                                                                        const EdgeInsets.only(
-                                                                          left:
-                                                                              8,
-                                                                        ),
-                                                                    child: PronunciationButton(
-                                                                      key: ValueKey(
-                                                                        'revealed:${_card.id}:$_index',
-                                                                      ),
-                                                                      autoPlay:
-                                                                          true,
-                                                                      audioUrl:
-                                                                          url,
-                                                                      repository:
-                                                                          audioRepository,
-                                                                    ),
-                                                                  ),
-                                                            ],
-                                                          ),
-                                                          if (!_revealed &&
-                                                              _prompt
-                                                                  .isListening)
-                                                            if (_card.content
-                                                                case LanguageCardContent(
-                                                                  audioUrl: final url?,
-                                                                )
-                                                                when url.isNotEmpty &&
-                                                                    audioRepository !=
-                                                                        null)
-                                                              LanguageAudioControls(
-                                                                key: ValueKey(
-                                                                  'listen:${_card.id}:$_index',
-                                                                ),
-                                                                audioUrl: url,
-                                                                repository:
-                                                                    audioRepository,
-                                                              )
-                                                            else
-                                                              const Text(
-                                                                'Pronunciation unavailable for this card',
-                                                              ),
-                                                          if (!_revealed)
-                                                            const Padding(
-                                                              padding:
-                                                                  EdgeInsets.only(
-                                                                    top: 14,
-                                                                  ),
-                                                              child: Text(
-                                                                'Tap the card to reveal the answer',
-                                                                style: TextStyle(
+                                                                      as LanguageCardContent,
+                                                              audioRepository:
+                                                                  audioRepository,
+                                                            )
+                                                          else ...[
+                                                            if (!_revealed)
+                                                              Text(
+                                                                _prompt
+                                                                    .instruction,
+                                                                style: const TextStyle(
                                                                   color:
                                                                       RecallColors
                                                                           .faint,
                                                                 ),
                                                               ),
-                                                            )
-                                                          else ...[
-                                                            const Padding(
-                                                              padding:
-                                                                  EdgeInsets.symmetric(
-                                                                    vertical:
-                                                                        22,
-                                                                  ),
-                                                              child: SizedBox(
-                                                                width: 54,
-                                                                child:
-                                                                    Divider(),
-                                                              ),
+                                                            const SizedBox(
+                                                              height: 16,
                                                             ),
                                                             Text(
-                                                              _prompt.cue.label,
+                                                              _revealed
+                                                                  ? _prompt
+                                                                        .answer
+                                                                  : _prompt
+                                                                        .prompt,
                                                               textAlign:
                                                                   TextAlign
                                                                       .center,
+                                                              style: const TextStyle(
+                                                                fontSize: 38,
+                                                                height: 1.2,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
                                                             ),
+                                                            if (!_revealed &&
+                                                                _prompt
+                                                                    .isListening)
+                                                              if (_card.content
+                                                                  case LanguageCardContent(
+                                                                    audioUrl: final url?,
+                                                                  )
+                                                                  when url.isNotEmpty &&
+                                                                      audioRepository !=
+                                                                          null)
+                                                                LanguageAudioControls(
+                                                                  key: ValueKey(
+                                                                    'listen:${_card.id}:$_index',
+                                                                  ),
+                                                                  audioUrl: url,
+                                                                  repository:
+                                                                      audioRepository,
+                                                                ),
+                                                            if (!_revealed)
+                                                              const Padding(
+                                                                padding:
+                                                                    EdgeInsets.only(
+                                                                      top: 14,
+                                                                    ),
+                                                                child: Text(
+                                                                  'Tap the card to reveal the answer',
+                                                                  style: TextStyle(
+                                                                    color: RecallColors
+                                                                        .faint,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                          ],
+                                                          if (_revealed &&
+                                                              !TabletRecallContext.visibleOn(
+                                                                context,
+                                                              ))
                                                             if (_card.content
                                                                 case LanguageCardContent(
                                                                   examples: final examples,
@@ -455,7 +407,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                                     ),
                                                               ),
                                                             ],
-                                                          ],
                                                         ],
                                                       ),
                                                     ),

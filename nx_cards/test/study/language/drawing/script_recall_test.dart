@@ -25,7 +25,7 @@ void main() {
       expect(find.text('ക'), findsNothing);
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
-      expect(find.text('ക'), findsNothing);
+      expect(find.text('ക'), findsOneWidget);
       expect(find.text(StudyPrompt(card: card, cue: cue).answer), findsWidgets);
       expect(find.text('Yes'), findsOneWidget);
     });
@@ -50,7 +50,7 @@ void main() {
         await tester.tap(find.text('Show answer'));
         await tester.pumpAndSettle();
         expect(find.text('Letter ka'), findsOneWidget);
-        expect(find.text('ക'), findsNothing);
+        expect(find.text('ക'), findsOneWidget);
       },
     );
   }
@@ -157,9 +157,7 @@ void main() {
           // A forgotten answer must still be revealable without drawing.
           await tester.tap(find.text('Show answer'));
           await tester.pumpAndSettle();
-          final answer = tester.widget<Text>(
-            find.byKey(const ValueKey('writing-recall-answer')),
-          );
+          final answer = tester.widget<Text>(find.text('学生'));
           expect(answer.data, '学生');
           expect(find.text('student'), findsOneWidget);
           expect(find.text('xuésheng'), findsOneWidget);
@@ -168,8 +166,8 @@ void main() {
             lessThan(tester.getTopLeft(find.text('student')).dy),
           );
           expect(
-            tester.getTopLeft(find.text('student')).dy,
-            lessThan(tester.getTopLeft(find.text('xuésheng')).dy),
+            tester.getTopLeft(find.text('xuésheng')).dy,
+            lessThan(tester.getTopLeft(find.text('student')).dy),
           );
           expect(find.text('Yes'), findsOneWidget);
           expect(find.text('No'), findsOneWidget);
@@ -179,7 +177,7 @@ void main() {
   }
 
   for (final cue in StudyCue.languageDirections) {
-    testWidgets('standard recall tests just the target of ${cue.name}', (
+    testWidgets('standard recall reveals the complete word for ${cue.name}', (
       tester,
     ) async {
       final card = _scriptCard();
@@ -191,7 +189,19 @@ void main() {
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
       expect(find.text(prompt.answer), findsOneWidget);
-      expect(find.text(cue.label), findsOneWidget);
+      expect(find.text(cue.label), findsNothing);
+      expect(find.text(prompt.instruction), findsNothing);
+      expect(find.text('ക'), findsOneWidget);
+      expect(find.text('ka'), findsOneWidget);
+      expect(find.text('Letter ka'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('ക')).dy,
+        lessThan(tester.getTopLeft(find.text('ka')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('ka')).dy,
+        lessThan(tester.getTopLeft(find.text('Letter ka')).dy),
+      );
     });
   }
 

@@ -1,4 +1,3 @@
-import 'package:nx_cards/scheduling/review_progression.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -133,12 +132,6 @@ class ProgressPage extends ConsumerWidget {
                   preferenceKey: key,
                   initialGroup: initialGroup,
                   isBook: bookId != null,
-                  window:
-                      ref
-                          .watch(reviewProgressionSettingsProvider)
-                          .value
-                          ?.historyWindow ??
-                      10,
                 ),
               );
         },
@@ -157,14 +150,12 @@ class ProgressView extends StatefulWidget {
     this.initialGroup,
     this.now,
     this.isBook = false,
-    this.window = 10,
   });
   final List<StudyCard> cards;
   final String language, preferenceKey;
   final LanguageGroup? initialGroup;
   final DateTime? now;
   final bool isBook;
-  final int window;
   @override
   State<ProgressView> createState() => _ProgressViewState();
 }
@@ -589,7 +580,6 @@ class _ProgressViewState extends State<ProgressView> {
       groupLabel,
       group?.tagSystem,
       target,
-      widget.window,
       period,
       custom?.start.toIso8601String(),
       custom?.end.toIso8601String(),
@@ -609,7 +599,7 @@ class _ProgressViewState extends State<ProgressView> {
       cards: widget.cards.where((c) => group?.contains(c) ?? true).toList(),
       directions: RecallComponent.values.toSet(),
       targetPercent: target,
-      window: widget.window,
+
       now: now,
       start: start,
       end: period == 'custom' ? custom!.end : null,

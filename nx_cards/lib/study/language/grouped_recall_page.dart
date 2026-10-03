@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/revealed_language_answer.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
 import 'dart:math';
@@ -338,7 +339,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                   'Group ${_groupIndex + 1} of ${widget.groups.length} · Word ${_wordIndex + 1} of ${_questions.length}',
                 ),
                 const SizedBox(height: 8),
-                Text(prompt.cue.label),
+                if (!_revealed) Text(prompt.instruction),
                 const SizedBox(height: 16),
                 if (_error != null) Text(_error!),
                 Card(
@@ -375,23 +376,14 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                                         fontSize: fast ? 24 : 36,
                                       ),
                                     ),
-                                  if (_revealed) ...[
-                                    Text(
-                                      prompt.answer,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: fast ? 28 : 40,
-                                      ),
+                                  if (_revealed)
+                                    RevealedLanguageAnswer(
+                                      content: content,
+                                      compact: fast,
+                                      audioRepository: audio,
                                     ),
-                                    const SizedBox(height: 14),
-                                    Text(
-                                      prompt.cue.label,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 20),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  if ((prompt.isListening || _revealed) &&
+                                  if (prompt.isListening &&
+                                      !_revealed &&
                                       content.audioUrl?.isNotEmpty == true &&
                                       audio != null) ...[
                                     const SizedBox(height: 14),

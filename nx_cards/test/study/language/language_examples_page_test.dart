@@ -69,14 +69,11 @@ void main() {
     await tester.tap(find.text('Show answer'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Meaning → Script'), findsOneWidget);
+    expect(find.text('Meaning → Script'), findsNothing);
     expect(find.text('തട്ടിപ്പ്'), findsOneWidget);
-    expect(find.text('thattippu'), findsNothing);
+    expect(find.text('thattippu'), findsOneWidget);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);
-    expect(
-      find.ancestor(of: find.text('Examples'), matching: find.byType(Card)),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(TextButton, 'Examples'), findsNothing);
     expect(find.text('Edit card'), findsNothing);
     expect(find.byIcon(Icons.refresh_rounded), findsNothing);
 
@@ -89,6 +86,14 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpAndSettle();
+    expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsNothing);
+    expect(find.widgetWithText(TextButton, 'Examples'), findsOneWidget);
     await tester.tap(find.text('Examples'));
     await tester.pumpAndSettle();
 

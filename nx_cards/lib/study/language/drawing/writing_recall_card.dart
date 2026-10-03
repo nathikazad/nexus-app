@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/revealed_language_answer.dart';
 import 'package:flutter/material.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -26,8 +27,6 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
   LanguageCardContent get _content =>
       widget.prompt.card.content as LanguageCardContent;
 
-  String get _answer => _content.originalScript;
-
   String? get _audioUrl {
     final value = _content.audioUrl?.trim();
     return value == null || value.isEmpty ? null : value;
@@ -55,20 +54,43 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(
-            child:
-                !widget.revealed &&
-                    widget.prompt.cue.source == RecallComponent.meaning
-                ? FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      _content.english.replaceAll(RegExp(r'\s+'), ' ').trim(),
-                      key: const ValueKey('writing-recall-prompt'),
-                      maxLines: 1,
-                      softWrap: false,
+      if (widget.revealed)
+        RevealedLanguageAnswer(
+          key: const ValueKey('writing-recall-answer'),
+          content: _content,
+          audioRepository: widget.audioRepository,
+        )
+      else
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child:
+                  !widget.revealed &&
+                      widget.prompt.cue.source == RecallComponent.meaning
+                  ? FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _content.english.replaceAll(RegExp(r'\s+'), ' ').trim(),
+                        key: const ValueKey('writing-recall-prompt'),
+                        maxLines: 1,
+                        softWrap: false,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 38,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.6,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      widget.prompt.prompt,
+                      key: ValueKey<String>(
+                        widget.revealed
+                            ? 'writing-recall-answer'
+                            : 'writing-recall-prompt',
+                      ),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 38,
@@ -77,42 +99,20 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
                         letterSpacing: -0.6,
                       ),
                     ),
-                  )
-                : Text(
-                    widget.revealed ? _answer : widget.prompt.prompt,
-                    key: ValueKey<String>(
-                      widget.revealed
-                          ? 'writing-recall-answer'
-                          : 'writing-recall-prompt',
-                    ),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 38,
-                      height: 1.2,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.6,
-                    ),
-                  ),
-          ),
-          if (widget.revealed || widget.prompt.isListening)
-            if (_audioUrl case final audioUrl?
-                when widget.audioRepository != null) ...[
-              const SizedBox(width: 8),
-              PronunciationButton(
-                key: ValueKey('pronunciation:${widget.revealed}'),
-                autoPlay: true,
-                audioUrl: audioUrl,
-                repository: widget.audioRepository!,
-              ),
-            ],
-        ],
-      ),
-      if (widget.revealed) ...[
-        const SizedBox(height: 8),
-        Text(_content.english, textAlign: TextAlign.center),
-      ],
-      if (widget.revealed)
-        Text(_content.transliteration, textAlign: TextAlign.center),
+            ),
+            if (widget.revealed || widget.prompt.isListening)
+              if (_audioUrl case final audioUrl?
+                  when widget.audioRepository != null) ...[
+                const SizedBox(width: 8),
+                PronunciationButton(
+                  key: ValueKey('pronunciation:${widget.revealed}'),
+                  autoPlay: true,
+                  audioUrl: audioUrl,
+                  repository: widget.audioRepository!,
+                ),
+              ],
+          ],
+        ),
       const SizedBox(height: 8),
       Text(
         widget.revealed

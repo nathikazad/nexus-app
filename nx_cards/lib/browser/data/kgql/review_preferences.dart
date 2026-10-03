@@ -5,21 +5,15 @@ import 'package:nx_db/nx_db.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewProgressionSettings {
-  const ReviewProgressionSettings({
-    this.historyWindow = 10,
-    this.dailyGoals = const {},
-  });
-  final int historyWindow;
+  const ReviewProgressionSettings({this.dailyGoals = const {}});
+  int get historyWindow => 5;
   final Map<String, int> dailyGoals;
-  bool get isValid => historyWindow >= 1 && historyWindow <= 10;
   Map<String, Object> toJson() => {
     'history_window': historyWindow,
     'daily_goals': dailyGoals,
   };
   factory ReviewProgressionSettings.fromJson(Map<String, Object?> json) {
-    final n = (json['history_window'] as num?)?.toInt() ?? 10;
     return ReviewProgressionSettings(
-      historyWindow: n >= 1 && n <= 10 ? n : 10,
       dailyGoals: {
         for (final e
             in (json['daily_goals'] is Map
@@ -101,9 +95,6 @@ class ReviewProgressionSettingsStore {
   }
 
   Future<void> save(ReviewProgressionSettings settings) async {
-    if (!settings.isValid) {
-      throw ArgumentError('Choose between 1 and 10 answers.');
-    }
     if (client == null || userId == null) {
       throw StateError('Sign in to save account preferences.');
     }

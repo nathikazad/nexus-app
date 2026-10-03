@@ -63,7 +63,12 @@ void main() {
               .copyWith(
                 content: sample(1, 6).content,
                 schedules: sample(1, 6).schedules,
-                reviewHistory: sample(1, 6).reviewHistory,
+                reviewHistory: {
+                  StudyCue.meaningToSound: sample(
+                    1,
+                    3,
+                  ).reviewHistoryFor(StudyCue.meaningToSound),
+                },
                 learningStatus: LearningStatus.recall,
               ),
         ],
@@ -89,7 +94,7 @@ void main() {
       expect(find.byTooltip('Recall'), findsOneWidget);
       expect(find.byKey(const ValueKey('practice-select')), findsOneWidget);
       expect(find.byType(TabBar), findsNothing);
-      expect(find.text('60%'), findsOneWidget);
+      expect(find.text('40%'), findsOneWidget);
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
       expect(find.text('Weak (1)', findRichText: true), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('current-filter-toggle')));
@@ -108,7 +113,7 @@ void main() {
             .values,
         const RangeValues(.8, 1),
       );
-      expect(find.text('60%'), findsNothing);
+      expect(find.text('40%'), findsNothing);
       await tester.tap(find.text('Weak'));
       await tester.pumpAndSettle();
       expect(
@@ -119,16 +124,16 @@ void main() {
             .values,
         const RangeValues(0, .6),
       );
-      expect(find.text('60%'), findsOneWidget);
-      slider.onChanged!(const RangeValues(.5, .7));
+      expect(find.text('40%'), findsOneWidget);
+      slider.onChanged!(const RangeValues(.3, .5));
       await tester.pumpAndSettle();
       expect(find.byType(DirectionChoices), findsNothing);
-      expect(find.text('60%'), findsOneWidget);
+      expect(find.text('40%'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
       await tester.tap(find.text('All'));
       await tester.pumpAndSettle();
-      expect(find.text('60%'), findsOneWidget);
+      expect(find.text('40%'), findsOneWidget);
       expect(find.byKey(const ValueKey('current-retention')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('open-backlog')));
       await tester.pumpAndSettle();

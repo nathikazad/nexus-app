@@ -55,7 +55,7 @@ void main() {
       await tester.drag(find.byType(ListView), const Offset(0, -600));
       await tester.pumpAndSettle();
       expect(find.text('No reviews for these skills yet.'), findsOneWidget);
-      expect(find.text('0/40 · 0 recent attempts'), findsOneWidget);
+      expect(find.text('Average of 1 skill'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -108,22 +108,21 @@ void main() {
         expect(tester.widget<FilterChip>(chip('sound')).selected, isTrue);
         expect(chip('script'), spokenOnly ? findsNothing : findsOneWidget);
         expect(
-          find.descendant(of: chip('meaning'), matching: find.text('10%')),
+          find.descendant(
+            of: chip('meaning'),
+            matching: find.text(spokenOnly ? '40%' : '80%'),
+          ),
           findsOneWidget,
         );
         expect(
           find.descendant(
             of: chip('sound'),
-            matching: find.text(spokenOnly ? '10%' : '8%'),
+            matching: find.text(spokenOnly ? '40%' : '60%'),
           ),
           findsOneWidget,
         );
         expect(
-          find.text(
-            spokenOnly
-                ? '2/20 · 2 recent attempts'
-                : '5/60 · 6 recent attempts',
-          ),
+          find.text(spokenOnly ? 'Average of 2 skills' : 'Average of 3 skills'),
           findsOneWidget,
         );
         await tester.ensureVisible(chip('sound'));
@@ -131,17 +130,13 @@ void main() {
         await tester.pumpAndSettle();
         // Two selected skills still cover all six directions, without duplication.
         expect(
-          find.text(
-            spokenOnly
-                ? '2/20 · 2 recent attempts'
-                : '5/60 · 6 recent attempts',
-          ),
+          find.text(spokenOnly ? 'Average of 1 skill' : 'Average of 2 skills'),
           findsOneWidget,
         );
         if (!spokenOnly) {
           await tester.tap(chip('script'));
           await tester.pumpAndSettle();
-          expect(find.text('4/40 · 4 recent attempts'), findsOneWidget);
+          expect(find.text('Average of 1 skill'), findsOneWidget);
           expect(find.text('4 yes · 0 no'), findsOneWidget);
         }
         await tester.drag(find.byType(ListView), const Offset(0, 1000));
@@ -664,7 +659,7 @@ void main() {
     expect(find.text('Backlog'), findsOneWidget);
     expect(find.text('Learning step 2 of 2'), findsNothing);
     expect(find.text('0%'), findsNWidgets(4));
-    expect(find.text('0/60 · 4 recent attempts'), findsOneWidget);
+    expect(find.text('Average of 3 skills'), findsOneWidget);
     expect(find.text('estimated recall'), findsNothing);
   });
 }

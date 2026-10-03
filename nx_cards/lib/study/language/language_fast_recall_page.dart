@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/revealed_language_answer.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/study/language/language_audio_controls.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
@@ -369,94 +370,97 @@ class _FastRecallRowState extends ConsumerState<_FastRecallRow> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    Text(
-                                      widget.prompt.instruction,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: RecallColors.faint,
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: InkWell(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            onTap: _revealed
-                                                ? widget.onOpenCard
-                                                : null,
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 4,
-                                              ),
-                                              child: Text(
-                                                widget.prompt.prompt,
-                                                key: ValueKey<String>(
-                                                  'fast-prompt-${widget.prompt.cardId}',
-                                                ),
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  height: 1.35,
-                                                  color: RecallColors.muted,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
+                                    if (!_revealed)
+                                      Text(
+                                        widget.prompt.instruction,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: RecallColors.faint,
                                         ),
-                                        if ((_revealed ||
-                                                widget.prompt.isListening) &&
-                                            widget
-                                                    .content
-                                                    .audioUrl
-                                                    ?.isNotEmpty ==
-                                                true &&
-                                            ref.watch(
-                                                  cardAudioRepositoryProvider,
-                                                ) !=
-                                                null)
-                                          PronunciationButton(
-                                            key: ValueKey(
-                                              'pronunciation:$_revealed',
-                                            ),
-                                            audioUrl: widget.content.audioUrl!,
-                                            repository: ref.watch(
-                                              cardAudioRepositoryProvider,
-                                            )!,
-                                            // Fast recall shows multiple rows; play only the row requested.
-                                            autoPlay: _revealed,
-                                          ),
-
-                                        if (!_revealed) ...[
-                                          const SizedBox(width: 16),
-                                          Expanded(
+                                      ),
+                                    if (!_revealed)
+                                      Row(
+                                        children: [
+                                          Flexible(
                                             child: InkWell(
-                                              key: ValueKey<String>(
-                                                'fast-hidden-${widget.prompt.cardId}',
-                                              ),
                                               borderRadius:
                                                   BorderRadius.circular(8),
-                                              onTap: () => setState(
-                                                () => _revealed = true,
-                                              ),
-                                              child: const Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                  vertical: 3,
+                                              onTap: _revealed
+                                                  ? widget.onOpenCard
+                                                  : null,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 4,
                                                 ),
                                                 child: Text(
-                                                  'Tap to reveal',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: RecallColors.faint,
-                                                    fontStyle: FontStyle.italic,
+                                                  widget.prompt.prompt,
+                                                  key: ValueKey<String>(
+                                                    'fast-prompt-${widget.prompt.cardId}',
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    height: 1.35,
+                                                    color: RecallColors.muted,
                                                   ),
                                                 ),
                                               ),
                                             ),
                                           ),
+                                          if ((_revealed ||
+                                                  widget.prompt.isListening) &&
+                                              widget
+                                                      .content
+                                                      .audioUrl
+                                                      ?.isNotEmpty ==
+                                                  true &&
+                                              ref.watch(
+                                                    cardAudioRepositoryProvider,
+                                                  ) !=
+                                                  null)
+                                            PronunciationButton(
+                                              key: ValueKey(
+                                                'pronunciation:$_revealed',
+                                              ),
+                                              audioUrl:
+                                                  widget.content.audioUrl!,
+                                              repository: ref.watch(
+                                                cardAudioRepositoryProvider,
+                                              )!,
+                                              // Fast recall shows multiple rows; play only the row requested.
+                                              autoPlay: _revealed,
+                                            ),
+
+                                          if (!_revealed) ...[
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: InkWell(
+                                                key: ValueKey<String>(
+                                                  'fast-hidden-${widget.prompt.cardId}',
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                onTap: () => setState(
+                                                  () => _revealed = true,
+                                                ),
+                                                child: const Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical: 3,
+                                                  ),
+                                                  child: Text(
+                                                    'Tap to reveal',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: RecallColors.faint,
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ],
-                                      ],
-                                    ),
+                                      ),
                                     if (_revealed) ...[
                                       const SizedBox(height: 10),
                                       Row(
@@ -477,9 +481,12 @@ class _FastRecallRowState extends ConsumerState<_FastRecallRow> {
                                                       horizontal: 4,
                                                       vertical: 2,
                                                     ),
-                                                child: _FastAnswer(
-                                                  prompt: widget.prompt,
+                                                child: RevealedLanguageAnswer(
                                                   content: widget.content,
+                                                  compact: true,
+                                                  audioRepository: ref.watch(
+                                                    cardAudioRepositoryProvider,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -621,44 +628,6 @@ class _FastSwipeBackground extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _FastAnswer extends StatelessWidget {
-  const _FastAnswer({required this.prompt, required this.content});
-
-  final StudyPrompt prompt;
-  final LanguageCardContent content;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = prompt.answer;
-    final secondary = prompt.cue.label;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          primary,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 20,
-            height: 1.35,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          secondary,
-          style: const TextStyle(
-            fontSize: 14,
-            height: 1.35,
-            fontStyle: FontStyle.italic,
-            color: RecallColors.faint,
-          ),
-        ),
-      ],
     );
   }
 }

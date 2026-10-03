@@ -1,4 +1,3 @@
-import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_cards/browser/browser.dart';
@@ -35,16 +34,7 @@ class BacklogPage extends ConsumerWidget {
           onRetry: () => ref.read(cardsInvalidationProvider)(),
         ),
         data: (dashboard) {
-          final scores = futureCardScores(
-            dashboard.cards,
-            cue: null,
-            historyWindow:
-                ref
-                    .watch(reviewProgressionSettingsProvider)
-                    .value
-                    ?.historyWindow ??
-                10,
-          );
+          final scores = futureCardScores(dashboard.cards, cue: null);
           final cards = sortFutureCards(
             dashboard.cards.where(
               (c) => matches(c) && c.learningStatus == LearningStatus.future,

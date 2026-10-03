@@ -413,6 +413,12 @@ void main() {
     expect(repository.changes, isEmpty);
 
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('current-filter-toggle')));
+    await tester.pumpAndSettle();
+    tester
+        .widget<RangeSlider>(find.byKey(const ValueKey('current-retention')))
+        .onChanged!(const RangeValues(0, 1));
+    await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const ValueKey('recall:3')),
       const Offset(100, 0),
@@ -491,7 +497,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('0%'), findsNWidgets(2));
-    expect(find.text('7%'), findsOneWidget);
+    expect(find.text('53%'), findsOneWidget);
     expect(find.text('word 3'), findsOneWidget);
     final order = [
       'word 1',
@@ -500,7 +506,7 @@ void main() {
     ].map((label) => tester.getCenter(find.text(label)).dy).toList();
     expect(order, orderedEquals([...order]..sort()));
     await tester.pumpAndSettle();
-    expect(find.text('2%'), findsOneWidget);
+    expect(find.text('13%'), findsOneWidget);
     expect(find.text('word 3'), findsOneWidget);
     expect(find.text('word 4'), findsNothing);
   });
@@ -585,8 +591,8 @@ void main() {
       expect(find.byKey(const ValueKey('future-score-1')), findsNothing);
       final phraseOrder = <String>[
         'word 103',
-        'word 101',
         'word 102',
+        'word 101',
       ].map((label) => tester.getCenter(find.text(label)).dy).toList();
       expect(phraseOrder, orderedEquals(<double>[...phraseOrder]..sort()));
     },

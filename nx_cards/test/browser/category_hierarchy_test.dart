@@ -171,11 +171,7 @@ void main() {
       false,
     );
     expect(question.isPhraseCard, true);
-    final scores = futureCardScores(
-      cards,
-      cue: StudyCue.meaningToScript,
-      historyWindow: 10,
-    );
+    final scores = futureCardScores(cards, cue: StudyCue.meaningToScript);
     expect(scores[1], greaterThan(0));
     expect(
       question.copyWith(suspended: true).categoryPaths,

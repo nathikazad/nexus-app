@@ -66,13 +66,10 @@ class _SettingsForm extends ConsumerStatefulWidget {
 
 class _SettingsFormState extends ConsumerState<_SettingsForm> {
   late AppAppearance _appearance = widget.initialAppearance;
-  final int _historyWindow = 10;
   bool _saving = false;
   bool _syncing = false;
   String? _syncMessage;
   bool _syncFailed = false;
-
-  bool get _valid => _historyWindow >= 1 && _historyWindow <= 10;
 
   Future<void> _selectAppearance(AppAppearance appearance) async {
     setState(() => _appearance = appearance);
@@ -80,9 +77,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   }
 
   Future<void> _save() async {
-    if (!_valid || _saving) return;
+    if (_saving) return;
     setState(() => _saving = true);
-    final settings = ReviewProgressionSettings(historyWindow: _historyWindow);
+    final settings = ReviewProgressionSettings();
     try {
       await ref.read(reviewProgressionSettingsStoreProvider).save(settings);
       ref.invalidate(reviewProgressionSettingsProvider);
@@ -202,7 +199,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               ),
               const SizedBox(height: 7),
               const Text(
-                'Recall scores use your latest 10 attempts, with a minimum denominator of 5. One correct answer out of one attempt scores 1/5 (20%). Recall cards below 80% are Weak; 80% or more are Strong.',
+                'Each skill uses its latest five recalls; missing attempts count as zero. Overall retention averages Meaning, Sound and Script, or just Meaning and Sound for spoken-only cards. Recall filters use each direction’s own latest five recalls.',
                 style: TextStyle(color: RecallColors.muted, height: 1.4),
               ),
               const SizedBox(height: 18),
@@ -253,7 +250,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               ),
               const SizedBox(height: 22),
               FilledButton(
-                onPressed: _valid && !_saving ? _save : null,
+                onPressed: !_saving ? _save : null,
                 child: Text(_saving ? 'Saving…' : 'Save settings'),
               ),
               const SizedBox(height: 12),

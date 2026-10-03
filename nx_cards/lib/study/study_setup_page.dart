@@ -290,7 +290,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       retentionPrompts(
             _studyCards,
             _directions,
-            window: _reviewHistoryWindow,
+
             writing: _writing,
             minimum:
                 (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
@@ -304,27 +304,20 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           )
           .toList();
 
-  bool _matchesRecallBaseFilters(StudyCard card) {
-    if (_mode == StudyMode.study) {
-      return true;
-    }
-    if (_dueOnly) {
-      return card.active &&
-          card.learningStatus == LearningStatus.recall &&
-          averageRetention(card, _directions, window: _reviewHistoryWindow) +
-                  1e-9 >=
-              _dueMinPercentage / 100;
-    }
-    final score = averageRetention(
-      card,
-      _directions,
-      window: _reviewHistoryWindow,
-    );
+  bool _matchesRecallBaseFilters(StudyCard card, [StudyCue? cue]) {
+    if (_mode == StudyMode.study) return true;
     return card.active &&
         card.learningStatus == LearningStatus.recall &&
-        score + 1e-9 >= _retainedMinPercentage / 100 &&
-        score <= _retainedMaxPercentage / 100 + 1e-9 &&
-        (!_weakOnly || score < .8 - 1e-9);
+        (cue == null ? selectedCues(card, _directions) : [cue]).any(
+          (direction) => matchesRecallRange(
+            card,
+            direction,
+            minimum:
+                (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
+            maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
+            weakOnly: !_dueOnly && _weakOnly,
+          ),
+        );
   }
 
   List<StudyPrompt> get _practiceCandidates => [
@@ -341,9 +334,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
   bool get _usesRecallFilters =>
       _mode == StudyMode.recall || _mode == StudyMode.ai;
-
-  int get _reviewHistoryWindow =>
-      ref.read(reviewProgressionSettingsProvider).value?.historyWindow ?? 10;
 
   bool get _supportsDrawing =>
       !_isBookStudy &&
@@ -901,7 +891,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                   if (cardsById[queued.cardId] case final latestCard?
                       when !latestCard.suspended &&
                           (!_usesRecallFilters ||
-                              _matchesRecallBaseFilters(latestCard)) &&
+                              _matchesRecallBaseFilters(
+                                latestCard,
+                                queued.cue,
+                              )) &&
                           latestCard.scheduleFor(queued.cue).enabled &&
                           (!_dueOnly ||
                               latestCard
@@ -939,11 +932,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         selected.shuffle(Random.secure());
       }
       if (_usesRecallFilters) {
-        prioritizeRecallPrompts(
-          selected,
-          DateTime.now().toUtc(),
-          historyWindow: _reviewHistoryWindow,
-        );
+        prioritizeRecallPrompts(selected, DateTime.now().toUtc());
       }
       _startupStep('selection_ready');
       final chosen = shuffledRecallSelection(

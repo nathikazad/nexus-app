@@ -18,7 +18,7 @@ class RecallScore {
   const RecallScore({
     required this.recalled,
     required this.attempts,
-    this.denominator = 10,
+    this.denominator = recallWindow,
   });
   final int recalled;
   final int attempts;
@@ -44,47 +44,83 @@ List<CardReview> selectionReviews(StudyCard card, RecallSelection? selection) =>
         ...card.reviewHistoryFor(cue),
     ]..sort((a, b) => b.reviewedAt.compareTo(a.reviewedAt));
 
-final _scoreCache = Expando<Map<(RecallSelection?, int), RecallScore>>(
-  'recall scores',
-);
+/// Every skill and direction uses five slots, including unattempted slots.
+const recallWindow = 5;
 
-RecallScore recallScore(
+RecallScore pooledRecallScore(
   StudyCard card,
-  RecallSelection? selection, {
-  int window = 10,
+  Iterable<StudyCue> cues, {
+  Map<StudyCue, List<CardReview>>? history,
 }) {
-  assert(window >= 1 && window <= 10);
-  final cache = _scoreCache[card] ??= {};
-  final cached = cache[(selection, window)];
-  if (cached != null) return cached;
-  final cues = selectionCues(card, selection);
-  var recalled = 0;
-  var attempts = 0;
-  for (final cue in cues) {
-    final byId = {
-      for (final review in card.reviewHistoryFor(cue)) review.id: review,
-    };
-    final reviews = byId.values.toList()
-      ..sort((a, b) {
-        final byTime = b.reviewedAt.compareTo(a.reviewedAt);
-        return byTime != 0 ? byTime : b.id.compareTo(a.id);
-      });
-    final recent = reviews.take(window);
-    recalled += recent.where((r) => r.rating >= 3).length;
-    attempts += recent.length;
-  }
-  return cache[(selection, window)] = RecallScore(
-    recalled: recalled,
-    attempts: attempts,
-    denominator: cues.length * window,
+  final unique = <(StudyCue, String), CardReview>{
+    for (final cue in cues)
+      for (final review
+          in (history ?? card.reviewHistory)[cue] ?? <CardReview>[])
+        (cue, review.id): review,
+  };
+  final reviews = unique.entries.toList()
+    ..sort((a, b) {
+      final time = b.value.reviewedAt.compareTo(a.value.reviewedAt);
+      if (time != 0) return time;
+      final id = b.value.id.compareTo(a.value.id);
+      return id != 0 ? id : b.key.$1.index.compareTo(a.key.$1.index);
+    });
+  final recent = reviews.take(recallWindow).map((entry) => entry.value);
+  return RecallScore(
+    recalled: recent.where((review) => review.rating >= 3).length,
+    attempts: recent.length,
   );
 }
 
-LearningStage learningStage(
+/// Average selected skill scores; each skill pools its latest five recalls.
+/// An event may inform two skills, but is only one event in the history graph.
+RecallScore combinedRecallScore(
   StudyCard card,
-  RecallSelection? cue, {
-  int window = 10,
+  Iterable<RecallComponent> components, {
+  Map<StudyCue, List<CardReview>>? history,
 }) {
+  if (!card.isLanguageCard) {
+    return pooledRecallScore(
+      card,
+      selectedCues(card, components),
+      history: history,
+    );
+  }
+  final selected = components.toSet()
+    ..removeWhere(
+      (component) => card.spokenOnly && component == RecallComponent.script,
+    );
+  final scores = [
+    for (final component in selected)
+      history == null
+          ? recallScore(card, component)
+          : pooledRecallScore(
+              card,
+              selectedCues(card, [component]),
+              history: history,
+            ),
+  ];
+  return RecallScore(
+    recalled: scores.fold(0, (sum, score) => sum + score.recalled),
+    attempts: scores.fold(0, (sum, score) => sum + score.attempts),
+    denominator: recallWindow * scores.length,
+  );
+}
+
+final _scoreCache = Expando<Map<RecallSelection?, RecallScore>>(
+  'fixed five recall',
+);
+RecallScore recallScore(StudyCard card, RecallSelection? selection) {
+  final cache = _scoreCache[card] ??= {};
+  return cache.putIfAbsent(
+    selection,
+    () => selection == null
+        ? combinedRecallScore(card, RecallComponent.values)
+        : pooledRecallScore(card, selectionCues(card, selection)),
+  );
+}
+
+LearningStage learningStage(StudyCard card, RecallSelection? cue) {
   if (card.learningStatus == LearningStatus.future) {
     return LearningStage.future;
   }
@@ -92,17 +128,12 @@ LearningStage learningStage(
     return LearningStage.upcoming;
   }
   // Compare without rounding: 79.6% must never graduate to Past.
-  return recallScore(card, cue, window: window).strong
+  return recallScore(card, cue).strong
       ? LearningStage.past
       : LearningStage.current;
 }
 
-bool availableForRecall(
-  StudyCard card,
-  StudyCue cue,
-  DateTime now, {
-  int window = 10,
-}) {
+bool availableForRecall(StudyCard card, StudyCue cue, DateTime now) {
   if (card.suspended ||
       !card.active ||
       !card.supportsCue(cue) ||
@@ -110,6 +141,6 @@ bool availableForRecall(
       !card.directions.contains(cue)) {
     return false;
   }
-  return learningStage(card, cue, window: window) != LearningStage.past ||
+  return learningStage(card, cue) != LearningStage.past ||
       card.scheduleFor(cue).isDueAt(now);
 }
