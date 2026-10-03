@@ -35,8 +35,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-        domainAppearancesProvider.overrideWith((ref) async=>{}),
-          timeDomainsProvider.overrideWith(()=>TestDomains(MockGraphQLClient())),
+          domainAppearancesProvider.overrideWith((ref) async => {}),
+          timeDomainsProvider.overrideWith(
+            () => TestDomains(MockGraphQLClient()),
+          ),
           planningFeedProvider.overrideWith(
             (ref) async => CalendarFeed(
               entries: [
@@ -67,6 +69,7 @@ void main() {
     expect(find.text('Your plans this week'), findsOneWidget);
     expect(find.text('Upcoming chore'), findsOneWidget);
     expect(find.text('Finished chore'), findsNothing);
+    expect(find.text('No plans'), findsNothing);
     expect(find.byTooltip('Next week'), findsOneWidget);
   });
 }

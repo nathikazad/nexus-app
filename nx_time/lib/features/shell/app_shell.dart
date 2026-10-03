@@ -38,6 +38,7 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell>
     with RouteAware, WidgetsBindingObserver {
   late int _index;
+  final Set<int> _visitedTabs = {};
   bool _routeVisible = true;
   bool _wasBackgrounded = false;
 
@@ -47,6 +48,7 @@ class _AppShellState extends ConsumerState<AppShell>
     WidgetsBinding.instance.addObserver(this);
     final i = widget.initialTabIndex;
     _index = i < 0 ? 0 : (i > 3 ? 3 : i);
+    _visitedTabs.add(_index);
   }
 
   @override
@@ -104,17 +106,24 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   Widget build(BuildContext context) {
-    final snapshotAsync = ref.watch(todaySnapshotProvider);
+    final snapshotAsync = _visitedTabs.contains(3)
+        ? ref.watch(todaySnapshotProvider)
+        : const AsyncValue<TodaySnapshot>.loading();
     final colors = modelTypeColorsOrFallback(
       ref.watch(modelTypeColorsProvider),
     );
     final voiceState = ref.watch(voiceSocketControllerProvider);
 
-    ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
-      if (next.hasError) {
-        debugPrint('[nx_time shell] todaySnapshot: ${next.error}');
-      }
-    });
+    if (_visitedTabs.contains(3)) {
+      ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (
+        prev,
+        next,
+      ) {
+        if (next.hasError) {
+          debugPrint('[nx_time shell] todaySnapshot: ${next.error}');
+        }
+      });
+    }
     if (_routeVisible) {
       ref.listen<AsyncValue<KgqlModelChange>>(workspaceChangesProvider, (
         prev,
@@ -136,92 +145,102 @@ class _AppShellState extends ConsumerState<AppShell>
             index: _index,
             children: [
               const TasksPage(),
-              _index == 1 ? const CalendarPage() : const SizedBox.shrink(),
-              const GoalsPage(),
-              snapshotAsync.when(
-                data: (snapshot) => TodayPage(
-                  snapshot: snapshot,
-                  onActivityTap: (index) {
-                    final row = index < snapshot.umbrellaRows.length
-                        ? snapshot.umbrellaRows[index]
-                        : null;
-                    final Action? rowAction =
-                        index < snapshot.sourceActions.length
-                        ? snapshot.sourceActions[index]
-                        : null;
-                    late final ActivityDetailArgs args;
-                    if (row != null && row.children.isNotEmpty) {
-                      args = activityDetailArgsForUmbrella(
-                        row,
-                        snapshot.dayDateLabel,
-                        colors,
-                      );
-                    } else if (rowAction != null) {
-                      args = activityDetailArgsForAction(
-                        rowAction,
-                        snapshot.dayDateLabel,
-                        colors,
-                      );
-                    } else {
-                      args = activityDetailArgsForTodayRow(
-                        snapshot.actions[index],
-                        snapshot.dayDateLabel,
-                      );
-                    }
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => ActivityDetailPage(args: args),
+              _visitedTabs.contains(1)
+                  ? const CalendarPage()
+                  : const SizedBox.shrink(),
+              _visitedTabs.contains(2)
+                  ? const GoalsPage()
+                  : const SizedBox.shrink(),
+              !_visitedTabs.contains(3)
+                  ? const SizedBox.shrink()
+                  : snapshotAsync.when(
+                      data: (snapshot) => TodayPage(
+                        snapshot: snapshot,
+                        onActivityTap: (index) {
+                          final row = index < snapshot.umbrellaRows.length
+                              ? snapshot.umbrellaRows[index]
+                              : null;
+                          final Action? rowAction =
+                              index < snapshot.sourceActions.length
+                              ? snapshot.sourceActions[index]
+                              : null;
+                          late final ActivityDetailArgs args;
+                          if (row != null && row.children.isNotEmpty) {
+                            args = activityDetailArgsForUmbrella(
+                              row,
+                              snapshot.dayDateLabel,
+                              colors,
+                            );
+                          } else if (rowAction != null) {
+                            args = activityDetailArgsForAction(
+                              rowAction,
+                              snapshot.dayDateLabel,
+                              colors,
+                            );
+                          } else {
+                            args = activityDetailArgsForTodayRow(
+                              snapshot.actions[index],
+                              snapshot.dayDateLabel,
+                            );
+                          }
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => ActivityDetailPage(args: args),
+                            ),
+                          );
+                        },
+                        onChildTap: (rowIndex, childIndex) {
+                          final row = snapshot.umbrellaRows[rowIndex];
+                          if (childIndex < 0 ||
+                              childIndex >= row.children.length) {
+                            return;
+                          }
+                          final child = row.children[childIndex];
+                          final args = activityDetailArgsForAction(
+                            child,
+                            snapshot.dayDateLabel,
+                            colors,
+                          );
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => ActivityDetailPage(args: args),
+                            ),
+                          );
+                        },
+                        onAddManualTap: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ActionEditPage(),
+                            ),
+                          );
+                        },
+                        onLogTap: (log) {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (_) => LogEditPage(
+                                mode: LogEditMode.edit,
+                                initial: log,
+                              ),
+                            ),
+                          );
+                        },
+                        onAddLogTap: () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const LogEditPage(),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                  onChildTap: (rowIndex, childIndex) {
-                    final row = snapshot.umbrellaRows[rowIndex];
-                    if (childIndex < 0 || childIndex >= row.children.length) {
-                      return;
-                    }
-                    final child = row.children[childIndex];
-                    final args = activityDetailArgsForAction(
-                      child,
-                      snapshot.dayDateLabel,
-                      colors,
-                    );
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => ActivityDetailPage(args: args),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text('Could not load Actions: $e'),
+                        ),
                       ),
-                    );
-                  },
-                  onAddManualTap: () {
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const ActionEditPage(),
-                      ),
-                    );
-                  },
-                  onLogTap: (log) {
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            LogEditPage(mode: LogEditMode.edit, initial: log),
-                      ),
-                    );
-                  },
-                  onAddLogTap: () {
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const LogEditPage(),
-                      ),
-                    );
-                  },
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text('Could not load Actions: $e'),
-                  ),
-                ),
-              ),
+                    ),
             ],
           ),
           if (voiceState.overlayVisible) const VoiceListeningOverlay(),
@@ -229,7 +248,10 @@ class _AppShellState extends ConsumerState<AppShell>
       ),
       bottomNavigationBar: _BottomNav(
         currentIndex: _index,
-        onChanged: (i) => setState(() => _index = i),
+        onChanged: (i) => setState(() {
+          _index = i;
+          _visitedTabs.add(i);
+        }),
         onAiTap: () {
           Navigator.of(context).push<void>(
             PageRouteBuilder<void>(

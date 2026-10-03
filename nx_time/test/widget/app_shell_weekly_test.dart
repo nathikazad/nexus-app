@@ -5,6 +5,10 @@ import 'package:nx_time/data/subscriptions/kgql_model_subscription.dart';
 import 'package:nx_time/features/calendar/calendar_page.dart';
 import 'package:nx_time/domain/calendar/calendar_entry.dart';
 import '../_support/fake_task_repository.dart';
+import '../_support/test_domains.dart';
+import '../_support/mock_graphql_client.dart';
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_time/data/domains/domain_appearance.dart';
 import 'package:nx_time/features/tasks/task_view_models.dart';
 import '../_support/fake_goal_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,15 +31,24 @@ class _AuthLoggedIn extends AuthController {
 }
 
 void main() {
-  testWidgets('shell labels the planning Calendar tab', (tester) async {
+  testWidgets('shell loads tabs lazily and retains the calendar on return', (
+    tester,
+  ) async {
+    var calendarLoads = 0;
+    var todayLoads = 0;
     await pumpAppWith(
       tester,
-      child: const AppShell(initialTabIndex: 3),
+      child: const AppShell(),
       overrides: [
-        workspaceChangesProvider.overrideWith((ref) => const Stream.empty()),
-        planningFeedProvider.overrideWith(
-          (ref) async => const CalendarFeed(entries: []),
+        timeDomainsProvider.overrideWith(
+          () => TestDomains(MockGraphQLClient()),
         ),
+        domainAppearancesProvider.overrideWith((ref) async => {}),
+        workspaceChangesProvider.overrideWith((ref) => const Stream.empty()),
+        planningFeedProvider.overrideWith((ref) async {
+          calendarLoads++;
+          return const CalendarFeed(entries: []);
+        }),
         taskRepositoryProvider.overrideWithValue(
           const FakeEmptyTaskRepository(),
         ),
@@ -54,10 +67,10 @@ void main() {
         modelTypeColorsProvider.overrideWith(
           (ref) async => ModelTypeColors.fallback,
         ),
-        todaySnapshotProvider.overrideWith(
-          (ref) =>
-              AsyncValue.data(buildTodaySnapshot(const [], DateTime.now())),
-        ),
+        todaySnapshotProvider.overrideWith((ref) {
+          todayLoads++;
+          return AsyncValue.data(buildTodaySnapshot(const [], DateTime.now()));
+        }),
       ],
     );
     await tester.pump();
@@ -65,5 +78,16 @@ void main() {
 
     expect(find.text('Calendar'), findsAtLeastNWidgets(1));
     expect(find.text('Weekly'), findsNothing);
+    expect(calendarLoads, 0);
+    expect(todayLoads, 0);
+    await tester.tap(find.text('Calendar').last);
+    await tester.pumpAndSettle();
+    expect(calendarLoads, 1);
+    await tester.tap(find.text('Tasks').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Calendar').last);
+    await tester.pumpAndSettle();
+    expect(calendarLoads, 1);
+    expect(todayLoads, 0);
   });
 }

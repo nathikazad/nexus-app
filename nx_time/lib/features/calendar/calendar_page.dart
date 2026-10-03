@@ -257,7 +257,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         ],
                       ),
                     for (var i = 0; i < 7; i++)
-                      if (selectedDay == null || selectedDay == i) ...[
+                      if ((selectedDay == null || selectedDay == i) &&
+                          entries.any((e) => e.occursOn(days[i]))) ...[
                         Padding(
                           padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
                           child: Text(
@@ -268,14 +269,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                             ),
                           ),
                         ),
-                        if (!entries.any((e) => e.occursOn(days[i])))
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(68, 8, 0, 12),
-                            child: Text(
-                              'No plans',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
                         for (final e in entries.where(
                           (e) => e.occursOn(days[i]),
                         ))
