@@ -7,19 +7,38 @@ import 'package:nx_time/domain/tasks/task.dart';
 import 'package:nx_time/domain/tasks/task_status.dart';
 
 void main() {
+  test(
+    'full edits explicitly clear due date without sending removed attributes',
+    () {
+      final req = setModelRequestForUpdateTask(
+        Task(id: 1, name: 'Laundry', modelTypeId: 1),
+        includeAttributes: true,
+      );
+      final attrs = {for (final a in req.attributes!) a.key: a};
+      expect(attrs['due_at']!.delete, isTrue);
+      expect(attrs.containsKey('start_time'), isFalse);
+      expect(attrs.containsKey('end_time'), isFalse);
+      expect(attrs.containsKey('date'), isFalse);
+      expect(attrs.containsKey('history'), isFalse);
+      expect(attrs.containsKey('completed_at'), isFalse);
+    },
+  );
+
   group('taskFromModel', () {
-    test('reads status and tags', () {
+    test('reads status and due date', () {
       final m = Model.fromJson({
         'id': 1,
         'name': 'T',
         'model_type_id': 9,
         'status': 'progress',
-        'task_tags': ['a', 'b'],
+        'history': [
+          {'at': '2026-10-01T10:00:00Z', 'status': 'todo'},
+        ],
         'model_type': {'id': 9, 'name': 'Task', 'type_kind': 'base'},
       });
       final t = taskFromModel(m);
       expect(t.status, TaskStatus.progress);
-      expect(t.tags, ['a', 'b']);
+      expect(t.history.single['status'], 'todo');
     });
 
     test('reads nested Task children', () {
@@ -101,14 +120,14 @@ void main() {
           name: 'New',
           modelTypeId: 9,
           status: TaskStatus.todo,
-          tags: const ['x'],
+          dueAt: DateTime(2026, 10, 2),
         ),
         parentTaskId: 10,
         projectId: 20,
       );
       expect(req.modelType, kTaskModelTypeName);
       final keys = req.attributes!.map((a) => a.key).toSet();
-      expect(keys, containsAll([kTaskAttrStatus, kTaskAttrTags]));
+      expect(keys, containsAll([kTaskAttrStatus, kTaskAttrDueAt]));
       expect(req.relations, isNotNull);
       expect(req.relations!.length, 2);
       expect(
@@ -127,19 +146,19 @@ void main() {
       expect(req.attributes, isNull);
     });
 
-    test('includeAttributes sends status and tags', () {
+    test('includeAttributes sends status and due date', () {
       final req = setModelRequestForUpdateTask(
         Task(
           id: 1,
           name: 'Y',
           modelTypeId: 9,
           status: TaskStatus.done,
-          tags: const ['a'],
+          dueAt: DateTime(2026, 10, 2),
         ),
         includeAttributes: true,
       );
       final keys = req.attributes!.map((a) => a.key).toSet();
-      expect(keys, containsAll([kTaskAttrStatus, kTaskAttrTags]));
+      expect(keys, containsAll([kTaskAttrStatus, kTaskAttrDueAt]));
     });
   });
 

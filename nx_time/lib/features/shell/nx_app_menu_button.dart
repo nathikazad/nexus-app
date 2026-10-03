@@ -1,3 +1,4 @@
+import 'package:nx_time/features/calendar/history_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,7 +28,13 @@ class NxAppMenuButton extends ConsumerWidget {
       offset: const Offset(0, 40),
       icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
       onSelected: (value) async {
-        if (value == 'colors') {
+        if (value == 'history') {
+          Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => Scaffold(body: const HistoryPage()),
+            ),
+          );
+        } else if (value == 'colors') {
           _onColors(context);
         } else if (value == 'tags') {
           Navigator.of(context).push<void>(
@@ -65,7 +72,8 @@ class NxAppMenuButton extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        _menuItem('tags', Icons.label_outline, 'Tags'),
+        _menuItem('history', Icons.history, 'History'),
+        _menuItem('tags', Icons.label_outline, 'Daily log tags'),
         _menuItem('colors', Icons.palette_outlined, 'Colors'),
         _menuItem('desktop', Icons.desktop_windows_outlined, 'Desktop'),
         _menuItem('necklace', Icons.camera_alt_outlined, 'Necklace'),

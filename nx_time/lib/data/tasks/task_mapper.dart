@@ -12,20 +12,6 @@ String? _notesDescriptionFromModel(Model model) {
   return null;
 }
 
-List<String> _tagsFromModel(Model m) {
-  final raw = m.attributes?[kTaskAttrTags];
-  if (raw == null) return [];
-  if (raw is List) {
-    return raw.map((e) => e.toString()).toList();
-  }
-  if (raw is String) {
-    final t = raw.trim();
-    if (t.isEmpty) return [];
-    return [raw];
-  }
-  return [];
-}
-
 String? _taskEdgeRelationFromNestedModel(Model m) {
   final a = m.attributes?['relation'];
   if (a is String) return a;
@@ -137,35 +123,29 @@ List<TaskActivityLink> _linkedActivitiesFromModel(Model m) {
 List<SetModelAttribute> _taskAttributes(Task task) {
   final attrs = <SetModelAttribute>[
     SetModelAttribute(key: kTaskAttrStatus, value: task.status.kgqlValue),
-    SetModelAttribute(key: kTaskAttrTags, value: task.tags),
   ];
-  final d = task.date;
-  if (d != null) {
+  attrs.add(
+    SetModelAttribute(
+      key: kTaskAttrDueAt,
+      value: task.dueAt?.toIso8601String(),
+      delete: task.dueAt == null,
+    ),
+  );
+  if (task.status.kgqlValue == 'done') {
     attrs.add(
-      SetModelAttribute(key: kTaskAttrDate, value: d.toIso8601String()),
+      SetModelAttribute(
+        key: kTaskAttrCompletedAt,
+        value: (task.completedAt ?? DateTime.now()).toIso8601String(),
+      ),
     );
   }
-  final st = task.startTime;
-  final en = task.endTime;
-  if (st != null) {
-    attrs.add(
-      SetModelAttribute(key: kTaskAttrStartTime, value: st.toIso8601String()),
-    );
-  }
-  if (en != null) {
-    attrs.add(
-      SetModelAttribute(key: kTaskAttrEndTime, value: en.toIso8601String()),
-    );
-  }
+  // Server preserves completion on repeated done writes and clears it on reopen.
   return attrs;
 }
 
 Task taskFromModel(Model m) {
   final childIds = _childTaskIdsFromModel(m);
   final statusRaw = m.attrString(kTaskAttrStatus);
-  final date = m.attrDateTime(kTaskAttrDate);
-  final start = m.attrDateTime(kTaskAttrStartTime);
-  final end = m.attrDateTime(kTaskAttrEndTime);
   final (projectId, projectRelId) = _projectLinkFromModel(m);
 
   return Task(
@@ -175,10 +155,16 @@ Task taskFromModel(Model m) {
     modelTypeId: m.modelTypeId,
     modelTypeName: m.modelType?.name,
     status: taskStatusFromKgql(statusRaw),
-    tags: _tagsFromModel(m),
-    date: date != null ? asStoredLocalWallClock(date) : null,
-    startTime: start != null ? asStoredLocalWallClock(start) : null,
-    endTime: end != null ? asStoredLocalWallClock(end) : null,
+    dueAt: m.attrDateTime(kTaskAttrDueAt) == null
+        ? null
+        : asStoredLocalWallClock(m.attrDateTime(kTaskAttrDueAt)!),
+    completedAt: m.attrDateTime(kTaskAttrCompletedAt) == null
+        ? null
+        : asStoredLocalWallClock(m.attrDateTime(kTaskAttrCompletedAt)!),
+    history: [
+      for (final h in (m.attributes?['history'] as List? ?? []))
+        Map<String, dynamic>.from(h as Map),
+    ],
     parentTaskId: _parentTaskIdFromModel(m),
     childTaskIds: childIds,
     relationIdByChildTaskId: _taskRelationIdsByChildFromModel(m),
@@ -210,7 +196,7 @@ SetModelRequest setModelRequestForCreateTask(
 }
 
 /// When [includeAttributes] is false, only name/description (and optional model type) are sent;
-/// status, tags, and times are left unchanged — avoids wiping tags on partial saves.
+/// status and due/completion times are left unchanged.
 SetModelRequest setModelRequestForUpdateTask(
   Task task, {
   bool includeAttributes = false,

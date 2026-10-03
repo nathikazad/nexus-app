@@ -6,10 +6,6 @@ const String kTaskModelTypeName = 'Task';
 const String kTaskAttrStatus = 'status';
 
 /// JSON array of strings; not named `tags` (reserved for KGQL tag assignments on [Model]).
-const String kTaskAttrTags = 'task_tags';
-const String kTaskAttrDate = 'date';
-const String kTaskAttrStartTime = 'start_time';
-const String kTaskAttrEndTime = 'end_time';
 
 /// `RelationshipType.relation_name` for parent task → subtask.
 const String kTaskRelationName = 'has_subtask';
@@ -22,3 +18,8 @@ const String kTaskInProjectRelationName = 'in_project';
 
 /// Generic Task -> Action relation for linking to concrete Action subtype rows.
 const String kTaskLinkedActivityRelationName = 'link_to_action';
+
+const String kTaskAttrDueAt = 'due_at';
+const String kTaskAttrCompletedAt = 'completed_at';
+
+const String kTaskAttrHistory = 'history';

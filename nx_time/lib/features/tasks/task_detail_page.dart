@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+import 'package:nx_time/features/calendar/calendar_feed_providers.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -31,6 +33,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     ref.invalidate(subtasksOfTaskProvider(widget.taskId));
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
+    ref.invalidate(calendarFeedProvider);
   }
 
   Future<void> _moveToTomorrow() async {
@@ -38,7 +41,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     if (task == null || !mounted) return;
     final next = calendarDay(DateTime.now()).add(const Duration(days: 1));
     final repo = ref.read(taskRepositoryProvider);
-    await repo.update(task.copyWith(date: next), includeAttributes: true);
+    await repo.update(task.copyWith(dueAt: next), includeAttributes: true);
     _invalidateAll();
     if (mounted) Navigator.of(context).maybePop();
   }
@@ -47,7 +50,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final task = await ref.read(taskDetailProvider(widget.taskId).future);
     if (task == null || !mounted) return;
     final repo = ref.read(taskRepositoryProvider);
-    await repo.update(task.copyWith(date: null), includeAttributes: true);
+    await repo.update(task.copyWith(dueAt: null), includeAttributes: true);
     _invalidateAll();
     if (mounted) Navigator.of(context).maybePop();
   }
@@ -57,6 +60,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     await repo.delete(widget.taskId);
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
+    ref.invalidate(calendarFeedProvider);
     if (mounted) Navigator.of(context).maybePop();
   }
 
@@ -66,6 +70,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     ref.invalidate(subtasksOfTaskProvider(widget.taskId));
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
+    ref.invalidate(calendarFeedProvider);
   }
 
   void _openEdit() {
@@ -259,6 +264,52 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                             loading: () => const SizedBox.shrink(),
                             error: (_, __) => const SizedBox.shrink(),
                           ),
+                          if (task.dueAt != null)
+                            ListTile(
+                              title: const Text('Due'),
+                              subtitle: Text(
+                                DateFormat(
+                                  'MMM d, yyyy · h:mm a',
+                                ).format(task.dueAt!),
+                              ),
+                            ),
+                          if (task.history.isNotEmpty)
+                            ExpansionTile(
+                              title: const Text('Task history'),
+                              children: [
+                                for (final entry in task.history.reversed)
+                                  ListTile(
+                                    title: Text(
+                                      entry['status']?.toString() ?? '',
+                                    ),
+                                    subtitle: Text(
+                                      [
+                                        if (DateTime.tryParse(
+                                              entry['at']?.toString() ?? '',
+                                            )
+                                            case final DateTime at)
+                                          DateFormat(
+                                            'MMM d, yyyy h:mm a',
+                                          ).format(at.toLocal()),
+                                        entry['due_at'] == null
+                                            ? 'No due date'
+                                            : 'Due ${entry['due_at']}',
+                                        if (entry['note'] != null)
+                                          entry['note'].toString(),
+                                      ].join(' · '),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          if (task.completedAt != null)
+                            ListTile(
+                              title: const Text('Completed'),
+                              subtitle: Text(
+                                DateFormat(
+                                  'MMM d, yyyy · h:mm a',
+                                ).format(task.completedAt!),
+                              ),
+                            ),
                           if (vm.notesPreview != null) ...[
                             const SizedBox(height: 16),
                             const Text(
@@ -301,13 +352,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                           _DetailAction(
                             icon: SolarLinearIcons.calendar,
                             title: 'Move to different day',
-                            subtitle: 'Repin this task (tomorrow)',
+                            subtitle: 'Set due date to tomorrow',
                             onTap: _moveToTomorrow,
                           ),
                           _DetailAction(
                             icon: SolarLinearIcons.archive,
-                            title: 'Unpin from today',
-                            subtitle: 'Clear calendar date',
+                            title: 'Clear due date',
+                            subtitle: 'Keep this task unscheduled',
                             onTap: _unpinFromToday,
                           ),
                           _DetailAction(
@@ -348,7 +399,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
             child: Column(
               children: [
                 const Text(
-                  'DATE',
+                  'DUE',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_time/core/layout/layout.dart';
@@ -786,7 +785,7 @@ class _LogTagSystemFormPageState extends ConsumerState<LogTagSystemFormPage> {
   }
 
   void _leaveForm(BuildContext context, WidgetRef ref) {
-    context.pop();
+    Navigator.of(context).pop();
   }
 
   Future<void> _delete(ModelTypeView schema) async {

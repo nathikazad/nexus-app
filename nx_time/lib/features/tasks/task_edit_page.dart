@@ -1,3 +1,5 @@
+import 'package:nx_time/features/calendar/calendar_datetime_field.dart';
+import 'package:nx_time/features/calendar/calendar_feed_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -93,6 +95,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
       ref.invalidate(taskDetailProvider(widget.taskId));
       ref.invalidate(tasksForTodayProvider);
       ref.invalidate(allTasksProvider);
+      ref.invalidate(calendarFeedProvider);
       ref.invalidate(projectBreadcrumbLabelsProvider);
       if (mounted) Navigator.of(context).maybePop();
     } finally {
@@ -105,6 +108,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     await repo.delete(widget.taskId);
     ref.invalidate(tasksForTodayProvider);
     ref.invalidate(allTasksProvider);
+    ref.invalidate(calendarFeedProvider);
     if (!mounted) return;
     Navigator.of(context).pop();
     if (Navigator.of(context).canPop()) {
@@ -186,6 +190,11 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                     children: [
                       _fieldLabel('TASK NAME'),
                       const SizedBox(height: 8),
+                      CalendarDateTimeField(
+                        label: 'Due',
+                        value: draft.dueAt,
+                        onChanged: (v) => setState(() => draft.dueAt = v),
+                      ),
                       TextField(
                         controller: _nameCtl,
                         decoration: const InputDecoration(
@@ -253,18 +262,6 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                               ],
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Divider(color: AppColors.slate100),
-                      const SizedBox(height: 20),
-                      _fieldLabel('TAGS'),
-                      const SizedBox(height: 8),
-                      Text(
-                        draft.tags.isEmpty ? 'No tags' : draft.tags.join(', '),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.slate600,
                         ),
                       ),
                       const SizedBox(height: 20),

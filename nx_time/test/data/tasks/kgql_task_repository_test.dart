@@ -215,7 +215,7 @@ void main() {
     expect(queryCount, 3);
   });
 
-  test('updateStatus sends only status attribute', () async {
+  test('updateStatus sends status and local completion time', () async {
     final mock = MockGraphQLClient();
     when(() => mock.mutate(any())).thenAnswer(
       (_) async => okMutationResult({
@@ -239,9 +239,11 @@ void main() {
     final input = captured.variables!['input'] as Map<String, dynamic>;
     final data = input['data'] as Map<String, dynamic>;
     final attrs = data['attributes'] as List<dynamic>;
-    expect(attrs.length, 1);
-    expect(attrs.single['key'], kTaskAttrStatus);
-    expect(attrs.single['value'], 'done');
+    expect(attrs.length, 2);
+    expect(attrs.first['key'], kTaskAttrStatus);
+    expect(attrs.first['value'], 'done');
+    expect(attrs.last['key'], kTaskAttrCompletedAt);
+    expect(DateTime.tryParse(attrs.last['value'] as String), isNotNull);
   });
 
   test('moveTaskToProject no-op when project unchanged', () async {

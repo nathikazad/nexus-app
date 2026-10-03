@@ -1,3 +1,4 @@
+import 'package:nx_time/features/calendar/calendar_feed_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_time/core/time/action_calendar_overlap.dart';
 import 'package:nx_time/core/time/week_calendar.dart';
@@ -71,6 +72,7 @@ final actionGoalsMonthScoreProvider = FutureProvider.autoDispose
 /// week-goal [FutureProvider] families. Refetches any **mounted** family instances
 /// (e.g. Today's week, the calendar's selected week) — typically one or two weeks.
 void invalidateActionsAfterMutation(WidgetRef ref) {
+  ref.invalidate(calendarFeedProvider);
   ref.invalidate(weekActionsProvider);
   ref.invalidate(actionGoalsWeekProvider);
   ref.invalidate(actionGoalsMonthScoreProvider);

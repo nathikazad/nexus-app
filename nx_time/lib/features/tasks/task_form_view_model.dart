@@ -6,32 +6,23 @@ class TaskDraft {
   TaskDraft({
     this.name = '',
     this.status = TaskStatus.todo,
-    List<String>? tags,
     this.notes,
-    this.date,
-    this.startTime,
-    this.endTime,
+    this.dueAt,
     this.projectId,
-  }) : tags = List<String>.from(tags ?? const []);
+  });
 
   String name;
   TaskStatus status;
-  List<String> tags;
   String? notes;
-  DateTime? date;
-  DateTime? startTime;
-  DateTime? endTime;
+  DateTime? dueAt;
   int? projectId;
 
   factory TaskDraft.fromTask(Task t) {
     return TaskDraft(
       name: t.name,
       status: t.status,
-      tags: List<String>.from(t.tags),
       notes: t.description,
-      date: t.date,
-      startTime: t.startTime,
-      endTime: t.endTime,
+      dueAt: t.dueAt,
       projectId: t.projectId,
     );
   }
@@ -49,10 +40,7 @@ class TaskDraft {
       modelTypeId: modelTypeId,
       modelTypeName: modelTypeName,
       status: status,
-      tags: List<String>.from(tags),
-      date: date,
-      startTime: startTime,
-      endTime: endTime,
+      dueAt: dueAt,
     );
   }
 
@@ -64,10 +52,7 @@ class TaskDraft {
       name: n,
       description: (note == null || note.isEmpty) ? null : note,
       status: status,
-      tags: List<String>.from(tags),
-      date: date,
-      startTime: startTime,
-      endTime: endTime,
+      dueAt: dueAt,
     );
   }
 }

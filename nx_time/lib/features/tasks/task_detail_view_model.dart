@@ -56,9 +56,11 @@ TaskDetailVm taskDetailVmFromTask({
   required List<Action?> linkedActions,
 }) {
   final timeFmt = DateFormat.jm();
-  final date = task.date;
+  final date = task.dueAt;
   final dateLabel = date != null ? DateFormat('EEE, MMM d').format(date) : '—';
-  final timeRangeLabel = formatTimeRange(timeFmt, task.startTime, task.endTime);
+  final timeRangeLabel = task.dueAt == null
+      ? 'Unscheduled'
+      : timeFmt.format(task.dueAt!);
 
   var done = 0;
   for (final s in subtasks) {
@@ -92,7 +94,7 @@ TaskDetailVm taskDetailVmFromTask({
   return TaskDetailVm(
     title: task.name.isEmpty ? 'Task' : task.name,
     subtitle: projectSubtitle,
-    durationLabel: formatDurationHm(task.startTime, task.endTime),
+    durationLabel: '',
     dateLabel: dateLabel,
     timeRangeLabel: timeRangeLabel,
     notesPreview: task.description?.trim().isEmpty ?? true

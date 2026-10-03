@@ -110,7 +110,7 @@ class _AppShellState extends ConsumerState<AppShell>
     );
     final todayMode = ref.watch(todayViewModeProvider);
     final voiceState = ref.watch(voiceSocketControllerProvider);
-    final actionsTabVisible = _routeVisible && _index == 0;
+    final actionsTabVisible = _routeVisible && _index == 3;
 
     ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (prev, next) {
       if (next.hasError) {
@@ -153,6 +153,9 @@ class _AppShellState extends ConsumerState<AppShell>
           IndexedStack(
             index: _index,
             children: [
+              const TasksPage(),
+              _index == 1 ? const CalendarPage() : const SizedBox.shrink(),
+              const GoalsPage(),
               snapshotAsync.when(
                 data: (snapshot) => TodayPage(
                   snapshot: snapshot,
@@ -237,9 +240,6 @@ class _AppShellState extends ConsumerState<AppShell>
                   ),
                 ),
               ),
-              const TasksPage(),
-              const GoalsPage(),
-              _index == 3 ? const CalendarPage() : const SizedBox.shrink(),
             ],
           ),
           if (voiceState.overlayVisible) const VoiceListeningOverlay(),
@@ -311,19 +311,18 @@ class _BottomNav extends StatelessWidget {
               children: [
                 Expanded(
                   child: _NavItem(
-                    label: 'Actions',
-                    icon: SolarLinearIcons.running,
+                    label: 'Tasks',
+                    icon: SolarLinearIcons.checklistMinimalistic,
                     selected: currentIndex == 0,
                     onTap: () => onChanged(0),
                   ),
                 ),
                 Expanded(
                   child: _NavItem(
-                    label: 'Tasks',
-                    icon: SolarLinearIcons.checklistMinimalistic,
+                    label: 'Calendar',
+                    icon: SolarLinearIcons.calendarMark,
                     selected: currentIndex == 1,
                     onTap: () => onChanged(1),
-                    badge: true,
                   ),
                 ),
                 Expanded(
@@ -344,8 +343,8 @@ class _BottomNav extends StatelessWidget {
                 ),
                 Expanded(
                   child: _NavItem(
-                    label: 'Weekly',
-                    icon: SolarLinearIcons.calendarMark,
+                    label: 'Today',
+                    icon: SolarLinearIcons.running,
                     selected: currentIndex == 3,
                     onTap: () => onChanged(3),
                   ),

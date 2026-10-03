@@ -53,12 +53,12 @@ class KgqlTaskRepository implements TaskRepository {
       final start = DateTime(onDate.year, onDate.month, onDate.day);
       final end = start.add(const Duration(days: 1));
       filters.add({
-        'key': kTaskAttrDate,
+        'key': kTaskAttrDueAt,
         'op': '>=',
         'value': start.toIso8601String(),
       });
       filters.add({
-        'key': kTaskAttrDate,
+        'key': kTaskAttrDueAt,
         'op': '<',
         'value': end.toIso8601String(),
       });
@@ -117,6 +117,11 @@ class KgqlTaskRepository implements TaskRepository {
         id: id,
         attributes: [
           SetModelAttribute(key: kTaskAttrStatus, value: status.kgqlValue),
+          if (status == TaskStatus.done)
+            SetModelAttribute(
+              key: kTaskAttrCompletedAt,
+              value: DateTime.now().toIso8601String(),
+            ),
         ],
       ),
     );

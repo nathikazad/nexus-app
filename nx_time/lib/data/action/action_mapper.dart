@@ -101,12 +101,19 @@ Action actionFromModel(Model m) {
     modelTypeName: m.modelType?.name,
     startTime: start != null ? asStoredLocalWallClock(start) : null,
     endTime: end != null ? asStoredLocalWallClock(end) : null,
+    planningStatus: m.attrString('planning_status'),
+    scheduledStartTime: m.attrDateTime('scheduled_start_time'),
+    scheduledEndTime: m.attrDateTime('scheduled_end_time'),
     childActionIds: childIds,
     relationIdByChildId: _relationIdsByChildFromModel(m),
   );
 }
 
-SetModelRequest setModelRequestForCreate(Action action, String modelTypeName) {
+SetModelRequest setModelRequestForCreate(
+  Action action,
+  String modelTypeName, {
+  bool plannable = false,
+}) {
   final start = action.startTime;
   final end = action.endTime;
   if (start == null || end == null) {
@@ -115,16 +122,25 @@ SetModelRequest setModelRequestForCreate(Action action, String modelTypeName) {
     );
   }
 
+  final planned = plannable && start.isAfter(DateTime.now());
   return SetModelRequest(
     modelType: modelTypeName,
     name: action.name.trim().isEmpty ? null : action.name,
     description: action.description,
     attributes: [
+      if (plannable)
+        SetModelAttribute(
+          key: 'planning_status',
+          value: planned ? 'planned' : 'attended',
+        ),
       SetModelAttribute(
-        key: kActionAttrStartTime,
+        key: planned ? 'scheduled_start_time' : kActionAttrStartTime,
         value: start.toIso8601String(),
       ),
-      SetModelAttribute(key: kActionAttrEndTime, value: end.toIso8601String()),
+      SetModelAttribute(
+        key: planned ? 'scheduled_end_time' : kActionAttrEndTime,
+        value: end.toIso8601String(),
+      ),
     ],
   );
 }
@@ -134,8 +150,13 @@ SetModelRequest setModelRequestForCreateWithParent(
   Action action,
   String modelTypeName, {
   required int parentActionId,
+  bool plannable = false,
 }) {
-  final base = setModelRequestForCreate(action, modelTypeName);
+  final base = setModelRequestForCreate(
+    action,
+    modelTypeName,
+    plannable: plannable,
+  );
   return SetModelRequest(
     modelType: base.modelType,
     name: base.name,

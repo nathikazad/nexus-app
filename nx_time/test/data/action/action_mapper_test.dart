@@ -5,6 +5,40 @@ import 'package:nx_time/data/action/action_mapper.dart';
 import 'package:nx_time/domain/action/action.dart';
 
 void main() {
+  test('action reads preserve scheduled and actual intervals independently', () {
+    final action = actionFromModel(Model.fromJson({
+      'id': 99, 'name': 'Custom visit', 'model_type_id': 8,
+      'planning_status': 'attended',
+      'scheduled_start_time': '2026-10-02T10:00:00',
+      'scheduled_end_time': '2026-10-02T11:00:00',
+      'start_time': '2026-10-02T12:00:00',
+      'end_time': '2026-10-02T13:00:00',
+    }));
+    expect(action.planningStatus, 'attended');
+    expect(action.scheduledStartTime, DateTime(2026, 10, 2, 10));
+    expect(action.scheduledEndTime, DateTime(2026, 10, 2, 11));
+    expect(action.startTime, DateTime(2026, 10, 2, 12));
+    expect(action.endTime, DateTime(2026, 10, 2, 13));
+  });
+
+  test('future meetings write scheduled times and explicit planned status', () {
+    final req = setModelRequestForCreate(
+      Action(
+        id: 0,
+        name: 'Future meeting',
+        modelTypeId: 1,
+        startTime: DateTime(2100, 1, 1, 9),
+        endTime: DateTime(2100, 1, 1, 10),
+      ),
+      'Meet',
+      plannable: true,
+    );
+    final attrs = {for (final a in req.attributes!) a.key: a.value};
+    expect(attrs['planning_status'], 'planned');
+    expect(attrs['scheduled_start_time'], '2100-01-01T09:00:00.000');
+    expect(attrs.containsKey('start_time'), isFalse);
+  });
+
   group('actionFromModel', () {
     test('reads flat datetime fields into Action', () {
       final m = Model.fromJson({

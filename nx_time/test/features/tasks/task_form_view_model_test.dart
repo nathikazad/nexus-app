@@ -15,7 +15,9 @@ void main() {
       name: 'N',
       modelTypeId: 9,
       status: TaskStatus.progress,
-      tags: ['a'],
+      history: [
+        {'at': '2026-10-01T10:00:00Z', 'status': 'todo'},
+      ],
       description: 'note',
     );
     final d = TaskDraft.fromTask(t);

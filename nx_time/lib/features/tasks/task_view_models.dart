@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/projects/project.dart';
 import 'package:nx_time/domain/tasks/task.dart';
@@ -43,8 +42,8 @@ List<TaskRowVm> taskRowVmsFromTasks(
 ) {
   final sorted = List<Task>.from(tasks)
     ..sort((a, b) {
-      final sa = a.startTime;
-      final sb = b.startTime;
+      final sa = a.dueAt;
+      final sb = b.dueAt;
       if (sa != null && sb != null) {
         final c = sa.compareTo(sb);
         if (c != 0) return c;
@@ -60,7 +59,9 @@ List<TaskRowVm> taskRowVmsFromTasks(
               ? (projectBreadcrumbByProjectId[t.projectId] ??
                     'Project ${t.projectId}')
               : '',
-          durationLabel: formatDurationHm(t.startTime, t.endTime),
+          durationLabel: t.dueAt == null
+              ? 'Unscheduled'
+              : 'Due ${t.dueAt!.month}/${t.dueAt!.day}',
           isDone: t.status == TaskStatus.done,
         ),
       )
@@ -110,7 +111,8 @@ final projectBreadcrumbLabelsProvider = FutureProvider<Map<int, String>>((
 final tasksForTodayProvider = FutureProvider<List<Task>>((ref) async {
   await ref.watch(authenticatedUserProvider.future);
   final day = calendarDay(DateTime.now());
-  return ref.read(taskRepositoryProvider).listAll(onDate: day);
+  final all = await ref.watch(allTasksProvider.future);
+  return currentTasks(all, day);
 });
 
 final allTasksProvider = FutureProvider<List<Task>>((ref) async {
@@ -140,7 +142,7 @@ final subtasksOfTaskProvider = FutureProvider.family<List<Task>, int>((
   return out;
 });
 
-/// Pins each task id to [dayLocal]'s calendar day (`date` attribute).
+/// Pins each task id to [dayLocal]'s calendar day (`due_at` attribute).
 Future<void> pinTaskIdsToCalendarDay(
   TaskRepository repo,
   Iterable<int> taskIds,
@@ -150,7 +152,7 @@ Future<void> pinTaskIdsToCalendarDay(
   for (final id in taskIds) {
     final t = await repo.getById(id);
     if (t == null) continue;
-    await repo.update(t.copyWith(date: day), includeAttributes: true);
+    await repo.update(t.copyWith(dueAt: day), includeAttributes: true);
   }
 }
 
@@ -187,4 +189,16 @@ void invalidateTasksAfterMutation(WidgetRef ref) {
   ref.invalidate(taskDetailProvider);
   ref.invalidate(subtasksOfTaskProvider);
   ref.invalidate(tasksLinkedToActivityProvider);
+}
+
+/// Open tasks carry forward without moving their due date or writing history.
+List<Task> currentTasks(List<Task> tasks, DateTime day) {
+  final until = DateTime(day.year, day.month, day.day + 1);
+  return tasks
+      .where(
+        (t) =>
+            (t.status == TaskStatus.todo || t.status == TaskStatus.progress) &&
+            (t.dueAt == null || t.dueAt!.isBefore(until)),
+      )
+      .toList();
 }

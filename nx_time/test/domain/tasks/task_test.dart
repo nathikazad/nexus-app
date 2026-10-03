@@ -3,27 +3,33 @@ import 'package:nx_time/domain/tasks/task.dart';
 import 'package:nx_time/domain/tasks/task_status.dart';
 
 void main() {
-  test('Task equality includes status and tags', () {
+  test('Task equality includes status and history', () {
     const a = Task(
       id: 1,
       name: 'A',
       modelTypeId: 9,
       status: TaskStatus.progress,
-      tags: ['work'],
+      history: [
+        {'at': '2026-10-01T10:00:00Z', 'status': 'todo'},
+      ],
     );
     const b = Task(
       id: 1,
       name: 'A',
       modelTypeId: 9,
       status: TaskStatus.progress,
-      tags: ['work'],
+      history: [
+        {'at': '2026-10-01T10:00:00Z', 'status': 'todo'},
+      ],
     );
     const c = Task(
       id: 1,
       name: 'A',
       modelTypeId: 9,
       status: TaskStatus.done,
-      tags: ['work'],
+      history: [
+        {'at': '2026-10-01T10:00:00Z', 'status': 'todo'},
+      ],
     );
     expect(a, b);
     expect(a, isNot(c));
@@ -35,12 +41,14 @@ void main() {
       name: 'A',
       modelTypeId: 9,
       status: TaskStatus.todo,
-      tags: ['x'],
+      history: [
+        {'at': '2026-10-01T10:00:00Z', 'status': 'todo'},
+      ],
     );
     final u = t.copyWith(name: 'B', status: TaskStatus.done);
     expect(u.name, 'B');
     expect(u.status, TaskStatus.done);
-    expect(u.tags, ['x']);
+    expect(u.history, t.history);
     expect(u.id, 1);
   });
 

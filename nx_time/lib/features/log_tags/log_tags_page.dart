@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_time/core/layout/layout.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
@@ -49,7 +48,7 @@ class LogTagsPage extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      if (context.canPop())
+                      if (Navigator.of(context).canPop())
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -61,11 +60,11 @@ class LogTagsPage extends ConsumerWidget {
                             color: AppColors.slate400,
                             size: 22,
                           ),
-                          onPressed: () => context.pop(),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
                       Expanded(
                         child: Text(
-                          'Tag systems',
+                          'Daily log tags',
                           style: refAppBarTitleLarge(),
                         ),
                       ),
@@ -84,7 +83,10 @@ class LogTagsPage extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('Tag systems', style: refAppBarTitleLarge()),
+                      child: Text(
+                        'Daily log tags',
+                        style: refAppBarTitleLarge(),
+                      ),
                     ),
                   ],
                 ),
@@ -94,22 +96,14 @@ class LogTagsPage extends ConsumerWidget {
               child: ColoredBox(
                 color: AppColors.slate50.withValues(alpha: 0.5),
                 child: systems.isEmpty
-                    ? ListView(
-                        padding: const EdgeInsets.all(RefLayout.px5),
-                        children: [
-                          _placeholderRow(
-                            'Category',
-                            'exclusive · tree · 24 nodes',
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text(
+                            'No tag systems for Daily Log yet.\nAdd one to organize your journal entries.',
+                            textAlign: TextAlign.center,
                           ),
-                          _placeholderRow(
-                            'Priority',
-                            'exclusive · flat · 3 nodes',
-                          ),
-                          _placeholderRow(
-                            'Project',
-                            'multiple · flat · 8 nodes',
-                          ),
-                        ],
+                        ),
                       )
                     : ListView.separated(
                         itemCount: systems.length,
@@ -179,54 +173,6 @@ class LogTagsPage extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _placeholderRow(String title, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: RefLayout.px5,
-            vertical: 16,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.slate900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: AppColors.slate300,
-                size: 22,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

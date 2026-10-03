@@ -1,3 +1,4 @@
+import 'package:nx_time/data/action/planning_schema.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_time/core/time/action_calendar_overlap.dart';
@@ -21,6 +22,11 @@ class KgqlActionRepository implements ActionRepository {
     // Ensure nested Action self-relation even if schema cache is stale.
     final merged = Map<String, dynamic>.from(base);
     merged[kActionRelationKey] = {'id': true, 'name': true, 'relation': true};
+    merged.addAll({
+      'planning_status': true,
+      'scheduled_start_time': true,
+      'scheduled_end_time': true,
+    });
     return merged;
   }
 
@@ -109,13 +115,17 @@ class KgqlActionRepository implements ActionRepository {
     String modelTypeName, {
     int? parentActionId,
   }) async {
+    final plannable = plannableTypeNames(
+      await _loadActionSchema(),
+    ).contains(modelTypeName);
     final req = parentActionId != null
         ? setModelRequestForCreateWithParent(
             action,
             modelTypeName,
             parentActionId: parentActionId,
+            plannable: plannable,
           )
-        : setModelRequestForCreate(action, modelTypeName);
+        : setModelRequestForCreate(action, modelTypeName, plannable: plannable);
     return setKgqlModel(_client, req);
   }
 

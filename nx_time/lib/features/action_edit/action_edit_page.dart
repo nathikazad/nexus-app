@@ -1,3 +1,5 @@
+import 'package:nx_time/domain/calendar/calendar_entry.dart';
+import 'package:nx_time/features/calendar/calendar_record_editor.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -363,6 +365,27 @@ class _ActionEditPageState extends ConsumerState<ActionEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    final existing = widget.initial;
+    if (!_isCreate && existing?.planningStatus != null) {
+      return CalendarRecordEditor(
+        entry: CalendarEntry(
+          id: existing!.id,
+          kind: 'action',
+          modelType: existing.modelTypeName ?? 'Action',
+          name: existing.name,
+          description: existing.description,
+          attributes: {
+            'planning_status': existing.planningStatus,
+            'scheduled_start_time': existing.scheduledStartTime
+                ?.toIso8601String(),
+            'scheduled_end_time': existing.scheduledEndTime?.toIso8601String(),
+            'start_time': existing.startTime?.toIso8601String(),
+            'end_time': existing.endTime?.toIso8601String(),
+          },
+        ),
+      );
+    }
+
     final title = _isCreate ? 'Add time block' : 'Edit action';
     return Scaffold(
       backgroundColor: Colors.white,

@@ -10,6 +10,9 @@ class Action {
     this.modelTypeName,
     this.startTime,
     this.endTime,
+    this.planningStatus,
+    this.scheduledStartTime,
+    this.scheduledEndTime,
     this.parentActionId,
     this.childActionIds = const [],
     this.relationIdByChildId = const {},
@@ -24,6 +27,8 @@ class Action {
   /// Local wall-clock start of the interval (same semantics as KGQL `start_time`).
   final DateTime? startTime;
   final DateTime? endTime;
+  final String? planningStatus;
+  final DateTime? scheduledStartTime, scheduledEndTime;
 
   /// Set client-side after [foldDayActions] when needed; usually null from KGQL mapper.
   final int? parentActionId;
@@ -46,6 +51,9 @@ class Action {
           modelTypeName == other.modelTypeName &&
           startTime == other.startTime &&
           endTime == other.endTime &&
+          planningStatus == other.planningStatus &&
+          scheduledStartTime == other.scheduledStartTime &&
+          scheduledEndTime == other.scheduledEndTime &&
           parentActionId == other.parentActionId &&
           _listEq(childActionIds, other.childActionIds) &&
           _mapEq(relationIdByChildId, other.relationIdByChildId);
@@ -59,6 +67,9 @@ class Action {
     modelTypeName,
     startTime,
     endTime,
+    planningStatus,
+    scheduledStartTime,
+    scheduledEndTime,
     parentActionId,
     Object.hashAll(childActionIds),
     Object.hashAllUnordered(relationIdByChildId.entries),

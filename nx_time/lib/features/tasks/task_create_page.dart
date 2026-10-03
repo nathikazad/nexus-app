@@ -1,3 +1,5 @@
+import 'package:nx_time/features/calendar/calendar_datetime_field.dart';
+import 'package:nx_time/features/calendar/calendar_feed_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icon_pack/solar_icon_pack.dart';
@@ -82,6 +84,7 @@ class _TaskCreatePageState extends ConsumerState<TaskCreatePage> {
       );
       ref.invalidate(tasksForTodayProvider);
       ref.invalidate(allTasksProvider);
+      ref.invalidate(calendarFeedProvider);
       if (mounted) Navigator.of(context).pop(newId);
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -154,6 +157,11 @@ class _TaskCreatePageState extends ConsumerState<TaskCreatePage> {
                 children: [
                   _label('TASK NAME'),
                   const SizedBox(height: 8),
+                  CalendarDateTimeField(
+                    label: 'Due',
+                    value: _draft.dueAt,
+                    onChanged: (v) => setState(() => _draft.dueAt = v),
+                  ),
                   TextField(
                     controller: _nameCtl,
                     decoration: const InputDecoration(

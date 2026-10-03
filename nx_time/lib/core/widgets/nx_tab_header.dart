@@ -13,12 +13,14 @@ class NxTabHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.trailing,
+    this.leading,
     this.bottomBorder = false,
     this.borderColor = AppColors.slate50,
   });
 
   final String title;
   final Widget? trailing;
+  final Widget? leading;
   final bool bottomBorder;
   final Color borderColor;
 
@@ -50,6 +52,7 @@ class NxTabHeader extends StatelessWidget {
                   ),
                 ),
               ),
+              if (leading != null) Align(alignment: Alignment.centerLeft, child: leading!),
               Align(
                 alignment: Alignment.centerRight,
                 child: trailing ?? const NxAppMenuButton(),

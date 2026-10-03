@@ -6,7 +6,9 @@ void main() {
   test('task keys are stable', () {
     expect(kTaskModelTypeName, 'Task');
     expect(kTaskAttrStatus, 'status');
-    expect(kTaskAttrTags, 'task_tags');
+    expect(kTaskAttrHistory, 'history');
+    expect(kTaskAttrDueAt, 'due_at');
+    expect(kTaskAttrCompletedAt, 'completed_at');
     expect(kTaskRelationKey, 'Task');
     expect(kProjectRelationKey, 'Project');
   });

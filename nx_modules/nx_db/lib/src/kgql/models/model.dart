@@ -100,7 +100,11 @@ class Model {
             attrKeys[key] = value;
           } else {
             final list = value;
-            if (list.isEmpty || (list.isNotEmpty && list[0] is! Map)) {
+            // Lowercase keys are attributes, including JSON arrays of objects.
+            // Type-named (uppercase) arrays are nested model relations.
+            if (key.isNotEmpty && key[0] != key[0].toUpperCase() ||
+                list.isEmpty ||
+                (list.isNotEmpty && list[0] is! Map)) {
               attrKeys[key] = value;
             }
           }

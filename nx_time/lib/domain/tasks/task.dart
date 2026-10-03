@@ -1,4 +1,5 @@
 import 'package:nx_time/domain/tasks/task_status.dart';
+import 'package:collection/collection.dart';
 
 class _TaskCopyUnset {
   const _TaskCopyUnset();
@@ -43,10 +44,9 @@ class Task {
     required this.modelTypeId,
     this.modelTypeName,
     this.status = TaskStatus.todo,
-    this.tags = const [],
-    this.date,
-    this.startTime,
-    this.endTime,
+    this.dueAt,
+    this.completedAt,
+    this.history = const [],
     this.parentTaskId,
     this.childTaskIds = const [],
     this.relationIdByChildTaskId = const {},
@@ -62,12 +62,11 @@ class Task {
   final String? modelTypeName;
 
   final TaskStatus status;
-  final List<String> tags;
 
   /// Optional calendar pin date.
-  final DateTime? date;
-  final DateTime? startTime;
-  final DateTime? endTime;
+  final DateTime? dueAt;
+  final DateTime? completedAt;
+  final List<Map<String, dynamic>> history;
 
   final int? parentTaskId;
 
@@ -90,10 +89,9 @@ class Task {
     int? modelTypeId,
     Object? modelTypeName = _taskCopyUnset,
     TaskStatus? status,
-    List<String>? tags,
-    Object? date = _taskCopyUnset,
-    Object? startTime = _taskCopyUnset,
-    Object? endTime = _taskCopyUnset,
+    Object? dueAt = _taskCopyUnset,
+    Object? completedAt = _taskCopyUnset,
+    List<Map<String, dynamic>>? history,
     Object? parentTaskId = _taskCopyUnset,
     List<int>? childTaskIds,
     Map<int, int>? relationIdByChildTaskId,
@@ -112,14 +110,11 @@ class Task {
           ? this.modelTypeName
           : modelTypeName as String?,
       status: status ?? this.status,
-      tags: tags ?? this.tags,
-      date: identical(date, _taskCopyUnset) ? this.date : date as DateTime?,
-      startTime: identical(startTime, _taskCopyUnset)
-          ? this.startTime
-          : startTime as DateTime?,
-      endTime: identical(endTime, _taskCopyUnset)
-          ? this.endTime
-          : endTime as DateTime?,
+      dueAt: identical(dueAt, _taskCopyUnset) ? this.dueAt : dueAt as DateTime?,
+      completedAt: identical(completedAt, _taskCopyUnset)
+          ? this.completedAt
+          : completedAt as DateTime?,
+      history: history ?? this.history,
       parentTaskId: identical(parentTaskId, _taskCopyUnset)
           ? this.parentTaskId
           : parentTaskId as int?,
@@ -147,10 +142,9 @@ class Task {
           modelTypeId == other.modelTypeId &&
           modelTypeName == other.modelTypeName &&
           status == other.status &&
-          _listStrEq(tags, other.tags) &&
-          date == other.date &&
-          startTime == other.startTime &&
-          endTime == other.endTime &&
+          const DeepCollectionEquality().equals(history, other.history) &&
+          dueAt == other.dueAt &&
+          completedAt == other.completedAt &&
           parentTaskId == other.parentTaskId &&
           _listEq(childTaskIds, other.childTaskIds) &&
           _mapEq(relationIdByChildTaskId, other.relationIdByChildTaskId) &&
@@ -159,35 +153,26 @@ class Task {
           _listActivityEq(linkedActivities, other.linkedActivities);
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     description,
     modelTypeId,
     modelTypeName,
     status,
-    Object.hashAll(tags),
-    date,
-    startTime,
-    endTime,
+    const DeepCollectionEquality().hash(history),
+    dueAt,
+    completedAt,
     parentTaskId,
     Object.hashAll(childTaskIds),
     Object.hashAllUnordered(relationIdByChildTaskId.entries),
     projectId,
     projectRelationId,
     Object.hashAll(linkedActivities),
-  );
+  ]);
 }
 
 bool _listEq(List<int> a, List<int> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-bool _listStrEq(List<String> a, List<String> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     if (a[i] != b[i]) return false;
