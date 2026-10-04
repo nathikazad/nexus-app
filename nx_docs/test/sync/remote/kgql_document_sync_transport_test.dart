@@ -40,7 +40,7 @@ void main() {
       final bundle = await KgqlDocumentSyncTransport(
         client,
       ).syncDocuments(manifest: [], manifestOnly: true);
-      expect(bundle.manifest.single.serverHash, 'h');
+      expect(bundle.manifest.single.serverHash, startsWith('v1:'));
       expect(bundle.documents, isEmpty);
     },
   );
@@ -99,7 +99,10 @@ void main() {
 
     expect(bundle.documents.single.document.id, 42);
     expect(bundle.documents.single.document.document, 'Synced body');
-    expect(bundle.documents.single.serverHash, 'server-hash');
+    expect(
+      bundle.documents.single.serverHash,
+      bundle.manifest.single.serverHash,
+    );
     expect(bundle.deletedIds, <int>[9]);
   });
 }

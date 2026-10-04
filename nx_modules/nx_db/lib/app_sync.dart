@@ -39,6 +39,7 @@ final class AppSyncClient {
   AppSyncClient(this.client, this.app) {
     session = AppSyncSession(
       request: _request,
+      app: app,
       load: _loadManifest,
       save: _saveManifest,
     );
@@ -128,7 +129,7 @@ final class AppSyncClient {
       query AppSyncState($app:String!,$domainId:Int!) { appSyncState(app:$app,domainId:$domainId) }
     '''
               : r'''
-      query AppSyncSnapshot($app:String!,$domainId:Int!,$revision:String!,$itemIds:[Int!],$collectionIds:[String!]) {
+      query AppSyncSnapshot($app:String!,$domainId:Int!,$revision:String!,$itemIds:[String!],$collectionIds:[String!]) {
         appSyncSnapshot(app:$app,domainId:$domainId,revision:$revision,itemIds:$itemIds,collectionIds:$collectionIds)
       }
     ''',

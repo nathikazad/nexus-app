@@ -9,12 +9,13 @@ void main() {
     () async {
       var downloads = 0;
       final session = AppSyncSession(
+        app: 'hypnosis',
         request: (operation, variables) async {
           if (operation == 'state')
             return {
               'status': 'ready',
               'revision': 1,
-              'projection_version': 2,
+              'projection_version': 3,
               'root_hash': 'r',
               'collections': {
                 '': {'hash': 'h', 'parent': null, 'count': 1, 'child_count': 0},
@@ -24,23 +25,24 @@ void main() {
           return {
             'status': 'ready',
             'revision': 1,
-            'projection_version': 2,
+            'projection_version': 3,
             'collections': {},
             'manifest': [
               {
-                'id': 1,
+                'id': 'model:1',
                 'hash': 'h',
                 'collections': [''],
               },
             ],
             'items': [
               {
-                'id': 1,
+                'id': 'model:1',
                 'hash': 'h',
                 'payload': {
                   'id': 1,
-                  'kind': 'desires',
-                  'record': {'id': '1', 'title': 'Calm', 'belief': 'Rest'},
+                  'name': 'Calm',
+                  'model_type': {'name': 'Desire'},
+                  'attributes': {'belief': 'Rest'},
                 },
               },
             ],

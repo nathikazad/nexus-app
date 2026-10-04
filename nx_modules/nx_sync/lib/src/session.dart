@@ -1,242 +1,147 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import 'record_session.dart';
+import 'record_graph.dart';
+export 'record_session.dart'
+    show
+        AppSyncRequest,
+        ManifestLoad,
+        ManifestSave,
+        AppSyncManifest,
+        appStateSyncEnabled,
+        appSyncProjectionVersion;
 
-typedef AppSyncRequest =
-    Future<Map<String, dynamic>> Function(
-      String operation,
-      Map<String, dynamic> variables,
-    );
-typedef ManifestLoad = Future<Map<String, dynamic>?> Function();
-typedef ManifestSave = Future<void> Function(Map<String, dynamic> value);
-const appStateSyncEnabled = true;
-const appSyncProjectionVersion = 2;
-
-final class AppSyncManifest {
-  AppSyncManifest(
-    this.revision,
-    this.root,
-    this.collections,
-    Iterable<Map<String, dynamic>> entries, [
-    this.branches = const {},
-  ]) : entries = List.unmodifiable(entries);
-  final int revision;
-  final String root;
-  final Map<String, dynamic> collections;
-  final List<Map<String, dynamic>> entries;
-  // Complete immediate record manifests for each visited group. This preserves
-  // overlapping memberships and lets an unchanged branch survive a restart.
-  final Map<String, dynamic> branches;
-  Map<String, dynamic> toJson() => {
-    'version': appSyncProjectionVersion,
-    'revision': revision,
-    'root': root,
-    'collections': collections,
-    'entries': entries,
-    'branches': branches,
-  };
-  static AppSyncManifest? restore(Map<String, dynamic>? data) {
-    if (data == null || data['version'] != appSyncProjectionVersion)
-      return null;
-    return AppSyncManifest(
-      data['revision'] as int,
-      data['root'] as String,
-      Map<String, dynamic>.from(data['collections'] as Map),
-      (data['entries'] as List).map((e) => Map<String, dynamic>.from(e as Map)),
-      Map<String, dynamic>.from(data['branches'] as Map),
-    );
-  }
-}
-
-/// One protocol for root records, flat groups and arbitrary nested groups.
-/// Published revisions are checked at every step; incomplete traversals are
-/// never committed. Local bodies and pending edits remain app-owned.
+/// Canonical wire records are assembled into app views locally. No per-app
+/// model payload exists on the server. Network identities are namespaced.
 final class AppSyncSession {
-  AppSyncSession({required this.request, this.load, this.save});
-  final AppSyncRequest request;
+  AppSyncSession({
+    required AppSyncRequest request,
+    this.load,
+    this.save,
+    this.app = 'generic',
+  }) {
+    _remote = RecordSyncSession(request: request, load: _restore);
+  }
+  final String app;
   final ManifestLoad? load;
   final ManifestSave? save;
+  late final RecordSyncSession _remote;
+  Map<String, Map<String, dynamic>> _records = {};
+  Map<String, String> _hashes = {};
+  Map<int, Map<String, dynamic>> _views = {};
   AppSyncManifest? _manifest;
   Future<AppSyncManifest?>? _active;
-  bool _loaded = false;
+  Future<Map<String, dynamic>?> _restore() async {
+    final data = await load?.call();
+    if (data == null || data['version'] != appSyncProjectionVersion)
+      return null;
+    try {
+      _records = {
+        for (final e in (data['bodies'] as Map).entries)
+          e.key as String: Map<String, dynamic>.from(e.value as Map),
+      };
+      _records.removeWhere((key, body) => !_validRecord(key, body));
+      _hashes = Map<String, String>.from(data['hashes'] as Map);
+      return data;
+    } on Object {
+      _records = {};
+      _hashes = {};
+      return null;
+    }
+  }
 
   Future<AppSyncManifest?> manifest() =>
-      _active ??= _readManifest().whenComplete(() => _active = null);
-
-  Future<AppSyncManifest?> _readManifest() async {
-    if (!_loaded) {
-      try {
-        _manifest = AppSyncManifest.restore(await load?.call());
-      } on FormatException {
-        _manifest = null;
-      } on TypeError {
-        _manifest = null;
-      }
-      _loaded = true;
-    }
-    final state = await request('state', {});
-    if (state['status'] != 'ready')
-      throw StateError('Remote state is being prepared');
-    if (state['projection_version'] != appSyncProjectionVersion) {
-      throw StateError('Incompatible app sync protocol; update the app/server');
-    }
-    final revision = state['revision'] as int;
-    final root = state['root_hash'] as String;
-    final previous = _manifest;
-    if (previous != null && previous.revision > revision) {
-      throw StateError('Remote sync revision regressed');
-    }
-    if (previous?.root == root) {
-      final result = AppSyncManifest(
-        revision,
-        root,
-        previous!.collections,
-        previous.entries,
-        previous.branches,
+      _active ??= _refresh().whenComplete(() => _active = null);
+  Future<AppSyncManifest?> _refresh() async {
+    final remote = (await _remote.manifest())!;
+    if (_manifest?.root == remote.root) {
+      return _manifest = AppSyncManifest(
+        remote.revision,
+        remote.root,
+        remote.collections,
+        _manifest!.entries,
       );
-      if (revision != previous.revision) await save?.call(result.toJson());
-      return _manifest = result;
     }
-    final rootNode = Map<String, dynamic>.from(
-      (state['collections'] as Map)[''] as Map,
+
+    final wanted = <String>{
+      for (final e in remote.entries)
+        if (_hashes[e['id']] != e['hash'] || !_records.containsKey(e['id']))
+          e['id'] as String,
+    };
+    final bodies = await _remote.download(remote, wanted);
+    final ids = remote.entries.map((e) => e['id']).toSet();
+    final next = Map<String, Map<String, dynamic>>.of(_records)
+      ..removeWhere((key, _) => !ids.contains(key));
+    for (final row in bodies) {
+      final key = row['id'] as String;
+      final body = Map<String, dynamic>.from(row['payload'] as Map);
+      if (!_validRecord(key, body))
+        throw StateError('Invalid canonical record');
+      next[key] = body;
+    }
+    final hashes = {
+      for (final e in remote.entries) e['id'] as String: e['hash'] as String,
+    };
+    final graph = RecordGraph(next, hashes);
+    final views = <int, Map<String, dynamic>>{};
+    final entries = <Map<String, dynamic>>[];
+    for (final entry in remote.entries) {
+      if (entry['role'] == 'support') continue;
+      final key = entry['id'] as String;
+      final payload = graph.view(app, key);
+      final id = payload['id'] as int;
+      final hash =
+          'v1:${sha256.convert(utf8.encode(jsonEncode(_ordered(payload))))}';
+      if (views.containsKey(id))
+        throw StateError('Duplicate app view identity');
+      views[id] = {'id': id, 'hash': hash, 'payload': payload};
+      entries.add({...entry, 'id': id, 'hash': hash});
+    }
+    final result = AppSyncManifest(
+      remote.revision,
+      remote.root,
+      remote.collections,
+      entries,
     );
-    final nodes = <String, dynamic>{'': rootNode};
-    final branches = <String, dynamic>{};
-    final oldChildren = <String, List<String>>{};
-    for (final entry
-        in previous?.collections.entries ?? <MapEntry<String, dynamic>>[]) {
-      if (entry.key.isNotEmpty)
-        (oldChildren[entry.value['parent'] as String] ??= []).add(entry.key);
+    if (save != null && (_manifest?.root != remote.root || wanted.isNotEmpty)) {
+      await save!({...remote.toJson(), 'bodies': next, 'hashes': hashes});
     }
-    var pending = <String>[''];
-    final visited = <String>{};
-    while (pending.isNotEmpty) {
-      final changed = <String>[];
-      final next = <String>[];
-      for (final key in pending) {
-        if (!visited.add(key))
-          throw StateError('Cycle or duplicate sync group');
-        if (previous?.collections[key]?['hash'] == nodes[key]['hash'] &&
-            previous!.branches.containsKey(key)) {
-          branches[key] = previous.branches[key];
-          for (final child in oldChildren[key] ?? <String>[]) {
-            nodes[child] = previous.collections[child];
-            next.add(child);
-          }
-        } else {
-          changed.add(key);
-        }
-      }
-      for (var offset = 0; offset < changed.length; offset += 200) {
-        final selected = changed.skip(offset).take(200).toSet();
-        final response = await request('snapshot', {
-          'revision': '$revision',
-          'collectionIds': selected.toList(),
-        });
-        _checkRevision(response, revision);
-        final children = Map<String, dynamic>.from(
-          response['collections'] as Map,
-        );
-        final records = (response['manifest'] as List)
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-        for (final key in selected) branches[key] = <Map<String, dynamic>>[];
-        final received = <int>{};
-        for (final record in records) {
-          if (record['id'] is! int ||
-              !received.add(record['id']) ||
-              record['hash'] is! String ||
-              record['collections'] is! List) {
-            throw StateError('Invalid record manifest');
-          }
-          final memberships = (record['collections'] as List).where(
-            selected.contains,
-          );
-          if (memberships.isEmpty)
-            throw StateError('Unexpected manifest record');
-          for (final key in memberships) (branches[key] as List).add(record);
-        }
-        for (final child in children.entries) {
-          if (child.key.isEmpty ||
-              nodes.containsKey(child.key) ||
-              !selected.contains(child.value['parent']) ||
-              child.value['hash'] is! String) {
-            throw StateError('Invalid sync child group');
-          }
-          nodes[child.key] = child.value;
-          next.add(child.key);
-        }
-        for (final key in selected) {
-          if ((branches[key] as List).length != nodes[key]['count'] ||
-              children.values.where((v) => v['parent'] == key).length !=
-                  nodes[key]['child_count']) {
-            throw StateError('Incomplete sync branch');
-          }
-        }
-      }
-      pending = next;
-    }
-    final records = <int, Map<String, dynamic>>{};
-    final memberships = <int, Set<String>>{};
-    for (final branch in branches.entries) {
-      for (final raw in branch.value as List) {
-        final record = Map<String, dynamic>.from(raw as Map);
-        final id = record['id'] as int;
-        if (records[id] != null && records[id]!['hash'] != record['hash']) {
-          throw StateError('Inconsistent record across sync branches');
-        }
-        records[id] = record;
-        (memberships[id] ??= {}).add(branch.key);
-      }
-    }
-    for (final entry in records.entries) {
-      entry.value['collections'] = memberships[entry.key]!.toList()..sort();
-    }
-    final ordered = records.values.toList()
-      ..sort((a, b) => (a['id'] as int).compareTo(b['id'] as int));
-    final result = AppSyncManifest(revision, root, nodes, ordered, branches);
-    await save?.call(result.toJson());
-    return _manifest = result;
+    _records = next;
+    _hashes = hashes;
+    _views = views;
+    _manifest = result;
+    return result;
   }
 
   Future<List<Map<String, dynamic>>> download(
     AppSyncManifest manifest,
     Set<int> ids,
   ) async {
-    final expected = {
-      for (final e in manifest.entries) e['id'] as int: e['hash'],
-    };
-    final requested = ids.where(expected.containsKey).toList()..sort();
-    final result = <Map<String, dynamic>>[];
-    for (var offset = 0; offset < requested.length; offset += 200) {
-      final page = requested.skip(offset).take(200).toSet();
-      final response = await request('snapshot', {
-        'revision': '${manifest.revision}',
-        'itemIds': page.toList(),
-        'collectionIds': <String>[],
-      });
-      _checkRevision(response, manifest.revision);
-      final received = <int>{};
-      for (final raw in response['items'] as List) {
-        final item = Map<String, dynamic>.from(raw as Map);
-        final id = item['id'] as int;
-        if (!page.contains(id) ||
-            !received.add(id) ||
-            item['hash'] != expected[id] ||
-            item['payload'] is! Map) {
-          throw StateError('Item does not match its advertised snapshot');
-        }
-        result.add(item);
-      }
-      if (received.length != page.length)
-        throw StateError('Incomplete app snapshot');
+    if (_manifest?.root != manifest.root ||
+        _manifest?.revision != manifest.revision) {
+      throw StateError('Local app view changed; refresh its manifest');
     }
-    return result;
+    return [
+      for (final id in ids)
+        if (_views.containsKey(id)) _views[id]!,
+    ];
   }
+}
 
-  void _checkRevision(Map<String, dynamic> response, int revision) {
-    if (response['status'] != 'ready' ||
-        response['revision'] != revision ||
-        response['projection_version'] != appSyncProjectionVersion) {
-      throw StateError('Remote state changed; refresh the manifest');
-    }
+Object? _ordered(Object? value) {
+  if (value is Map) {
+    final keys = value.keys.cast<String>().toList()..sort();
+    return {for (final key in keys) key: _ordered(value[key])};
   }
+  if (value is List) return value.map(_ordered).toList();
+  return value;
+}
+
+bool _validRecord(String key, Map<String, dynamic> body) {
+  if (body['id'] is! int) return false;
+  if (!key.startsWith('model:')) return true;
+  return key == 'model:${body['id']}' &&
+      body['model_type'] is Map &&
+      (body['model_type'] as Map)['name'] is String;
 }

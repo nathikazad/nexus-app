@@ -8,7 +8,7 @@ Map<String, dynamic> appSyncFixture(
       'appSyncState': {
         'status': 'ready',
         'revision': 1,
-        'projection_version': 2,
+        'projection_version': 3,
         'root_hash': 'fixture-root',
         'collections': {
           '': {
@@ -26,12 +26,12 @@ Map<String, dynamic> appSyncFixture(
     'appSyncSnapshot': {
       'status': 'ready',
       'revision': 1,
-      'projection_version': 2,
+      'projection_version': 3,
       'collections': {},
       'manifest': [
         for (final item in items)
           {
-            'id': item['id'],
+            'id': 'model:${item['id']}',
             'hash': item['hash'],
             'model_type': item['payload']['model_type']['name'],
             'collections': [''],
@@ -39,7 +39,11 @@ Map<String, dynamic> appSyncFixture(
       ],
       'items': ids == null
           ? []
-          : items.where((item) => ids.contains(item['id'])).toList(),
+          : [
+              for (final item in items)
+                if (ids.contains('model:${item['id']}'))
+                  {...item, 'id': 'model:${item['id']}'},
+            ],
     },
   };
 }

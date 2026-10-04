@@ -24,7 +24,7 @@ void main() {
                         'status': 'ready',
                         'revision': 1,
                         'root_hash': 'root',
-                        'projection_version': 2,
+                        'projection_version': 3,
                         'collections': {
                           '': {
                             'hash': 'group',
@@ -37,11 +37,11 @@ void main() {
                     : {
                         'status': 'ready',
                         'revision': 1,
-                        'projection_version': 2,
+                        'projection_version': 3,
                         'collections': {},
                         'manifest': [
                           {
-                            'id': 11,
+                            'id': 'model:11',
                             'hash': 's1:card',
                             'collections': [''],
                           },
@@ -50,7 +50,7 @@ void main() {
                             ? []
                             : [
                                 {
-                                  'id': 11,
+                                  'id': 'model:11',
                                   'hash': 's1:card',
                                   'payload': {
                                     'id': 11,
@@ -78,7 +78,10 @@ void main() {
         1,
       );
       final transport = KgqlCardsSyncTransport(client);
-      expect((await transport.cardManifest()).manifest.single.hash, 's1:card');
+      expect(
+        (await transport.cardManifest()).manifest.single.hash,
+        startsWith('v1:'),
+      );
       final downloaded = await transport.downloadCards({11});
       expect(downloaded.cards.single.card.back, '日');
       expect(manifests, 1);

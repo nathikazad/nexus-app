@@ -39,7 +39,9 @@ void main() {
     await transport.download({42});
     expect(calls.length, 4);
     expect(calls.first['app'], 'books');
-    expect(calls.last['itemIds'], [42]);
+    expect(calls.where((c) => c['itemIds'] != null).single['itemIds'], [
+      'model:42',
+    ]);
     expect(
       client.cache.store.toMap(),
       isEmpty,

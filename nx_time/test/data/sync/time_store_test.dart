@@ -197,11 +197,12 @@ void main() {
       var downloads = 0;
       var changes = 0;
       final session = AppSyncSession(
+        app: 'time',
         request: (operation, variables) async {
           if (operation == 'state') {
             return {
               'status': 'ready',
-              'projection_version': 2,
+              'projection_version': 3,
               'revision': revision,
               'root_hash': 'root$revision',
               'collections': {
@@ -219,10 +220,10 @@ void main() {
             return {
               'status': 'ready',
               'revision': revision,
-              'projection_version': 2,
+              'projection_version': 3,
               'items': [
                 {
-                  'id': 1,
+                  'id': 'model:1',
                   'hash': 'h$revision',
                   'payload': entity(1, 'Version $revision', 'r$revision'),
                 },
@@ -232,12 +233,12 @@ void main() {
           return {
             'status': 'ready',
             'revision': revision,
-            'projection_version': 2,
+            'projection_version': 3,
             'collections': {},
             'manifest': [
               if (revision < 3)
                 {
-                  'id': 1,
+                  'id': 'model:1',
                   'hash': 'h$revision',
                   'collections': [''],
                 },
@@ -271,7 +272,7 @@ void main() {
           if (operation == 'state') {
             return {
               'status': 'ready',
-              'projection_version': 2,
+              'projection_version': 3,
               'revision': 2,
               'root_hash': 'new',
               'collections': {
@@ -287,7 +288,7 @@ void main() {
           return {
             'status': 'ready',
             'revision': 2,
-            'projection_version': 2,
+            'projection_version': 3,
             'collections': {},
             'manifest': [
               {

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nx_sync/nx_sync.dart';
+import 'package:nx_sync/src/record_session.dart';
 
 class Server {
   int revision = 1;
@@ -11,7 +11,7 @@ class Server {
   Map<String, dynamic>? persisted;
   void group(String id, String? parent) => nodes[id] = {'parent': parent};
   void record(int id, String group, String hash) => records[id] = {
-    'id': id,
+    'id': 'model:$id',
     'hash': hash,
     'collections': [group],
     'model_type': 'Task',
@@ -44,7 +44,7 @@ class Server {
     if (op == 'state')
       return {
         'status': 'ready',
-        'projection_version': 2,
+        'projection_version': 3,
         'revision': revision,
         'root_hash': summary('')['hash'],
         'collections': {'': summary('')},
@@ -54,7 +54,7 @@ class Server {
     requests.add(selected);
     return {
       'status': 'ready',
-      'projection_version': 2,
+      'projection_version': 3,
       'revision': revision,
       'collections': {
         for (final k in nodes.keys)
@@ -68,14 +68,14 @@ class Server {
         for (final id in args['itemIds'] as List? ?? [])
           {
             'id': id,
-            'hash': records[id]!['hash'],
+            'hash': records[int.parse((id as String).split(':').last)]!['hash'],
             'payload': {'id': id},
           },
       ],
     };
   }
 
-  AppSyncSession session() => AppSyncSession(
+  RecordSyncSession session() => RecordSyncSession(
     request: request,
     load: () async => persisted,
     save: (data) async => persisted = jsonDecode(jsonEncode(data)),
@@ -110,8 +110,8 @@ void main() {
         ['2026-10'],
         ['2026-10-03'],
       ]);
-      expect(changed.entries.map((e) => e['id']), [1, 2]);
-      expect((await client.download(changed, {2})).single['hash'], 'c');
+      expect(changed.entries.map((e) => e['id']), ['model:1', 'model:2']);
+      expect((await client.download(changed, {'model:2'})).single['hash'], 'c');
     },
   );
   test(
@@ -129,7 +129,7 @@ void main() {
       s.revision++;
       final changed = (await client.manifest())!;
       expect(changed.collections.containsKey('old'), false);
-      expect(changed.entries.single['id'], 1);
+      expect(changed.entries.single['id'], 'model:1');
       s.nodes.remove('new');
       s.records.clear();
       s.revision++;
@@ -172,7 +172,7 @@ void main() {
     final s = Server()
       ..group('', null)
       ..record(1, '', 'a');
-    final client = AppSyncSession(
+    final client = RecordSyncSession(
       request: (op, args) async {
         final result = await s.request(op, args);
         if (op == 'snapshot') result['manifest'] = [];
@@ -181,7 +181,7 @@ void main() {
     );
     await expectLater(client.manifest(), throwsStateError);
     await expectLater(
-      AppSyncSession(
+      RecordSyncSession(
         request: (_, _) async => {'status': 'ready', 'projection_version': 1},
       ).manifest(),
       throwsStateError,
