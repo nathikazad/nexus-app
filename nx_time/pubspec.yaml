@@ -16,6 +16,14 @@ dependencies:
   http: ^1.6.0
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
+  nx_sync:
+    path: ../nx_modules/nx_sync
+  nx_offline:
+    path: ../nx_modules/nx_offline
+  drift: ^2.28.1
+  gql: ^1.0.1
+  crypto: ^3.0.6
+  connectivity_plus: 6.1.5
   nx_db:
     path: ../nx_modules/nx_db
   nx_observability:

@@ -172,6 +172,12 @@ class GraphQLConfig {
 }
 
 final _clientDomains = Expando<int>('domain');
+final _clientSyncIdentities = Expando<String>('syncIdentity');
+String? syncStorageKeyForClient(GraphQLClient client, String app) {
+  final identity = _clientSyncIdentities[client];
+  return identity == null ? null : '$identity/$app';
+}
+
 @visibleForTesting
 T bindTestClientDomain<T extends GraphQLClient>(T client, int domainId) {
   if (domainId <= 0 ||
@@ -244,5 +250,6 @@ GraphQLClient createClient(
     queryRequestTimeout: graphQlQueryRequestTimeout,
   );
   _clientDomains[client] = domainId;
+  _clientSyncIdentities[client] = '${preset?.serverId ?? ep}/$userId/$domainId';
   return client;
 }

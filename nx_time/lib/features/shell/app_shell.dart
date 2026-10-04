@@ -1,3 +1,5 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
+import 'package:nx_sync/nx_sync.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart' hide Action;
@@ -124,12 +126,28 @@ class _AppShellState extends ConsumerState<AppShell>
         }
       });
     }
+    ref.listen(timeLocalChangesProvider, (previous, next) {
+      if (!next.hasValue) return;
+      invalidateActionsAfterMutation(ref);
+      invalidateTasksAfterMutation(ref);
+      invalidateLogsAfterMutation(ref);
+      ref.invalidate(planningFeedProvider);
+    });
     if (_routeVisible) {
       ref.listen<AsyncValue<KgqlModelChange>>(workspaceChangesProvider, (
         prev,
         next,
       ) {
         if (next.asData?.value == null) return;
+        final workspace = ref.read(timeDomainsProvider).asData?.value;
+        if (workspace != null && workspace.sessions.isNotEmpty) {
+          unawaited(
+            workspace
+                .synchronize(SyncReason.foregroundDemand)
+                .catchError((Object _) {}),
+          );
+          return;
+        }
         invalidateActionsAfterMutation(ref);
         invalidateTasksAfterMutation(ref);
         invalidateLogsAfterMutation(ref);

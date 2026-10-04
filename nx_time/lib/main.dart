@@ -12,6 +12,7 @@ void main() {
   runApp(
     ProviderScope(
       overrides: [
+        retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
         graphqlClientProvider.overrideWith((ref) {
           final w = ref.watch(timeDomainsProvider).requireValue;
           return w.clients[w.personalId]!;

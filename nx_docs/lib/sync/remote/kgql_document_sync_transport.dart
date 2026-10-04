@@ -18,21 +18,13 @@ final class KgqlDocumentSyncTransport implements DocumentSyncTransport {
     Set<int>? documentIds,
     bool manifestOnly = false,
   }) async {
-    final response =
-        await AppSyncClient.forOwner(this, _client, 'docs').documents(
+    final response = await AppSyncClient.forOwner(this, _client, 'docs')
+        .documents(
           localManifest: [for (final entry in manifest) entry.toJson()],
           ids: documentIds,
           manifestOnly: manifestOnly,
-        ) ??
-        await document_api.syncDocuments(
-          _client,
-          manifest: <Map<String, Object?>>[
-            for (final entry in manifest) entry.toJson(),
-          ],
-          documentIds: documentIds,
-          manifestOnly: manifestOnly,
-          requestTimeout: document_api.documentBulkSyncTimeout,
         );
+    if (response == null) throw StateError('Docs sync is unavailable');
     return DocumentSyncBundle(
       manifest: [
         for (final entry in response.manifest)

@@ -24,19 +24,26 @@ void main() {
                         'status': 'ready',
                         'revision': 1,
                         'root_hash': 'root',
-                        'projection_version': 1,
+                        'projection_version': 2,
                         'collections': {
-                          'language': {'hash': 'group'},
+                          '': {
+                            'hash': 'group',
+                            'parent': null,
+                            'count': 1,
+                            'child_count': 0,
+                          },
                         },
                       }
                     : {
                         'status': 'ready',
                         'revision': 1,
+                        'projection_version': 2,
+                        'collections': {},
                         'manifest': [
                           {
                             'id': 11,
                             'hash': 's1:card',
-                            'collections': ['language'],
+                            'collections': [''],
                           },
                         ],
                         'items': request.variables['itemIds'] == null

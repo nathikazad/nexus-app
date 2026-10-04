@@ -18,7 +18,7 @@ void main() {
                 data: {
                   'appSyncState': {
                     'status': 'ready',
-                    'projection_version': 1,
+                    'projection_version': 2,
                     'root_hash': root,
                   },
                 },
@@ -75,9 +75,12 @@ void main() {
                           'status': 'ready',
                           'revision': 3,
                           'root_hash': 'root3',
-                          'projection_version': 1,
+                          'projection_version': 2,
                           'collections': {
-                            'document:42': {
+                            '': {
+                              'parent': null,
+                              'count': 1,
+                              'child_count': 0,
                               'hash': 'group3',
                               'metadata': {'kind': 'Document', 'name': 'Book'},
                             },
@@ -86,12 +89,14 @@ void main() {
                       : {
                           'status': 'ready',
                           'revision': 3,
+                          'projection_version': 2,
+                          'collections': {},
                           'manifest': [
                             {
                               'id': 42,
                               'hash': 's1:body',
                               'model_type': 'Book',
-                              'collections': ['document:42'],
+                              'collections': [''],
                             },
                           ],
                           'items': request.variables['itemIds'] == null

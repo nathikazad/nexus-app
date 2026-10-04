@@ -8,10 +8,15 @@ Map<String, dynamic> appSyncFixture(
       'appSyncState': {
         'status': 'ready',
         'revision': 1,
-        'projection_version': 1,
+        'projection_version': 2,
         'root_hash': 'fixture-root',
         'collections': {
-          'all': {'hash': 'fixture-group'},
+          '': {
+            'hash': 'fixture-group',
+            'parent': null,
+            'count': items.length,
+            'child_count': 0,
+          },
         },
       },
     };
@@ -21,13 +26,15 @@ Map<String, dynamic> appSyncFixture(
     'appSyncSnapshot': {
       'status': 'ready',
       'revision': 1,
+      'projection_version': 2,
+      'collections': {},
       'manifest': [
         for (final item in items)
           {
             'id': item['id'],
             'hash': item['hash'],
             'model_type': item['payload']['model_type']['name'],
-            'collections': ['all'],
+            'collections': [''],
           },
       ],
       'items': ids == null

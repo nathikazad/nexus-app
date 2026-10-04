@@ -32,6 +32,8 @@ class RemoteCollection extends HypnosisCollection {
   final HypnosisCache? cache;
   final AppSyncSession? Function()? stateSession;
   String? _appliedRoot;
+  final Map<int, Map<String, dynamic>> _syncRecords = {};
+  final Map<int, String> _syncHashes = {};
   late final SyncSupervisor<String> synchronizer;
   StreamSubscription<SyncStatus>? _statusSubscription;
   final savedRecordings = <String>{};
@@ -67,6 +69,23 @@ class RemoteCollection extends HypnosisCollection {
     if (saved != null) {
       try {
         _accept(200, saved);
+        final treeRecords = await cache?.library.read(
+          'hypnosis',
+          'sync_records',
+        );
+        if (treeRecords != null) {
+          final checkpoint = jsonDecode(treeRecords) as Map;
+          _syncRecords.addAll({
+            for (final e in (checkpoint['records'] as Map).entries)
+              int.parse(e.key as String): Map<String, dynamic>.from(
+                e.value as Map,
+              ),
+          });
+          _syncHashes.addAll({
+            for (final e in (checkpoint['hashes'] as Map).entries)
+              int.parse(e.key as String): e.value as String,
+          });
+        }
         unawaited(_availability = _checkSavedRecordings());
         return;
       } catch (_) {
@@ -102,13 +121,49 @@ class RemoteCollection extends HypnosisCollection {
       final session = stateSession?.call();
       final remote = await session?.manifest();
       if (session != null && remote != null) {
-        // The collection is a single compatibility projection; asset downloads
-        // remain independent and are retried even when its metadata is equal.
         if (_appliedRoot != remote.root) {
-          final items = await session.download(remote, {0});
-          if (items.length != 1)
-            throw StateError('Missing Hypnosis collection');
-          await _persist(200, jsonEncode(items.single['payload']));
+          final wanted = {
+            for (final e in remote.entries)
+              if (_syncHashes[e['id']] != e['hash']) e['id'] as int,
+          };
+          final items = await session.download(remote, wanted);
+          final next = Map<int, Map<String, dynamic>>.of(_syncRecords);
+          final ids = remote.entries.map((e) => e['id']).toSet();
+          next.removeWhere((id, _) => !ids.contains(id));
+          for (final item in items) {
+            next[item['id'] as int] = Map<String, dynamic>.from(
+              item['payload'] as Map,
+            );
+          }
+          final data = {
+            for (final kind in ['desires', 'tapes'])
+              kind: [
+                for (final row in next.values)
+                  if (row['kind'] == kind) row['record'],
+              ],
+          };
+          await _persist(200, jsonEncode(data));
+          _syncRecords
+            ..clear()
+            ..addAll(next);
+          _syncHashes
+            ..clear()
+            ..addAll({
+              for (final e in remote.entries)
+                e['id'] as int: e['hash'] as String,
+            });
+          await cache?.library.saveRemote(
+            'hypnosis',
+            'sync_records',
+            jsonEncode({
+              'records': {
+                for (final e in _syncRecords.entries) '${e.key}': e.value,
+              },
+              'hashes': {
+                for (final e in _syncHashes.entries) '${e.key}': e.value,
+              },
+            }),
+          );
           _appliedRoot = remote.root;
         }
         return;

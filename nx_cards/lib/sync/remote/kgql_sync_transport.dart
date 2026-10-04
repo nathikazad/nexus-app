@@ -2,7 +2,6 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_mapper.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_schema.dart';
-import 'dart:convert';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_db/cards.dart' as cards_api;
 import 'package:nx_db/kgql.dart';
@@ -124,72 +123,35 @@ final class KgqlCardsSyncTransport
     Set<int>? ids,
     bool manifestOnly = false,
   }) async {
-    if (appStateSyncEnabled) {
-      final session = AppSyncClient.forOwner(this, _client, 'cards').session;
-      final remote = await session.manifest();
-      if (remote != null) {
-        final entries = remote.entries;
-        final wanted = ids ?? entries.map((e) => e['id'] as int).toSet();
-        final items = manifestOnly
-            ? <Map<String, dynamic>>[]
-            : await session.download(remote, wanted);
-        final cards = <HashedCard>[];
-        for (final entry in items) {
-          final card = studyCardFromModel(
-            Model.fromJson(Map<String, dynamic>.from(entry['payload'] as Map)),
-          );
-          if (card == null || card.id != entry['id']) {
-            throw StateError('Invalid card payload');
-          }
-          cards.add(HashedCard(card, entry['hash'] as String));
-        }
-        final remoteIds = entries.map((e) => e['id']).toSet();
-        return CardHashBundle(
-          [
-            for (final entry in entries)
-              CardHash(entry['id'] as int, entry['hash'] as String),
-          ],
-          cards,
-          {
-            for (final id in ids ?? <int>{})
-              if (!remoteIds.contains(id)) id,
-          },
-        );
-      }
-    }
-    final response = await _client.query(
-      QueryOptions(
-        document: gql(
-          r'''query CardHashSync($ids: [Int!], $manifestOnly: Boolean!) {
-        syncCards(cardIds: $ids, manifestOnly: $manifestOnly)
-      }''',
-        ),
-        variables: {'ids': ids?.toList(), 'manifestOnly': manifestOnly},
-        fetchPolicy: FetchPolicy.noCache,
-      ),
-    );
-    if (response.hasException) throw response.exception!;
-    final raw = response.data?['syncCards'];
-    final data =
-        (raw is String ? jsonDecode(raw) : raw) as Map<String, dynamic>;
-    final manifest = [
-      for (final entry in data['manifest'] as List)
-        CardHash(entry['id'] as int, entry['hash'] as String),
-    ];
+    final session = AppSyncClient.forOwner(this, _client, 'cards').session;
+    final remote = await session.manifest();
+    if (remote == null) throw StateError('Cards sync is unavailable');
+    final entries = remote.entries;
+    final wanted = ids ?? entries.map((e) => e['id'] as int).toSet();
+    final items = manifestOnly
+        ? <Map<String, dynamic>>[]
+        : await session.download(remote, wanted);
     final cards = <HashedCard>[];
-    for (final entry in data['cards'] as List) {
+    for (final entry in items) {
       final card = studyCardFromModel(
-        Model.fromJson(Map<String, dynamic>.from(entry['card'] as Map)),
+        Model.fromJson(Map<String, dynamic>.from(entry['payload'] as Map)),
       );
       if (card == null || card.id != entry['id']) {
         throw StateError('Invalid card payload');
       }
       cards.add(HashedCard(card, entry['hash'] as String));
     }
+    final remoteIds = entries.map((e) => e['id']).toSet();
     return CardHashBundle(
-      manifest,
+      [
+        for (final entry in entries)
+          CardHash(entry['id'] as int, entry['hash'] as String),
+      ],
       cards,
-      (data['deleted_ids'] as List).cast<int>().toSet(),
+      {
+        for (final id in ids ?? <int>{})
+          if (!remoteIds.contains(id)) id,
+      },
     );
   }
 

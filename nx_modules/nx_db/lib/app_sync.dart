@@ -1,12 +1,18 @@
 library;
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:nx_offline/nx_offline_storage.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_sync/nx_sync.dart';
 import 'nx_db.dart';
 
 export 'package:nx_sync/nx_sync.dart' show appStateSyncEnabled;
+
+String _encodeManifest(Map<String, dynamic> value) => jsonEncode(value);
+Map<String, dynamic> _decodeManifest(String value) =>
+    Map<String, dynamic>.from(jsonDecode(value) as Map);
 
 final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
   ref,
@@ -31,12 +37,44 @@ final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
 
 final class AppSyncClient {
   AppSyncClient(this.client, this.app) {
-    session = AppSyncSession(request: _request);
+    session = AppSyncSession(
+      request: _request,
+      load: _loadManifest,
+      save: _saveManifest,
+    );
   }
   final GraphQLClient client;
   final String app;
   late final AppSyncSession session;
-  bool _unsupported = false;
+  Future<Map<String, dynamic>?> _loadManifest() async {
+    final key = syncStorageKeyForClient(client, app);
+    if (kIsWeb || key == null) return null;
+    final library = FileLibrary.application(key);
+    try {
+      final raw = await library.read('sync_tree', 'manifest');
+      return raw == null ? null : await compute(_decodeManifest, raw);
+    } on Exception {
+      return null;
+    } finally {
+      await library.close();
+    }
+  }
+
+  Future<void> _saveManifest(Map<String, dynamic> value) async {
+    final key = syncStorageKeyForClient(client, app);
+    if (kIsWeb || key == null) return;
+    final library = FileLibrary.application(key);
+    try {
+      await library.saveRemote(
+        'sync_tree',
+        'manifest',
+        await compute(_encodeManifest, value),
+      );
+    } finally {
+      await library.close();
+    }
+  }
+
   String? _refreshedRoot;
   Map<String, dynamic> _collections = {};
 
@@ -48,11 +86,8 @@ final class AppSyncClient {
     invalidate,
   }) async {
     final state = await _request('state', {});
-    if (state['status'] == 'unsupported') {
-      await refresh();
-      return;
-    }
-    if (state['status'] != 'ready' || state['projection_version'] != 1) {
+    if (state['status'] != 'ready' ||
+        state['projection_version'] != appSyncProjectionVersion) {
       throw StateError('Remote app state is not ready');
     }
     final root = state['root_hash'] as String;
@@ -84,7 +119,6 @@ final class AppSyncClient {
     String operation,
     Map<String, dynamic> variables,
   ) async {
-    if (_unsupported) return {'status': 'unsupported'};
     final state = operation == 'state';
     final response = await client.query(
       QueryOptions(
@@ -109,12 +143,6 @@ final class AppSyncClient {
       ),
     );
     if (response.hasException) {
-      if (response.exception!.graphqlErrors.any(
-        (error) => error.message.contains('Cannot query field "appSync'),
-      )) {
-        _unsupported = true;
-        return {'status': 'unsupported'};
-      }
       throw response.exception!;
     }
     final raw = response.data?[state ? 'appSyncState' : 'appSyncSnapshot'];
@@ -163,6 +191,9 @@ final class AppSyncClient {
           if (!remoteIds.contains(id)) id,
       ],
       topicTags: ({
+        for (final value in remote.collections.values)
+          ...((value['metadata']?['topics'] as List?) ?? const [])
+              .cast<String>(),
         for (final value in remote.collections.values)
           if (value['metadata']?['kind'] == 'Topic')
             value['metadata']['name'] as String,

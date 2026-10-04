@@ -14,32 +14,33 @@ void main() {
             return {
               'status': 'ready',
               'revision': 1,
-              'projection_version': 1,
+              'projection_version': 2,
               'root_hash': 'r',
               'collections': {
-                'all': {'hash': 'h'},
+                '': {'hash': 'h', 'parent': null, 'count': 1, 'child_count': 0},
               },
             };
           if (variables['itemIds'] != null) downloads++;
           return {
             'status': 'ready',
             'revision': 1,
+            'projection_version': 2,
+            'collections': {},
             'manifest': [
               {
-                'id': 0,
+                'id': 1,
                 'hash': 'h',
-                'collections': ['all'],
+                'collections': [''],
               },
             ],
             'items': [
               {
-                'id': 0,
+                'id': 1,
                 'hash': 'h',
                 'payload': {
-                  'desires': [
-                    {'id': '1', 'title': 'Calm', 'belief': 'Rest'},
-                  ],
-                  'tapes': [],
+                  'id': 1,
+                  'kind': 'desires',
+                  'record': {'id': '1', 'title': 'Calm', 'belief': 'Rest'},
                 },
               },
             ],

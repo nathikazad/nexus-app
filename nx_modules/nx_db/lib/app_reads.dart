@@ -99,6 +99,10 @@ final class AppReads {
       for (final key in {...previous.keys, ...current.keys})
         if (previous[key]?['hash'] != current[key]?['hash']) key,
     };
+    if (changed.contains('')) {
+      invalidate();
+      return;
+    }
     bool tagChanged(String system, String name) => changed.any((key) {
       for (final source in [previous, current]) {
         final metadata = source[key]?['metadata'];

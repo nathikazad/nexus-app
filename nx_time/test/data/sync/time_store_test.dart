@@ -1,30 +1,30 @@
-import 'package:nx_people/data/sync/people_synchronizer.dart';
+import 'package:nx_time/data/sync/time_synchronizer.dart';
 import 'dart:io';
 import 'package:nx_offline/src/storage/content_files_native.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/nx_offline_storage.dart';
-import 'package:nx_people/data/sync/people_store.dart';
+import 'package:nx_time/data/sync/time_store.dart';
 
 const account = AccountIdentity(
   serverId: 'test',
   userId: '1',
   domainId: 1,
-  application: 'people',
+  application: 'time',
 );
 Map<String, dynamic> entity(int id, String name, String revision) => {
   'id': id,
   'name': name,
-  'kind': 'Person',
-  'model_type': {'name': 'Person'},
+  'kind': 'Task',
+  'model_type': {'name': 'Task'},
   'revision': revision,
 };
 
 void main() {
   late Directory directory;
   late FileLibrary library;
-  late PeopleStore store;
+  late TimeStore store;
   void open() {
     library = FileLibrary(
       database: LibraryDatabase(
@@ -32,12 +32,12 @@ void main() {
       ),
       files: DirectoryContentFiles(Directory('${directory.path}/files')),
     );
-    store = PeopleStore(library, account);
+    store = TimeStore(library, account);
   }
 
   setUp(() async {
     directory = await (Directory(
-      '${Platform.environment["NEXUS_TEST_TMP"] ?? Directory.systemTemp.path}/nx-people-sync',
+      '${Platform.environment["NEXUS_TEST_TMP"] ?? Directory.systemTemp.path}/nx-time-sync',
     )..createSync(recursive: true)).createTemp('people-store-');
     open();
   });
@@ -61,7 +61,7 @@ void main() {
     localId: local,
     command: {
       if (!create) 'id': 1,
-      if (create) 'model_type': 'Person',
+      if (create) 'model_type': 'Task',
       'name': name,
     },
     optimistic: entity(1, name, 'r1'),
@@ -91,6 +91,10 @@ void main() {
     final mutation = (await store.pendingMutations()).single;
     final request = await store.freeze(mutation);
     expect(request['data']['id'], isNull);
+    expect(
+      request['client_updated_at'],
+      mutation.createdAt.toUtc().toIso8601String(),
+    );
     await library.close();
     open();
     expect((await store.get('local-1'))!['name'], 'Groceries');
@@ -241,7 +245,7 @@ void main() {
           };
         },
       );
-      final sync = PeopleReconciler(store, session, onChanged: () => changes++);
+      final sync = TimeReconciler(store, session, onChanged: () => changes++);
       await sync.pullAll();
       await sync.pullAll();
       expect(downloads, 1);
@@ -297,11 +301,11 @@ void main() {
         },
       );
       await expectLater(
-        PeopleReconciler(store, session).pullAll(),
+        TimeReconciler(store, session).pullAll(),
         throwsStateError,
       );
       expect((await store.get('1'))!['name'], 'Original');
-      expect(await library.read('people_state', 'coverage'), isNull);
+      expect(await library.read('time_state', 'coverage'), isNull);
     },
   );
   test(

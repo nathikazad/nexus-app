@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:nx_offline/nx_offline.dart';
+import 'package:nx_time/data/sync/time_session.dart';
 import 'package:nx_time/domain/projects/project_repository.dart';
 import 'package:nx_time/domain/goals/goal_repository.dart';
 import 'package:nx_time/domain/action/action_repository.dart';
@@ -34,12 +39,30 @@ class TimeDomains extends AsyncNotifier<DomainWorkspace> {
   Future<DomainWorkspace> build() async {
     final user = await ref.watch(authProvider.future);
     if (user == null) throw StateError('Sign in first');
-    final memberships = await ref.watch(domainLoaderProvider)(user);
+    final prefs = await SharedPreferences.getInstance();
+    final membershipKey =
+        'nx_time.memberships.${user.preset.serverId}.${user.userId}';
+    final loader = ref.watch(domainLoaderProvider);
+    String encode(List<DomainMembership> rows) => jsonEncode([
+      for (final d in rows)
+        {'id': d.id, 'name': d.name, 'role': d.role, 'kind': d.kind},
+    ]);
+    final cached = prefs.getString(membershipKey);
+    final memberships = cached == null
+        ? await loader(user)
+        : (jsonDecode(cached) as List)
+              .map(
+                (d) => DomainMembership.fromJson(
+                  Map<String, dynamic>.from(d as Map),
+                ),
+              )
+              .toList();
+    if (cached == null)
+      await prefs.setString(membershipKey, encode(memberships));
     final personal = memberships.where((d) => d.kind == 'personal').toList();
     if (personal.length != 1) {
       throw StateError('Expected exactly one personal domain');
     }
-    final prefs = await SharedPreferences.getInstance();
     final key = 'nx_time.domains.${user.preset.serverId}.${user.userId}';
     final saved = prefs.getStringList(key);
     final ids =
@@ -50,15 +73,44 @@ class TimeDomains extends AsyncNotifier<DomainWorkspace> {
         {personal.single.id};
     if (ids.isEmpty) ids.add(personal.single.id);
     final factory = ref.watch(timeDomainClientFactoryProvider);
+    final clients = {for (final d in memberships) d.id: factory(user, d.id)};
+    final sessions = <int, TimeSession>{
+      if (!kIsWeb)
+        for (final id in {...ids, personal.single.id})
+          id: TimeSession(user, id, clients[id]!),
+    };
+    for (final entry in sessions.entries)
+      clients[entry.key] = entry.value.client;
     final workspace = DomainWorkspace(
       user: user,
       memberships: memberships,
       personalId: personal.single.id,
       selectedIds: ids,
       needsSelection: saved == null && memberships.length > 1,
-      clients: {for (final d in memberships) d.id: factory(user, d.id)},
+      clients: clients,
+      sessions: sessions,
     );
     ref.onDispose(workspace.dispose);
+    if (cached != null) {
+      unawaited(
+        loader(user)
+            .then((fresh) async {
+              if (!ref.mounted) return;
+              final next = encode(fresh);
+              if (next != cached) {
+                await prefs.setString(membershipKey, next);
+                if (ref.mounted) ref.invalidateSelf();
+              }
+            })
+            .catchError((Object error) async {
+              if (error is AuthSessionRejected) {
+                await prefs.remove(membershipKey);
+                workspace.dispose();
+                if (ref.mounted) state = AsyncError(error, StackTrace.current);
+              }
+            }),
+      );
+    }
     return workspace;
   }
 
@@ -85,8 +137,14 @@ class DomainWorkspace {
     required this.selectedIds,
     required this.clients,
     this.needsSelection = false,
+    this.sessions = const {},
   });
+  final Map<int, TimeSession> sessions;
   final bool needsSelection;
+  bool _disposed = false;
+  Future<void> synchronize(SyncReason reason) => Future.wait(
+    sessions.values.map((s) => s.synchronize(reason)),
+  ).then((_) {});
   final User user;
   final List<DomainMembership> memberships;
   final int personalId;
@@ -173,8 +231,33 @@ class DomainWorkspace {
   }
 
   void dispose() {
-    for (final c in clients.values) {
-      c.link.dispose();
+    if (_disposed) return;
+    _disposed = true;
+    for (final e in clients.entries) {
+      final session = sessions[e.key];
+      if (session == null) {
+        e.value.link.dispose();
+      } else {
+        unawaited(session.close());
+      }
     }
   }
 }
+
+final timeLocalChangesProvider = StreamProvider.autoDispose<void>((ref) async* {
+  final workspace = await ref.watch(timeDomainsProvider.future);
+  final controller = StreamController<void>();
+  final subscriptions = [
+    for (final s in workspace.sessions.values)
+      s.store.changes.listen((_) {
+        if (!controller.isClosed) controller.add(null);
+      }),
+  ];
+  ref.onDispose(() {
+    for (final s in subscriptions) {
+      unawaited(s.cancel());
+    }
+    unawaited(controller.close());
+  });
+  yield* controller.stream;
+});
