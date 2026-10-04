@@ -242,98 +242,96 @@ class _StudySheetRow extends StatelessWidget {
       content is LanguageCardContent ? content as LanguageCardContent : null;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 18),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 30,
-          child: Text(number.toString().padLeft(2, '0'), style: monoLabel),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                languageContent?.originalScript ?? content.back,
-                style: const TextStyle(
-                  fontSize: 28,
-                  height: 1.35,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              if (languageContent case final word?) ...[
-                Text(
-                  word.transliteration,
-                  style: const TextStyle(fontSize: 15, height: 1.5),
-                ),
-                Text(
-                  word.english,
-                  style: const TextStyle(fontSize: 15, height: 1.5),
-                ),
-              ] else
-                Text(
-                  content.front,
-                  style: const TextStyle(fontSize: 15, height: 1.5),
-                ),
-            ],
+  Widget build(BuildContext context) => InkWell(
+    key: ValueKey('study-focus-row-${card.id}'),
+    onTap: onFocus,
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 30,
+            child: Text(number.toString().padLeft(2, '0'), style: monoLabel),
           ),
-        ),
-        const SizedBox(width: 6),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (languageContent?.examples.isNotEmpty == true)
-              TextButton(
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => LanguageExamplesPage(
-                      card: card,
-                      audioRepository: audioRepository,
-                    ),
-                  ),
-                ),
-                child: const Text('Examples'),
-              ),
-            if (onFocus != null)
-              IconButton(
-                tooltip: 'Focus view',
-                onPressed: onFocus,
-                color: Theme.of(context).colorScheme.primary,
-                icon: const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Icon(Icons.crop_landscape_rounded, size: 26),
-                      Icon(Icons.open_in_full_rounded, size: 12),
-                    ],
-                  ),
-                ),
-              ),
-            if (onAudio != null)
-              IconButton(
-                tooltip: playing ? 'Pause pronunciation' : 'Play pronunciation',
-                onPressed: loading ? null : onAudio,
-                icon: loading
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        languageContent?.originalScript ?? content.back,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-              ),
-          ],
-        ),
-      ],
+                    ),
+                    if (onAudio != null)
+                      IconButton(
+                        tooltip: playing
+                            ? 'Pause pronunciation'
+                            : 'Play pronunciation',
+                        onPressed: loading ? null : onAudio,
+                        icon: loading
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                playing
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                              ),
+                      ),
+                  ],
+                ),
+                if (languageContent case final word?) ...[
+                  Text(
+                    word.transliteration,
+                    style: const TextStyle(fontSize: 15, height: 1.5),
+                  ),
+                  Text(
+                    word.english,
+                    style: const TextStyle(fontSize: 15, height: 1.5),
+                  ),
+                ] else
+                  Text(
+                    content.front,
+                    style: const TextStyle(fontSize: 15, height: 1.5),
+                  ),
+                if (languageContent?.examples.isNotEmpty == true)
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => LanguageExamplesPage(
+                          card: card,
+                          audioRepository: audioRepository,
+                        ),
+                      ),
+                    ),
+                    child: const Text('Examples'),
+                  ),
+              ],
+            ),
+          ),
+          if (onFocus != null)
+            IconButton(
+              tooltip: 'Focus view',
+              onPressed: onFocus,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+        ],
+      ),
     ),
   );
 }

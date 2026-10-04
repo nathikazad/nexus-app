@@ -55,9 +55,10 @@ void main() {
       expect(find.byTooltip('Focus view'), findsNWidgets(3));
       expect(
         tester.getCenter(find.byTooltip('Play pronunciation').first).dx,
-        greaterThan(tester.getCenter(find.byTooltip('Focus view').first).dx),
+        lessThan(tester.getCenter(find.byTooltip('Focus view').first).dx),
       );
-      await tester.tap(find.byTooltip('Focus view').first);
+      expect(find.byIcon(Icons.chevron_right_rounded), findsNWidgets(3));
+      await tester.tap(find.text('he'));
       await tester.pumpAndSettle();
       expect(find.byType(ScriptDrawPracticePage), findsOneWidget);
       expect(find.text('Chinese · Focus'), findsOneWidget);
