@@ -876,11 +876,11 @@ class _BookCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
       child: Material(
-        color: selected ? const Color(0xfff4fbf9) : AppColors.surface,
+        color: selected ? AppColors.accentSoft : AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
           side: BorderSide(
-            color: selected ? const Color(0xffabcfc8) : AppColors.line,
+            color: selected ? AppColors.accent : AppColors.line,
           ),
         ),
         child: InkWell(
