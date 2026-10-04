@@ -133,9 +133,12 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
+                Flexible(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(
@@ -144,26 +147,19 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                           maintainSize: true,
                           maintainAnimation: true,
                           maintainState: true,
-                          child: LayoutBuilder(
-                            builder: (context, space) => FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: SizedBox(
-                                width: space.maxWidth,
-                                child: Text(
-                                  _letter,
-                                  textAlign: TextAlign.center,
-                                  key: const ValueKey<String>(
-                                    'draw-practice-letter',
-                                  ),
-                                  style: TextStyle(
-                                    fontSize: _letter.runes.length == 1
-                                        ? 82
-                                        : 32,
-                                    height: 1.2,
-                                    fontWeight: FontWeight.w500,
-                                    color: RecallPalette.of(context).ink,
-                                  ),
-                                ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _letter,
+                              textAlign: TextAlign.center,
+                              key: const ValueKey<String>(
+                                'draw-practice-letter',
+                              ),
+                              style: TextStyle(
+                                fontSize: _letter.runes.length == 1 ? 82 : 32,
+                                height: 1.2,
+                                fontWeight: FontWeight.w500,
+                                color: RecallPalette.of(context).ink,
                               ),
                             ),
                           ),
@@ -173,6 +169,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                       Text(
                         _cue != null && !_letterVisible ? '' : _sound,
                         key: const ValueKey<String>('draw-practice-sound'),
+                        textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -187,6 +184,7 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                 ),
                 if (_audioUrl case final audioUrl?
                     when widget.audioRepository != null) ...[
+                  const SizedBox(width: 12),
                   PronunciationButton(
                     key: ValueKey<String>(
                       'draw-practice-audio-${_card.id}-${_cue?.storageKey}',
@@ -195,7 +193,6 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                     audioUrl: audioUrl,
                     repository: widget.audioRepository!,
                   ),
-                  const SizedBox(width: 12),
                 ],
               ],
             ),

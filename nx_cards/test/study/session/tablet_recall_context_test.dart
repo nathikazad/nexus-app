@@ -44,6 +44,74 @@ class Library implements CardLibrary {
 }
 
 void main() {
+  for (final width in [320.0, 760.0]) {
+    for (final withExamples in [false, true]) {
+      testWidgets(
+        'Contains wraps only when alone: width=$width examples=$withExamples',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = Size(width, 1100);
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final parent = card(
+            1,
+            '甲乙丙丁',
+            'four characters',
+            links: {2, 3, 4, 5},
+            examples: withExamples
+                ? [
+                    const LanguageExample(
+                      text: 'Example sentence',
+                      transliteration: 'example',
+                      translation: 'example',
+                    ),
+                  ]
+                : [],
+          );
+          final parts = [
+            for (final (i, text) in ['甲', '乙', '丙', '丁'].indexed)
+              card(i + 2, text, 'meaning $i'),
+          ];
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                cardAudioRepositoryProvider.overrideWithValue(null),
+                cardLibraryProvider.overrideWithValue(
+                  Library([parent, ...parts]),
+                ),
+              ],
+              child: MaterialApp(
+                home: Scaffold(
+                  body: SingleChildScrollView(
+                    child: TabletRecallContext(card: parent, allSizes: true),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          if (withExamples) {
+            await tester.tap(find.text('Contains'));
+            await tester.pumpAndSettle();
+          } else {
+            expect(find.byType(SegmentedButton<String>), findsNothing);
+          }
+          final first = tester.getTopLeft(find.text('甲'));
+          final second = tester.getTopLeft(find.text('乙'));
+          final fourth = tester.getTopLeft(find.text('丁'));
+          if (!withExamples && width > 600) {
+            expect(second.dy, first.dy);
+            expect(second.dx, greaterThan(first.dx));
+            expect(fourth.dy, greaterThan(first.dy));
+          } else {
+            expect(second.dy, greaterThan(first.dy));
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   testWidgets(
     'phone examples page includes available Examples Contains and Similar tabs',
     (tester) async {

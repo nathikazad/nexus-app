@@ -62,6 +62,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(ScriptDrawPracticePage), findsOneWidget);
       expect(find.text('Chinese · Focus'), findsOneWidget);
+      final scriptRight = tester
+          .getRect(find.byKey(const ValueKey('draw-practice-letter')))
+          .right;
+      final soundRight = tester
+          .getRect(find.byKey(const ValueKey('draw-practice-sound')))
+          .right;
+      final textRight = scriptRight > soundRight ? scriptRight : soundRight;
+      final audioLeft = tester
+          .getRect(find.byTooltip('Play pronunciation'))
+          .left;
+      expect(audioLeft - textRight, inInclusiveRange(0, 24));
       expect(
         find.byKey(const ValueKey('script-drawing-canvas')),
         findsOneWidget,

@@ -28,7 +28,7 @@ class NativeDrawingActivity : Activity() {
     private lateinit var hint: TextView
     private lateinit var referenceScroll: ScrollView
     private lateinit var practiceFrame: LinearLayout
-    private lateinit var referencePlay: Button
+    private lateinit var referencePlay: ImageButton
     private var referenceHeight = 0
     private val writingEnabled get() = if (recall) card["writing"] == true else card["spokenOnly"] != true
     private lateinit var controls: LinearLayout
@@ -90,11 +90,18 @@ class NativeDrawingActivity : Activity() {
             progress = label(13f); root.addView(progress)
             val reference = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(12), dp(12), dp(12), dp(12)) }
             prompt = label(32f); subtitle = label(16f)
-            reference.addView(prompt, LinearLayout.LayoutParams(-1, -2))
-            reference.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
-            val referenceRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-            referenceRow.addView(reference, LinearLayout.LayoutParams(0, -2, 1f))
-            referencePlay = button("▶") { play() }.apply { contentDescription = "Play pronunciation" }
+            val textWidth = resources.displayMetrics.widthPixels - dp(144)
+            prompt.maxWidth = textWidth; subtitle.maxWidth = textWidth
+            reference.addView(prompt, LinearLayout.LayoutParams(-2, -2))
+            reference.addView(subtitle, LinearLayout.LayoutParams(-2, -2))
+            val referenceRow = LinearLayout(this).apply { gravity = Gravity.CENTER }
+            referenceRow.addView(reference, LinearLayout.LayoutParams(-2, -2))
+            referencePlay = ImageButton(this).apply {
+                contentDescription = "Play pronunciation"; tooltipText = "Play pronunciation"
+                setImageDrawable(DrawingIcon("play")); setPadding(dp(12), dp(12), dp(12), dp(12))
+                background = GradientDrawable().apply { setColor(Color.WHITE); setStroke(dp(1), Color.LTGRAY); cornerRadius = dp(24).toFloat() }
+                setOnClickListener { if (!busy) play() }
+            }
             referenceRow.addView(referencePlay, LinearLayout.LayoutParams(dp(48), dp(48)))
             val scroll = ScrollView(this).apply { isFillViewport = true; addView(referenceRow) }
             referenceScroll = scroll
@@ -411,6 +418,11 @@ class NativeDrawingActivity : Activity() {
         list.removeAllViews()
         charactersScroll?.scrollTo(0, 0)
         if (!show) return
+        val onlyContains = listOf("examples", "derivedExamples", "similar").all { (card[it] as? List<*>)?.isNotEmpty() != true }
+        val availableWidth = (charactersScroll?.width?.takeIf { it > 0 } ?: (resources.displayMetrics.widthPixels - dp(32)))
+        val columns = if (onlyContains) (availableWidth / dp((230 * resources.configuration.fontScale).roundToInt())).coerceIn(1, 6) else 1
+        val cellWidth = (availableWidth - dp(10) * (columns - 1)) / columns
+        var row: LinearLayout? = null
         characters.forEachIndexed { characterIndex, item ->
             val part = item as? Map<*, *> ?: return@forEachIndexed
             val entry = LinearLayout(this).apply {
@@ -420,7 +432,7 @@ class NativeDrawingActivity : Activity() {
             val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
             val textArea = LinearLayout(this)
             textArea.addView(label(28f).apply {
-                maxWidth = resources.displayMetrics.widthPixels - dp(140)
+                maxWidth = cellWidth - dp(100)
                 text = part["text"] as? String ?: ""
                 gravity = Gravity.START
                 if (part["cardId"] is Number) {
@@ -449,8 +461,18 @@ class NativeDrawingActivity : Activity() {
                     setPadding(0, dp(5), 0, 0)
                 })
             }
-            list.addView(entry, LinearLayout.LayoutParams(-1, -2))
-            list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
+            if (onlyContains) {
+                entry.setPadding(dp(12), dp(12), dp(12), dp(12))
+                entry.background = GradientDrawable().apply { setColor(Color.WHITE); setStroke(dp(1), Color.LTGRAY); cornerRadius = dp(12).toFloat() }
+                if (characterIndex % columns == 0) {
+                    row = LinearLayout(this)
+                    list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+                }
+                row!!.addView(entry, LinearLayout.LayoutParams(cellWidth, -2).apply { if (characterIndex % columns != columns - 1) rightMargin = dp(10) })
+            } else {
+                list.addView(entry, LinearLayout.LayoutParams(-1, -2))
+                list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
+            }
         }
     }
     private fun control(label: String, icon: String, enabled: Boolean = true, action: () -> Unit) {

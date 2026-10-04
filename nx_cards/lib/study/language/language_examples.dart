@@ -13,15 +13,44 @@ class LanguageExamples extends StatelessWidget {
     required this.audioRepository,
     required this.audioKeyPrefix,
     this.showHeading = true,
+    this.wrapCards = false,
   });
 
   final List<LanguageExample> examples;
   final CardAudioRepository? audioRepository;
   final String audioKeyPrefix;
   final bool showHeading;
+  final bool wrapCards;
 
   @override
   Widget build(BuildContext context) {
+    if (wrapCards) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final minimumWidth =
+              220 * MediaQuery.textScalerOf(context).scale(14) / 14;
+          final columns = ((constraints.maxWidth + 10) / (minimumWidth + 10))
+              .floor()
+              .clamp(1, 6);
+          final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (var index = 0; index < examples.length; index++)
+                SizedBox(
+                  width: width,
+                  child: _ExampleCard(
+                    example: examples[index],
+                    audioRepository: audioRepository,
+                    audioKey: '$audioKeyPrefix:$index',
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
