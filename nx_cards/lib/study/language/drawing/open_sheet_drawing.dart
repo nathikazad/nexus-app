@@ -10,7 +10,7 @@ import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'native_drawing_session.dart';
 import 'script_draw_practice_page.dart';
 
-Future<void> openSheetDrawing(
+Future<void> openStudyFocus(
   BuildContext context,
   WidgetRef ref,
   String title,
@@ -19,7 +19,8 @@ Future<void> openSheetDrawing(
 ) async {
   final audio = ref.read(cardAudioRepositoryProvider);
   try {
-    if (!await NativeDrawingSession.isAvailable()) {
+    if (MediaQuery.sizeOf(context).shortestSide < 600 ||
+        !await NativeDrawingSession.isAvailable()) {
       if (!context.mounted) return;
       await Navigator.of(context).push<bool>(
         MaterialPageRoute(
@@ -190,7 +191,7 @@ Future<void> openSheetDrawing(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Could not open drawing practice. Please try again.'),
+          content: Text('Could not open Focus view. Please try again.'),
         ),
       );
     }

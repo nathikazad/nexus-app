@@ -1,3 +1,5 @@
+import 'package:nx_cards/study/language/drawing/native_drawing_session.dart';
+import 'package:nx_cards/study/language/drawing/script_draw_practice_page.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -9,6 +11,84 @@ import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/study/language/language_study_page.dart';
 
 void main() {
+  for (final size in [const Size(390, 844), const Size(1024, 1366)]) {
+    testWidgets('mixed practice Focus view keeps every card at $size', (
+      tester,
+    ) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        NativeDrawingSession.channel,
+        (call) async => false,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          NativeDrawingSession.channel,
+          null,
+        ),
+      );
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final original = _card(2, 'cat', '猫', 'māo');
+      final cards = [
+        _card(1, 'he', '他', 'tā'),
+        original.copyWith(
+          content: (original.content as LanguageCardContent).copyWith(
+            spokenOnly: true,
+          ),
+        ),
+        _card(3, 'she', '她', 'tā'),
+      ];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cardAudioRepositoryProvider.overrideWithValue(
+              _UnusedAudioRepository(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: buildRecallTheme(),
+            home: LanguageStudyPage(title: 'Chinese', cards: cards),
+          ),
+        ),
+      );
+      expect(find.byTooltip('Focus view'), findsNWidgets(3));
+      expect(
+        tester.getCenter(find.byTooltip('Play pronunciation').first).dx,
+        greaterThan(tester.getCenter(find.byTooltip('Focus view').first).dx),
+      );
+      await tester.tap(find.byTooltip('Focus view').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(ScriptDrawPracticePage), findsOneWidget);
+      expect(find.text('Chinese · Focus'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('script-drawing-canvas')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byTooltip('Hide character'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('CARD 2 OF 3'), findsOneWidget);
+      expect(find.text('猫'), findsOneWidget);
+      expect(find.byKey(const ValueKey('script-drawing-canvas')), findsNothing);
+      expect(find.byTooltip('Hide character'), findsNothing);
+      expect(find.byTooltip('Play pronunciation'), findsOneWidget);
+      await tester.tap(find.byTooltip('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('CARD 3 OF 3'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('script-drawing-canvas')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byTooltip('Previous'));
+      await tester.pumpAndSettle();
+      expect(find.text('CARD 2 OF 3'), findsOneWidget);
+      expect(find.byKey(const ValueKey('script-drawing-canvas')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('shows all words on one study sheet without search', (
     tester,
   ) async {

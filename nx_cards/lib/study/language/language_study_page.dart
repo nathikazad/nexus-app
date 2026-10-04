@@ -150,20 +150,20 @@ class _LanguageStudyPageState extends ConsumerState<LanguageStudyPage> {
               final content = card.content;
               return _StudySheetRow(
                 number: index,
-                onDraw: card.spokenOnly || content is! LanguageCardContent
+                onFocus: content is! LanguageCardContent
                     ? null
                     : () async {
                         if (_activeCardId != null) await _player.stop();
                         if (!context.mounted) return;
-                        final drawingCards = cards
-                            .where((c) => c.isLanguageCard && !c.spokenOnly)
+                        final focusCards = cards
+                            .where((c) => c.isLanguageCard)
                             .toList();
-                        await openSheetDrawing(
+                        await openStudyFocus(
                           context,
                           ref,
                           widget.title,
-                          drawingCards,
-                          drawingCards.indexWhere((c) => c.id == card.id),
+                          focusCards,
+                          focusCards.indexWhere((c) => c.id == card.id),
                         );
                       },
                 cue: widget.cues?[index - 1],
@@ -219,7 +219,7 @@ class _StudySheetHeader extends StatelessWidget {
 class _StudySheetRow extends StatelessWidget {
   const _StudySheetRow({
     required this.number,
-    required this.onDraw,
+    required this.onFocus,
     this.cue,
     required this.card,
     required this.content,
@@ -230,7 +230,7 @@ class _StudySheetRow extends StatelessWidget {
   });
 
   final int number;
-  final VoidCallback? onDraw;
+  final VoidCallback? onFocus;
   final StudyCue? cue;
   final StudyCard card;
   final CardContent content;
@@ -284,28 +284,6 @@ class _StudySheetRow extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (onAudio != null)
-              IconButton(
-                tooltip: playing ? 'Pause pronunciation' : 'Play pronunciation',
-                onPressed: loading ? null : onAudio,
-                icon: loading
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                      ),
-              ),
-            if (onDraw != null)
-              IconButton(
-                tooltip: 'Draw',
-                onPressed: onDraw,
-                color: Colors.blue,
-                icon: const Icon(Icons.draw_outlined, size: 20),
-              ),
             if (languageContent?.examples.isNotEmpty == true)
               TextButton(
                 style: TextButton.styleFrom(
@@ -320,6 +298,38 @@ class _StudySheetRow extends StatelessWidget {
                   ),
                 ),
                 child: const Text('Examples'),
+              ),
+            if (onFocus != null)
+              IconButton(
+                tooltip: 'Focus view',
+                onPressed: onFocus,
+                color: Theme.of(context).colorScheme.primary,
+                icon: const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(Icons.crop_landscape_rounded, size: 26),
+                      Icon(Icons.open_in_full_rounded, size: 12),
+                    ],
+                  ),
+                ),
+              ),
+            if (onAudio != null)
+              IconButton(
+                tooltip: playing ? 'Pause pronunciation' : 'Play pronunciation',
+                onPressed: loading ? null : onAudio,
+                icon: loading
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        playing
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                      ),
               ),
           ],
         ),

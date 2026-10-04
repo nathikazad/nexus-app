@@ -98,11 +98,17 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
         return;
       }
       _drawingController.clear();
-      setState(() => _index = 0);
+      setState(() {
+        _index = 0;
+        _letterVisible = true;
+      });
       return;
     }
     _drawingController.clear();
-    setState(() => _index += 1);
+    setState(() {
+      _index += 1;
+      _letterVisible = true;
+    });
   }
 
   @override
@@ -113,7 +119,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
       builder: (context, constraints) {
         final prompt = Container(
           key: const ValueKey('practice-reference'),
-          height: compact
+          height: _card.spokenOnly
+              ? (constraints.maxHeight * .45).clamp(180.0, 360.0)
+              : compact
               ? (constraints.maxHeight * .18).clamp(120.0, 150.0)
               : (constraints.maxHeight * .28).clamp(120.0, 220.0),
           alignment: Alignment.center,
@@ -177,6 +185,18 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                     ],
                   ),
                 ),
+                if (_audioUrl case final audioUrl?
+                    when widget.audioRepository != null) ...[
+                  PronunciationButton(
+                    key: ValueKey<String>(
+                      'draw-practice-audio-${_card.id}-${_cue?.storageKey}',
+                    ),
+                    autoPlay: _cue?.isListening == true,
+                    audioUrl: audioUrl,
+                    repository: widget.audioRepository!,
+                  ),
+                  const SizedBox(width: 12),
+                ],
               ],
             ),
           ),
@@ -198,9 +218,9 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
         );
         return Scaffold(
           appBar: AppBar(
-            title: Text('${widget.title} · Practice'),
+            title: Text('${widget.title} · Focus'),
             leading: IconButton(
-              tooltip: 'Quit drawing practice',
+              tooltip: 'Back to study sheet',
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back),
             ),
@@ -266,7 +286,21 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                     children: [
                                       prompt,
                                       const SizedBox(height: 16),
-                                      Expanded(child: practice),
+                                      if (!_card.spokenOnly)
+                                        Expanded(child: practice)
+                                      else
+                                        Expanded(
+                                          child: Center(
+                                            child: Text(
+                                              'Listen and say it aloud',
+                                              style: TextStyle(
+                                                color: RecallPalette.of(
+                                                  context,
+                                                ).muted,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -275,32 +309,21 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                   alignment: WrapAlignment.center,
                                   runSpacing: 8,
                                   children: [
-                                    if (_audioUrl case final audioUrl?
-                                        when widget.audioRepository !=
-                                            null) ...[
-                                      PronunciationButton(
-                                        key: ValueKey<String>(
-                                          'draw-practice-audio-${_card.id}-${_cue?.storageKey}',
+                                    if (!_card.spokenOnly)
+                                      IconButton.filledTonal(
+                                        tooltip: _letterVisible
+                                            ? 'Hide character'
+                                            : 'Show character',
+                                        onPressed: () => setState(
+                                          () =>
+                                              _letterVisible = !_letterVisible,
                                         ),
-                                        autoPlay: _cue?.isListening == true,
-                                        audioUrl: audioUrl,
-                                        repository: widget.audioRepository!,
+                                        icon: Icon(
+                                          _letterVisible
+                                              ? Icons.visibility_off_outlined
+                                              : Icons.visibility_outlined,
+                                        ),
                                       ),
-                                      const SizedBox(width: 12),
-                                    ],
-                                    IconButton.filledTonal(
-                                      tooltip: _letterVisible
-                                          ? 'Hide character'
-                                          : 'Show character',
-                                      onPressed: () => setState(
-                                        () => _letterVisible = !_letterVisible,
-                                      ),
-                                      icon: Icon(
-                                        _letterVisible
-                                            ? Icons.visibility_off_outlined
-                                            : Icons.visibility_outlined,
-                                      ),
-                                    ),
                                     const SizedBox(width: 12),
                                     IconButton.filledTonal(
                                       tooltip: 'Study sheet',
@@ -316,7 +339,10 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
                                           ? null
                                           : () {
                                               _drawingController.clear();
-                                              setState(() => _index--);
+                                              setState(() {
+                                                _index--;
+                                                _letterVisible = true;
+                                              });
                                             },
                                       icon: const Icon(Icons.arrow_back),
                                     ),

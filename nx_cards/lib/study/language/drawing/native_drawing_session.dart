@@ -134,6 +134,8 @@ class NativeDrawingSession {
     final content = card.content as LanguageCardContent;
     return {
       'practiceDirection': cue != null,
+      'spokenOnly': card.spokenOnly,
+      'writing': !card.spokenOnly,
       'listening': cue?.isListening == true,
       'prompt': cue == null
           ? content.originalScript

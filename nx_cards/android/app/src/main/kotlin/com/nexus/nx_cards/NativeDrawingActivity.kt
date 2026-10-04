@@ -26,6 +26,11 @@ class NativeDrawingActivity : Activity() {
     private lateinit var prompt: TextView
     private lateinit var subtitle: TextView
     private lateinit var hint: TextView
+    private lateinit var referenceScroll: ScrollView
+    private lateinit var practiceFrame: LinearLayout
+    private lateinit var referencePlay: Button
+    private var referenceHeight = 0
+    private val writingEnabled get() = if (recall) card["writing"] == true else card["spokenOnly"] != true
     private lateinit var controls: LinearLayout
     private lateinit var end: Button
     private var examplesList: LinearLayout? = null
@@ -79,7 +84,7 @@ class NativeDrawingActivity : Activity() {
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
             end = button(if (recall) "End" else "Back") { finish() }
             if (recall) header.addView(View(this), LinearLayout.LayoutParams(dp(64), dp(48))) else header.addView(end)
-            header.addView(label(18f).apply { text = input["title"] as? String ?: "Drawing" }, LinearLayout.LayoutParams(0, -2, 1f))
+            header.addView(label(18f).apply { text = if (recall) input["title"] as? String ?: "Recall" else "${input["title"] ?: "Practice"} · Focus" }, LinearLayout.LayoutParams(0, -2, 1f))
             if (recall) header.addView(end)
             root.addView(header, LinearLayout.LayoutParams(-1, -2))
             progress = label(13f); root.addView(progress)
@@ -87,14 +92,21 @@ class NativeDrawingActivity : Activity() {
             prompt = label(32f); subtitle = label(16f)
             reference.addView(prompt, LinearLayout.LayoutParams(-1, -2))
             reference.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
-            val scroll = ScrollView(this).apply { isFillViewport = true; addView(reference) }
+            val referenceRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+            referenceRow.addView(reference, LinearLayout.LayoutParams(0, -2, 1f))
+            referencePlay = button("▶") { play() }.apply { contentDescription = "Play pronunciation" }
+            referenceRow.addView(referencePlay, LinearLayout.LayoutParams(dp(48), dp(48)))
+            val scroll = ScrollView(this).apply { isFillViewport = true; addView(referenceRow) }
+            referenceScroll = scroll
             val height = (resources.displayMetrics.heightPixels * .24).roundToInt().coerceIn(dp(110), dp(240))
+            referenceHeight = height
             root.addView(scroll, LinearLayout.LayoutParams(-1, height))
             hint = label(12f); root.addView(hint, LinearLayout.LayoutParams(-1, dp(28)))
             val frame = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 background = GradientDrawable().apply { setColor(Color.WHITE); setStroke(dp(1), Color.LTGRAY); cornerRadius = dp(12).toFloat() }
             }
+            practiceFrame = frame
             root.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f))
             controls = LinearLayout(this).apply { gravity = Gravity.END }
             frame.addView(controls, LinearLayout.LayoutParams(-1, dp(48)))
@@ -151,10 +163,15 @@ class NativeDrawingActivity : Activity() {
         prompt.visibility = if (!recall && !visibleAnswer && card["practiceDirection"] != true) View.INVISIBLE else View.VISIBLE
         prompt.textSize = if (!recall && card["practiceDirection"] != true && card["multiCharacter"] == false) 64f else 32f
         subtitle.text = if (recall && !revealed || !recall && card["practiceDirection"] == true && !visibleAnswer) "" else value("subtitle")
-        val writing = !recall || card["writing"] == true
-        ink?.getView()?.visibility = if (writing) View.VISIBLE else View.INVISIBLE
+        val writing = writingEnabled
+        referencePlay.visibility = if (!recall && card["audio"] == true) View.VISIBLE else View.GONE
+        if (!recall) {
+            referenceScroll.layoutParams = LinearLayout.LayoutParams(-1, if (writing) referenceHeight else 0, if (writing) 0f else 1f)
+            practiceFrame.layoutParams = LinearLayout.LayoutParams(-1, if (writing) 0 else dp(48), if (writing) 1f else 0f)
+        }
+        ink?.getView()?.visibility = if (writing) View.VISIBLE else if (recall) View.INVISIBLE else View.GONE
         ink?.setResumed(writing && !busy)
-        hint.text = if (recall) { if (revealed) "Did you recall the answer?" else value("instruction") } else "Practice only"
+        hint.text = if (recall) { if (revealed) "Did you recall the answer?" else value("instruction") } else if (writing) "Practice only" else "Listen and say it aloud"
         val showContext = !recall || revealed
         // Reserve the context area before reveal. GONE resizes NoteView when
         // the answer appears; the firmware can discard pen records during that
@@ -183,9 +200,9 @@ class NativeDrawingActivity : Activity() {
             control("Undo", "undo") { ink?.undo() }
             control("Erase", "erase") { ink?.clear {} }
         }
-        if (card["audio"] == true && (!recall || revealed || card["listening"] == true)) control("Play", "play") { play() }
+        if (recall && card["audio"] == true && (revealed || card["listening"] == true)) control("Play", "play") { play() }
         if (!recall) {
-            control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
+            if (writing) control(if (visibleAnswer) "Hide" else "Show", if (visibleAnswer) "hide" else "show") { visibleAnswer = !visibleAnswer; updateCard() }
             control(if (index == cards.lastIndex) "Finish" else "Next", if (index == cards.lastIndex) "yes" else "next") { advance() }
         } else if (!revealed) {
             control("Show answer", "show") { revealed = true; revealedAt = System.currentTimeMillis(); updateCard(); if (card["audio"] == true) play() }
@@ -466,11 +483,12 @@ class NativeDrawingActivity : Activity() {
     }
     private fun setBusy(value: Boolean) {
         busy = value; end.isEnabled = !value
+        referencePlay.isEnabled = !value
         for (i in 0 until controls.childCount) {
             val control = controls.getChildAt(i)
             control.isEnabled = !value && control.tag != false
         }
-        ink?.setResumed(!value && (!recall || cards.getOrNull(index)?.get("writing") == true))
+        ink?.setResumed(!value && writingEnabled)
     }
     private fun openExample(cardId: Int) {
         stopAudio()
@@ -557,11 +575,11 @@ class NativeDrawingActivity : Activity() {
             if (error != null) { setBusy(false); report(error); return@requestCard }
             val next = {
                 if (!isFinishing && !isDestroyed) {
-                    index = targetIndex; revealed = false; updateCard()
+                    index = targetIndex; revealed = false; visibleAnswer = true; updateCard()
                     refreshDisplay { setBusy(false); prefetch() }
                 }
             }
-            ink?.clear(next) ?: next()
+            if (!recall && !writingEnabled) next() else ink?.clear(next) ?: next()
         }
     }
     private fun rate(correct: Boolean) {
@@ -600,8 +618,8 @@ class NativeDrawingActivity : Activity() {
     }
     private fun stopAudio() { audioGeneration++; player?.release(); player = null; audioFile?.delete(); audioFile = null }
     private fun report(message: String) { if (::hint.isInitialized) hint.text = message; Log.e("NxCardsNative", message) }
-    override fun onResume() { super.onResume(); ink?.setResumed(!busy && (!recall || cards.getOrNull(index)?.get("writing") == true)) }
+    override fun onResume() { super.onResume(); ink?.setResumed(!busy && writingEnabled) }
     override fun onPause() { ink?.setResumed(false); stopAudio(); super.onPause() }
-    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy && (!recall || cards.getOrNull(index)?.get("writing") == true)) }
+    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy && writingEnabled) }
     override fun onDestroy() { if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
 }

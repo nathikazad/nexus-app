@@ -107,7 +107,7 @@ void main() {
       expect(find.text('Repeat'), findsNothing);
       expect(find.text('Return'), findsOneWidget);
       expect(find.text('End'), findsOneWidget);
-      await tester.tap(find.byTooltip('Draw'));
+      await tester.tap(find.byTooltip('Focus view'));
       await tester.pumpAndSettle();
       final drawing = tester.widget<ScriptDrawPracticePage>(
         find.byType(ScriptDrawPracticePage),

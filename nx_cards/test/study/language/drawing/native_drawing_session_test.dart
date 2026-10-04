@@ -37,6 +37,15 @@ void main() {
     reviewHistory: const {},
     suspended: false,
   );
+  test('native focus disables writing only for spoken-only cards', () {
+    final spoken = card.copyWith(
+      content: (card.content as LanguageCardContent).copyWith(spokenOnly: true),
+    );
+    expect(NativeDrawingSession.practiceCard(card)['writing'], isTrue);
+    expect(NativeDrawingSession.practiceCard(spoken)['writing'], isFalse);
+    expect(NativeDrawingSession.practiceCard(spoken)['spokenOnly'], isTrue);
+    expect(NativeDrawingSession.practiceCard(spoken)['prompt'], '很长的句子');
+  });
   test('native reveal carries complete similar groups with display titles', () {
     final payload = NativeDrawingSession.recallCard(
       StudyPrompt(card: card, cue: StudyCue.meaningToScript),
