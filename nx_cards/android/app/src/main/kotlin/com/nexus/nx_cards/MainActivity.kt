@@ -7,8 +7,11 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
+    override fun onResume() { super.onResume(); RecallDiagnostics.foreground("flutter") }
+    override fun onPause() { super.onPause(); RecallDiagnostics.background("flutter") }
     private var pending: MethodChannel.Result? = null
     override fun configureFlutterEngine(engine: FlutterEngine) {
+        RecallDiagnostics.foreground("flutter")
         super.configureFlutterEngine(engine)
         val channel = MethodChannel(engine.dartExecutor.binaryMessenger, "nx_cards/drawing-session")
         channel.setMethodCallHandler { call, result ->

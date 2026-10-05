@@ -37,19 +37,20 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
     private fun start(context: Context) {
         if (started || stopped) return
         api = Class.forName("com.xrz.NoteView")
-        val widget = api!!.getConstructor(Context::class.java).newInstance(context) as View
+        val widget = RecallDiagnostics.measure("note_view_construct") { api!!.getConstructor(Context::class.java).newInstance(context) as View }
         ink = widget
         host.addView(widget, LinearLayout.LayoutParams(-1, 0, 1f))
         widget.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
             if ((r-l != or-ol || b-t != ob-ot) && !stopped) {
-                widget.post { if (!stopped) runCatching { capture(); render() }.onFailure { fail(it) } }
+                Log.i("NxCardsPerf", "ink_layout old=${or-ol}x${ob-ot} new=${r-l}x${b-t}")
+                widget.post { if (!stopped) runCatching { RecallDiagnostics.measure("ink_layout_restore") { capture(); render() } }.onFailure { fail(it) } }
             }
         }
         started = true
         Log.i("NxCardsInk", "Stock native pen mounted; no live Flutter callbacks")
     }
     private fun flag(enabled: Boolean) {
-        ink?.let { api!!.getMethod("setInputEnabled", Boolean::class.javaPrimitiveType).invoke(it, enabled) }
+        RecallDiagnostics.measure("ink_input_enabled_$enabled") { ink?.let { api!!.getMethod("setInputEnabled", Boolean::class.javaPrimitiveType).invoke(it, enabled) } }
     }
     override fun setResumed(value: Boolean) {
         if (!value) eraseButton(false)
@@ -67,7 +68,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         }
         return p.map { it / density }
     }
-    private fun capture() {
+    private fun capture() = RecallDiagnostics.measure("ink_capture") {
 
         val records = api!!.getMethod("getRecordList").invoke(ink) as List<*>
         for (record in records.filterNotNull()) {
@@ -89,7 +90,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         if (busy) { main.postDelayed({ edit(command, complete) }, 110); return }
         busy = true
         flag(false)
-        api?.getMethod("finishPen")?.invoke(ink)
+        RecallDiagnostics.measure("ink_finish_pen_$command") { api?.getMethod("finishPen")?.invoke(ink) }
         // Finish the vendor's queued pen-up before undo/erase, including a
         // stroke completed immediately before the toolbar tap.
         main.postDelayed({
@@ -105,7 +106,8 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
             finally { busy = false; if (!stopped) setResumed(resumed) }
         }, 100)
     }
-    private fun render() {
+    private fun render(): Unit = RecallDiagnostics.measure("ink_render") { renderBody() }
+    private fun renderBody() {
         val widget = ink ?: return
         val w = widget.width; val h = widget.height
         if (w <= 0 || h <= 0 || stopped) return
@@ -139,7 +141,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         api!!.getMethod("setDrawGroundMode", Int::class.javaPrimitiveType).invoke(widget, 0)
         api!!.getMethod("resetRecordList").invoke(widget)
         seen.clear()
-        api!!.getMethod("setForeground", Bitmap::class.java).invoke(widget, image)
+        RecallDiagnostics.measure("ink_set_foreground_${w}x$h") { api!!.getMethod("setForeground", Bitmap::class.java).invoke(widget, image) }
         foreground = image
         flag(resumed && !busy)
     }

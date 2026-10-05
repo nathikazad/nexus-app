@@ -69,6 +69,7 @@ class NativeDrawingActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val startup = android.os.SystemClock.elapsedRealtime()
         fun mark(stage: String) = Log.i("NxCardsStartup", "stage=$stage native_ms=${android.os.SystemClock.elapsedRealtime() - startup} epoch_ms=${System.currentTimeMillis()}")
+        RecallDiagnostics.foreground("drawing")
         mark("activity_create")
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -160,7 +161,7 @@ class NativeDrawingActivity : Activity() {
             setResult(RESULT_CANCELED, Intent().putExtra("error", e.toString())); finish()
         }
     }
-    private fun updateCard() {
+    private fun updateCard(): Unit = RecallDiagnostics.measure("card_bind") {
         progress.text = "${index + 1} of ${cards.size}"
         if ((recall && !revealed || !recall && card["practiceDirection"] == true) && card["listening"] == true && listeningIndex != index) {
             listeningIndex = index
@@ -495,10 +496,13 @@ class NativeDrawingActivity : Activity() {
         }, LinearLayout.LayoutParams(dp(48), dp(48)))
     }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        ink?.eraseButton(StylusInput.erasing(event))
-        val result = super.dispatchTouchEvent(event)
-        if (event.actionMasked == MotionEvent.ACTION_CANCEL) ink?.eraseButton(false)
-        return result
+        val start = RecallDiagnostics.inputBegin(event)
+        try {
+            ink?.eraseButton(StylusInput.erasing(event))
+            val result = super.dispatchTouchEvent(event)
+            if (event.actionMasked == MotionEvent.ACTION_CANCEL) ink?.eraseButton(false)
+            return result
+        } finally { RecallDiagnostics.inputEnd(event, start) }
     }
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         ink?.eraseButton(StylusInput.erasing(event))
@@ -642,8 +646,8 @@ class NativeDrawingActivity : Activity() {
     }
     private fun stopAudio() { audioGeneration++; player?.release(); player = null; audioFile?.delete(); audioFile = null }
     private fun report(message: String) { if (::hint.isInitialized) hint.text = message; Log.e("NxCardsNative", message) }
-    override fun onResume() { super.onResume(); ink?.setResumed(!busy && writingEnabled) }
-    override fun onPause() { ink?.setResumed(false); stopAudio(); super.onPause() }
+    override fun onResume() { super.onResume(); RecallDiagnostics.foreground("drawing"); ink?.setResumed(!busy && writingEnabled) }
+    override fun onPause() { ink?.setResumed(false); stopAudio(); super.onPause(); RecallDiagnostics.background("drawing") }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy && writingEnabled) }
     override fun onDestroy() { if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
 }
