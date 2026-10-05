@@ -155,6 +155,7 @@ class NativeDrawingActivity : Activity() {
                 root.addView(columns, LinearLayout.LayoutParams(-1, 0, 1.2f))
             }
             setContentView(root)
+            InputFlightRecorder.attach(this) { "index=$index busy=$busy loading=$loadingCard revealed=$revealed writing=$writingEnabled" }
             mark("layout_built")
             updateCard()
             mark("first_card_bound")
@@ -512,6 +513,7 @@ class NativeDrawingActivity : Activity() {
         return super.dispatchGenericMotionEvent(event)
     }
     private fun setBusy(value: Boolean) {
+        InputFlightRecorder.event("busy=$value index=$index")
         busy = value; end.isEnabled = !value
         referencePlay.isEnabled = !value
         for (i in 0 until controls.childCount) {
@@ -691,8 +693,8 @@ class NativeDrawingActivity : Activity() {
     }
     private fun stopAudio() { audioGeneration++; player?.release(); player = null; audioFile?.delete(); audioFile = null }
     private fun report(message: String) { if (::hint.isInitialized) hint.text = message; Log.e("NxCardsNative", message) }
-    override fun onResume() { super.onResume(); RecallDiagnostics.foreground("drawing"); ink?.setResumed(!busy && writingEnabled) }
-    override fun onPause() { ink?.setResumed(false); stopAudio(); super.onPause(); RecallDiagnostics.background("drawing") }
-    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); ink?.setResumed(hasFocus && !busy && writingEnabled) }
-    override fun onDestroy() { if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
+    override fun onResume() { super.onResume(); InputFlightRecorder.event("resume"); RecallDiagnostics.foreground("drawing"); ink?.setResumed(!busy && writingEnabled) }
+    override fun onPause() { InputFlightRecorder.event("pause"); ink?.setResumed(false); stopAudio(); super.onPause(); RecallDiagnostics.background("drawing") }
+    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); InputFlightRecorder.event("focus=$hasFocus"); ink?.setResumed(hasFocus && !busy && writingEnabled) }
+    override fun onDestroy() { InputFlightRecorder.detach(); if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
 }

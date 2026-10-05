@@ -89,12 +89,27 @@ In native drawing practice, Previous stays to the left of Undo and is disabled
 on the first card. It is not shown during recall.
 The undocumented API is described by [inksdk](https://github.com/imedwei/inksdk);
 no vendor binaries are bundled. The Bigme adapter uses AndroidHiddenApiBypass 6.1
-to allow only `com.xrz` firmware APIs within the app process on Android 9+;
+to allow the `com.xrz` firmware APIs within the app process on Android 9+;
 device-wide hidden-API settings remain unchanged. All drawing, Undo and Erase run inside Android without
 Flutter composition. Audio bytes and individual recall saves use the existing
 account-scoped Flutter repositories. Each recall answer is saved before the
 native screen advances, and the existing recap opens when the session ends.
 Other platforms keep the Flutter drawing screens.
+
+Native drawing has a passive input flight recorder. It retains at most 2,048
+entries from the last minute, writes a rolling snapshot every two seconds off
+the UI thread, and preserves up to five incident snapshots for main-thread or
+input-acknowledgement stalls. `previous-session.txt` preserves the rolling file
+when another drawing screen opens. It records input timing/counts, frame counts,
+focus, busy/loading state, and ink-operation timings, without card content or
+pen coordinates. Read-only reflection into ViewRootImpl/InputEventReceiver
+adds queue counts where firmware permits it; unavailable fields do not stop
+recording. It does not request frames or consume/finish input events.
+Pull the files with `adb pull /sdcard/Android/data/com.nexus.nx_cards/files/input-diagnostics`.
+For a live hang, also capture `adb shell dumpsys input`,
+`adb shell dumpsys gfxinfo com.nexus.nx_cards`, and
+`adb shell dumpsys dropbox --print data_app_anr` before restarting the app.
+
 Android tablet drawing practice (600dp smallest width and above) also reserves
 the lower portion for a scrollable list of incoming Examples links, with the
 full expression, transliteration, translation, and cached audio playback.
