@@ -52,6 +52,9 @@ class NativeDrawingActivity : Activity() {
     private var visibleAnswer = true
     private var busy = false
     private var revealedAt = 0L
+    private val pendingSave = PendingRecallSave()
+    private var finishAfterSave = false
+    private var saveErrorPaused = false
     private var player: MediaPlayer? = null
     private var audioFile: File? = null
     private var audioGeneration = 0
@@ -603,27 +606,63 @@ class NativeDrawingActivity : Activity() {
             val next = {
                 if (!isFinishing && !isDestroyed) {
                     index = targetIndex; revealed = false; visibleAnswer = true; updateCard()
-                    // NoteView already redraws the cleared ink surface. A forced
-                    // global GC16 refresh here can delay the vendor input queue
-                    // and lose the first pen strokes on the next card. Keep full
-                    // panel refresh as an explicit toolbar action only.
-                    setBusy(false)
-                    Log.i("NxCardsPerf", "card_ready index=$index automatic_full_refresh=false")
-                    prefetch()
+                    refreshDisplay {
+                        setBusy(false)
+                        Log.i("NxCardsPerf", "card_ready index=$index save_pending=${pendingSave.answer != null}")
+                        prefetch()
+                    }
                 }
             }
             if (!recall && !writingEnabled) next() else ink?.clear(next) ?: next()
         }
     }
+    override fun finish() {
+        if (pendingSave.answer != null) {
+            finishAfterSave = true
+            if (::hint.isInitialized) hint.text = "Finishing save…"
+            return
+        }
+        super.finish()
+    }
     private fun rate(correct: Boolean) {
-        if (!revealed) return
-        setBusy(true); hint.text = "Saving…"
+        if (!revealed || busy) return
+        val answer = pendingSave.begin(index, correct, revealedAt)
+        if (answer == null) { hint.text = "Finishing previous save…"; return }
+        val last = index == cards.lastIndex
+        if (last) { finishAfterSave = true; setBusy(true); hint.text = "Saving…" }
+        sendRating(answer)
+        // The existing preparation cache already holds the next two cards.
+        // Ink clearing and display work can overlap the durable save.
+        if (!last) advance()
+    }
+    private fun sendRating(answer: PendingRecallSave.Answer) {
+        val started = android.os.SystemClock.uptimeMillis()
+        fun failed() {
+            if (isDestroyed || isFinishing) return
+            saveErrorPaused = true
+            setBusy(true)
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Answer not saved")
+                .setMessage("Card ${answer.index + 1} could not be saved. Retry to keep this answer before continuing.")
+                .setCancelable(false)
+                .setPositiveButton("Retry") { _, _ -> sendRating(answer) }
+                .show()
+        }
         val channel = NativeDrawingBridge.channel
-        if (channel == null) { setBusy(false); report("Session ended. Close this screen and try again."); return }
-        channel.invokeMethod("rate", mapOf("index" to index, "correct" to correct, "revealedAt" to revealedAt), object : MethodChannel.Result {
-            override fun success(result: Any?) { if (!isFinishing && !isDestroyed) { setBusy(false); advance() } }
-            override fun error(code: String, message: String?, details: Any?) { if (!isDestroyed) { setBusy(false); report(message ?: "Could not save review. Try again.") } }
-            override fun notImplemented() = error("missing", "Could not save review", null)
+        if (channel == null) { failed(); return }
+        channel.invokeMethod("rate", answer.arguments(), object : MethodChannel.Result {
+            override fun success(result: Any?) {
+                pendingSave.complete(answer)
+                Log.i("NxCardsPerf", "save_complete index=${answer.index} elapsed_ms=${android.os.SystemClock.uptimeMillis() - started}")
+                if (isFinishing || isDestroyed) return
+                if (finishAfterSave) { finish(); return }
+                if (saveErrorPaused) { saveErrorPaused = false; setBusy(false) }
+            }
+            override fun error(code: String, message: String?, details: Any?) {
+                Log.w("NxCardsPerf", "save_failed index=${answer.index} code=$code")
+                failed()
+            }
+            override fun notImplemented() = error("missing", null, null)
         })
     }
     private fun play(exampleIndex: Int? = null, characterIndex: Int? = null, derivedIndex: Int? = null, similarCardId: Int? = null) {

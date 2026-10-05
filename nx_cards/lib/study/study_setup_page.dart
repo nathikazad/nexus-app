@@ -638,6 +638,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final audio = ref.read(cardAudioRepositoryProvider);
     final latest = {for (final card in queue) card.id: card};
     final ratings = <int, CardRating>{};
+    final pendingOutcomes = <int, StudyCard>{};
     final linkedLibrary = {
       for (final card in (await ref.read(cardsDashboardProvider.future)).cards)
         card.id: card,
@@ -846,8 +847,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               args['revealedAt'] as int,
               isUtc: true,
             );
-            final updated = scheduler.preview(prompt, time)[rating]!.card;
+            // Retry the exact review after a failed durable write; do not mint
+            // another review ID or apply FSRS a second time.
+            final updated = pendingOutcomes.putIfAbsent(
+              index,
+              () => scheduler.preview(prompt, time)[rating]!.card,
+            );
             await library.saveSchedule(updated);
+            pendingOutcomes.remove(index);
             ratings[index] = rating;
             latest[updated.id] = updated;
             if (mounted) ref.read(cardsInvalidationProvider)();
