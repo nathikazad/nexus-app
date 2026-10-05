@@ -603,7 +603,13 @@ class NativeDrawingActivity : Activity() {
             val next = {
                 if (!isFinishing && !isDestroyed) {
                     index = targetIndex; revealed = false; visibleAnswer = true; updateCard()
-                    refreshDisplay { setBusy(false); prefetch() }
+                    // NoteView already redraws the cleared ink surface. A forced
+                    // global GC16 refresh here can delay the vendor input queue
+                    // and lose the first pen strokes on the next card. Keep full
+                    // panel refresh as an explicit toolbar action only.
+                    setBusy(false)
+                    Log.i("NxCardsPerf", "card_ready index=$index automatic_full_refresh=false")
+                    prefetch()
                 }
             }
             if (!recall && !writingEnabled) next() else ink?.clear(next) ?: next()
