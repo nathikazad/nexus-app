@@ -60,13 +60,19 @@ void prioritizeRecallPrompts(
   });
 }
 
+/// Select distinct cards in priority order and retain their eligible prompts.
+List<StudyPrompt> takeRecallCards(List<StudyPrompt> prompts, int count) {
+  final ids = prompts.map((p) => p.cardId).toSet().take(max(0, count)).toSet();
+  return prompts.where((p) => ids.contains(p.cardId)).toList();
+}
+
 /// The priority order decides membership, never the order of the actual round.
 List<StudyPrompt> shuffledRecallSelection(
   List<StudyPrompt> prioritized,
   int count, {
   Random? random,
 }) => spaceRepeatedRecallCards(
-  prioritized.take(max(0, count)).toList()..shuffle(random),
+  takeRecallCards(prioritized, count)..shuffle(random),
 );
 
 /// Keep every selected front, spacing repetitions of the same card as far

@@ -154,7 +154,7 @@ void main() {
         store: store,
         library: library,
       );
-      expect(find.text('3 recall items available'), findsOneWidget);
+      expect(find.text('1 card available'), findsOneWidget);
       await tester.tap(find.text('Start recall'));
       await tester.pumpAndSettle();
       final session = tester.widget<StudySessionPage>(
@@ -199,7 +199,7 @@ void main() {
       await showSetup(tester, cue: RecallComponent.script, studyCards: [card]);
       await tester.tap(find.byKey(const ValueKey('recall-sound')));
       await tester.pumpAndSettle();
-      expect(find.text('2 recall items available'), findsOneWidget);
+      expect(find.text('1 card available'), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('study_setup.v4.recall.Chinese')!;
       await tester.pumpWidget(const SizedBox());
@@ -235,10 +235,10 @@ void main() {
       );
       await showSetup(tester, cue: RecallComponent.script, studyCards: [card]);
       expect(find.text('Recall for'), findsOneWidget);
-      expect(find.text('3 recall items available'), findsOneWidget);
+      expect(find.text('1 card available'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('recall-writing')));
       await tester.pumpAndSettle();
-      expect(find.text('1 recall items available'), findsOneWidget);
+      expect(find.text('1 card available'), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('study_setup.v4.recall.Chinese')!;
       await tester.pumpWidget(const SizedBox());
@@ -256,7 +256,7 @@ void main() {
             .value,
         isFalse,
       );
-      expect(find.text('1 recall items available'), findsOneWidget);
+      expect(find.text('1 card available'), findsOneWidget);
       await tester.binding.setSurfaceSize(const Size(320, 844));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
@@ -379,30 +379,30 @@ void main() {
         directions: {RecallComponent.meaning},
         studyCards: [sample(1, 0), sample(2, 10), sample(3, 0, due: false)],
       );
-      expect(find.text('6 recall items available'), findsOneWidget);
+      expect(find.text('3 cards available'), findsOneWidget);
       final retention = tester.widget<RangeSlider>(
         find.byKey(const ValueKey('recall-retention')),
       );
       retention.onChanged!(const RangeValues(0, 0));
       await tester.pumpAndSettle();
-      expect(find.text('4 recall items available'), findsOneWidget);
+      expect(find.text('2 cards available'), findsOneWidget);
       await tester.tap(find.text('Due'));
       await tester.pumpAndSettle();
-      expect(find.text('4 cards due'), findsOneWidget);
+      expect(find.text('2 cards due'), findsOneWidget);
       expect(find.byType(Slider), findsNWidgets(2));
       expect(
         tester.widget<Slider>(find.byKey(const ValueKey('card-count'))).max,
-        4,
+        2,
       );
       tester
           .widget<Slider>(find.byKey(const ValueKey('due-retention')))
           .onChanged!(80);
       await tester.pumpAndSettle();
       expect(find.text('80–100%'), findsOneWidget);
-      expect(find.text('2 cards due'), findsOneWidget);
+      expect(find.text('1 card due'), findsOneWidget);
       await tester.tap(find.text('Retention'));
       await tester.pumpAndSettle();
-      expect(find.text('4 recall items available'), findsOneWidget);
+      expect(find.text('2 cards available'), findsOneWidget);
       expect(find.byType(RangeSlider), findsOneWidget);
     },
   );
@@ -524,13 +524,13 @@ void main() {
       studyCards: cards,
       directions: RecallComponent.values.toSet(),
     );
-    expect(find.text('81 recall items available'), findsOneWidget);
+    expect(find.text('27 cards available'), findsOneWidget);
     expect(find.text('Write'), findsNothing);
     final titles = [
       'Recall format',
       'Recall for',
       'Retention',
-      'How many recall items?',
+      'How many cards?',
     ];
     final positions = titles
         .map((title) => tester.getTopLeft(find.text(title)).dy)
@@ -539,17 +539,17 @@ void main() {
     await tester.tap(find.text('AI').first);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('direction-script')), findsNothing);
-    expect(find.text('54 recall items available'), findsOneWidget);
+    expect(find.text('27 cards available'), findsOneWidget);
     await tester.tap(find.text('Recall').first);
     await tester.pumpAndSettle();
-    expect(find.text('81 recall items available'), findsOneWidget);
+    expect(find.text('27 cards available'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('direction-sound')));
     await tester.pumpAndSettle();
-    expect(find.text('81 recall items available'), findsOneWidget);
+    expect(find.text('27 cards available'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('direction-script')));
     await tester.pumpAndSettle();
-    expect(find.text('81 recall items available'), findsOneWidget);
+    expect(find.text('27 cards available'), findsOneWidget);
   });
 
   testWidgets('saved Write format migrates to Standard for reverse recall', (
@@ -599,7 +599,7 @@ void main() {
     tester,
   ) async {
     await showSetup(tester);
-    expect(find.text('6 recall items available'), findsOneWidget);
+    expect(find.text('3 cards available'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Practice'), findsNothing);
     expect(find.widgetWithText(TextButton, 'Weak'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Strong'), findsOneWidget);
@@ -615,7 +615,7 @@ void main() {
       expect(find.text('Study format'), findsOneWidget);
       expect(find.text('Study sheet'), findsOneWidget);
       expect(find.text('Draw'), findsOneWidget);
-      expect(find.text('15 cards available'), findsOneWidget);
+      expect(find.text('5 cards available'), findsOneWidget);
       expect(find.text('Which cards?'), findsOneWidget);
       expect(find.text('Recall score'), findsNothing);
       expect(find.textContaining('Strong cards due'), findsNothing);
@@ -635,10 +635,10 @@ void main() {
     expect(find.textContaining('Strong cards due'), findsNothing);
     await tester.tap(find.widgetWithText(TextButton, 'Strong'));
     await tester.pumpAndSettle();
-    expect(find.text('4 recall items available'), findsOneWidget);
+    expect(find.text('2 cards available'), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, 'Weak'));
     await tester.pumpAndSettle();
-    expect(find.text('2 recall items available'), findsOneWidget);
+    expect(find.text('1 card available'), findsOneWidget);
     await tester.tap(find.text('AI').first);
     await tester.pumpAndSettle();
     expect(find.text('Start AI tutor'), findsOneWidget);
@@ -647,7 +647,7 @@ void main() {
     tester,
   ) async {
     await showSetup(tester, cue: RecallComponent.script);
-    expect(find.text('6 recall items available'), findsOneWidget);
+    expect(find.text('3 cards available'), findsOneWidget);
     expect(find.textContaining('Chinese → English'), findsNothing);
     expect(find.widgetWithText(ChoiceChip, 'Transliteration'), findsNothing);
   });

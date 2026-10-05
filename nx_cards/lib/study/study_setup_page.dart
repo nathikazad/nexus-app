@@ -353,11 +353,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         for (final cue in selectedCues(card, _directions))
           if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
   ];
-  int get _availableCount => _mode == StudyMode.study
-      ? _practiceCandidates.length
-      : _usesSimilar
-      ? _similarSessions(_studyCards).length
-      : _candidates.length;
+  int get _availableCount =>
+      _usesSimilar ? _similarSessions(_studyCards).length : _availableCardCount;
+
+  int get _availableCardCount =>
+      (_mode == StudyMode.study ? _practiceCandidates : _candidates)
+          .map((prompt) => prompt.card.id)
+          .toSet()
+          .length;
 
   bool get _usesRecallFilters =>
       _mode == StudyMode.recall || _mode == StudyMode.ai;
@@ -1022,7 +1025,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   Future<void> _openStudySheet() async {
     final prompts = _practiceCandidates.toList();
     if (_order == StudyOrder.shuffle) prompts.shuffle(Random.secure());
-    final chosen = prompts.take(min(_count, prompts.length)).toList();
+    final chosen = takeRecallCards(prompts, _count);
     final selected = chosen.map((p) => p.card).toList();
     final hydrated = <StudyCard>[];
     try {
@@ -1071,7 +1074,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             ).where((c) => c.target == RecallComponent.script))
               if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
       ]..shuffle(Random.secure());
-      final chosen = candidates.take(min(_count, candidates.length)).toList();
+      final chosen = takeRecallCards(candidates, _count);
       final selected = chosen.map((p) => p.card).toList();
       if (selected.isEmpty) {
         if (mounted) {
@@ -1422,7 +1425,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       ),
                       const SizedBox(height: 16),
                       _SetupCard(
-                        title: 'How many recall items?',
+                        title: _usesSimilar
+                            ? 'How many recall groups?'
+                            : 'How many cards?',
                         child: _countControl(maxCount),
                       ),
                     ],
@@ -1457,7 +1462,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     ),
                     const SizedBox(height: 16),
                     _SetupCard(
-                      title: 'How many recall items?',
+                      title: _usesSimilar
+                          ? 'How many recall groups?'
+                          : 'How many cards?',
                       child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 22),
@@ -1650,48 +1657,50 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     ],
   );
 
-  Widget _countControl(int maxCount) => maxCount == 0
-      ? Text(
-          _dueOnly ? '0 cards due' : 'No cards match these filters',
-          style: TextStyle(color: RecallColors.faint),
-        )
-      : Column(
-          children: [
-            Row(
-              children: [
-                Text(
-                  '${_displayCount.clamp(1, maxCount)}',
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
+  Widget _countControl(int maxCount) {
+    final available = _usesSimilar ? maxCount : _availableCardCount;
+    final noun = _usesSimilar
+        ? 'recall groups'
+        : available == 1
+        ? 'card'
+        : 'cards';
+    return maxCount == 0
+        ? Text(
+            _dueOnly ? '0 cards due' : 'No cards match these filters',
+            style: TextStyle(color: RecallColors.faint),
+          )
+        : Column(
+            children: [
+              Row(
+                children: [
+                  Text(
+                    '${_displayCount.clamp(1, maxCount)}',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    _dueOnly
-                        ? '$maxCount cards due'
-                        : '$maxCount ${_usesSimilar
-                              ? 'recall groups'
-                              : _usesRecallFilters
-                              ? 'recall items'
-                              : 'cards'} available',
-                    style: const TextStyle(color: RecallColors.muted),
-                    textAlign: TextAlign.end,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      '$available $noun ${_dueOnly ? 'due' : 'available'}',
+                      style: const TextStyle(color: RecallColors.muted),
+                      textAlign: TextAlign.end,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            Slider(
-              key: const ValueKey('card-count'),
-              value: _displayCount.clamp(1, maxCount).toDouble(),
-              min: 1,
-              max: maxCount.toDouble(),
-              divisions: maxCount > 1 ? maxCount - 1 : null,
-              onChanged: _selectCount,
-            ),
-          ],
-        );
+                ],
+              ),
+              Slider(
+                key: const ValueKey('card-count'),
+                value: _displayCount.clamp(1, maxCount).toDouble(),
+                min: 1,
+                max: maxCount.toDouble(),
+                divisions: maxCount > 1 ? maxCount - 1 : null,
+                onChanged: _selectCount,
+              ),
+            ],
+          );
+  }
 }
 
 class _SetupCard extends StatelessWidget {

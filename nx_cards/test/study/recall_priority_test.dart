@@ -148,10 +148,11 @@ void main() {
           7,
           random: Random(seed),
         );
-        expect(chosen, hasLength(7));
+        expect(chosen, hasLength(42));
+        expect(chosen.map((p) => p.cardId).toSet(), hasLength(7));
         expect(
           chosen.map((p) => '${p.cardId}:${p.cue.name}').toSet(),
-          hasLength(7),
+          hasLength(42),
         );
         selections.add(
           chosen.map((p) => '${p.cardId}:${p.cue.name}').join(','),
