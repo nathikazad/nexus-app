@@ -108,11 +108,11 @@ void main() {
     expect(await runtime.connect(session()), true);
     expect(socket.metadata, {'X-Client-Id': 'necklace', 'X-Domain-Id': '2'});
     expect(device.files.single, fileHello);
-    runtime.onNotification('file', manifest.begin());
-    expect(socket.files.single, manifest.begin());
+    runtime.onNotification('file', manifest.open());
+    expect(socket.files.single, manifest.open());
     expect(device.files.length, 1);
-    await socket.onFilePacket!(manifest.control(FileOp.commit, 3));
-    expect(device.files.last, manifest.control(FileOp.commit, 3));
+    await socket.onFilePacket!(manifest.status(1, 3, committed: true));
+    expect(device.files.last, manifest.status(1, 3, committed: true));
     await runtime.execute(1, 'take_photo', {'file_id': manifest.id});
     expect(device.camera.single, [1, ...List.filled(16, 0x12)]);
   });
@@ -120,14 +120,14 @@ void main() {
       () async {
     await runtime.connect(session());
     socket.sending = false;
-    runtime.onNotification('file', manifest.begin());
+    runtime.onNotification('file', manifest.open());
     await runtime.drained;
     expect(socket.retries, 1);
     expect(socket.files, isEmpty);
     expect(device.files.length, 1);
     socket.sending = true;
     expect(socket.files, isEmpty);
-    runtime.onNotification('file', manifest.begin());
+    runtime.onNotification('file', manifest.open());
     expect(socket.files.length, 1);
   });
   test('old file/audio/command callbacks cannot reach a replacement session',
@@ -138,7 +138,7 @@ void main() {
         oldCommand = socket.onDeviceRequest!;
     await runtime.connect(session(domain: 3));
     final count = device.files.length;
-    await oldFile(manifest.control(FileOp.commit, 3));
+    await oldFile(manifest.status(1, 3, committed: true));
     await oldAudio(Uint8List.fromList([1, 2]));
     expect(
         jsonDecode((await oldCommand(1, 'take_photo', {}))!)['success'], false);
@@ -164,9 +164,9 @@ void main() {
     await runtime.connect(session(current: () => current));
     current = false;
     await socket.onPacketFromServer!(Uint8List.fromList([1, 2]));
-    runtime.onNotification('file', manifest.begin());
+    runtime.onNotification('file', manifest.open());
     runtime.onNotification('audio', Uint8List.fromList([1, 2]));
-    await socket.onFilePacket!(manifest.control(FileOp.commit, 3));
+    await socket.onFilePacket!(manifest.status(1, 3, committed: true));
     expect(jsonDecode((await runtime.execute(1, 'take_photo', {}))!)['success'],
         false);
     expect(socket.files, isEmpty);

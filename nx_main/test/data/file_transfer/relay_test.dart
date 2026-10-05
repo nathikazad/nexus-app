@@ -14,16 +14,16 @@ void main() {
     }, sendToDevice: (b) async {
       down.add(b);
     });
-    expect(relay.fromDevice(m.begin()), true);
-    expect(up.single, m.begin());
+    expect(relay.fromDevice(m.open()), true);
+    expect(up.single, m.open());
     expect(down, isEmpty);
-    await relay.fromServer(m.control(FileOp.resume, 0));
-    await relay.fromServer(m.control(FileOp.commit, 3));
-    expect(down.last, m.control(FileOp.commit, 3));
-    expect(() => relay.fromDevice(m.control(FileOp.commit, 3)),
+    await relay.fromServer(m.status(1, 0));
+    await relay.fromServer(m.status(1, 3, committed: true));
+    expect(down.last, m.status(1, 3, committed: true));
+    expect(() => relay.fromDevice(m.status(1, 3, committed: true)),
         throwsFormatException);
     await relay.close();
-    expect(relay.fromDevice(m.begin()), false);
+    expect(relay.fromDevice(m.open()), false);
   });
   test('offline packets are not queued or acknowledged', () async {
     var online = false;
@@ -35,11 +35,11 @@ void main() {
       fail('Synthetic ack');
     });
     for (var i = 0; i < 100; i++) {
-      expect(relay.fromDevice(m.begin()), false);
+      expect(relay.fromDevice(m.open()), false);
     }
     online = true;
     expect(sent, 0);
-    expect(relay.fromDevice(m.begin()), true);
+    expect(relay.fromDevice(m.open()), true);
     expect(sent, 1);
   });
 }

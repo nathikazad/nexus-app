@@ -12,6 +12,7 @@ import 'package:nexus_voice_assistant/data/simulator/firmware_process.dart';
 // Faults wrap the production socket; handshake, encoding and reads remain real.
 class FaultSocket extends SocketClient {
   final committed = <String>{};
+  final handles = <int, String>{};
   final manifests = <String, FileManifest>{};
   bool dropCommit = true, disconnectOnce = true, resumedPartial = false;
   Future<void> recovery = Future.value();
@@ -19,12 +20,12 @@ class FaultSocket extends SocketClient {
   @override
   bool sendFilePacket(Uint8List bytes) {
     final p = FilePacket.parse(bytes);
-    if (p.op == FileOp.begin) manifests[p.id] = p.manifest();
+    if (p.op == FileOp.open) manifests[p.id] = p.manifest();
     final sent = super.sendFilePacket(bytes);
     if (sent &&
         disconnectOnce &&
-        p.op == FileOp.chunk &&
-        manifests[p.id]?.kind == FileKind.telemetry) {
+        p.op == FileOp.data &&
+        manifests[handles[p.handle]]?.kind == FileKind.telemetry) {
       disconnectOnce = false;
       recovery = disconnect().then((_) async {
         await Future<void>.delayed(const Duration(milliseconds: 30));
@@ -40,12 +41,17 @@ class FaultSocket extends SocketClient {
         ? null
         : (bytes) async {
             final p = FilePacket.parse(bytes);
-            if (p.op == FileOp.resume &&
+            if (p.op == FileOp.status) handles[p.handle] = p.id;
+            if (p.op == FileOp.status &&
+                !p.committed &&
                 p.offset > 0 &&
                 manifests[p.id]?.kind == FileKind.telemetry)
               resumedPartial = true;
-            if (p.op == FileOp.commit) {
+            if (p.op == FileOp.status && p.committed) {
               committed.add(p.id);
+              final m = manifests[p.id]!;
+              manifests[p.id] =
+                  FileManifest(m.id, m.kind, m.name, p.offset, p.checksum);
               if (dropCommit) {
                 dropCommit = false;
                 return;
@@ -70,8 +76,10 @@ void main() {
         'tool/necklace_sim/identity.py',
         '${configDir.path}/relay-identity.json');
     addTearDown(identity.close);
-    final root =
-        await Directory('../../tmp/necklace-websocket').createTemp('e2e-');
+    final artifacts = await Directory(
+            '${Platform.environment['NECKLACE_TEST_SCRATCH'] ?? configDir.path}/necklace-websocket')
+        .create(recursive: true);
+    final root = await artifacts.createTemp('e2e-');
     final seeds = File('$configPath.next-seed');
     final seed =
         await seeds.exists() ? int.parse(await seeds.readAsString()) : 200000;

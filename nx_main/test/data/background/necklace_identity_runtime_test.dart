@@ -143,7 +143,7 @@ void main() {
       'authorization': 'Bearer nd1_${'ab' * 32}',
     });
     await until(() => requests.contains('/v1/domains'));
-    expect(device.files.single, [0, 0x83, 2]);
+    expect(device.files.single, [0, 0x83, 3]);
     final before = socket.disconnects;
     device.connected = false;
     device.onConnectionStateChanged!(BleConnectionState.idle);

@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 import 'protocol.dart';
 
-/// No disk or offline queue. Backend RESUME grants an eight-packet window;
-/// only a backend COMMIT can authorize deletion. SD retains disconnected work.
+/// No disk or offline queue. Backend STATUS grants an eight-packet window;
+/// only a backend committed STATUS can authorize deletion. SD retains disconnected work.
 class FileRelay {
   FileRelay({required this.sendToServer, required this.sendToDevice});
   final bool Function(Uint8List) sendToServer;
@@ -13,7 +13,7 @@ class FileRelay {
   bool fromDevice(Uint8List bytes) {
     if (_closed) return false;
     final p = FilePacket.parse(bytes);
-    if (![FileOp.begin, FileOp.chunk, FileOp.finish].contains(p.op)) {
+    if (![FileOp.open, FileOp.data, FileOp.close].contains(p.op)) {
       throw const FormatException('Unexpected device file operation');
     }
     return sendToServer(bytes);
@@ -21,7 +21,7 @@ class FileRelay {
 
   Future<void> fromServer(Uint8List bytes) {
     final p = FilePacket.parse(bytes);
-    if (![FileOp.resume, FileOp.commit].contains(p.op)) {
+    if (![FileOp.status].contains(p.op)) {
       throw const FormatException('Unexpected server file operation');
     }
     final copy = Uint8List.fromList(bytes);

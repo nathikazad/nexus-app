@@ -20,29 +20,40 @@ class SimulatorPanel {
   Completer<void>? _frameReady;
   Uint8List? _photo;
   FileManifest? _preview;
+  int? _previewHandle;
   final List<int> _previewBytes = [];
 
   /// Bounded UI preview only: no storage, ACKs or upload policy live here.
   void onFilePacket(Uint8List bytes) {
     try {
       final packet = FilePacket.parse(bytes);
-      if (packet.op == FileOp.begin) {
+      if (packet.op == FileOp.open) {
         final manifest = packet.manifest();
-        if (manifest.kind != FileKind.photo || manifest.size > 512 * 1024)
+        if (manifest.kind != FileKind.photo) {
+          _preview = null;
+          _previewHandle = null;
+          _previewBytes.clear();
           return;
-        if (_preview?.id != manifest.id) _previewBytes.clear();
+        }
+        if (_preview?.id != manifest.id) {
+          _previewBytes.clear();
+          _previewHandle = null;
+        }
         _preview = manifest;
       }
       final manifest = _preview;
-      if (manifest == null || packet.id != manifest.id) return;
-      if (packet.op == FileOp.chunk &&
+      if (manifest == null) return;
+      if (packet.op == FileOp.data &&
+          (_previewHandle == null || _previewHandle == packet.handle) &&
           packet.offset == _previewBytes.length &&
-          _previewBytes.length + bytes.length - 24 <= manifest.size) {
-        _previewBytes.addAll(bytes.sublist(24));
+          _previewBytes.length + bytes.length - fileDataHeader <= 512 * 1024) {
+        _previewHandle = packet.handle;
+        _previewBytes.addAll(bytes.sublist(fileDataHeader));
       }
-      if (packet.op == FileOp.finish &&
-          _previewBytes.length == manifest.size &&
-          crc32(_previewBytes) == manifest.checksum) {
+      if (packet.op == FileOp.close &&
+          packet.handle == _previewHandle &&
+          _previewBytes.length == packet.offset &&
+          crc32(_previewBytes) == packet.checksum) {
         _photo = Uint8List.fromList(_previewBytes);
         photoVersion++;
         _preview = null;
@@ -51,7 +62,7 @@ class SimulatorPanel {
             'Photo received from necklace: ${manifest.name} (${_photo!.length} bytes)');
       }
     } on FormatException {
-      // Unsupported legacy packets cannot affect the authoritative relay.
+      // Malformed preview packets cannot affect the authoritative relay.
     }
   }
 
