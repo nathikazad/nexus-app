@@ -12,6 +12,7 @@ import 'package:nexus_voice_assistant/data/simulator/firmware_process.dart';
 // Faults wrap the production socket; handshake, encoding and reads remain real.
 class FaultSocket extends SocketClient {
   final committed = <String>{};
+  final durableOffsets = <String, int>{};
   final handles = <int, String>{};
   final manifests = <String, FileManifest>{};
   bool dropCommit = true, disconnectOnce = true, resumedPartial = false;
@@ -41,7 +42,10 @@ class FaultSocket extends SocketClient {
         ? null
         : (bytes) async {
             final p = FilePacket.parse(bytes);
-            if (p.op == FileOp.status) handles[p.handle] = p.id;
+            if (p.op == FileOp.status) {
+              handles[p.handle] = p.id;
+              durableOffsets[p.id] = p.offset;
+            }
             if (p.op == FileOp.status &&
                 !p.committed &&
                 p.offset > 0 &&
@@ -163,7 +167,36 @@ void main() {
         jsonDecode((await relay.execute(2, 'audio.start',
             {'file_id': config['audio']['file_id']}))!)['success'],
         true);
-    await advance(3000);
+    await advance(6000);
+    final recordingId = config['audio']['file_id'] as String;
+    expect(socket.durableOffsets[recordingId] ?? 0, greaterThan(0),
+        reason:
+            'Server acknowledges saved bytes while the microphone is still recording');
+    expect(socket.committed, isNot(contains(recordingId)));
+    expect(
+        File('${root.path}/restarted/sd/$recordingId.opusraw.part')
+            .lengthSync(),
+        greaterThan(0));
+    expect(
+        (await client.get(
+                Uri.parse('${config['http_url']}${config['audio']['url']}'),
+                headers: headers))
+            .statusCode,
+        404,
+        reason: 'A growing file is not published before CLOSE');
+    final overlapPhoto = DateTime.now()
+        .microsecondsSinceEpoch
+        .toRadixString(16)
+        .padLeft(32, '0');
+    expect(
+        jsonDecode((await relay
+            .execute(5, 'take_photo', {'file_id': overlapPhoto}))!)['success'],
+        true);
+    await advance(6000);
+    expect(socket.committed, contains(overlapPhoto),
+        reason:
+            'Photo capture and upload finish while audio continues recording');
+    expect(socket.committed, isNot(contains(recordingId)));
     expect(
         jsonDecode((await relay.execute(3, 'audio.new',
             {'file_id': config['audio_new']['file_id']}))!)['success'],
