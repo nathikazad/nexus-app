@@ -28,9 +28,15 @@ Spoken-only cards exclude all script directions, without deleting their history
 or schedules. Sound-source questions require an audio asset.
 
 The device-local **Writing** setting excludes Meaning → Script and Sound → Script
-when off. Script-source questions remain available. It filters questions only;
-it does not change retained scores or histories. Script answers use the drawing
-surface; meaning and sound answers use the standard response presentation.
+when off. Script-source questions remain available. When on, every non-spoken-only
+question in standard recall has a writing area, including script prompts. That
+extra scratchpad does not add any tested directions or change scoring.
+
+The device-local **Sound** setting excludes sound as either source or target when
+off, leaving Meaning ↔ Script (or only Script → Meaning with Writing off).
+Spoken-only cards have no eligible questions in a silent session. Audio playback,
+including answer and related-card audio, is disabled for the session. Both
+settings also apply to grouped recall and are remembered in recall setup.
 
 `learning_stage.dart` derives Practice/Weak/Strong from activation and recall
 history. Each direction uses successes among its latest five recalls divided by

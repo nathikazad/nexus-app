@@ -241,7 +241,8 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                               _interaction ==
                                                       RecallInteraction
                                                           .writing &&
-                                                  _prompt.recallsTarget
+                                                  _card.isLanguageCard &&
+                                                  !_card.spokenOnly
                                               ? LayoutBuilder(
                                                   builder:
                                                       (

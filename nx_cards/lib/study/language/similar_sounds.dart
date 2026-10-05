@@ -55,6 +55,7 @@ Set<SimilarGroupType> availableSimilarGroupTypes(
   Iterable<StudyCard> cards, {
   required Set<RecallComponent> directions,
   required bool writing,
+  bool soundEnabled = true,
 }) {
   final result = <SimilarGroupType>{};
   for (final card in cards) {
@@ -67,7 +68,10 @@ Set<SimilarGroupType> availableSimilarGroupTypes(
     bool eligible(StudyCue cue) =>
         card.supportsCue(cue) &&
         card.scheduleFor(cue).enabled &&
-        (writing || cue.target != RecallComponent.script);
+        (writing || cue.target != RecallComponent.script) &&
+        (soundEnabled ||
+            (cue.source != RecallComponent.sound &&
+                cue.target != RecallComponent.sound));
     if (!result.contains(SimilarGroupType.sound) &&
         groups.any((id) => id.endsWith('-sound')) &&
         StudyCue.languageDirections.any(
@@ -98,6 +102,7 @@ List<SimilarRecallGroup> manualRecallSession(
   required Set<RecallComponent> directions,
   required int groupLimit,
   bool writing = true,
+  bool soundEnabled = true,
   Random? random,
 }) {
   if (groupLimit < 1) return [];
@@ -122,7 +127,10 @@ List<SimilarRecallGroup> manualRecallSession(
           for (final card in group.cards)
             if (card.supportsCue(cue) &&
                 card.scheduleFor(cue).enabled &&
-                (writing || cue.target != RecallComponent.script))
+                (writing || cue.target != RecallComponent.script) &&
+                (soundEnabled ||
+                    (cue.source != RecallComponent.sound &&
+                        cue.target != RecallComponent.sound)))
               StudyPrompt(card: card, cue: cue),
       ]);
       if (prompts.isEmpty) continue;

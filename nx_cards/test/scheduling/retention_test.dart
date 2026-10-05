@@ -32,6 +32,31 @@ StudyCard scored(int id, List<int> correct) => sample(id, 0).copyWith(
 void main() {
   final all = RecallComponent.values.toSet();
   test(
+    'Sound off excludes both sound directions; writing remains independent',
+    () {
+      final card = scored(1, [5, 4, 3, 2, 1, 0]);
+      expect(
+        retentionPrompts([card], all, sound: false).map((p) => p.cue).toSet(),
+        {StudyCue.meaningToScript, StudyCue.scriptToMeaning},
+      );
+      expect(
+        retentionPrompts(
+          [card],
+          all,
+          sound: false,
+          writing: false,
+        ).map((p) => p.cue).toSet(),
+        {StudyCue.scriptToMeaning},
+      );
+      final spoken = card.copyWith(
+        content: (card.content as LanguageCardContent).copyWith(
+          spokenOnly: true,
+        ),
+      );
+      expect(retentionPrompts([spoken], all, sound: false), isEmpty);
+    },
+  );
+  test(
     'Writing off excludes only script answers and leaves score unchanged',
     () {
       final card = scored(1, [5, 4, 3, 2, 1, 0]);

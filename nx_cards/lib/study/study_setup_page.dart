@@ -81,6 +81,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   RecallPresentation _recallPresentation = RecallPresentation.standard;
   late Set<RecallComponent> _directions;
   bool _writing = true;
+  bool _sound = true;
   bool get _allowsWriting => _writing && _supportsDrawing;
   Set<RecallComponent>? _regularDirections;
   RecallPresentation get _effectiveRecallPresentation =>
@@ -129,8 +130,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     directions: _writtenDirections,
     groupLimit: limit ?? 1000000,
     writing: _writing,
+    soundEnabled: _sound,
   );
-  (List<StudyCard>, int, bool)? _similarTypesKey;
+  (List<StudyCard>, int, bool, bool)? _similarTypesKey;
   Set<SimilarGroupType> _cachedSimilarTypes = {};
   Set<SimilarGroupType> get _similarTypes {
     final cards = _studyCards;
@@ -138,13 +140,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       0,
       (bits, c) => bits | (1 << c.index),
     );
-    final key = (cards, mask, _writing);
+    final key = (cards, mask, _writing, _sound);
     if (_similarTypesKey != key) {
       _similarTypesKey = key;
       _cachedSimilarTypes = availableSimilarGroupTypes(
         cards,
         directions: _writtenDirections,
         writing: _writing,
+        soundEnabled: _sound,
       );
     }
     return _cachedSimilarTypes;
@@ -236,6 +239,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _retainedMaxPercentage = 60;
         }
         _writing = saved['writing'] != false;
+        _sound = saved['sound'] != false;
         _timing =
             _enumByName(RecallTiming.values, saved['timing']) ??
             RecallTiming.allMatching;
@@ -281,6 +285,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'dueMinPercentage': _dueMinPercentage,
         'weakOnly': _weakOnly,
         'writing': _writing,
+        'sound': _sound,
         'timing': _timing.name,
         'similarType': _similarType.name,
         'writtenDirections': _writtenDirections.map((cue) => cue.name).toList(),
@@ -314,6 +319,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         _directions,
 
         writing: _writing,
+        sound: _sound,
         minimum: (dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
         maximum: dueOnly ? 1 : _retainedMaxPercentage / 100,
         weakOnly: !dueOnly && _weakOnly,
@@ -508,20 +514,25 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       final byId = {for (final card in full) card.id: card};
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => GroupedRecallPage(
-            format: GroupedRecallFormat.standard,
-            groups: [
-              for (final group in groups)
-                SimilarRecallGroup(
-                  label: group.label,
-                  prompts: [
-                    for (final p in group.prompts) p.withCard(byId[p.cardId]!),
-                  ],
-                  comparisonCards: [
-                    for (final c in group.comparisonCards) byId[c.id]!,
-                  ],
-                ),
-            ],
+          builder: (_) => _withSessionSound(
+            GroupedRecallPage(
+              format: GroupedRecallFormat.standard,
+              writing: _writing,
+              sound: _sound,
+              groups: [
+                for (final group in groups)
+                  SimilarRecallGroup(
+                    label: group.label,
+                    prompts: [
+                      for (final p in group.prompts)
+                        p.withCard(byId[p.cardId]!),
+                    ],
+                    comparisonCards: [
+                      for (final c in group.comparisonCards) byId[c.id]!,
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
       );
@@ -577,18 +588,21 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       if (!mounted) return;
       await Navigator.of(context).push<bool>(
         MaterialPageRoute<bool>(
-          builder: (_) => StudySessionPage(
-            studyScope: widget.studyScope,
-            title: widget.title,
-            prompts: [
-              for (var i = 0; i < prompts.length; i++)
-                prompts[i].withCard(cards[i]),
-            ],
-            interaction:
-                _allowsWriting &&
-                    _effectiveRecallPresentation == RecallPresentation.standard
-                ? RecallInteraction.writing
-                : RecallInteraction.standard,
+          builder: (_) => _withSessionSound(
+            StudySessionPage(
+              studyScope: widget.studyScope,
+              title: widget.title,
+              prompts: [
+                for (var i = 0; i < prompts.length; i++)
+                  prompts[i].withCard(cards[i]),
+              ],
+              interaction:
+                  _allowsWriting &&
+                      _effectiveRecallPresentation ==
+                          RecallPresentation.standard
+                  ? RecallInteraction.writing
+                  : RecallInteraction.standard,
+            ),
           ),
         ),
       );
@@ -681,6 +695,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       return recall
           ? NativeDrawingSession.recallCard(
               prompts[index].withCard(full),
+              writing: _allowsWriting,
+              sound: _sound,
               similar: similarGroupsForCard(full, linkedLibrary.values),
               characters: characters[index],
               characterCardIds: characterCardIds,
@@ -885,10 +901,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     if (!mounted || prompts == null) return;
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => LanguageFastRecallPage(
-          title: widget.title,
-          prompts: prompts,
-          studyScope: widget.studyScope,
+        builder: (_) => _withSessionSound(
+          LanguageFastRecallPage(
+            title: widget.title,
+            prompts: prompts,
+            studyScope: widget.studyScope,
+          ),
         ),
       ),
     );
@@ -914,6 +932,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       when !latestCard.suspended &&
                           latestCard.supportsCue(cue) &&
                           (_writing || cue.target != RecallComponent.script) &&
+                          (_sound ||
+                              (cue.source != RecallComponent.sound &&
+                                  cue.target != RecallComponent.sound)) &&
                           (!_usesRecallFilters ||
                               _matchesRecallBaseFilters(latestCard, cue)) &&
                           latestCard.scheduleFor(cue).enabled &&
@@ -1340,7 +1361,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      _writingToggle(),
+                      _SetupCard(
+                        title: 'Session options',
+                        child: _recallOptions(),
+                      ),
+                      const SizedBox(height: 16),
                       _SetupCard(
                         title: 'How many recall groups?',
                         child: _countControl(maxCount),
@@ -1464,29 +1489,73 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _clampCount();
         }),
       ),
-      if (_mode == StudyMode.recall) _writingToggle(),
+      if (_mode == StudyMode.recall && _supportsDrawing) ...[
+        const SizedBox(height: 20),
+        const Divider(height: 1),
+        const SizedBox(height: 8),
+        _recallOptions(),
+      ],
     ],
   );
 
-  Widget _writingToggle() =>
-      _studyCards.any((card) => card.isLanguageCard && !card.spokenOnly)
-      ? SwitchListTile.adaptive(
-          key: const ValueKey('recall-writing'),
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Writing'),
-          subtitle: const Text(
-            'Include questions that ask you to produce the script',
-          ),
-          value: _writing,
-          onChanged: (value) {
-            setState(() {
-              _writing = value;
-              _clampCount();
-            });
-            _rememberPreferences();
-          },
-        )
-      : const SizedBox.shrink();
+  Widget _withSessionSound(Widget child) => ProviderScope(
+    overrides: [
+      if (!_sound) cardAudioRepositoryProvider.overrideWithValue(null),
+    ],
+    child: child,
+  );
+
+  Widget _recallOptions() => Column(
+    children: [
+      _sessionOption(
+        key: 'recall-writing',
+        icon: Icons.edit_outlined,
+        title: 'Writing',
+        description: 'Script answers and space to write',
+        value: _writing,
+        onChanged: (value) => _writing = value,
+      ),
+      const SizedBox(height: 4),
+      _sessionOption(
+        key: 'recall-sound',
+        icon: Icons.volume_up_outlined,
+        title: 'Sound',
+        description: 'Listening and pronunciation',
+        value: _sound,
+        onChanged: (value) => _sound = value,
+      ),
+    ],
+  );
+
+  Widget _sessionOption({
+    required String key,
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) => SwitchListTile.adaptive(
+    key: ValueKey(key),
+    contentPadding: EdgeInsets.zero,
+    secondary: Icon(
+      icon,
+      size: 22,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+    title: Text(
+      title,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+    ),
+    subtitle: Text(description, style: const TextStyle(fontSize: 12)),
+    value: value,
+    onChanged: (value) {
+      setState(() {
+        onChanged(value);
+        _clampCount();
+      });
+      _rememberPreferences();
+    },
+  );
 
   Widget _dueFilterChoices() {
     final colors = Theme.of(context).colorScheme;

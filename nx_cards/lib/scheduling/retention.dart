@@ -46,6 +46,7 @@ List<StudyPrompt> retentionPrompts(
   Iterable<StudyCard> cards,
   Set<RecallComponent> directions, {
   bool writing = true,
+  bool sound = true,
   double minimum = 0,
   double maximum = 1,
   bool weakOnly = false,
@@ -59,6 +60,9 @@ List<StudyPrompt> retentionPrompts(
           if (card.supportsCue(cue) &&
               card.scheduleFor(cue).enabled &&
               (writing || cue.target != RecallComponent.script) &&
+              (sound ||
+                  (cue.source != RecallComponent.sound &&
+                      cue.target != RecallComponent.sound)) &&
               matchesRecallRange(
                 card,
                 cue,

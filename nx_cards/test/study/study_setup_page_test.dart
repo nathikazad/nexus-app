@@ -186,6 +186,43 @@ void main() {
   );
 
   testWidgets(
+    'Sound toggle removes audio questions and remembers the setting',
+    (tester) async {
+      final card = sample(1, 0).copyWith(
+        content: const LanguageCardContent(
+          english: 'cat',
+          originalScript: '猫',
+          transliteration: 'māo',
+          audioUrl: '/cat',
+        ),
+      );
+      await showSetup(tester, cue: RecallComponent.script, studyCards: [card]);
+      await tester.tap(find.byKey(const ValueKey('recall-sound')));
+      await tester.pumpAndSettle();
+      expect(find.text('2 recall items available'), findsOneWidget);
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('study_setup.v4.recall.Chinese')!;
+      await tester.pumpWidget(const SizedBox());
+      await showSetup(
+        tester,
+        cue: RecallComponent.script,
+        studyCards: [card],
+        preferences: {'study_setup.v4.recall.Chinese': saved},
+      );
+      expect(
+        tester
+            .widget<SwitchListTile>(find.byKey(const ValueKey('recall-sound')))
+            .value,
+        isFalse,
+      );
+      await tester.binding.setSurfaceSize(const Size(320, 844));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
+
+  testWidgets(
     'Recall for Writing toggle filters script production and remembers this device',
     (tester) async {
       final card = sample(1, 0).copyWith(
@@ -393,7 +430,7 @@ void main() {
               '{"recallPresentation":"similar","similarType":"written","groupCount":3}',
         },
       );
-      expect(find.text('Sound'), findsOneWidget);
+      expect(find.text('Sound'), findsNWidgets(2));
       expect(find.text('Written'), findsNothing);
       expect(find.byType(DirectionChoices), findsNothing);
       expect(find.text('Retention'), findsNothing);
@@ -453,7 +490,7 @@ void main() {
         isTrue,
       );
       expect(find.text('3 recall groups available'), findsOneWidget);
-      await tester.tap(find.text('Sound'));
+      await tester.tap(find.text('Sound').first);
       await tester.pumpAndSettle();
       expect(find.byType(DirectionChoices), findsNothing);
       expect(find.text('Retention'), findsNothing);

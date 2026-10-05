@@ -30,6 +30,7 @@ class NativeDrawingActivity : Activity() {
     private lateinit var practiceFrame: LinearLayout
     private lateinit var referencePlay: ImageButton
     private var referenceHeight = 0
+    private val soundEnabled get() = card["sound"] != false
     private val writingEnabled get() = if (recall) card["writing"] == true else card["spokenOnly"] != true
     private lateinit var controls: LinearLayout
     private lateinit var end: Button
@@ -337,7 +338,7 @@ class NativeDrawingActivity : Activity() {
                 if (key == "text") {
                     val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
                     heading.addView(textView, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(6) })
-                    if (example["audio"] == true) heading.addView(ImageButton(this).apply {
+                    if (soundEnabled && example["audio"] == true) heading.addView(ImageButton(this).apply {
                 contentDescription = "Play example: ${example["text"]}"
                 tooltipText = "Play example"
                 setImageDrawable(DrawingIcon("play"))
@@ -391,7 +392,7 @@ class NativeDrawingActivity : Activity() {
                         }
                     }, LinearLayout.LayoutParams(-2, -2))
                     heading.addView(textArea, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(8) })
-                    if (word["audio"] == true && word["cardId"] is Number) heading.addView(ImageButton(this).apply {
+                    if (soundEnabled && word["audio"] == true && word["cardId"] is Number) heading.addView(ImageButton(this).apply {
                         contentDescription = "Play similar word: ${word["text"]}"
                         tooltipText = "Play pronunciation"
                         setImageDrawable(DrawingIcon("play"))
@@ -444,7 +445,7 @@ class NativeDrawingActivity : Activity() {
                 }
             }, LinearLayout.LayoutParams(-2, -2))
             top.addView(textArea, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(16) })
-            if (part["audio"] == true) top.addView(ImageButton(this).apply {
+            if (soundEnabled && part["audio"] == true) top.addView(ImageButton(this).apply {
                 contentDescription = "Play character: ${part["text"]}"
                 tooltipText = "Play character"
                 setImageDrawable(DrawingIcon("play"))
@@ -617,6 +618,7 @@ class NativeDrawingActivity : Activity() {
     }
     private fun play(exampleIndex: Int? = null, characterIndex: Int? = null, derivedIndex: Int? = null, similarCardId: Int? = null) {
         stopAudio()
+        if (!soundEnabled) return
         val generation = audioGeneration
         hint.text = "Loading audio…"
         NativeDrawingBridge.channel?.invokeMethod("audio", mapOf("index" to index, "exampleIndex" to exampleIndex, "characterIndex" to characterIndex, "derivedIndex" to derivedIndex, "similarCardId" to similarCardId), object : MethodChannel.Result {

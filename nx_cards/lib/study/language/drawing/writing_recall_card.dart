@@ -116,7 +116,9 @@ class _WritingRecallCardState extends State<WritingRecallCard> {
       const SizedBox(height: 8),
       Text(
         widget.revealed
-            ? 'Compare your drawing with the answer'
+            ? (widget.prompt.recallsTarget
+                  ? 'Compare your drawing with the answer'
+                  : 'Check your answer above')
             : widget.prompt.instruction,
         style: const TextStyle(color: RecallColors.faint, fontSize: 12),
       ),

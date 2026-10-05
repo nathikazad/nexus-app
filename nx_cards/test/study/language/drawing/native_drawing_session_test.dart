@@ -37,6 +37,22 @@ void main() {
     reviewHistory: const {},
     suspended: false,
   );
+  test('scratchpad and sound settings do not change tested directions', () {
+    final prompt = StudyPrompt(card: card, cue: StudyCue.scriptToMeaning);
+    final enabled = NativeDrawingSession.recallCard(
+      prompt,
+      writing: true,
+      sound: false,
+    );
+    expect(enabled['writing'], isTrue);
+    expect(enabled['sound'], isFalse);
+    expect(enabled['audio'], isFalse);
+    expect(prompt.testedCues, {StudyCue.scriptToMeaning});
+    expect(
+      NativeDrawingSession.recallCard(prompt, writing: false)['writing'],
+      isFalse,
+    );
+  });
   test('native focus disables writing only for spoken-only cards', () {
     final spoken = card.copyWith(
       content: (card.content as LanguageCardContent).copyWith(spokenOnly: true),

@@ -200,6 +200,8 @@ class NativeDrawingSession {
 
   static Map<String, Object?> recallCard(
     StudyPrompt prompt, {
+    bool? writing,
+    bool sound = true,
     List<SimilarSoundGroup> similar = const [],
     List<LanguageCardContent> characters = const [],
     Map<LanguageCardContent, int> characterCardIds = const {},
@@ -218,9 +220,10 @@ class NativeDrawingSession {
       'listening': prompt.isListening,
       'answer': content.originalScript,
       'subtitle': '${content.transliteration}\n${content.english}',
-      'writing': prompt.recallsTarget,
+      'writing': writing ?? prompt.recallsTarget,
+      'sound': sound,
       'instruction': prompt.instruction,
-      'audio': content.audioUrl?.isNotEmpty == true,
+      'audio': sound && content.audioUrl?.isNotEmpty == true,
     };
   }
 

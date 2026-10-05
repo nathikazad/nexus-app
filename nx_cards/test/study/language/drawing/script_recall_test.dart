@@ -10,6 +10,33 @@ import 'package:nx_cards/study/session/study_session_page.dart';
 import 'package:nx_cards/study/language/drawing/recall_interaction.dart';
 
 void main() {
+  for (final writing in [false, true]) {
+    testWidgets(
+      'Script prompt has scratchpad only when writing is on ($writing)',
+      (tester) async {
+        final card = _scriptCard();
+        await _pumpRecall(
+          tester,
+          card,
+          StudyCue.scriptToMeaning,
+          writing: writing,
+        );
+        expect(find.text('ക'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('script-drawing-canvas')),
+          writing ? findsOneWidget : findsNothing,
+        );
+        expect(find.text('Letter ka'), findsNothing);
+        await tester.tap(find.text('Show answer'));
+        await tester.pumpAndSettle();
+        expect(find.text('Letter ka'), findsOneWidget);
+        if (writing) {
+          expect(find.text('Check your answer above'), findsOneWidget);
+        }
+      },
+    );
+  }
+
   for (final cue in [StudyCue.meaningToSound, StudyCue.soundToMeaning]) {
     testWidgets('spoken-only skips drawing even in writing mode: $cue', (
       tester,

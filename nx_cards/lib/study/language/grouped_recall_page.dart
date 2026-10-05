@@ -25,9 +25,13 @@ class GroupedRecallPage extends ConsumerStatefulWidget {
     super.key,
     required this.groups,
     required this.format,
+    this.writing = true,
+    this.sound = true,
   });
   final List<SimilarRecallGroup> groups;
   final GroupedRecallFormat format;
+  final bool writing;
+  final bool sound;
   @override
   ConsumerState<GroupedRecallPage> createState() => _GroupedRecallPageState();
 }
@@ -161,6 +165,8 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
           for (final p in _questions)
             NativeDrawingSession.recallCard(
               p.withCard(_latest[p.cardId]!),
+              writing: widget.writing,
+              sound: widget.sound,
               similar: similarGroupsForCard(_latest[p.cardId]!, _latest.values),
             ),
         ],
@@ -347,7 +353,8 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                     padding: EdgeInsets.all(fast ? 18 : 28),
                     child:
                         widget.format != GroupedRecallFormat.fast &&
-                            prompt.recallsTarget
+                            widget.writing &&
+                            !prompt.card.spokenOnly
                         ? SizedBox(
                             height: max(420, constraints.maxHeight - 160),
                             child: WritingRecallCard(
