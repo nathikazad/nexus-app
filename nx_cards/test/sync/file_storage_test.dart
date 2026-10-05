@@ -10,6 +10,49 @@ import 'package:nx_offline/src/storage/content_files_native.dart';
 
 void main() {
   test(
+    'dashboard reuses unchanged cards and refreshes changed and removed rows',
+    () async {
+      final db = CardsDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final store = DriftLocalCardsStore(
+        database: db,
+        account: const AccountIdentity(
+          domainId: 1,
+          serverId: 'test',
+          userId: '1',
+          application: 'cards',
+        ),
+      );
+      StudyCard card(int id) => StudyCard(
+        id: id,
+        content: BasicCardContent(front: 'card $id', back: 'answer'),
+        schedules: {StudyCue.frontToBack: CardSchedule.initial(enabled: true)},
+        reviewHistory: const {},
+        suspended: false,
+      );
+      final one = card(1), two = card(2);
+      await store.applyCardSnapshot([one, two]);
+      final first = await store.readDashboard();
+      final repeated = await store.readDashboard();
+      expect(identical(first, repeated), isTrue);
+      await store.applyCardBatch([
+        HashedCard(one.copyWith(suspended: true), 'changed'),
+      ]);
+      final changed = await store.readDashboard();
+      expect(changed.cards.firstWhere((c) => c.id == 1).suspended, isTrue);
+      expect(
+        identical(
+          changed.cards.firstWhere((c) => c.id == 2),
+          first.cards.firstWhere((c) => c.id == 2),
+        ),
+        isTrue,
+      );
+      await store.publishCardManifest([const CardHash(1, 'changed')]);
+      expect((await store.readDashboard()).cards.map((c) => c.id), [1]);
+    },
+  );
+
+  test(
     'hash sync skips unchanged content, repairs missing files and preserves pending edits',
     () async {
       final dir = await Directory.systemTemp.createTemp('nx-card-hash-');

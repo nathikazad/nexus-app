@@ -484,12 +484,60 @@ final class DriftLocalCardsStore
   @override
   Future<DateTime?> nextRetryAt() => _outbox.nextRetryAt();
 
-  Future<CardsDashboard> _dashboard(List<LocalStudyCardRow> cardRows) async {
-    final cards = <StudyCard>[
-      for (final row in cardRows)
-        mapper.cardFromRow(row).copyWith(isSummary: row.contentRef != null),
-    ];
-    return CardsDashboard(cards: cards);
+  final _dashboardCache = <int, ({LocalStudyCardRow row, StudyCard card})>{};
+  List<LocalStudyCardRow>? _dashboardRows;
+  Future<CardsDashboard>? _dashboardResult;
+
+  Future<CardsDashboard> _dashboard(List<LocalStudyCardRow> rows) {
+    // Several visible providers watch the same query. Share their decoding work.
+    if (_dashboardResult != null && listEquals(_dashboardRows, rows)) {
+      return _dashboardResult!;
+    }
+    _dashboardRows = rows;
+    final result = _buildDashboard(rows);
+    _dashboardResult = result;
+    return result;
+  }
+
+  Future<CardsDashboard> _buildDashboard(List<LocalStudyCardRow> rows) async {
+    final clock = Stopwatch()..start();
+    final cardsById = <int, StudyCard>{};
+    final changed = <LocalStudyCardRow>[];
+    for (final row in rows) {
+      final cached = _dashboardCache[row.remoteId];
+      if (cached != null && cached.row == row) {
+        cardsById[row.remoteId] = cached.card;
+      } else {
+        changed.add(row);
+      }
+    }
+    try {
+      // Schedule/history JSON decoding must not block native Android pen input:
+      // Flutter's Dart UI isolate shares the platform thread on this engine.
+      final decoded = changed.isEmpty
+          ? const <StudyCard>[]
+          : await compute(_decodeDashboardRows, (mapper, changed));
+      for (var i = 0; i < changed.length; i++) {
+        final row = changed[i];
+        final card = decoded[i];
+        cardsById[row.remoteId] = card;
+        _dashboardCache[row.remoteId] = (row: row, card: card);
+      }
+      final ids = rows.map((row) => row.remoteId).toSet();
+      _dashboardCache.removeWhere((id, _) => !ids.contains(id));
+      debugPrint(
+        'NxCardsPerf dashboard rows=${rows.length} decoded=${changed.length} elapsed_ms=${clock.elapsedMilliseconds}',
+      );
+      return CardsDashboard(
+        cards: [for (final row in rows) cardsById[row.remoteId]!],
+      );
+    } catch (_) {
+      if (identical(_dashboardRows, rows)) {
+        _dashboardRows = null;
+        _dashboardResult = null;
+      }
+      rethrow;
+    }
   }
 
   Future<bool> _hasPendingCard(int cardId) =>
@@ -511,3 +559,10 @@ final class DriftLocalCardsStore
           ))
           .go();
 }
+
+List<StudyCard> _decodeDashboardRows(
+  (DriftCardsMapper, List<LocalStudyCardRow>) input,
+) => [
+  for (final row in input.$2)
+    input.$1.cardFromRow(row).copyWith(isSummary: row.contentRef != null),
+];
