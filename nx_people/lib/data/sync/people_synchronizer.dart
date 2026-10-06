@@ -1,3 +1,4 @@
+import 'package:nx_db/app_sync.dart' show syncTrace;
 import 'package:nx_people/data/sync/people_assets.dart';
 import 'dart:convert';
 import 'package:nx_offline/nx_offline.dart';
@@ -56,16 +57,19 @@ class PeopleReconciler implements PullReconciler<int> {
   final AppSyncSession session;
   @override
   Future<void> pullAll() async {
+    final timer = Stopwatch()..start();
     final manifest = await session.manifest();
     if (manifest == null) {
       throw StateError('People synchronization is unavailable');
     }
+    final manifestMs = timer.elapsedMilliseconds;
     final hashes = await store.hashes();
     final wanted = <int>{
       for (final entry in manifest.entries)
         if (hashes[entry['id']] != entry['hash']) entry['id'] as int,
     };
     final items = await session.download(manifest, wanted);
+    final downloadedMs = timer.elapsedMilliseconds;
     await store.applySnapshot(items, {
       for (final entry in manifest.entries) entry['id'] as int,
     });
@@ -84,6 +88,16 @@ class PeopleReconciler implements PullReconciler<int> {
         )) {
       onChanged?.call();
     }
+    syncTrace('cache_applied', {
+      'app': 'people',
+      'revision': manifest.revision,
+      'root_hash': manifest.root,
+      'changed_count': wanted.length,
+      'manifest_ms': manifestMs,
+      'download_and_compare_ms': downloadedMs - manifestMs,
+      'apply_ms': timer.elapsedMilliseconds - downloadedMs,
+      'duration_ms': timer.elapsedMilliseconds,
+    });
     await syncAssets?.call();
   }
 

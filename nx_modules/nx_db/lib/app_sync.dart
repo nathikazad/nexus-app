@@ -10,6 +10,13 @@ import 'nx_db.dart';
 
 export 'package:nx_sync/nx_sync.dart' show appStateSyncEnabled;
 
+/// Diagnostic metadata only: never pass record contents, credentials or errors' text.
+void syncTrace(String event, Map<String, Object?> fields) {
+  debugPrint(
+    'sync_timing ${jsonEncode({'event': event, 'at': DateTime.now().toUtc().toIso8601String(), ...fields})}',
+  );
+}
+
 String _encodeManifest(Map<String, dynamic> value) => jsonEncode(value);
 Map<String, dynamic> _decodeManifest(String value) =>
     Map<String, dynamic>.from(jsonDecode(value) as Map);
@@ -31,7 +38,32 @@ final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
           fetchPolicy: FetchPolicy.noCache,
         ),
       )
-      .where((result) => !result.hasException)
+      .where((result) {
+        if (result.hasException) {
+          syncTrace('subscription_error', {
+            'app': app,
+            'domain_id': domainForClient(client),
+          });
+          return false;
+        }
+        final raw = result.data?['appSyncChanged'];
+        Object? hint = raw;
+        if (raw is String) {
+          try {
+            hint = jsonDecode(raw);
+          } on FormatException {
+            // Diagnostics must not change handling of an unexpected payload.
+            hint = null;
+          }
+        }
+        syncTrace('socket_hint_received', {
+          'app': app,
+          'domain_id': domainForClient(client),
+          if (hint is Map) 'revision': hint['revision'],
+          if (hint is Map) 'status': hint['status'],
+        });
+        return true;
+      })
       .map((result) => jsonEncode(result.data?['appSyncChanged']));
 });
 
@@ -120,36 +152,56 @@ final class AppSyncClient {
     String operation,
     Map<String, dynamic> variables,
   ) async {
+    final timer = Stopwatch()..start();
     final state = operation == 'state';
-    final response = await client.query(
-      QueryOptions(
-        document: gql(
-          state
-              ? r'''
+    try {
+      final response = await client.query(
+        QueryOptions(
+          document: gql(
+            state
+                ? r'''
       query AppSyncState($app:String!,$domainId:Int!) { appSyncState(app:$app,domainId:$domainId) }
     '''
-              : r'''
+                : r'''
       query AppSyncSnapshot($app:String!,$domainId:Int!,$revision:String!,$itemIds:[String!],$collectionIds:[String!]) {
         appSyncSnapshot(app:$app,domainId:$domainId,revision:$revision,itemIds:$itemIds,collectionIds:$collectionIds)
       }
     ''',
+          ),
+          variables: {
+            ...variables,
+            'app': app,
+            'domainId': domainForClient(client),
+          },
+          fetchPolicy: FetchPolicy.noCache,
+          queryRequestTimeout: const Duration(seconds: 30),
         ),
-        variables: {
-          ...variables,
-          'app': app,
-          'domainId': domainForClient(client),
-        },
-        fetchPolicy: FetchPolicy.noCache,
-        queryRequestTimeout: const Duration(seconds: 30),
-      ),
-    );
-    if (response.hasException) {
-      throw response.exception!;
+      );
+      if (response.hasException) {
+        throw response.exception!;
+      }
+      final raw = response.data?[state ? 'appSyncState' : 'appSyncSnapshot'];
+      final result = Map<String, dynamic>.from(
+        (raw is String ? jsonDecode(raw) : raw) as Map,
+      );
+      syncTrace('client_$operation', {
+        'app': app,
+        'domain_id': domainForClient(client),
+        'status': result['status'],
+        'revision': result['revision'] ?? variables['revision'],
+        'duration_ms': timer.elapsedMilliseconds,
+      });
+      return result;
+    } catch (error) {
+      syncTrace('client_request_failed', {
+        'app': app,
+        'operation': operation,
+        'domain_id': domainForClient(client),
+        'duration_ms': timer.elapsedMilliseconds,
+        'error_type': error.runtimeType.toString(),
+      });
+      rethrow;
     }
-    final raw = response.data?[state ? 'appSyncState' : 'appSyncSnapshot'];
-    return Map<String, dynamic>.from(
-      (raw is String ? jsonDecode(raw) : raw) as Map,
-    );
   }
 
   Future<DocumentSyncResponse?> documents({

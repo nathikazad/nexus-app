@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:nx_db/src/core/client/graphql_client.dart'
     show bindTestClientDomain;
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +7,49 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_db/app_sync.dart';
 
 void main() {
+  test(
+    'request diagnostics contain scope and revision without record payloads',
+    () async {
+      final messages = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) messages.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+      final client = AppSyncClient(
+        bindTestClientDomain(
+          GraphQLClient(
+            cache: GraphQLCache(store: InMemoryStore()),
+            link: Link.function((request, [forward]) async* {
+              yield Response(
+                data: {
+                  'appSyncState': {
+                    'status': 'ready',
+                    'projection_version': 3,
+                    'revision': 17,
+                    'root_hash': 'root17',
+                    'private_content': 'secret person name',
+                  },
+                },
+                response: const {},
+              );
+            }),
+          ),
+          1,
+        ),
+        'people',
+      );
+      await client.refreshIfChanged(() async {});
+      final trace = messages.singleWhere((m) => m.startsWith('sync_timing '));
+      final fields = jsonDecode(trace.substring('sync_timing '.length));
+      expect(fields['event'], 'client_state');
+      expect(fields['revision'], 17);
+      expect(fields['domain_id'], 1);
+      expect(fields['duration_ms'], greaterThanOrEqualTo(0));
+      expect(trace, isNot(contains('secret person name')));
+    },
+  );
+
   test(
     'browser refresh skips equal roots and retries failed refreshes',
     () async {
