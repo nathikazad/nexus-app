@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/data/sync/people_sync_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +15,11 @@ import 'package:nx_people/domain/meeting/meeting_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  Future<_FakeLogRepository> pumpApp(WidgetTester tester, Size size) async {
+  Future<_FakeLogRepository> pumpApp(
+    WidgetTester tester,
+    Size size, {
+    FakePeopleRepository? people,
+  }) async {
     final logs = _FakeLogRepository();
     final meetings = _FakeMeetingRepository();
     SharedPreferences.setMockInitialValues({});
@@ -37,7 +43,9 @@ void main() {
               skipBackendPing: true,
             ),
           ),
-          peopleRepositoryProvider.overrideWithValue(FakePeopleRepository()),
+          peopleRepositoryProvider.overrideWithValue(
+            people ?? FakePeopleRepository(),
+          ),
           logRepositoryProvider.overrideWithValue(logs),
           meetingRepositoryProvider.overrideWithValue(meetings),
         ],
@@ -47,6 +55,52 @@ void main() {
     await tester.pumpAndSettle();
     return logs;
   }
+
+  testWidgets(
+    'Recent is selected and sync preserves the visible scrolling list',
+    (tester) async {
+      final repository = _RefreshingPeopleRepository();
+      await pumpApp(tester, const Size(390, 500), people: repository);
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Recent'))
+            .selected,
+        isTrue,
+      );
+      final scrollable = find
+          .descendant(
+            of: find.byKey(const PageStorageKey('people-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.drag(scrollable, const Offset(0, -180));
+      await tester.pumpAndSettle();
+      final before = tester.state<ScrollableState>(scrollable).position.pixels;
+      expect(before, greaterThan(0));
+      repository.pending = Completer<List<Person>>();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(NexusPeopleApp)),
+      );
+      container.read(peopleDataGenerationProvider.notifier).changed();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(tester.state<ScrollableState>(scrollable).position.pixels, before);
+      repository.pending!.complete(await FakePeopleRepository().listRecent());
+      await tester.pumpAndSettle();
+      expect(tester.state<ScrollableState>(scrollable).position.pixels, before);
+      await tester.drag(scrollable, const Offset(0, 500));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Pinned'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Pinned'))
+            .selected,
+        isTrue,
+      );
+    },
+  );
 
   testWidgets('desktop renders four section nav, people list, and profile', (
     tester,
@@ -418,4 +472,11 @@ class _FakeMeetingRepository implements MeetingRepository {
     created.add(draft);
     return created.length;
   }
+}
+
+class _RefreshingPeopleRepository extends FakePeopleRepository {
+  Completer<List<Person>>? pending;
+  @override
+  Future<List<Person>> listRecent({int limit = 20}) =>
+      pending?.future ?? super.listRecent(limit: limit);
 }

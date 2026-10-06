@@ -37,7 +37,7 @@ class KgqlPeopleRepository implements PersonRepository {
 
   @override
   Future<List<Person>> listRecent({int limit = 20}) async {
-    return (await _listAll()).take(limit).toList();
+    return (await _listAll(recent: true)).take(limit).toList();
   }
 
   @override
@@ -238,7 +238,7 @@ class KgqlPeopleRepository implements PersonRepository {
   }
 
   Future<List<Person>> _filter(String type, String label) async {
-    final people = await _listAll();
+    final people = await _listAll(recent: type == 'Recent');
     return switch (type) {
       'Search' => search(label),
       'Recent' => Future<List<Person>>.value(people),
@@ -260,23 +260,34 @@ class KgqlPeopleRepository implements PersonRepository {
     };
   }
 
-  Future<List<Person>> _listAll() async {
+  Future<List<Person>> _listAll({bool recent = false}) async {
+    final List<Model> models;
     if (data != null) {
-      final rows = (await data!.models(
-        kPersonModelTypeName,
-      )).map(personFromModel).toList();
-      rows.sort((a, b) => a.name.compareTo(b.name));
-      return rows;
+      models = await data!.models(kPersonModelTypeName);
+    } else {
+      final schema = await _loadPersonSchema();
+      models = await fetchKgqlModels(
+        _client,
+        filter: const {'model_type': kPersonModelTypeName},
+        struct: personFetchStruct(schema),
+      );
     }
-    final schema = await _loadPersonSchema();
-    final models = await fetchKgqlModels(
-      _client,
-      filter: const {'model_type': kPersonModelTypeName},
-      struct: personFetchStruct(schema),
-    );
-    final rows = [for (final model in models) personFromModel(model)];
-    rows.sort((a, b) => a.name.compareTo(b.name));
-    return rows;
+    final sorted = [...models];
+    sorted.sort((a, b) {
+      if (recent) {
+        final left = DateTime.tryParse(a.createdAt ?? '');
+        final right = DateTime.tryParse(b.createdAt ?? '');
+        if (left != null && right != null) {
+          final order = right.compareTo(left);
+          if (order != 0) return order;
+        } else if (left != null || right != null) {
+          return left != null ? -1 : 1;
+        }
+        return b.id.compareTo(a.id);
+      }
+      return a.name.compareTo(b.name);
+    });
+    return sorted.map(personFromModel).toList();
   }
 
   List<String> _unique(Iterable<String> values) {

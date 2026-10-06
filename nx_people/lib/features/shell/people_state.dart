@@ -8,6 +8,7 @@ class PeopleWorkspaceState {
     this.section = PeopleAppSection.people,
     this.activePersonId,
     this.searchText = '',
+    this.peopleFilter = 'Recent',
     this.selectedDayOffset = 0,
     this.selectedLogDayOffset = 0,
   });
@@ -15,6 +16,7 @@ class PeopleWorkspaceState {
   final PeopleAppSection section;
   final int? activePersonId;
   final String searchText;
+  final String peopleFilter;
   final int selectedDayOffset;
   final int selectedLogDayOffset;
 
@@ -22,6 +24,7 @@ class PeopleWorkspaceState {
     PeopleAppSection? section,
     int? activePersonId,
     String? searchText,
+    String? peopleFilter,
     int? selectedDayOffset,
     int? selectedLogDayOffset,
   }) {
@@ -29,6 +32,7 @@ class PeopleWorkspaceState {
       section: section ?? this.section,
       activePersonId: activePersonId ?? this.activePersonId,
       searchText: searchText ?? this.searchText,
+      peopleFilter: peopleFilter ?? this.peopleFilter,
       selectedDayOffset: selectedDayOffset ?? this.selectedDayOffset,
       selectedLogDayOffset: selectedLogDayOffset ?? this.selectedLogDayOffset,
     );
@@ -53,6 +57,10 @@ class PeopleWorkspaceNotifier extends Notifier<PeopleWorkspaceState> {
 
   void openPerson(int personId) {
     state = state.copyWith(activePersonId: personId);
+  }
+
+  void setPeopleFilter(String value) {
+    state = state.copyWith(peopleFilter: value);
   }
 
   void setSearchText(String value) {

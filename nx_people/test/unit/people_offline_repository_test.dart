@@ -95,6 +95,37 @@ void main() {
   });
 
   test(
+    'recent people sort by creation before limiting, not name or edits',
+    () async {
+      final rows = [
+        {
+          'id': 1,
+          'name': 'Alice',
+          'created_at': '2026-10-01T10:00:00Z',
+          'updated_at': '2026-10-10T10:00:00Z',
+        },
+        {'id': 2, 'name': 'Katie', 'created_at': '2026-10-06T08:00:00-07:00'},
+        {'id': 3, 'name': 'Zoe', 'created_at': '2026-10-06T15:00:00Z'},
+        {'id': 4, 'name': 'Missing date'},
+        {'id': 5, 'name': 'Invalid date', 'created_at': 'invalid'},
+      ];
+      await store.acceptLive([
+        for (final row in rows)
+          {
+            ...row,
+            'kind': 'Person',
+            'model_type': {'name': 'Person'},
+          },
+      ]);
+      expect((await people.listRecent()).map((p) => p.id), [3, 2, 1, 5, 4]);
+      expect((await people.listRecent(limit: 2)).map((p) => p.name), [
+        'Zoe',
+        'Katie',
+      ]);
+    },
+  );
+
+  test(
     'offline contact creation, editing, contact deletion and meeting stay readable',
     () async {
       final id = await people.createPerson(

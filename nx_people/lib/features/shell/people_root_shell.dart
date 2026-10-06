@@ -324,9 +324,19 @@ class _PeopleView extends ConsumerWidget {
         ? ref.watch(recentPeopleProvider)
         : ref.watch(_searchPeopleProvider(query));
     return peopleValue.when(
+      skipLoadingOnReload: true,
       data: (people) {
         _selectFirstPersonIfNeeded(ref, people);
-        final filtered = _filterPeople(people, query);
+        final filter = ref.watch(peopleWorkspaceProvider).peopleFilter;
+        final filtered = _filterPeople(people, query)
+            .where(
+              (person) => switch (filter) {
+                'Pinned' => person.pinned,
+                'Follow up' => person.status.toLowerCase().contains('follow'),
+                _ => true,
+              },
+            )
+            .toList();
         final activeId = ref.watch(peopleWorkspaceProvider).activePersonId;
         final active =
             _personById(filtered, activeId) ?? _personById(people, activeId);
@@ -793,10 +803,15 @@ class _PeopleList extends ConsumerWidget {
         ),
         Expanded(
           child: ListView(
+            key: const PageStorageKey('people-list'),
             padding: EdgeInsets.fromLTRB(16, 10, 16, fullHeight ? 96 : 24),
             children: <Widget>[
-              const _FilterRow(
-                labels: <String>['Pinned', 'Recent', 'Follow up'],
+              _FilterRow(
+                selected: ref.watch(peopleWorkspaceProvider).peopleFilter,
+                onSelected: ref
+                    .read(peopleWorkspaceProvider.notifier)
+                    .setPeopleFilter,
+                labels: const <String>['Pinned', 'Recent', 'Follow up'],
               ),
               SizedBox(height: fullHeight ? 8 : 6),
               if (fullHeight)
@@ -810,7 +825,7 @@ class _PeopleList extends ConsumerWidget {
                     activeId: activeId,
                   ),
                 _PeopleGroup(
-                  title: 'Recently contacted',
+                  title: 'Recently added',
                   people: people,
                   activeId: activeId,
                 ),
@@ -977,6 +992,7 @@ class _PersonDetailPage extends ConsumerWidget {
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: personValue.when(
+          skipLoadingOnReload: true,
           data: (person) {
             if (person == null) {
               return const Center(child: Text('Person not found.'));
@@ -2631,6 +2647,7 @@ class _MeetingsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final peopleValue = ref.watch(recentPeopleProvider);
     return peopleValue.when(
+      skipLoadingOnReload: true,
       data: (people) {
         final offset = ref.watch(peopleWorkspaceProvider).selectedDayOffset;
         final items = _agendaFor(people, offset);
@@ -4735,7 +4752,7 @@ class _SortSelector extends StatelessWidget {
       ),
       child: const Row(
         children: <Widget>[
-          Expanded(child: _SortOption(label: 'Name', selected: true)),
+          Expanded(child: _SortOption(label: 'Recent', selected: true)),
           Expanded(child: _SortOption(label: 'Last Meeting')),
         ],
       ),
@@ -4850,9 +4867,15 @@ class _SelectedFilterChip extends StatelessWidget {
 }
 
 class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.labels});
+  const _FilterRow({
+    required this.labels,
+    required this.selected,
+    required this.onSelected,
+  });
 
   final List<String> labels;
+  final String selected;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -4864,37 +4887,13 @@ class _FilterRow extends StatelessWidget {
           for (final label in labels)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: _PeopleFilterPill(label),
+              child: ChoiceChip(
+                label: Text(label),
+                selected: label == selected,
+                onSelected: (_) => onSelected(label),
+              ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _PeopleFilterPill extends StatelessWidget {
-  const _PeopleFilterPill(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: AppColors.subtle.withValues(alpha: 0.72),
-        border: Border.all(color: AppColors.line),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: AppColors.muted,
-          fontSize: 14,
-          height: 1.15,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
