@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:typed_data';
+import 'ble_setup_lifecycle.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -16,6 +17,7 @@ import 'package:nexus_voice_assistant/domain/ble/ble_constants.dart';
 
 class BleClient {
   BluetoothDevice? _device;
+  final _setupLifecycle = BleSetupLifecycle();
   BluetoothCharacteristic? _identityCharacteristic;
   BluetoothCharacteristic? _backgroundAudioCharacteristic;
   Future<void> _identityTail = Future.value();
@@ -312,6 +314,9 @@ class BleClient {
       _log('No device to connect to');
       return false;
     }
+    if (isConnected &&
+        _device!.isConnected &&
+        _setupLifecycle.isReady(_device!.remoteId.str)) return true;
     if (_state == BleConnectionState.connecting) {
       _log('Connection already in progress, ignoring');
       return isConnected;
@@ -371,26 +376,48 @@ class BleClient {
   /// Post-connection setup: bonding, service discovery, notification subscriptions.
   /// Called after the device is already connected at the OS level (either from
   /// [_connectToDevice], [_reconnectToPairedDevice], or the global listener).
-  Future<bool> _setupConnectedDevice() async {
-    if (_device == null) {
-      _log('No device for setup');
-      return false;
+  Future<bool> _setupConnectedDevice() {
+    final device = _device;
+    if (device == null) return Future.value(false);
+    return _setupLifecycle.ensure(device.remoteId.str,
+        (isCurrent) => _configureConnectedDevice(device, isCurrent));
+  }
+
+  Future<bool> _configureConnectedDevice(
+      BluetoothDevice device, bool Function() isCurrent) async {
+    void checkCurrent() {
+      if (!isCurrent() ||
+          _device?.remoteId != device.remoteId ||
+          !device.isConnected) {
+        throw StateError('Bluetooth setup superseded or disconnected');
+      }
     }
 
     _setState(BleConnectionState.connecting);
     _diagnosticLog('Connected to ${_device!.platformName}, setting up...');
 
     try {
+      checkCurrent();
+      _cancelConnectionSubscription();
+      _connectionSubscription = device.connectionState.listen((state) {
+        if (isCurrent() && state == BluetoothConnectionState.disconnected) {
+          unawaited(_handleDisconnection());
+        }
+      });
+      await _cancelNotifications();
+      checkCurrent();
       if (Platform.isAndroid) {
         try {
-          await _device!.createBond(timeout: 90);
+          await device.createBond(timeout: 90);
           _log('Bonding complete (Android)');
         } catch (e) {
           _log('createBond (non-fatal): $e');
         }
       }
 
-      final services = await _device!.discoverServices();
+      checkCurrent();
+      final services = await device.discoverServices();
+      checkCurrent();
 
       BluetoothService? targetService;
       for (BluetoothService service in services) {
@@ -462,23 +489,26 @@ class BleClient {
         }
       }
 
-      await _subscribeToAudioNotifications();
-      await _subscribeToFileTxNotifications();
-      await _subscribeToCameraStatusNotifications();
-      await _subscribeToBatteryNotifications();
+      checkCurrent();
+      await _subscribeToAudioNotifications(checkCurrent);
+      checkCurrent();
+      await _subscribeToFileTxNotifications(checkCurrent);
+      checkCurrent();
+      await _subscribeToCameraStatusNotifications(checkCurrent);
+      checkCurrent();
+      await _subscribeToBatteryNotifications(checkCurrent);
 
-      _cancelConnectionSubscription();
-      _connectionSubscription = _device!.connectionState.listen((state) async {
-        if (state == BluetoothConnectionState.disconnected) {
-          _diagnosticLog('Device disconnected');
-          await _handleDisconnection();
-        }
-      });
-
+      checkCurrent();
       _setState(BleConnectionState.connected);
-      await PairedDeviceStorage.setPairedRemoteId(_device!.remoteId.str);
+      await PairedDeviceStorage.setPairedRemoteId(device.remoteId.str);
+      checkCurrent();
       return true;
     } catch (e) {
+      if (!isCurrent()) return false;
+      await _cancelNotifications();
+      if (!isCurrent()) return false;
+      _cancelConnectionSubscription();
+      _clearCharacteristics();
       _log('Setup error: $e');
       onError?.call('Setup error: $e');
       _setState(BleConnectionState.idle);
@@ -486,7 +516,8 @@ class BleClient {
     }
   }
 
-  Future<void> _subscribeToAudioNotifications() async {
+  Future<void> _subscribeToAudioNotifications(
+      void Function() checkCurrent) async {
     if (_audioTxCharacteristic == null) {
       _log('Cannot subscribe: Audio TX characteristic not found');
       return;
@@ -494,6 +525,7 @@ class BleClient {
 
     try {
       await _audioTxCharacteristic!.setNotifyValue(true);
+      checkCurrent();
 
       _notificationSubscription =
           _audioTxCharacteristic!.onValueReceived.listen(
@@ -513,6 +545,7 @@ class BleClient {
     } catch (e) {
       _log('Error subscribing to notifications: $e');
       onError?.call('Error subscribing: $e');
+      rethrow;
     }
   }
 
@@ -521,7 +554,8 @@ class BleClient {
     onAudioPacketReceived?.call(data);
   }
 
-  Future<void> _subscribeToFileTxNotifications() async {
+  Future<void> _subscribeToFileTxNotifications(
+      void Function() checkCurrent) async {
     if (_fileTxCharacteristic == null) {
       _log('Cannot subscribe: File TX characteristic not found');
       return;
@@ -529,6 +563,7 @@ class BleClient {
 
     try {
       await _fileTxCharacteristic!.setNotifyValue(true);
+      checkCurrent();
 
       _fileTxNotificationSubscription =
           _fileTxCharacteristic!.lastValueStream.listen(
@@ -546,10 +581,12 @@ class BleClient {
     } catch (e) {
       _log('Error subscribing to file TX notifications: $e');
       onError?.call('Error subscribing to file TX: $e');
+      rethrow;
     }
   }
 
-  Future<void> _subscribeToCameraStatusNotifications() async {
+  Future<void> _subscribeToCameraStatusNotifications(
+      void Function() checkCurrent) async {
     if (_cameraStatusCharacteristic == null) {
       _log('Cannot subscribe: Camera Status characteristic not found');
       return;
@@ -557,6 +594,7 @@ class BleClient {
 
     try {
       await _cameraStatusCharacteristic!.setNotifyValue(true);
+      checkCurrent();
 
       _cameraStatusNotificationSubscription =
           _cameraStatusCharacteristic!.lastValueStream.listen(
@@ -574,10 +612,12 @@ class BleClient {
     } catch (e) {
       _log('Error subscribing to camera status notifications: $e');
       onError?.call('Error subscribing to camera status: $e');
+      rethrow;
     }
   }
 
-  Future<void> _subscribeToBatteryNotifications() async {
+  Future<void> _subscribeToBatteryNotifications(
+      void Function() checkCurrent) async {
     if (_batteryCharacteristic == null) {
       _log('Cannot subscribe: Battery characteristic not found');
       return;
@@ -585,6 +625,7 @@ class BleClient {
 
     try {
       await _batteryCharacteristic!.setNotifyValue(true);
+      checkCurrent();
 
       _batteryNotificationSubscription =
           _batteryCharacteristic!.lastValueStream.listen(
@@ -600,19 +641,29 @@ class BleClient {
     } catch (e) {
       _log('Error subscribing to battery notifications: $e');
       onError?.call('Error subscribing to battery: $e');
+      rethrow;
     }
   }
 
-  Future<void> _handleDisconnection() async {
-    _cancelConnectionSubscription();
-    await _notificationSubscription?.cancel();
+  Future<void> _cancelNotifications() async {
+    final subscriptions = <StreamSubscription?>[
+      _notificationSubscription,
+      _fileTxNotificationSubscription,
+      _cameraStatusNotificationSubscription,
+      _batteryNotificationSubscription,
+    ];
     _notificationSubscription = null;
-    await _fileTxNotificationSubscription?.cancel();
     _fileTxNotificationSubscription = null;
-    await _cameraStatusNotificationSubscription?.cancel();
     _cameraStatusNotificationSubscription = null;
-    await _batteryNotificationSubscription?.cancel();
     _batteryNotificationSubscription = null;
+    await Future.wait(
+        subscriptions.whereType<StreamSubscription>().map((s) => s.cancel()));
+  }
+
+  Future<void> _handleDisconnection() async {
+    _setupLifecycle.invalidate();
+    _cancelConnectionSubscription();
+    await _cancelNotifications();
     _clearCharacteristics();
 
     await reloadPreferredFromStorage();
@@ -715,17 +766,11 @@ class BleClient {
   /// When false (e.g. service teardown that should reconnect), falls through
   /// to [_reconnectToPairedDevice].
   Future<void> disconnect({bool intentional = false}) async {
+    _setupLifecycle.invalidate();
     try {
       await stopScan();
       _cancelConnectionSubscription();
-      await _notificationSubscription?.cancel();
-      _notificationSubscription = null;
-      await _fileTxNotificationSubscription?.cancel();
-      _fileTxNotificationSubscription = null;
-      await _cameraStatusNotificationSubscription?.cancel();
-      _cameraStatusNotificationSubscription = null;
-      await _batteryNotificationSubscription?.cancel();
-      _batteryNotificationSubscription = null;
+      await _cancelNotifications();
 
       if (_device != null && isConnected) {
         await _device!.disconnect();
@@ -961,11 +1006,15 @@ class BleClient {
   /// Queues background audio start/stop/rotation in the nRF firmware.
   Future<bool> writeBackgroundAudio(int operation, {Uint8List? fileId}) async {
     final characteristic = _backgroundAudioCharacteristic;
-    if (!isConnected || characteristic == null || operation < 0 || operation > 2) {
+    if (!isConnected ||
+        characteristic == null ||
+        operation < 0 ||
+        operation > 2) {
       return false;
     }
     try {
-      await characteristic.write([operation, ...?fileId], withoutResponse: false);
+      await characteristic
+          .write([operation, ...?fileId], withoutResponse: false);
       return true;
     } catch (_) {
       return false;
