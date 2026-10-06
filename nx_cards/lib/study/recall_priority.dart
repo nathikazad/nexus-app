@@ -66,14 +66,20 @@ List<StudyPrompt> takeRecallCards(List<StudyPrompt> prompts, int count) {
   return prompts.where((p) => ids.contains(p.cardId)).toList();
 }
 
-/// The priority order decides membership, never the order of the actual round.
+/// Each card contributes only its first (weakest) eligible question. The
+/// priority order chooses membership; shuffle only the resulting unique cards.
 List<StudyPrompt> shuffledRecallSelection(
   List<StudyPrompt> prioritized,
   int count, {
   Random? random,
-}) => spaceRepeatedRecallCards(
-  takeRecallCards(prioritized, count)..shuffle(random),
-);
+}) {
+  final seen = <int>{};
+  return prioritized
+      .where((prompt) => seen.add(prompt.cardId))
+      .take(max(0, count))
+      .toList()
+    ..shuffle(random);
+}
 
 /// Keep every selected front, spacing repetitions of the same card as far
 /// apart as the deck permits. Shuffled order breaks equal-frequency ties.

@@ -203,7 +203,7 @@ void main() {
       final session = tester.widget<StudySessionPage>(
         find.byType(StudySessionPage),
       );
-      expect(session.prompts, hasLength(3));
+      expect(session.prompts, hasLength(1));
       expect(
         session.prompts.every(
           (p) => p.testedCues.length == 2 && !p.card.isSummary,
@@ -351,10 +351,11 @@ void main() {
           find.byType(StudySessionPage),
         );
         expect(session.prompts.every((p) => p.card.isSummary), false);
-        expect(session.prompts.map((p) => p.cue).toSet(), {
+        expect(session.prompts, hasLength(1));
+        expect({
           StudyCue.meaningToSound,
           StudyCue.soundToMeaning,
-        });
+        }, contains(session.prompts.single.cue));
         await tester.tap(find.text('Show answer'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('No'));

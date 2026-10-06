@@ -5,6 +5,30 @@ import 'package:nx_cards/study/recall_priority.dart';
 import 'study_setup_page_test.dart' show sample;
 
 void main() {
+  test('a run selects each card once using its weakest eligible direction', () {
+    final card = sample(1, 5).copyWith(
+      reviewHistory: {
+        ...sample(1, 5).reviewHistory,
+        StudyCue.soundToMeaning: [],
+      },
+    );
+    final prompts = [
+      StudyPrompt(card: card, cue: StudyCue.meaningToSound),
+      StudyPrompt(card: card, cue: StudyCue.soundToMeaning),
+      StudyPrompt(card: sample(2, 3), cue: StudyCue.scriptToSound),
+    ];
+    prioritizeRecallPrompts(prompts, DateTime.now(), random: Random(1));
+    final chosen = shuffledRecallSelection(prompts, 30, random: Random(2));
+    expect(chosen, hasLength(2));
+    expect(
+      chosen.singleWhere((p) => p.cardId == 1).cue,
+      StudyCue.soundToMeaning,
+    );
+    expect(prompts, hasLength(3));
+    expect(card.reviewHistoryFor(StudyCue.meaningToSound), hasLength(5));
+    expect(shuffledRecallSelection(prompts, 0), isEmpty);
+  });
+
   test('repeated fronts preserve every item and maximize the gap', () {
     final ids = [2, 1, 1, 3, 2, 3, 4];
     final prompts = [
@@ -148,11 +172,11 @@ void main() {
           7,
           random: Random(seed),
         );
-        expect(chosen, hasLength(42));
+        expect(chosen, hasLength(7));
         expect(chosen.map((p) => p.cardId).toSet(), hasLength(7));
         expect(
           chosen.map((p) => '${p.cardId}:${p.cue.name}').toSet(),
-          hasLength(42),
+          hasLength(7),
         );
         selections.add(
           chosen.map((p) => '${p.cardId}:${p.cue.name}').join(','),
