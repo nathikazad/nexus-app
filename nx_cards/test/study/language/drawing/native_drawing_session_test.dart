@@ -60,6 +60,20 @@ void main() {
     expect(NativeDrawingSession.practiceCard(card)['writing'], isTrue);
     expect(NativeDrawingSession.practiceCard(spoken)['writing'], isFalse);
     expect(NativeDrawingSession.practiceCard(spoken)['spokenOnly'], isTrue);
+    expect(
+      NativeDrawingSession.recallCard(
+        StudyPrompt(card: spoken, cue: StudyCue.meaningToSound),
+        writing: true,
+      )['writing'],
+      isFalse,
+    );
+    expect(
+      NativeDrawingSession.recallCard(
+        StudyPrompt(card: card, cue: StudyCue.meaningToScript),
+        writing: true,
+      )['writing'],
+      isTrue,
+    );
     expect(NativeDrawingSession.practiceCard(spoken)['prompt'], '很长的句子');
   });
   test('native reveal carries complete similar groups with display titles', () {

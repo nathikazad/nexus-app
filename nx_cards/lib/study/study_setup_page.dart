@@ -626,11 +626,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     List<StudyPrompt>? prompts,
     List<StudyPrompt>? practicePrompts,
   }) async {
-    if ((cards ?? prompts?.map((p) => p.card).toList() ?? []).any(
-      (c) => c.spokenOnly,
-    )) {
-      return false;
-    }
     if (!await NativeDrawingSession.isAvailable() || !mounted) return false;
     _startupStep('native_available');
     final recall = prompts != null;

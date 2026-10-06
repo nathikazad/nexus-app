@@ -148,8 +148,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
   }
 
   Future<void> _startNativeIfAvailable() async {
-    if (_questions.any((p) => p.card.spokenOnly) ||
-        _summary ||
+    if (_summary ||
         widget.format == GroupedRecallFormat.fast ||
         !_sameSession) {
       return;

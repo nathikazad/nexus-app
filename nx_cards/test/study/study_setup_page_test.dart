@@ -1,3 +1,4 @@
+import 'package:nx_cards/account/account_session.dart';
 import 'package:nx_cards/audio/audio_providers.dart';
 import 'package:nx_cards/study/language/drawing/native_drawing_session.dart';
 import 'package:nx_cards/study/session/study_session_page.dart';
@@ -95,6 +96,7 @@ Future<void> showSetup(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        activeCardsSessionProvider.overrideWith((_) async => null),
         if (store != null) localCardsStoreProvider.overrideWithValue(store),
         if (library != null) cardLibraryProvider.overrideWithValue(library),
         cardAudioRepositoryProvider.overrideWithValue(null),
@@ -126,6 +128,47 @@ Future<void> showSetup(
 }
 
 void main() {
+  testWidgets('mixed spoken-only and written cards keep native recall', (
+    tester,
+  ) async {
+    final written = sample(1, 0);
+    final spoken = sample(2, 0).copyWith(
+      content: (sample(2, 0).content as LanguageCardContent).copyWith(
+        spokenOnly: true,
+      ),
+    );
+    Map<dynamic, dynamic>? opened;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      NativeDrawingSession.channel,
+      (call) async {
+        if (call.method == 'available') return true;
+        if (call.method == 'open') {
+          opened = call.arguments as Map;
+          return null;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        NativeDrawingSession.channel,
+        null,
+      ),
+    );
+    await showSetup(
+      tester,
+      studyCards: [written, spoken],
+      directions: RecallComponent.values.toSet(),
+      library: _ReviewLibrary(),
+    );
+    await tester.tap(find.text('Start recall'));
+    await tester.pumpAndSettle();
+    expect(opened, isNotNull);
+    expect(opened!['recall'], true);
+    expect((opened!['cards'] as List).length, greaterThan(1));
+    expect(find.byType(StudySessionPage), findsNothing);
+  });
+
   testWidgets(
     'starting and hydrating a combined round saves both tested directions',
     (tester) async {
@@ -265,78 +308,79 @@ void main() {
   );
 
   for (final cue in [RecallComponent.sound, RecallComponent.meaning]) {
-    testWidgets('native fallback hydrates spoken-only $cue before grading No', (
-      tester,
-    ) async {
-      final original = sample(40, 3);
-      final full = original.copyWith(
-        content: (original.content as LanguageCardContent).copyWith(
-          spokenOnly: true,
-          audioUrl: '/word.mp3',
-        ),
-      );
-      final summary = full.copyWith(isSummary: true, reviewHistory: const {});
-      final store = _ReviewStore(full);
-      final library = _ReviewLibrary();
-      var availableCalls = 0;
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        NativeDrawingSession.channel,
-        (call) async {
-          expect(call.method, 'available');
-          availableCalls++;
-          return true;
-        },
-      );
-      addTearDown(
-        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    testWidgets(
+      'unavailable native renderer hydrates spoken-only $cue before grading No',
+      (tester) async {
+        final original = sample(40, 3);
+        final full = original.copyWith(
+          content: (original.content as LanguageCardContent).copyWith(
+            spokenOnly: true,
+            audioUrl: '/word.mp3',
+          ),
+        );
+        final summary = full.copyWith(isSummary: true, reviewHistory: const {});
+        final store = _ReviewStore(full);
+        final library = _ReviewLibrary();
+        var availableCalls = 0;
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
           NativeDrawingSession.channel,
-          null,
-        ),
-      );
-      await showSetup(
-        tester,
-        studyCards: [summary],
-        cue: cue,
-        store: store,
-        library: library,
-      );
-      await tester.tap(find.text('Start recall'));
-      await tester.pumpAndSettle();
-      expect(availableCalls, greaterThan(0));
-      expect(store.loads, 1);
-      final session = tester.widget<StudySessionPage>(
-        find.byType(StudySessionPage),
-      );
-      expect(session.prompts.every((p) => p.card.isSummary), false);
-      expect(session.prompts.map((p) => p.cue).toSet(), {
-        StudyCue.meaningToSound,
-        StudyCue.soundToMeaning,
-      });
-      await tester.tap(find.text('Show answer'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('No'));
-      await tester.pumpAndSettle();
-      expect(library.saved, isNotNull);
-      expect(library.saved!.isSummary, false);
-      expect(
-        library.saved!
-            .reviewHistoryFor(
-              library.saved!.reviewHistory.keys.firstWhere(
-                (c) => library.saved!
-                    .reviewHistoryFor(c)
-                    .any((r) => r.rating == 1),
-              ),
-            )
-            .last
-            .rating,
-        1,
-      );
-      expect(
-        library.saved!.reviewHistoryFor(StudyCue.meaningToScript).length,
-        3,
-      );
-      expect(find.textContaining('Could not save review'), findsNothing);
-    });
+          (call) async {
+            expect(call.method, 'available');
+            availableCalls++;
+            return false;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            NativeDrawingSession.channel,
+            null,
+          ),
+        );
+        await showSetup(
+          tester,
+          studyCards: [summary],
+          cue: cue,
+          store: store,
+          library: library,
+        );
+        await tester.tap(find.text('Start recall'));
+        await tester.pumpAndSettle();
+        expect(availableCalls, greaterThan(0));
+        expect(store.loads, 1);
+        final session = tester.widget<StudySessionPage>(
+          find.byType(StudySessionPage),
+        );
+        expect(session.prompts.every((p) => p.card.isSummary), false);
+        expect(session.prompts.map((p) => p.cue).toSet(), {
+          StudyCue.meaningToSound,
+          StudyCue.soundToMeaning,
+        });
+        await tester.tap(find.text('Show answer'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('No'));
+        await tester.pumpAndSettle();
+        expect(library.saved, isNotNull);
+        expect(library.saved!.isSummary, false);
+        expect(
+          library.saved!
+              .reviewHistoryFor(
+                library.saved!.reviewHistory.keys.firstWhere(
+                  (c) => library.saved!
+                      .reviewHistoryFor(c)
+                      .any((r) => r.rating == 1),
+                ),
+              )
+              .last
+              .rating,
+          1,
+        );
+        expect(
+          library.saved!.reviewHistoryFor(StudyCue.meaningToScript).length,
+          3,
+        );
+        expect(find.textContaining('Could not save review'), findsNothing);
+      },
+    );
   }
 
   testWidgets('failed fallback hydration keeps setup available for retry', (
@@ -352,7 +396,7 @@ void main() {
     final store = _ReviewStore(null);
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       NativeDrawingSession.channel,
-      (_) async => true,
+      (_) async => false,
     );
     addTearDown(
       () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -364,7 +408,10 @@ void main() {
     await tester.tap(find.text('Start recall'));
     await tester.pumpAndSettle();
     expect(find.byType(StudySessionPage), findsNothing);
-    expect(find.textContaining('Could not start recall'), findsOneWidget);
+    expect(
+      find.textContaining('Could not refresh recall queue'),
+      findsOneWidget,
+    );
     store.card = summary.copyWith(isSummary: false);
     await tester.tap(find.text('Start recall'));
     await tester.pumpAndSettle();

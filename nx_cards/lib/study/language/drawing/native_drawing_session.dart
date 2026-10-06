@@ -220,7 +220,7 @@ class NativeDrawingSession {
       'listening': prompt.isListening,
       'answer': content.originalScript,
       'subtitle': '${content.transliteration}\n${content.english}',
-      'writing': writing ?? prompt.recallsTarget,
+      'writing': !prompt.card.spokenOnly && (writing ?? prompt.recallsTarget),
       'sound': sound,
       'instruction': prompt.instruction,
       'audio': sound && content.audioUrl?.isNotEmpty == true,
