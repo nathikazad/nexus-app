@@ -171,13 +171,20 @@ void invalidateCardsData(Ref ref, {bool invalidateCache = true}) {
 
 final cardBodyProvider = FutureProvider.autoDispose
     .family<StudyCard, StudyCard>((ref, summary) async {
-      if (!summary.isSummary) return summary;
+      // Recall queues retain card snapshots. Reload even a full snapshot so
+      // revisiting a linked card reflects edits saved during this session.
       final local = ref.watch(localCardsStoreProvider);
-      final card = await local?.getCard(summary.id);
-      if (card == null) {
-        throw StateError('Card ${summary.id} is unavailable offline.');
+      final saved = await local?.getCard(summary.id);
+      if (saved != null) return saved;
+      if (local == null) {
+        final dashboard = await ref.watch(cardsDashboardProvider.future);
+        final current = dashboard.cards
+            .where((card) => card.id == summary.id && !card.isSummary)
+            .firstOrNull;
+        if (current != null) return current;
       }
-      return card;
+      if (!summary.isSummary) return summary;
+      throw StateError('Card ${summary.id} is unavailable offline.');
     });
 
 Future<StudyCard> hydrateStudyCard(WidgetRef ref, StudyCard card) async {

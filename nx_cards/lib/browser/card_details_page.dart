@@ -51,6 +51,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
     setState(() => _savingStatus = true);
     try {
       await ref.read(cardLibraryProvider).setLearningStatus(card, status);
+      ref.invalidate(cardBodyProvider(widget.card));
       ref.read(cardsInvalidationProvider)();
       if (mounted) setState(() => _updatedStatus = status);
     } catch (error) {
@@ -72,6 +73,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
       await ref
           .read(cardLibraryProvider)
           .setLearningStatus(card, card.learningStatus, spokenOnly: value);
+      ref.invalidate(cardBodyProvider(widget.card));
       ref.read(cardsInvalidationProvider)();
       if (mounted) {
         setState(() => _editedContent = content.copyWith(spokenOnly: value));
@@ -102,10 +104,8 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final body = widget.card.isSummary
-        ? ref.watch(cardBodyProvider(widget.card))
-        : null;
-    if (body != null && !body.hasValue) {
+    final body = ref.watch(cardBodyProvider(widget.card));
+    if (!body.hasValue) {
       return Scaffold(
         appBar: AppBar(title: const Text('Card details')),
         body: Center(
@@ -115,7 +115,7 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
         ),
       );
     }
-    final card = (body?.value ?? widget.card).copyWith(
+    final card = (body.value ?? widget.card).copyWith(
       learningStatus: _updatedStatus,
       content: _editedContent,
     );

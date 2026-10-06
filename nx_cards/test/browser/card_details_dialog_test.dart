@@ -1,4 +1,10 @@
 import 'dart:async';
+import 'package:nx_cards/sync/sync_providers.dart';
+import 'package:nx_cards/sync/native/local_cards_store.dart';
+import 'package:nx_cards/sync/native/native_card_library.dart';
+import 'package:nx_cards/sync/card_synchronizer.dart';
+import 'package:nx_cards/scheduling/clock.dart';
+import 'package:nx_offline/nx_offline.dart' as offline;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +16,67 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/browser/card_details_page.dart';
 
 void main() {
+  testWidgets(
+    'offline activation survives reopening a stale full recall card',
+    (tester) async {
+      final stale = _card();
+      final store = _SavedCardStore(stale);
+      final library = NativeCardLibrary(
+        localStore: store,
+        serverLibrary: null,
+        transport: null,
+        uploader: null,
+        synchronizer: CardLibrarySynchronizer(
+          localStore: store,
+          transport: null,
+          uploader: null,
+        ),
+        clock: const SystemClock(),
+        newOperationId: () => 'offline-edit',
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            localCardsStoreProvider.overrideWithValue(store),
+            cardLibraryProvider.overrideWithValue(library),
+            cardsInvalidationProvider.overrideWithValue(() {}),
+            cardAudioRepositoryProvider.overrideWithValue(null),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(CardsDashboard(cards: [stale])),
+            ),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CardDetailsPage(card: stale),
+                  ),
+                ),
+                child: const Text('Open stale card'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open stale card'));
+      await tester.pumpAndSettle();
+      final toggle = find.byKey(const ValueKey('card-learning-status'));
+      expect(tester.widget<SwitchListTile>(toggle).value, false);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(store.card.learningStatus, LearningStatus.recall);
+      expect(store.queued, 1);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open stale card'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(toggle).value, true);
+      expect(store.card.reviewHistory, stale.reviewHistory);
+      expect(store.card.schedules, stale.schedules);
+    },
+  );
+
   testWidgets(
     'unreviewed skill selection shows empty history without losing controls',
     (tester) async {
@@ -26,7 +93,13 @@ void main() {
       );
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+          overrides: [
+            localCardsStoreProvider.overrideWithValue(null),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(const CardsDashboard(cards: [])),
+            ),
+            cardAudioRepositoryProvider.overrideWithValue(null),
+          ],
           child: MaterialApp(
             home: CardDetailsPage(card: card, initialTab: CardDetailsTab.stats),
           ),
@@ -92,7 +165,13 @@ void main() {
             );
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+            overrides: [
+              localCardsStoreProvider.overrideWithValue(null),
+              cardsDashboardProvider.overrideWith(
+                (_) => Stream.value(const CardsDashboard(cards: [])),
+              ),
+              cardAudioRepositoryProvider.overrideWithValue(null),
+            ],
             child: MaterialApp(
               theme: buildRecallTheme(),
               home: CardDetailsPage(
@@ -164,6 +243,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            localCardsStoreProvider.overrideWithValue(null),
             cardAudioRepositoryProvider.overrideWithValue(null),
             cardLibraryProvider.overrideWithValue(library),
             cardsInvalidationProvider.overrideWithValue(() {}),
@@ -237,6 +317,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsCollectionProvider.overrideWith(
             (ref, source) => Stream.value(CardsDashboard(cards: [card, peer])),
@@ -300,6 +381,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
             (_) => Stream.value(CardsDashboard(cards: [character, word])),
@@ -325,6 +407,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            localCardsStoreProvider.overrideWithValue(null),
             cardAudioRepositoryProvider.overrideWithValue(null),
             cardLibraryProvider.overrideWithValue(library),
             cardsDashboardProvider.overrideWith(
@@ -399,6 +482,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
             (_) => Stream.value(CardsDashboard(cards: [word, phrase])),
@@ -439,6 +523,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardsDashboardProvider.overrideWith(
             (_) => Stream.value(CardsDashboard(cards: [word, phrase])),
@@ -462,7 +547,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(const CardsDashboard(cards: [])),
+          ),
+          cardAudioRepositoryProvider.overrideWithValue(null),
+        ],
         child: MaterialApp(home: CardDetailsPage(card: card)),
       ),
     );
@@ -485,7 +576,13 @@ void main() {
   testWidgets('card content uses a readable dark surface', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(const CardsDashboard(cards: [])),
+          ),
+          cardAudioRepositoryProvider.overrideWithValue(null),
+        ],
         child: MaterialApp(
           theme: buildRecallTheme(),
           darkTheme: buildRecallDarkTheme(),
@@ -536,7 +633,13 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+          overrides: [
+            localCardsStoreProvider.overrideWithValue(null),
+            cardsDashboardProvider.overrideWith(
+              (_) => Stream.value(const CardsDashboard(cards: [])),
+            ),
+            cardAudioRepositoryProvider.overrideWithValue(null),
+          ],
           child: MaterialApp(home: CardDetailsPage(card: card)),
         ),
       );
@@ -592,7 +695,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(const CardsDashboard(cards: [])),
+          ),
+          cardAudioRepositoryProvider.overrideWithValue(null),
+        ],
         child: MaterialApp(
           home: CardDetailsPage(card: card, initialTab: CardDetailsTab.stats),
         ),
@@ -646,7 +755,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [cardAudioRepositoryProvider.overrideWithValue(null)],
+        overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(const CardsDashboard(cards: [])),
+          ),
+          cardAudioRepositoryProvider.overrideWithValue(null),
+        ],
         child: MaterialApp(
           home: CardDetailsPage(card: card, initialTab: CardDetailsTab.stats),
         ),
@@ -739,6 +854,28 @@ final class _StatusLibrary implements CardLibrary {
     savedSpokenOnly = spokenOnly;
     savedCard = card;
     savedStatus = status;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final class _SavedCardStore implements LocalCardsStore {
+  _SavedCardStore(this.card);
+  StudyCard card;
+  int queued = 0;
+  @override
+  Future<StudyCard?> getCard(int cardId) async =>
+      cardId == card.id ? card : null;
+  @override
+  Future<void> saveCardAndEnqueue(
+    StudyCard value, {
+    required String operationId,
+    required offline.MutationType mutationType,
+    required DateTime createdAt,
+  }) async {
+    card = value;
+    queued++;
   }
 
   @override

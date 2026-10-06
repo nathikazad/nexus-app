@@ -1,3 +1,4 @@
+import 'package:nx_cards/sync/sync_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,6 +54,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
+          cardsDashboardProvider.overrideWith(
+            (_) => Stream.value(const CardsDashboard(cards: [])),
+          ),
           cardAudioRepositoryProvider.overrideWithValue(null),
           cardLibraryProvider.overrideWithValue(library),
           cardsInvalidationProvider.overrideWithValue(() {}),
@@ -60,6 +65,7 @@ void main() {
         child: MaterialApp(home: CardDetailsPage(card: card)),
       ),
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Edit card'));
     await tester.pumpAndSettle();
   }

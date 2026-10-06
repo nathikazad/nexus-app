@@ -1,3 +1,4 @@
+import 'package:nx_cards/sync/sync_providers.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:nx_cards/progress/progress_page.dart';
 import 'package:nx_cards/browser/language/similar_sounds_page.dart';
@@ -27,6 +28,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            localCardsStoreProvider.overrideWithValue(null),
             sourceProgressCardsProvider.overrideWith((ref, source) async => []),
             reviewProgressionSettingsProvider.overrideWith(
               (ref) async => const ReviewProgressionSettings(),
@@ -67,6 +69,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          localCardsStoreProvider.overrideWithValue(null),
           sourceProgressCardsProvider.overrideWith((ref, source) async => []),
           reviewProgressionSettingsProvider.overrideWith(
             (ref) async => const ReviewProgressionSettings(),
@@ -106,6 +109,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              localCardsStoreProvider.overrideWithValue(null),
               sourceProgressCardsProvider.overrideWith(
                 (ref, source) async => [],
               ),
