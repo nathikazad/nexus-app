@@ -274,8 +274,7 @@ List<String> _actualMeetingNames(Model model) {
   final meetRows = model.relations?['Meet'] ?? const <Model>[];
   final meetNames = [
     for (final meet in meetRows)
-      if (_hasActualMeetingTime(meet) && !_hasInactivePlanningStatus(meet))
-        meet.name,
+      if (!_isPlannedMeet(meet) && !_hasInactivePlanningStatus(meet)) meet.name,
   ].where((name) => name.isNotEmpty);
   return {...legacy, ...meetNames}.toList()..sort();
 }
@@ -283,11 +282,19 @@ List<String> _actualMeetingNames(Model model) {
 List<PersonMeeting> _actualMeetings(Model model) {
   final rows = <PersonMeeting>[
     for (final meet in model.relations?['Meet'] ?? const <Model>[])
-      if (_actualMeetingTime(meet) case final startTime?)
-        if (!_hasInactivePlanningStatus(meet) && meet.name.isNotEmpty)
-          PersonMeeting(name: meet.name, startTime: startTime),
+      if (!_isPlannedMeet(meet) && !_hasInactivePlanningStatus(meet))
+        PersonMeeting(
+          id: meet.id,
+          name: meet.name.isEmpty ? "Conversation" : meet.name,
+          startTime: _actualMeetingTime(meet),
+          createdAt: DateTime.tryParse(meet.createdAt ?? ""),
+        ),
   ];
-  rows.sort((a, b) => b.startTime.compareTo(a.startTime));
+  rows.sort(
+    (a, b) => (b.startTime ?? b.createdAt ?? DateTime(0)).compareTo(
+      a.startTime ?? a.createdAt ?? DateTime(0),
+    ),
+  );
   return rows;
 }
 

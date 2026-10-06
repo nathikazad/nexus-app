@@ -1,3 +1,4 @@
+import 'package:nx_people/features/meeting/meeting_detail_page.dart';
 import 'package:nx_people/features/sync/people_sync_status.dart';
 import 'package:nx_people/data/sync/people_image.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1798,10 +1799,21 @@ class _TimelineAndMeetingsSection extends StatelessWidget {
           title: log.time == 'Today' ? 'Today note' : 'Relationship note',
           body: log.body,
         ),
-      for (final meeting in person.meetings.take(2))
+      for (final meeting in person.actualMeetings)
+        InkWell(
+          onTap: () => openMeeting(context, meeting),
+          child: _TimelineRow(
+            label: 'Meeting',
+            title: meeting.name,
+            body: 'Open conversation and transcript',
+          ),
+        ),
+      for (final name in person.meetings.where(
+        (name) => !person.actualMeetings.any((meeting) => meeting.name == name),
+      ))
         _TimelineRow(
           label: 'Meeting',
-          title: meeting,
+          title: name,
           body: 'Conversation with ${person.name}.',
         ),
     ];
@@ -2945,6 +2957,10 @@ class _AgendaRow extends ConsumerWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
+            if (item.meeting != null) {
+              openMeeting(context, item.meeting!);
+              return;
+            }
             ref
                 .read(peopleWorkspaceProvider.notifier)
                 .openPerson(item.person.id);
@@ -5595,6 +5611,7 @@ class _AgendaItem {
     required this.time,
     required this.person,
     required this.kind,
+    this.meeting,
   });
 
   final String title;
@@ -5602,6 +5619,7 @@ class _AgendaItem {
   final String time;
   final Person person;
   final _AgendaKind kind;
+  final PersonMeeting? meeting;
 }
 
 List<Person> _filterPeople(List<Person> people, String query) {
@@ -5785,14 +5803,23 @@ List<_AgendaItem> _agendaFor(List<Person> people, int dayOffset) {
   final datedMeetings = <_AgendaItem>[
     for (final person in people)
       for (final meeting in person.actualMeetings)
-        if (DateUtils.isSameDay(meeting.startTime.toLocal(), selectedDate))
+        if (DateUtils.isSameDay(
+              (meeting.startTime ?? meeting.createdAt)?.toLocal(),
+              selectedDate,
+            ) ||
+            (dayOffset == 0 &&
+                meeting.startTime == null &&
+                meeting.createdAt == null))
           _AgendaItem(
             title: meeting.name,
-            subtitle: dayOffset == 0
+            meeting: meeting,
+            subtitle: meeting.startTime == null
+                ? 'Start time not set • ${person.name}'
+                : dayOffset == 0
                 ? 'Today with ${person.name}'
                 : 'Past meeting with ${person.name}',
             time: _compactUpdatedAt(
-              meeting.startTime.toLocal().toIso8601String(),
+              meeting.startTime?.toLocal().toIso8601String() ?? "",
             ),
             person: person,
             kind: _AgendaKind.meeting,

@@ -154,10 +154,18 @@ class Person {
 }
 
 class PersonMeeting {
-  const PersonMeeting({required this.name, required this.startTime});
+  const PersonMeeting({
+    required this.id,
+    required this.name,
+    this.startTime,
+    this.createdAt,
+  });
+
+  final int id;
+  final DateTime? createdAt;
 
   final String name;
-  final DateTime startTime;
+  final DateTime? startTime;
 }
 
 class PersonContact {

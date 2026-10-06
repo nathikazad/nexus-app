@@ -4,6 +4,33 @@ import 'package:nx_people/data/person/person_mapper.dart';
 
 void main() {
   group('personFromModel meetings', () {
+    test('undated meetings retain identity and remain visible', () {
+      final mapped = personFromModel(
+        Model(
+          id: 1,
+          name: 'Rachel',
+          modelTypeId: 1,
+          relations: {
+            'Meet': [
+              Model(
+                id: 99,
+                name: 'Conversation with Rachel',
+                modelTypeId: 2,
+                createdAt: '2026-10-06T12:00:00Z',
+              ),
+            ],
+          },
+        ),
+      );
+      expect(mapped.actualMeetings.single.id, 99);
+      expect(mapped.actualMeetings.single.startTime, isNull);
+      expect(
+        mapped.actualMeetings.single.createdAt,
+        DateTime.utc(2026, 10, 6, 12),
+      );
+      expect(mapped.meetings, contains('Conversation with Rachel'));
+    });
+
     test('maps image_url onto the person photo field', () {
       final person = Model(
         id: 1,
@@ -332,7 +359,12 @@ void main() {
 
       final mapped = personFromModel(person);
 
-      expect(mapped.meetings, ['Legacy Review', 'Past Sync']);
+      // Attended meetings without an actual start must remain discoverable.
+      expect(mapped.meetings, [
+        'Default Attended',
+        'Legacy Review',
+        'Past Sync',
+      ]);
       expect(mapped.planned, ['Future Planning']);
     });
   });
