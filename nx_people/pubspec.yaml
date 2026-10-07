@@ -20,6 +20,8 @@ dependencies:
   drift: ^2.28.1
   nx_offline:
     path: ../nx_modules/nx_offline
+  nx_observability:
+    path: ../nx_modules/nx_observability
   nx_db:
     path: ../nx_modules/nx_db
   url_launcher: ^6.3.2

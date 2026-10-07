@@ -242,9 +242,25 @@ void main() {
           };
         },
       );
-      final sync = PeopleReconciler(store, session, onChanged: () => changes++);
+      final events = <Map<String, Object?>>[];
+      final sync = PeopleReconciler(
+        store,
+        session,
+        onChanged: () => changes++,
+        telemetry: (event, fields) => events.add({'event': event, ...fields}),
+      );
       await sync.pullAll();
       await sync.pullAll();
+      expect(events.take(4).map((e) => e['event']).toList(), [
+        'pull_started',
+        'download_started',
+        'download_finished',
+        'cache_applied',
+      ]);
+      expect(events.take(4).map((e) => e['run_id']).toSet(), hasLength(1));
+      expect(events[3]['revision'], 1);
+      expect(events[2]['record_count'], 1);
+      expect(events.toString(), isNot(contains('Version 1')));
       expect(downloads, 1);
       expect(changes, 1);
       revision = 2;

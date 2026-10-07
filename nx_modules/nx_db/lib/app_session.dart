@@ -18,6 +18,7 @@ AppDataSession? createAppSession(
   final client = AppSyncClient(
     ref.watch(graphqlClientProvider),
     definition.name,
+    telemetry: ref.watch(syncTelemetryProvider),
   );
   final reads = ref.watch(appReadsProvider(definition.name));
   final session = AppDataSession(

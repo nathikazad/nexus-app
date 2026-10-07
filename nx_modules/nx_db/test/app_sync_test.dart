@@ -16,6 +16,7 @@ void main() {
         if (message != null) messages.add(message);
       };
       addTearDown(() => debugPrint = original);
+      final uploaded = <String>[];
       final client = AppSyncClient(
         bindTestClientDomain(
           GraphQLClient(
@@ -38,10 +39,14 @@ void main() {
           1,
         ),
         'people',
+        telemetry: (event, fields) => uploaded.add(event),
       );
       await client.refreshIfChanged(() async {});
-      final trace = messages.singleWhere((m) => m.startsWith('sync_timing '));
+      final trace = messages.singleWhere(
+        (m) => m.contains('"event":"client_state"'),
+      );
       final fields = jsonDecode(trace.substring('sync_timing '.length));
+      expect(uploaded, ['check_started', 'client_state']);
       expect(fields['event'], 'client_state');
       expect(fields['revision'], 17);
       expect(fields['domain_id'], 1);

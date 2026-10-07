@@ -669,6 +669,13 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
+  nx_observability:
+    dependency: "direct main"
+    description:
+      path: "../nx_modules/nx_observability"
+      relative: true
+    source: path
+    version: "0.1.0"
   nx_offline:
     dependency: "direct main"
     description:

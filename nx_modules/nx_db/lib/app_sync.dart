@@ -10,11 +10,26 @@ import 'nx_db.dart';
 
 export 'package:nx_sync/nx_sync.dart' show appStateSyncEnabled;
 
+typedef SyncTraceSink =
+    void Function(String event, Map<String, Object?> fields);
+
+/// Opt-in per application; scoped to its authenticated ProviderScope.
+final syncTelemetryProvider = Provider<SyncTraceSink?>((ref) => null);
+
 /// Diagnostic metadata only: never pass record contents, credentials or errors' text.
-void syncTrace(String event, Map<String, Object?> fields) {
+void syncTrace(
+  String event,
+  Map<String, Object?> fields, {
+  SyncTraceSink? sink,
+}) {
   debugPrint(
     'sync_timing ${jsonEncode({'event': event, 'at': DateTime.now().toUtc().toIso8601String(), ...fields})}',
   );
+  try {
+    sink?.call(event, fields);
+  } catch (_) {
+    debugPrint('Sync telemetry unavailable');
+  }
 }
 
 String _encodeManifest(Map<String, dynamic> value) => jsonEncode(value);
@@ -28,6 +43,7 @@ final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
   if (!appStateSyncEnabled || ref.watch(authProvider).value?.domainId == null)
     return null;
   final client = ref.watch(graphqlClientProvider);
+  final telemetry = ref.watch(syncTelemetryProvider);
   return client
       .subscribe(
         SubscriptionOptions(
@@ -43,7 +59,7 @@ final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
           syncTrace('subscription_error', {
             'app': app,
             'domain_id': domainForClient(client),
-          });
+          }, sink: telemetry);
           return false;
         }
         final raw = result.data?['appSyncChanged'];
@@ -61,14 +77,14 @@ final appSyncChangesProvider = Provider.family<Stream<String>?, String>((
           'domain_id': domainForClient(client),
           if (hint is Map) 'revision': hint['revision'],
           if (hint is Map) 'status': hint['status'],
-        });
+        }, sink: telemetry);
         return true;
       })
       .map((result) => jsonEncode(result.data?['appSyncChanged']));
 });
 
 final class AppSyncClient {
-  AppSyncClient(this.client, this.app) {
+  AppSyncClient(this.client, this.app, {this.telemetry}) {
     session = AppSyncSession(
       request: _request,
       app: app,
@@ -76,6 +92,7 @@ final class AppSyncClient {
       save: _saveManifest,
     );
   }
+  final SyncTraceSink? telemetry;
   final GraphQLClient client;
   final String app;
   late final AppSyncSession session;
@@ -154,6 +171,11 @@ final class AppSyncClient {
   ) async {
     final timer = Stopwatch()..start();
     final state = operation == 'state';
+    syncTrace(state ? 'check_started' : 'snapshot_started', {
+      'app': app,
+      'domain_id': domainForClient(client),
+      if (variables['revision'] != null) 'revision': variables['revision'],
+    }, sink: telemetry);
     try {
       final response = await client.query(
         QueryOptions(
@@ -190,7 +212,7 @@ final class AppSyncClient {
         'status': result['status'],
         'revision': result['revision'] ?? variables['revision'],
         'duration_ms': timer.elapsedMilliseconds,
-      });
+      }, sink: telemetry);
       return result;
     } catch (error) {
       syncTrace('client_request_failed', {
@@ -199,7 +221,7 @@ final class AppSyncClient {
         'domain_id': domainForClient(client),
         'duration_ms': timer.elapsedMilliseconds,
         'error_type': error.runtimeType.toString(),
-      });
+      }, sink: telemetry);
       rethrow;
     }
   }

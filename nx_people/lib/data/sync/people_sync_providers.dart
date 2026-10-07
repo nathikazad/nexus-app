@@ -1,4 +1,5 @@
 import 'package:nx_people/data/sync/people_assets.dart';
+import 'package:nx_people/data/sync/people_sync_telemetry.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,10 +70,16 @@ final peopleLibrarySyncProvider = Provider<SyncSupervisor<int>?>((ref) {
   if (store == null) return null;
   final uploader = ref.watch(peopleOutboxProvider);
   final assets = ref.watch(peopleAssetsProvider);
+  final telemetry = ref.watch(peopleSyncTelemetryProvider);
   final sync = SyncSupervisor<int>(
     reconciler: PeopleReconciler(
       store,
-      AppSyncClient(ref.watch(graphqlClientProvider), 'people').session,
+      AppSyncClient(
+        ref.watch(graphqlClientProvider),
+        'people',
+        telemetry: telemetry?.record,
+      ).session,
+      telemetry: telemetry?.record,
       syncAssets: () async {
         // Media cannot hold up a later log/profile invalidation.
         unawaited(assets!.synchronize(await store.all()));
@@ -127,6 +134,7 @@ final peopleDataRepositoryProvider = Provider<PeopleDataRepository?>((ref) {
 
 final peopleDataSessionProvider = Provider<AppDataSession?>((ref) {
   final sync = ref.watch(peopleLibrarySyncProvider);
+  final telemetry = ref.watch(peopleSyncTelemetryProvider);
   return createAppSession(
     ref,
     onlineChanges: sync == null
@@ -149,6 +157,7 @@ final peopleDataSessionProvider = Provider<AppDataSession?>((ref) {
     offline: sync == null
         ? null
         : PersistentSyncBackend((reason) async {
+            telemetry?.record('check_requested', {'reason': reason.toString()});
             await sync.requestFull(reason);
           }),
   );
