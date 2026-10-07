@@ -206,7 +206,14 @@ void main() {
     final telemetry =
         File('${root.path}/restarted/sd/telemetry/outbox/demo.jsonl');
     await telemetry.parent.create(recursive: true);
-    await telemetry.writeAsString(List.filled(1000, '{"demo":true}\n').join());
+    await telemetry.writeAsString(List.generate(
+            1000,
+            (i) => jsonEncode({
+                  'origin': i.isEven ? 'esp32' : 'nrf53',
+                  'event_name': 'telemetry_e2e_packet',
+                  'payload': {'packet_id': i, 'turnkey': 'e2e:telemetry'},
+                })).join('\n') +
+        '\nnot-json\n');
     await advance(20000);
     for (final key in ['photo', 'audio', 'audio_new']) {
       final id = config[key]['file_id'];
@@ -231,6 +238,8 @@ void main() {
     expect(telemetry.existsSync(), false);
     expect(socket.resumedPartial, true,
         reason: 'Backend resumes partial telemetry after WebSocket reconnect');
+    config['telemetry_file_id'] = telemetryManifest.id;
+    await File(configPath).writeAsString(jsonEncode(config));
     print('WebSocket transfer artifacts: ${root.path}');
   },
       skip: binary == null || configPath == null
