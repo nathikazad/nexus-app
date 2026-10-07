@@ -424,9 +424,8 @@ class NativeDrawingActivity : Activity() {
         list.removeAllViews()
         charactersScroll?.scrollTo(0, 0)
         if (!show) return
-        val onlyContains = listOf("examples", "derivedExamples", "similar").all { (card[it] as? List<*>)?.isNotEmpty() != true }
         val availableWidth = (charactersScroll?.width?.takeIf { it > 0 } ?: (resources.displayMetrics.widthPixels - dp(32)))
-        val columns = if (onlyContains) (availableWidth / dp((230 * resources.configuration.fontScale).roundToInt())).coerceIn(1, 6) else 1
+        val columns = (availableWidth / dp((230 * resources.configuration.fontScale).roundToInt())).coerceIn(1, 6)
         val cellWidth = (availableWidth - dp(10) * (columns - 1)) / columns
         var row: LinearLayout? = null
         characters.forEachIndexed { characterIndex, item ->
@@ -467,18 +466,13 @@ class NativeDrawingActivity : Activity() {
                     setPadding(0, dp(5), 0, 0)
                 })
             }
-            if (onlyContains) {
-                entry.setPadding(dp(12), dp(12), dp(12), dp(12))
-                entry.background = GradientDrawable().apply { setColor(Color.WHITE); setStroke(dp(1), Color.LTGRAY); cornerRadius = dp(12).toFloat() }
-                if (characterIndex % columns == 0) {
-                    row = LinearLayout(this)
-                    list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-                }
-                row!!.addView(entry, LinearLayout.LayoutParams(cellWidth, -2).apply { if (characterIndex % columns != columns - 1) rightMargin = dp(10) })
-            } else {
-                list.addView(entry, LinearLayout.LayoutParams(-1, -2))
-                list.addView(View(this).apply { setBackgroundColor(Color.LTGRAY) }, LinearLayout.LayoutParams(-1, dp(1)))
+            entry.setPadding(dp(12), dp(12), dp(12), dp(12))
+            entry.background = GradientDrawable().apply { setColor(Color.WHITE); setStroke(dp(1), Color.LTGRAY); cornerRadius = dp(12).toFloat() }
+            if (characterIndex % columns == 0) {
+                row = LinearLayout(this)
+                list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
             }
+            row!!.addView(entry, LinearLayout.LayoutParams(cellWidth, -2).apply { if (characterIndex % columns != columns - 1) rightMargin = dp(10) })
         }
     }
     private fun control(label: String, icon: String, enabled: Boolean = true, action: () -> Unit) {

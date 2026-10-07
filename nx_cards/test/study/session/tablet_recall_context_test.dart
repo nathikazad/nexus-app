@@ -47,7 +47,7 @@ void main() {
   for (final width in [320.0, 760.0]) {
     for (final withExamples in [false, true]) {
       testWidgets(
-        'Contains wraps only when alone: width=$width examples=$withExamples',
+        'Contains wraps regardless of other tabs: width=$width examples=$withExamples',
         (tester) async {
           tester.view.devicePixelRatio = 1;
           tester.view.physicalSize = Size(width, 1100);
@@ -99,7 +99,7 @@ void main() {
           final first = tester.getTopLeft(find.text('甲'));
           final second = tester.getTopLeft(find.text('乙'));
           final fourth = tester.getTopLeft(find.text('丁'));
-          if (!withExamples && width > 600) {
+          if (width > 600) {
             expect(second.dy, first.dy);
             expect(second.dx, greaterThan(first.dx));
             expect(fourth.dy, greaterThan(first.dy));

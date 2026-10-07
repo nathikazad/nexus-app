@@ -116,8 +116,7 @@ class _TabletRecallContextState extends ConsumerState<TabletRecallContext> {
         ),
       if (!widget.card.spokenOnly && _parts.isNotEmpty)
         'Contains': LanguageExamples(
-          wrapCards:
-              content.examples.isEmpty && _derived.isEmpty && _similar.isEmpty,
+          wrapCards: true,
           examples: [
             for (final part in _parts)
               LanguageExample(
