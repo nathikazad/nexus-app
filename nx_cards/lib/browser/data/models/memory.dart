@@ -7,6 +7,20 @@ class CardReview {
     required this.scheduledSeconds,
   });
 
+  /// Contextual credits use a deterministic ID so retries cannot duplicate them.
+  /// Kept inside the existing opaque ID contract (no schema migration needed).
+  static String phraseCreditId(int phraseId, String reviewId) =>
+      'phrase/$phraseId/$reviewId';
+
+  int? get sourcePhraseId {
+    final parts = id.split('/');
+    return parts.length >= 3 && parts.first == 'phrase'
+        ? int.tryParse(parts[1])
+        : null;
+  }
+
+  bool get isPhraseCredit => sourcePhraseId != null;
+
   final String id;
   final DateTime reviewedAt;
 

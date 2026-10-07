@@ -143,7 +143,9 @@ ProgressAnalysis analyzeProgress({
       }
       final date = progressDay(time);
       if (time.isBefore(firstDay)) openingCount = atTarget.length;
-      counts[date] = (counts[date] ?? 0) + 1;
+      if (!event.review.isPhraseCredit) {
+        counts[date] = (counts[date] ?? 0) + 1;
+      }
     }
     days.add(
       ProgressDay(day, atTarget.length, reached.length, counts[day] ?? 0),

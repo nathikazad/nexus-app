@@ -1063,11 +1063,13 @@ class _SelectedReview extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                [
-                  if (elapsed > Duration.zero)
-                    'After ${_formatInterval(elapsed)}',
-                  'next ${_formatInterval(next)}',
-                ].join(' · '),
+                review.isPhraseCredit
+                    ? 'Within a phrase · schedule unchanged'
+                    : [
+                        if (elapsed > Duration.zero)
+                          'After ${_formatInterval(elapsed)}',
+                        'next ${_formatInterval(next)}',
+                      ].join(' · '),
                 style: const TextStyle(fontSize: 12, color: RecallColors.muted),
               ),
             ],

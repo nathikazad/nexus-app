@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/phrase_credit.dart';
 import 'package:nx_db/app_reads.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_mapper.dart';
@@ -205,6 +206,23 @@ class KgqlCardApi implements CardLibrary {
 
   @override
   Future<void> saveSchedule(StudyCard card) async {
+    reads?.invalidate();
+    final cards = {for (final card in await _readCards()) card.id: card};
+    final updates = await planRecallSave(card, (id) async {
+      final current = cards[id];
+      if (current == null) throw StateError('Card $id is unavailable.');
+      return current;
+    });
+    try {
+      for (final update in updates) {
+        await _saveRecallCard(update);
+      }
+    } finally {
+      reads?.invalidate();
+    }
+  }
+
+  Future<void> _saveRecallCard(StudyCard card) async {
     await setKgqlModel(
       _client,
       SetModelRequest(

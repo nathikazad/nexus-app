@@ -41,3 +41,8 @@ abstract interface class HashCardsStore {
 abstract interface class CardAudioAssetsReader {
   Future<List<AudioAsset>> readAudioAssets();
 }
+
+/// Groups related recall edits and their outbox entries in one commit.
+abstract interface class TransactionalCardsStore {
+  Future<T> transaction<T>(Future<T> Function() operation);
+}

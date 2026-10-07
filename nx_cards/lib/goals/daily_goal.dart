@@ -18,7 +18,9 @@ Map<DateTime, int> dailyRecallCounts(List<StudyCard> cards, DateTime now) {
     final seen = <(StudyCue, String)>{};
     for (final cue in card.directions) {
       for (final review in card.reviewHistoryFor(cue)) {
-        if (review.reviewedAt.isAfter(now) || !seen.add((cue, review.id))) {
+        if (review.isPhraseCredit ||
+            review.reviewedAt.isAfter(now) ||
+            !seen.add((cue, review.id))) {
           continue;
         }
         final time = review.reviewedAt.toLocal();

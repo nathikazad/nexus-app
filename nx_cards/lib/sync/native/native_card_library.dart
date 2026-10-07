@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/phrase_credit.dart';
 import 'package:nx_cards/sync/native/cards_uploader.dart';
 import 'package:nx_cards/sync/remote/cards_sync_transport.dart';
 import 'package:nx_cards/scheduling/clock.dart';
@@ -90,17 +91,20 @@ final class NativeCardLibrary implements CardWorkspace {
 
   @override
   Future<void> saveSchedule(StudyCard card) async {
-    if (card.isSummary) {
-      throw StateError('Load the full card before reviewing.');
+    Future<void> save() async {
+      final updates = await planRecallSave(card, _requireCard);
+      for (final update in updates) {
+        await _enqueue(update, offline.MutationType.update, upload: false);
+      }
     }
-    final existing = await _requireCard(card.id);
-    await _enqueue(
-      existing.copyWith(
-        schedules: card.schedules,
-        reviewHistory: card.reviewHistory,
-      ),
-      offline.MutationType.update,
-    );
+
+    final store = _localStore;
+    if (store is TransactionalCardsStore) {
+      await (store as TransactionalCardsStore).transaction(save);
+    } else {
+      await save();
+    }
+    _uploader?.schedule();
   }
 
   @override
@@ -137,7 +141,11 @@ final class NativeCardLibrary implements CardWorkspace {
     await _enqueue(await _requireCard(id), offline.MutationType.delete);
   }
 
-  Future<void> _enqueue(StudyCard card, offline.MutationType type) async {
+  Future<void> _enqueue(
+    StudyCard card,
+    offline.MutationType type, {
+    bool upload = true,
+  }) async {
     final now = _clock.now().toUtc();
     final updatedAt = card.updatedAt;
     final editTime = updatedAt != null && !now.isAfter(updatedAt)
@@ -149,7 +157,7 @@ final class NativeCardLibrary implements CardWorkspace {
       mutationType: type,
       createdAt: editTime,
     );
-    _uploader?.schedule();
+    if (upload) _uploader?.schedule();
   }
 
   Future<StudyCard> _requireCard(int cardId) async {

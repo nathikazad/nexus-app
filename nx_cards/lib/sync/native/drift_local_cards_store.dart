@@ -17,6 +17,7 @@ import 'package:nx_offline/nx_offline_drift.dart';
 final class DriftLocalCardsStore
     implements
         LocalCardsStore,
+        TransactionalCardsStore,
         QueuedCardReader,
         HashCardsStore,
         CardAudioAssetsReader {
@@ -26,6 +27,10 @@ final class DriftLocalCardsStore
     this.files,
     this.mapper = const DriftCardsMapper(),
   });
+
+  @override
+  Future<T> transaction<T>(Future<T> Function() operation) =>
+      database.transaction(operation);
 
   final CardsDatabase database;
   final ContentFiles? files;
