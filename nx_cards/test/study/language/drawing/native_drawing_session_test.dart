@@ -226,7 +226,7 @@ void main() {
       practice['examples'],
     );
   });
-  test('character breakdown follows saved links in reading order safely', () {
+  test('Contains preserves phrase to word to character levels', () {
     StudyCard part(int id, String text, Set<int> links) => StudyCard(
       id: id,
       content: LanguageCardContent(
@@ -246,7 +246,7 @@ void main() {
       suspended: false,
     );
     final phrase = part(10, '学生。', {11, 999});
-    final word = part(11, '学生', {13, 12, 10});
+    final word = part(11, '学生', {13, 12});
     final first = part(12, '学', {});
     final second = part(13, '生', {});
     final unlinked = part(14, '学', {});
@@ -254,12 +254,16 @@ void main() {
       for (final item in [phrase, word, first, second, unlinked]) item.id: item,
     };
     final cards = NativeDrawingSession.characterCards(phrase, library);
-    expect(cards.map((c) => c.id), [12, 13]);
+    expect(cards.map((c) => c.id), [11]);
+    expect(
+      NativeDrawingSession.characterCards(word, library).map((c) => c.id),
+      [12, 13],
+    );
     final ids = {
       for (final card in cards) card.content as LanguageCardContent: card.id,
     };
     final parts = NativeDrawingSession.characterParts(phrase, library);
-    expect(parts.map((p) => p.originalScript), ['学', '生']);
+    expect(parts.map((p) => p.originalScript), ['学生']);
     final payload = NativeDrawingSession.practiceCard(
       phrase,
       characters: parts,
@@ -267,10 +271,10 @@ void main() {
     );
     expect(payload['multiCharacter'], isTrue);
     expect((payload['characters'] as List).first, {
-      'cardId': 12,
-      'text': '学',
-      'transliteration': 'sound 12',
-      'translation': 'meaning 12',
+      'cardId': 11,
+      'text': '学生',
+      'transliteration': 'sound 11',
+      'translation': 'meaning 11',
       'audio': true,
     });
     expect(

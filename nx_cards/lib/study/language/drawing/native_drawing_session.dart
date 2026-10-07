@@ -75,7 +75,7 @@ class NativeDrawingSession {
     return results;
   }
 
-  /// Follow saved Contains links only, including phrase -> word -> character.
+  /// Show direct Contains links: phrases show words, words show characters.
   static List<LanguageCardContent> characterParts(
     StudyCard card,
     Map<int, StudyCard> library,
@@ -91,35 +91,35 @@ class NativeDrawingSession {
     final content = card.content as LanguageCardContent;
     final letters = content.originalScript.trim().characters.toList();
     if (letters.length <= 1) return const [];
-    final visited = <int>{card.id};
     final parts = <StudyCard>[];
-    void visit(StudyCard parent) {
-      for (final id in parent.linkedWordIds) {
-        if (!visited.add(id)) continue;
-        final child = library[id];
-        if (child == null || child.content is! LanguageCardContent) continue;
-        final part = child.content as LanguageCardContent;
-        final text = part.originalScript.trim();
-        if (text.characters.length == 1) {
-          // Match whole written letters, not a consonant hidden inside a
-          // combined letter. Stop here so வீ stays வீ, rather than வ் + ஈ.
-          if (letters.contains(text)) parts.add(child);
-          continue;
-        }
-        visit(child);
+    for (final id in card.linkedWordIds) {
+      final child = library[id];
+      if (id == card.id ||
+          child == null ||
+          child.content is! LanguageCardContent) {
+        continue;
       }
+      final text = (child.content as LanguageCardContent).originalScript.trim();
+      // Match whole written letters, preserving combined Tamil letters.
+      if (text.characters.length == 1 && !letters.contains(text)) continue;
+      parts.add(child);
+    }
+    final originalOrder = {
+      for (var i = 0; i < parts.length; i++) parts[i].id: i,
+    };
+    int position(StudyCard child) {
+      final index = content.originalScript.indexOf(
+        (child.content as LanguageCardContent).originalScript.trim(),
+      );
+      return index < 0 ? content.originalScript.length : index;
     }
 
-    visit(card);
-    parts.sort(
-      (a, b) => letters
-          .indexOf((a.content as LanguageCardContent).originalScript.trim())
-          .compareTo(
-            letters.indexOf(
-              (b.content as LanguageCardContent).originalScript.trim(),
-            ),
-          ),
-    );
+    parts.sort((a, b) {
+      final order = position(a).compareTo(position(b));
+      return order != 0
+          ? order
+          : originalOrder[a.id]!.compareTo(originalOrder[b.id]!);
+    });
     return parts;
   }
 
