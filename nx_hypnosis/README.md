@@ -33,7 +33,7 @@ Use this exact origin for the web preview. A hosted web release needs its own
 registered HTTPS callback; do not change the port without updating registration.
 Native apps use `nx-hypnosis://oauth/callback`. macOS uses the existing Nexus
 Apple development team for Keychain support. Physical iOS releases follow the
-parent repository's Shorebird policy.
+parent repository's [direct-install policy](../AGENTS.md).
 
 ## Backend
 
@@ -60,11 +60,10 @@ flutter build ios --simulator --debug
 
 ## iPhone releases
 
-Shorebird app `63b1569e-58ac-47a7-86af-fcc92ff4cf72` is initialized.
-Create a development-signed base with
-`scripts/shorebird_apps.sh release nx_hypnosis --export-method development --flutter-version 3.44.4`.
-Install the exported application with Xcode device tools. Subsequent compatible
-Dart-only changes can use `scripts/shorebird_apps.sh patch nx_hypnosis`.
+For a paired iPhone, use `scripts/install_ios.sh nx_hypnosis --device DEVICE_ID`
+from `mobile/`. This builds a signed release and installs it directly over Wi-Fi.
+See [installation instructions](../scripts/README.md). Shorebird remains optional
+when explicitly requested; use `scripts/shorebird_apps.sh` in that case.
 
 ## Offline storage
 
@@ -90,7 +89,7 @@ audio. Downloads must finish before a recording can be played offline.
 Creating, editing, and deleting records still use the existing online API; they
 are not queued offline. Successful responses update the local collection.
 Web retains its online storage behavior. Native SQLite/connectivity dependencies
-require a new Shorebird release for physical iOS installation, rather than a patch.
+require a full build/install. If explicitly using Shorebird, create a new base release rather than a patch.
 
 Validation: `flutter analyze`, `flutter test`, and
 `flutter build ios --release --no-codesign`. Cache tests cover offline restarts,

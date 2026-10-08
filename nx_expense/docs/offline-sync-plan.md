@@ -191,4 +191,6 @@ only after the new path passes recovery tests.
    library persistence. Run native and web builds plus physical-device checks.
 
 Deployment follows tested server/client compatibility. Any new native dependency
-requires a new Shorebird base; Dart-only updates can use a compatible patch.
+requires a full build/install. Direct iPhone installs use `scripts/install_ios.sh`;
+when Shorebird is explicitly requested, native changes require a new base and
+Dart-only updates can use a compatible patch.

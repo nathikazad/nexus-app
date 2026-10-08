@@ -5,18 +5,24 @@
   CocoaPods post-install deployment targets aligned; Xcode 27 rejects older
   targets. New projects must use the same minimum.
 
-- Physical iOS installations must be Shorebird-enabled by default. The only
-  exception is when the user explicitly asks for a debug installation for
-  quick edits, hot reload, or rapid visual iteration; in that case, use
-  `flutter run` on the requested physical device and keep the session alive.
-- Never install an iOS release using `flutter run --release` or `flutter install`.
-  The explicit debug/hot-reload exception above permits debug `flutter run`
-  only; it does not permit a non-Shorebird release installation.
-- If the device does not already have a compatible Shorebird base, create one with `shorebird release ios` and install that build.
-- For Dart-only changes against an installed compatible Shorebird base, use `shorebird patch ios`.
-- Before patching, verify the installed build number has a corresponding Shorebird release.
-- Native dependency, entitlement, plist, Pod, or engine changes require a new Shorebird release rather than a patch.
-- `nx_cards` AI study and `nx_docs` live conversations require `OPENAI_API_KEY` at compile time. The Shorebird wrapper validates the Git-ignored `nx_modules/nx_live_agent/.env` and passes `--dart-define-from-file=../nx_modules/nx_live_agent/.env` automatically for every release or patch; verify the key exists and never commit it.
+- For installations on Nathik's connected iPhone, default to a normal Flutter
+  release build installed directly over Wi-Fi using Apple `devicectl`.
+  Use `scripts/install_ios.sh APP --device DEVICE_ID -- [Flutter build options]`.
+  Select the intended device explicitly; never guess among connected phones.
+- Preserve build caches. Do not routinely run `flutter clean`, archive/export
+  an IPA, or use Shorebird for a direct phone update. Use the standard Flutter
+  SDK, not the Shorebird SDK cache. The script verifies signing, installs the
+  `.app`, verifies its installed version, and launches it without uninstalling.
+- Use debug/hot reload only when explicitly requested. Debug use does not
+  prevent a later release install.
+- Shorebird is optional and must be explicitly requested. When requested, use
+  `scripts/shorebird_apps.sh`: verify the matching installed base before a
+  Dart-only patch; native/assets changes require a full release installation.
+- Preserve app-specific build flags (flavors, targets, Dart defines, signing).
+  The direct-install and Shorebird scripts both validate the ignored
+  `nx_modules/nx_live_agent/.env` for `nx_cards` and `nx_docs` and pass its
+  `OPENAI_API_KEY` at compile time. Never print or commit credentials.
+- See [direct iOS installation](scripts/README.md) for usage and verification.
 
 ## macOS installation policy
 

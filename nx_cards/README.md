@@ -131,11 +131,13 @@ text in the grid.
 
 AI study requires `OPENAI_API_KEY` from the Git-ignored
 `../nx_modules/nx_live_agent/.env`. Release compilation fails when the Dart define is
-missing. The shared Shorebird release and patch commands validate that file
+missing. Both direct-install and optional Shorebird commands validate that file
 and pass it automatically:
 
 ```text
 # Run from mobile/.
+scripts/install_ios.sh nx_cards --device DEVICE_ID
+# Only when Shorebird is explicitly requested:
 scripts/shorebird_apps.sh release nx_cards
 scripts/shorebird_apps.sh patch nx_cards
 ```

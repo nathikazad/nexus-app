@@ -93,7 +93,8 @@ live in the floating panel rather than a second inspector conversation instance.
 
 The native browser adds a CocoaPods dependency on macOS and requires macOS 12
 or newer for the current Xcode toolchain. Changes to this native dependency
-require a new iOS Shorebird base release before installation.
+require a full iOS build/install with `scripts/install_ios.sh nx_docs --device DEVICE_ID`
+from `mobile/`. If explicitly using Shorebird, create a new base release.
 
 ## Web deployment
 
