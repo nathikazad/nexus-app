@@ -1,3 +1,4 @@
+import 'audio_page.dart';
 import 'package:flutter/material.dart';
 import 'package:nexus_voice_assistant/features/data_browser/battery_page.dart';
 import 'package:nexus_voice_assistant/features/data_browser/gps_page.dart';
@@ -15,6 +16,12 @@ class DataPage extends StatelessWidget {
       ),
       body: ListView(
         children: [
+          ListTile(
+              leading: const Icon(Icons.audiotrack),
+              title: const Text('Necklace audio'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const NecklaceAudioPage()))),
           ListTile(
             leading: const Icon(Icons.camera_alt),
             title: const Text('Necklace images'),

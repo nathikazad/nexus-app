@@ -1,3 +1,4 @@
+import '../diagnostics/necklace_diagnostics.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -109,6 +110,8 @@ class SocketClient implements NecklaceSocketPort {
   }
 
   Future<bool> _connect({bool forceRefresh = false}) async {
+    NecklaceDiagnostics.instance.record('socket.connect_start',
+        {'configured': _url != null, 'refresh': forceRefresh});
     if (_url == null) {
       debugPrint("[Socket] No URL provided");
       return false;
@@ -141,6 +144,7 @@ class SocketClient implements NecklaceSocketPort {
         return false;
       }
       _isConnected = true;
+      NecklaceDiagnostics.instance.record('socket.connected');
 
       debugPrint("[Socket] Connected to $_url");
 
@@ -181,11 +185,15 @@ class SocketClient implements NecklaceSocketPort {
         },
         onError: (error) {
           if (generation != _generation) return;
+          NecklaceDiagnostics.instance
+              .record('socket.error', {'type': error.runtimeType.toString()});
           debugPrint("[Socket] Error: $error");
           _handleDisconnection();
         },
         onDone: () {
           if (generation != _generation) return;
+          NecklaceDiagnostics.instance
+              .record('socket.closed', {'code': channel?.closeCode});
           debugPrint("[Socket] Connection closed");
           _handleDisconnection();
         },
@@ -203,6 +211,8 @@ class SocketClient implements NecklaceSocketPort {
         debugPrint('[Socket] Initial connection failed; refreshing session');
         return _connect(forceRefresh: true);
       }
+      NecklaceDiagnostics.instance
+          .record('socket.connect_failed', {'type': e.runtimeType.toString()});
       debugPrint("[Socket] Connection failed: $e");
       _isConnected = false;
       _channel = null;
@@ -243,9 +253,20 @@ class SocketClient implements NecklaceSocketPort {
       // Send as binary data without index
       _channel!.sink.add(data);
     }
+    NecklaceDiagnostics.instance.record('socket.sink_accepted', {
+      'bytes': data.length,
+      'index': index,
+      'header': index == null && data.length >= 2 ? data[0] | (data[1] << 8) : 1
+    });
   }
 
   void _queuePacket(Uint8List data, int? index) {
+    NecklaceDiagnostics.instance.record('socket.queued', {
+      'bytes': data.length,
+      'index': index,
+      'queue': _packetQueue.length,
+      'configured': _url != null
+    });
     // Never retain packets without an explicitly selected session.
     if (_url == null) return;
     // Limit queue size to prevent memory issues
@@ -395,6 +416,7 @@ class SocketClient implements NecklaceSocketPort {
   /// Format: [header_type 2B][index 4B]. Header type 0xFFFC.
   void sendAudioEofPacket(int index) {
     if (!_isConnected || _channel == null) {
+      NecklaceDiagnostics.instance.record('socket.eof_not_connected');
       debugPrint("[Socket] Cannot send AUDIO_EOF packet: not connected");
       return;
     }
@@ -409,6 +431,8 @@ class SocketClient implements NecklaceSocketPort {
       byteData.setUint32(2, index, Endian.little);
 
       _channel!.sink.add(packet);
+      NecklaceDiagnostics.instance
+          .record('socket.eof_sink_accepted', {'index': index});
       debugPrint("[Socket] Sent AUDIO_EOF packet #$index");
     } catch (e) {
       debugPrint("[Socket] Error sending AUDIO_EOF packet: $e");

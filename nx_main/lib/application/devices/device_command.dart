@@ -1,6 +1,8 @@
 /// These names are the existing isolate wire contract; do not rename casually.
 enum DeviceCommandKind {
   identityExchange,
+  writeAudioControl,
+  readAudioStatus,
   writeHaptic,
   writeCamera,
   readBattery,

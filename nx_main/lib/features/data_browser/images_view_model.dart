@@ -235,8 +235,7 @@ class ImagesViewNotifier extends Notifier<ImagesViewState> {
   DateTime _initialSelected(List<DateTime> dates) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    if (dates.contains(today)) return today;
-    if (dates.isNotEmpty) return dates.first;
+    if (dates.isNotEmpty) return dates.last;
     return today;
   }
 

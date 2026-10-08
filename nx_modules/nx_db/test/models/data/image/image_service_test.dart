@@ -45,6 +45,16 @@ void main() {
   });
 
   group('fetchImagesForDay', () {
+    test('keeps ID-named device images using explicit timestamp metadata', () async {
+      final mock = MockClient((request) async => http.Response(
+        '{"images":[{"url":"/images/file?name=68b900eb50c09db49311da7f529410e6.jpg&device_id=4e0b9db6-c3ea-4051-9638-3b989d0cb4ee","time":"2026-10-08T02:13:43.087162"}]}', 200));
+      final images = await fetchImagesForDay('https://nexus.kgql.io', '1',
+        'necklace', DateTime(2026,10,8), httpClient: mock);
+      expect(images, hasLength(1));
+      expect(images.single.minutesSinceMidnight, closeTo(133 + 43/60, 0.001));
+      expect(Uri.parse(images.single.url).queryParameters['device_id'],
+        '4e0b9db6-c3ea-4051-9638-3b989d0cb4ee');
+    });
     test('parses image entries with time from filename', () async {
       final mock = MockClient((request) async {
         return http.Response('''

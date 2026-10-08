@@ -117,6 +117,10 @@ class HardwareService {
     return await _bgService.writeCamera(data);
   }
 
+  Future<bool> writeAudioControl(int operation) =>
+      _bgService.writeAudioControl(operation);
+  Future<List<int>?> readAudioStatus() => _bgService.readAudioStatus();
+
   /// Read auto photo-record status (poll; device does not notify).
   Future<CameraRecordStatus?> readCameraRecordStatus() async {
     final st = await _bgService.readCameraStatus();

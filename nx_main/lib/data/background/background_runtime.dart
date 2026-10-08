@@ -1,3 +1,4 @@
+import '../diagnostics/necklace_diagnostics.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -38,6 +39,7 @@ class BackgroundRuntime {
     // 1. INITIALIZATION
     // ============================================================================
 
+    NecklaceDiagnostics.instance.record('runtime.start', {'version': 1});
     final bleClient = device ?? BleClient();
     final socketClient = socket ?? SocketClient();
     GpsUploadManager? gpsUploadManager;
@@ -419,6 +421,17 @@ class BackgroundRuntime {
 
       try {
         switch (request.kind) {
+          case DeviceCommandKind.writeAudioControl:
+            final bytes = request.bytes;
+            sendResult(
+                success: bytes != null &&
+                    bytes.length == 1 &&
+                    await bleClient.writeAudioControl(bytes.single));
+            break;
+          case DeviceCommandKind.readAudioStatus:
+            final status = await bleClient.readAudioStatus();
+            sendResult(success: status != null, bytes: status);
+            break;
           case DeviceCommandKind.identityExchange:
             if (request.name == null ||
                 bleClient.device?.remoteId.str != request.name) {

@@ -1,3 +1,4 @@
+import '../diagnostics/necklace_diagnostics.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:typed_data';
@@ -134,6 +135,7 @@ class BleClient {
 
   void _setState(BleConnectionState newState) {
     _state = newState;
+    NecklaceDiagnostics.instance.record('ble.state', {'state': newState.name});
     onConnectionStateChanged?.call(newState);
   }
 
@@ -519,11 +521,13 @@ class BleClient {
   Future<void> _subscribeToAudioNotifications(
       void Function() checkCurrent) async {
     if (_audioTxCharacteristic == null) {
+      NecklaceDiagnostics.instance.record('ble.audio_subscription_missing');
       _log('Cannot subscribe: Audio TX characteristic not found');
       return;
     }
 
     try {
+      NecklaceDiagnostics.instance.record('ble.audio_subscription_start');
       await _audioTxCharacteristic!.setNotifyValue(true);
       checkCurrent();
 
@@ -538,11 +542,16 @@ class BleClient {
           _handleAudioNotification(data);
         },
         onError: (error) {
+          NecklaceDiagnostics.instance.record('ble.audio_notification_error',
+              {'type': error.runtimeType.toString()});
           _log('Notification error: $error');
           onError?.call('Notification error: $error');
         },
       );
+      NecklaceDiagnostics.instance.record('ble.audio_subscription_ready');
     } catch (e) {
+      NecklaceDiagnostics.instance.record(
+          'ble.audio_subscription_failed', {'type': e.runtimeType.toString()});
       _log('Error subscribing to notifications: $e');
       onError?.call('Error subscribing: $e');
       rethrow;
@@ -550,6 +559,11 @@ class BleClient {
   }
 
   void _handleAudioNotification(Uint8List data) {
+    NecklaceDiagnostics.instance.record('ble.audio_notification', {
+      'bytes': data.length,
+      'header': data.length >= 2 ? data[0] | (data[1] << 8) : null,
+      'callback_attached': onAudioPacketReceived != null,
+    });
     // Forward the raw data via callback
     onAudioPacketReceived?.call(data);
   }
@@ -1018,6 +1032,31 @@ class BleClient {
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<bool> writeAudioControl(int operation) async {
+    if (!isConnected ||
+        _backgroundAudioCharacteristic == null ||
+        operation < 0 ||
+        operation > 4) return false;
+    try {
+      await _backgroundAudioCharacteristic!
+          .write([operation], withoutResponse: false);
+      NecklaceDiagnostics.instance.record(
+          'ble.audio_control', {'operation': operation, 'accepted': true});
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Uint8List?> readAudioStatus() async {
+    if (!isConnected || _backgroundAudioCharacteristic == null) return null;
+    try {
+      return Uint8List.fromList(await _backgroundAudioCharacteristic!.read());
+    } catch (_) {
+      return null;
     }
   }
 

@@ -265,6 +265,18 @@ class BackgroundServiceClient {
 
   /// Write to camera characteristic.
   /// [data] is the raw payload from [CameraCommand.toBytes].
+  Future<bool> writeAudioControl(int operation) async =>
+      await _sendCommand<bool>(
+          command: DeviceCommand(DeviceCommandKind.writeAudioControl,
+              bytes: [operation]),
+          responseParser: (e) => e?.success ?? false,
+          timeoutValue: () => false) ??
+      false;
+  Future<List<int>?> readAudioStatus() => _sendCommand<List<int>>(
+      command: DeviceCommand(DeviceCommandKind.readAudioStatus),
+      responseParser: (e) => e?.success == true ? e?.bytes : null,
+      timeoutValue: () => null);
+
   Future<bool> writeCamera(Uint8List data) async {
     return await _sendCommand<bool>(
           command: DeviceCommand(DeviceCommandKind.writeCamera, bytes: data),

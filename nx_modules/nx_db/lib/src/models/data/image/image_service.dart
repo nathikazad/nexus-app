@@ -151,7 +151,12 @@ Future<List<ImageEntry>> fetchImagesForDay(
       if (url is! String) continue;
       final normalizedUrl = _urlOnBase(url, base);
       final name = Uri.parse(normalizedUrl).queryParameters['name'] ?? '';
-      final m = minutesFromImageFilename(normalizedUrl);
+      final timestamp = item['time'] is String
+          ? DateTime.tryParse(item['time'] as String)
+          : null;
+      final m = timestamp == null
+          ? minutesFromImageFilename(normalizedUrl)
+          : timestamp.hour * 60.0 + timestamp.minute + timestamp.second / 60.0;
       if (m == null) continue;
       final currentApp = item['current_app'] as String?;
       out.add(

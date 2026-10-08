@@ -1,3 +1,4 @@
+import 'widgets/audio_section.dart';
 import 'package:nexus_voice_assistant/features/devices/devices_page.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -486,6 +487,15 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: RefLayout.gap4),
+                        AudioSection(
+                            isConnected: vm.isConnected,
+                            readStatus: ref
+                                .read(hardwareServiceProvider)
+                                .readAudioStatus,
+                            command: ref
+                                .read(hardwareServiceProvider)
+                                .writeAudioControl),
                         const SizedBox(height: RefLayout.gap4),
                         CameraSection(
                           isConnected: vm.isConnected,
