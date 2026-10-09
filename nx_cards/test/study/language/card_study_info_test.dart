@@ -3,35 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/study/language/card_study_info.dart';
 
 void main() {
-  testWidgets('reveal shows controls without moving the writing layout', (
-    tester,
-  ) async {
-    var opened = false;
-    Widget page(bool visible) => MaterialApp(
-      home: Scaffold(
-        body: Column(
-          children: [
-            CardStudyInfo(
-              spokenOnly: true,
-              visible: visible,
-              onOpen: () => opened = true,
-            ),
-            const SizedBox(key: ValueKey('writing'), width: 240, height: 200),
-          ],
-        ),
-      ),
-    );
-    await tester.pumpWidget(page(false));
-    final before = tester.getRect(find.byKey(const ValueKey('writing')));
-    expect(find.byTooltip('Card details').hitTestable(), findsNothing);
-    expect(find.text('Audio only').hitTestable(), findsNothing);
-    await tester.pumpWidget(page(true));
-    expect(tester.getRect(find.byKey(const ValueKey('writing'))), before);
-    expect(find.text('Audio only').hitTestable(), findsOneWidget);
-    await tester.tap(find.byTooltip('Card details'));
-    expect(opened, isTrue);
-  });
-
   for (final spoken in [false, true]) {
     testWidgets('details is available with audio-only=$spoken', (tester) async {
       var opened = false;

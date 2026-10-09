@@ -191,7 +191,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                           total: _prompts.length,
                           onEnd: _endReview,
                           spokenOnly: _card.spokenOnly,
-                          revealed: _revealed,
                           onOpen: _openCardDetails,
                         ),
                         const SizedBox(height: 14),
@@ -477,12 +476,11 @@ class _StudyHeader extends StatelessWidget {
     required this.total,
     required this.onEnd,
     required this.spokenOnly,
-    required this.revealed,
     required this.onOpen,
   });
   final String title;
   final int current, total;
-  final bool spokenOnly, revealed;
+  final bool spokenOnly;
   final VoidCallback onEnd, onOpen;
   @override
   Widget build(BuildContext context) => Column(
@@ -508,11 +506,7 @@ class _StudyHeader extends StatelessWidget {
       Row(
         children: [
           Expanded(child: Text('$current of $total', style: monoLabel)),
-          CardStudyInfo(
-            spokenOnly: spokenOnly,
-            onOpen: onOpen,
-            visible: revealed,
-          ),
+          CardStudyInfo(spokenOnly: spokenOnly, onOpen: onOpen),
         ],
       ),
     ],

@@ -189,8 +189,8 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCard(): Unit = RecallDiagnostics.measure("card_bind") {
         progress.text = "${index + 1} of ${cards.size}"
-        audioOnlyBadge.visibility = if (card["spokenOnly"] != true) View.GONE else if (!recall || revealed) View.VISIBLE else View.INVISIBLE
-        cardInfo.visibility = if (!recall || revealed) View.VISIBLE else View.INVISIBLE
+        audioOnlyBadge.visibility = if (card["spokenOnly"] == true) View.VISIBLE else View.GONE
+        cardInfo.visibility = View.VISIBLE
         if ((recall && !revealed || !recall && card["practiceDirection"] == true) && card["listening"] == true && listeningIndex != index) {
             listeningIndex = index
             val expectedIndex = index

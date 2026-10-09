@@ -351,7 +351,6 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                     ),
                     CardStudyInfo(
                       spokenOnly: prompt.card.spokenOnly,
-                      visible: _revealed,
                       onOpen: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => CardDetailsPage(
