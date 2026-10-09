@@ -1,13 +1,25 @@
 package com.nexus.nx_cards
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import kotlin.math.roundToInt
 import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 
 /** Owns one renderer and keeps selection/fallback out of the study UI. */
 internal class InkPanelHost(context: Context, private val report: (String) -> Unit) : DrawingInkPanel {
-    private val host = FrameLayout(context)
+    private val host = FrameLayout(context).apply {
+        val borderWidth = resources.displayMetrics.density.roundToInt().coerceAtLeast(1)
+        background = GradientDrawable().apply {
+            setColor(Color.WHITE)
+            setStroke(borderWidth, Color.rgb(161, 161, 170))
+        }
+        // Keep the opaque pen surface inside the border so it cannot cover it.
+        // This inset stays fixed across reveal, clearing and renderer fallback.
+        setPadding(borderWidth, borderWidth, borderWidth, borderWidth)
+    }
     private var panel: DrawingInkPanel? = null
     private var resumed = true
     private var closed = false

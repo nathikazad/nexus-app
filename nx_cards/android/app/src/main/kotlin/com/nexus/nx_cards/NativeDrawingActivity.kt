@@ -86,6 +86,11 @@ class NativeDrawingActivity : Activity() {
             require(cards.isNotEmpty())
             index = (input["initialIndex"] as? Int ?: 0).coerceIn(0, cards.lastIndex)
             recall = input["recall"] == true
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT
+                ) { handleSystemBack() }
+            }
             grouped = input["grouped"] == true
             val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(16), dp(8), dp(16), dp(8)) }
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
@@ -556,7 +561,12 @@ class NativeDrawingActivity : Activity() {
         })
     }
     @Deprecated("Deprecated in Java")
-    override fun onBackPressed() { if (!busy || loadingCard) super.onBackPressed() }
+    override fun onBackPressed() { handleSystemBack() }
+    private fun handleSystemBack() {
+        // Edge swipes and the system Back button must not discard a recall.
+        // Explicit End still confirms; completing the last card still finishes.
+        if (!recall && (!busy || loadingCard)) finish()
+    }
 
     // Grouped recall only records completion here. Its separate Flutter screen
     // accepts one group decision and writes retention after comparing the group.
@@ -641,11 +651,34 @@ class NativeDrawingActivity : Activity() {
     private fun requestEnd() {
         if (!recall) { finish(); return }
         if (endConfirmation != null || isFinishing || isDestroyed) return
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), dp(24))
+        }
+        fun action(label: String, filled: Boolean, clicked: () -> Unit) = Button(this).apply {
+            text = label; isAllCaps = false; textSize = 16f
+            setTextColor(if (filled) Color.WHITE else Color.rgb(39, 39, 42))
+            val shape = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(if (filled) Color.rgb(39, 39, 42) else Color.WHITE)
+                setStroke(dp(1), Color.rgb(113, 113, 122))
+            }
+            background = android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(Color.argb(60, 161, 161, 170)),
+                shape, null
+            )
+            setOnClickListener { clicked() }
+        }
+        actions.addView(action("Keep recalling", true) { endConfirmation?.dismiss() },
+            LinearLayout.LayoutParams(-1, dp(52)))
+        actions.addView(action("End recall", false) {
+            endConfirmation?.dismiss()
+            finish()
+        }, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(12) })
         endConfirmation = android.app.AlertDialog.Builder(this)
             .setTitle("End recall?")
             .setMessage("Your completed answers will be kept.")
-            .setNegativeButton("Keep recalling", null)
-            .setPositiveButton("End recall") { _, _ -> finish() }
+            .setView(actions)
             .create().also { dialog ->
                 dialog.setOnDismissListener { endConfirmation = null }
                 dialog.show()

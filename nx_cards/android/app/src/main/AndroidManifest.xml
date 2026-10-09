@@ -34,6 +34,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".NativeDrawingActivity"
+            android:enableOnBackInvokedCallback="true"
             android:exported="false"
             android:theme="@android:style/Theme.Material.Light.NoActionBar"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|uiMode" />
