@@ -9,7 +9,7 @@ import android.view.View
 import android.widget.FrameLayout
 
 /** Owns one renderer and keeps selection/fallback out of the study UI. */
-internal class InkPanelHost(context: Context, private val report: (String) -> Unit) : DrawingInkPanel {
+internal class InkPanelHost(context: Context, private val report: (String) -> Unit, restored: List<InkStroke> = emptyList(), standardOnly: Boolean = false) : DrawingInkPanel {
     private val host = FrameLayout(context).apply {
         val borderWidth = resources.displayMetrics.density.roundToInt().coerceAtLeast(1)
         background = GradientDrawable().apply {
@@ -23,9 +23,9 @@ internal class InkPanelHost(context: Context, private val report: (String) -> Un
     private var panel: DrawingInkPanel? = null
     private var resumed = true
     private var closed = false
-    private val candidates = inkBackends { name -> runCatching { Class.forName(name) }.isSuccess }.iterator()
+    private val candidates = (if (standardOnly) listOf(InkBackend.STANDARD) else inkBackends { name -> runCatching { Class.forName(name) }.isSuccess }).iterator()
 
-    init { selectNext() }
+    init { selectNext(restored) }
     private fun selectNext(restored: List<InkStroke> = emptyList()) {
         if (closed) return
         panel?.dispose(); panel = null; host.removeAllViews()
@@ -33,10 +33,10 @@ internal class InkPanelHost(context: Context, private val report: (String) -> Un
             val backend = candidates.next()
             try {
                 val candidate: DrawingInkPanel = when (backend) {
-                    InkBackend.NOTE_VIEW -> NativeInkPanel(host.context) { error -> report(error.message ?: "Drawing error") }
+                    InkBackend.NOTE_VIEW -> NativeInkPanel(host.context, restored) { error -> report(error.message ?: "Drawing error") }
                     InkBackend.BIGME -> {
                         lateinit var bigme: BigmeInkPanel
-                        bigme = BigmeInkPanel(host.context) { error ->
+                        bigme = BigmeInkPanel(host.context, restored) { error ->
                             if (!closed && panel === bigme) {
                                 val strokes = bigme.snapshot()
                                 selectNext(strokes)
@@ -63,7 +63,8 @@ internal class InkPanelHost(context: Context, private val report: (String) -> Un
     override fun getView(): View = host
     override fun clear(complete: () -> Unit) { panel?.clear(complete) ?: complete() }
     override fun refresh(complete: () -> Unit) { panel?.refresh(complete) ?: complete() }
-    override fun undo() { panel?.undo() }
+    override fun undo(complete: () -> Unit) { panel?.undo(complete) ?: complete() }
+    override fun snapshot() = panel?.snapshot() ?: emptyList()
     override fun eraseButton(held: Boolean) { panel?.eraseButton(held) }
     override fun setResumed(value: Boolean) { resumed = value; panel?.setResumed(value) }
     override fun dispose() { closed = true; panel?.dispose(); panel = null }

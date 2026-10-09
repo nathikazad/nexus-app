@@ -11,11 +11,47 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal object RecallDiagnostics {
     private val main = Handler(Looper.getMainLooper())
     private val pending = AtomicBoolean(false)
+    private val asyncPending = AtomicBoolean(false)
+    private val asyncMain = if (android.os.Build.VERSION.SDK_INT >= 28)
+        Handler.createAsync(Looper.getMainLooper()) else main
+    @Volatile private var asyncPostedAt = 0L
     @Volatile private var screen = "background"
     @Volatile private var postedAt = 0L
     private var started = false
     private var gestures = 0
     private var lastSlowInput = 0L
+    @Volatile var systemAnrGeneration = 0L
+        private set
+    @Volatile var systemAnrAt = 0L
+        private set
+    private var anrObserverStarted = false
+
+    @Synchronized fun observeSystemErrors(context: android.content.Context) {
+        if (anrObserverStarted) return
+        anrObserverStarted = true
+        val manager = context.applicationContext.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        Thread({
+            var previous: String? = null
+            while (true) {
+                Thread.sleep(2000)
+                if (screen != "drawing") continue
+                runCatching {
+                    val error = manager.processesInErrorState?.firstOrNull {
+                        it.pid == android.os.Process.myPid() &&
+                            it.condition == android.app.ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING
+                    }
+                    val signature = error?.shortMsg
+                    if (signature != null && signature != previous) {
+                        systemAnrAt = SystemClock.uptimeMillis()
+                        systemAnrGeneration++
+                        InputFlightRecorder.event("system_anr generation=$systemAnrGeneration reason=$signature")
+                        InputFlightRecorder.incident("system_anr")
+                    }
+                    previous = signature
+                }.onFailure { Log.w("NxCardsPerf", "System ANR status unavailable", it) }
+            }
+        }, "CardsAnrStatus").apply { isDaemon = true; start() }
+    }
 
     @Synchronized fun foreground(name: String) {
         screen = name
@@ -27,21 +63,31 @@ internal object RecallDiagnostics {
             while (true) {
                 Thread.sleep(500)
                 if (screen == "background") continue
+                if (asyncPending.compareAndSet(false, true)) {
+                    asyncPostedAt = SystemClock.uptimeMillis()
+                    asyncMain.post {
+                        try {
+                            InputFlightRecorder.sample(
+                                if (pending.get()) SystemClock.uptimeMillis() - postedAt else 0,
+                                SystemClock.uptimeMillis() - asyncPostedAt
+                            )
+                        } catch (e: Exception) { Log.w("NxCardsPerf", "Input sampling unavailable", e) }
+                        finally { asyncPending.set(false) }
+                    }
+                }
                 if (pending.compareAndSet(false, true)) {
                     reports = 0
                     postedAt = SystemClock.uptimeMillis()
                     main.post {
                         val delay = SystemClock.uptimeMillis() - postedAt
                         if (delay >= 250) Log.w("NxCardsPerf", "main_recovered screen=$screen delay_ms=$delay")
-                        try { InputFlightRecorder.sample() }
-                        catch (e: Exception) { Log.w("NxCardsPerf", "Input sampling unavailable", e) }
-                        finally { pending.set(false) }
+                        pending.set(false)
                     }
                 } else {
                     val delay = SystemClock.uptimeMillis() - postedAt
                     if (delay >= 1000 && reports < 3) {
                         reports++
-                        InputFlightRecorder.incident("main_stall")
+                        InputFlightRecorder.incident(if (asyncPending.get() && SystemClock.uptimeMillis() - asyncPostedAt >= 1000) "ui_thread_stall" else "synchronous_queue_stall")
                         val stack = Looper.getMainLooper().thread.stackTrace.take(28).joinToString("\n")
                         Log.w("NxCardsPerf", "main_stall screen=$screen delay_ms=$delay sample=$reports\n$stack")
                     }
@@ -53,6 +99,7 @@ internal object RecallDiagnostics {
 
     fun <T> measure(stage: String, block: () -> T): T {
         val start = SystemClock.uptimeMillis()
+        InputFlightRecorder.event("stage_begin=$stage")
         try { return block() } finally {
             val elapsed = SystemClock.uptimeMillis() - start
             InputFlightRecorder.event("stage=$stage elapsed_ms=$elapsed")

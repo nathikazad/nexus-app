@@ -61,6 +61,26 @@ class NativeDrawingActivity : Activity() {
     private var audioFile: File? = null
     private var audioGeneration = 0
     private var listeningIndex = -1
+    private var recoveryPolicy = RecallRecoveryPolicy()
+    private var standardInk = false
+    private var restarting = false
+    private var recoveryDialog: android.app.AlertDialog? = null
+    private var recoveryOffered = false
+    private var cachedInk: List<InkStroke> = emptyList()
+    private var penDown = false
+    private var inkEditing = false
+    private val checkpointHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val checkpoint = Runnable {
+        if (!penDown && !busy && !restarting && !isDestroyed && writingEnabled) {
+            checkpointInk()
+        }
+    }
+    private data class RecoveryState(
+        val cards: MutableList<Map<*, *>>, val index: Int, val revealed: Boolean,
+        val revealedAt: Long, val visibleAnswer: Boolean, val listeningIndex: Int,
+        val strokes: List<InkStroke>, val policy: RecallRecoveryPolicy, val standard: Boolean
+    )
+    private var retainedRecovery: RecoveryState? = null
     private val density get() = resources.displayMetrics.density
     private fun dp(value: Int) = (value * density).roundToInt()
     private fun label(size: Float) = TextView(this).apply { textSize = size; setTextColor(Color.BLACK); gravity = Gravity.CENTER }
@@ -92,6 +112,15 @@ class NativeDrawingActivity : Activity() {
                 ) { handleSystemBack() }
             }
             grouped = input["grouped"] == true
+            val recovered = lastNonConfigurationInstance as? RecoveryState
+            if (recovered != null) {
+                cards = recovered.cards; index = recovered.index
+                revealed = recovered.revealed; revealedAt = recovered.revealedAt
+                visibleAnswer = recovered.visibleAnswer; listeningIndex = recovered.listeningIndex
+                cachedInk = recovered.strokes; recoveryPolicy = recovered.policy
+                standardInk = recovered.standard
+                recoveryPolicy.resetObservation()
+            }
             val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(16), dp(8), dp(16), dp(8)) }
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
             end = button(if (recall) "End" else "Back") { requestEnd() }
@@ -150,7 +179,7 @@ class NativeDrawingActivity : Activity() {
             controls = LinearLayout(this).apply { gravity = Gravity.END }
             frame.addView(controls, LinearLayout.LayoutParams(-1, dp(48)))
             mark("before_ink_init")
-            ink = InkPanelHost(this, ::report)
+            ink = InkPanelHost(this, ::report, cachedInk, standardInk)
             mark("ink_initialized")
             frame.addView(ink!!.getView(), LinearLayout.LayoutParams(-1, 0, 1f))
             // Tablet context is shared by practice and revealed recall.
@@ -182,10 +211,15 @@ class NativeDrawingActivity : Activity() {
                 root.addView(columns, LinearLayout.LayoutParams(-1, 0, 1.2f))
             }
             setContentView(root)
-            InputFlightRecorder.attach(this) { "index=$index busy=$busy loading=$loadingCard revealed=$revealed writing=$writingEnabled" }
+            InputFlightRecorder.attach(this, ::observeInputHealth) { "index=$index busy=$busy loading=$loadingCard revealed=$revealed writing=$writingEnabled" }
             mark("layout_built")
             updateCard()
             mark("first_card_bound")
+            if (recovered != null) {
+                InputFlightRecorder.event("recovery_complete index=$index strokes=${cachedInk.size} standard=$standardInk")
+                Toast.makeText(this, if (standardInk) "Using standard drawing. Recall restored."
+                    else "Recall restored. Your completed answers were kept.", Toast.LENGTH_LONG).show()
+            }
             root.post { mark("first_ui_post"); prefetch() }
             Log.i("NxCardsNative", "Fully native ${if (recall) "recall" else "practice"} activity opened")
         } catch (e: Throwable) {
@@ -239,8 +273,14 @@ class NativeDrawingActivity : Activity() {
         if (!recall) control("Study sheet", "list") { finish() }
         if (!recall) control("Previous", "previous", enabled = index > 0) { moveTo(index - 1) }
         if (writing) {
-            control("Undo", "undo") { ink?.undo() }
-            control("Erase", "erase") { ink?.clear {} }
+            control("Undo", "undo") {
+                inkEditing = true
+                ink?.undo { checkpointInk(); inkEditing = false }
+            }
+            control("Erase", "erase") {
+                inkEditing = true
+                ink?.clear { cachedInk = emptyList(); inkEditing = false }
+            }
         }
         if (recall && card["audio"] == true && (revealed || card["listening"] == true)) control("Play", "play") { play() }
         if (!recall) {
@@ -257,6 +297,8 @@ class NativeDrawingActivity : Activity() {
     }
     private fun refreshDisplay(manual: Boolean = false, complete: () -> Unit) {
         if (isFinishing || isDestroyed) return
+        val started = android.os.SystemClock.uptimeMillis()
+        InputFlightRecorder.event("display_refresh_begin manual=$manual index=$index")
         val root = window.decorView
         root.invalidate()
         // Post after Android has rendered the updated card before refreshing
@@ -273,6 +315,7 @@ class NativeDrawingActivity : Activity() {
                         // GC16, identical to this firmware's Activity refresh receiver.
                         type.getMethod("forceGlobalRefresh", Int::class.javaPrimitiveType).invoke(manager, 4)
                     }
+                    InputFlightRecorder.event("display_refresh_complete elapsed_ms=${android.os.SystemClock.uptimeMillis() - started} success=${refreshed.isSuccess}")
                     complete()
                     if (refreshed.isSuccess) Log.i("NxCardsInk", "Full screen GC16 refresh requested; manual=$manual index=$index")
                     else {
@@ -519,11 +562,15 @@ class NativeDrawingActivity : Activity() {
             }
             setPadding(dp(12), dp(12), dp(12), dp(12))
             setBackgroundColor(Color.TRANSPARENT)
-            setOnClickListener { if (!busy) action() }
+            setOnClickListener { if (!busy) { InputFlightRecorder.event("action=$label"); action() } }
         }, LinearLayout.LayoutParams(dp(48), dp(48)))
     }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         val start = RecallDiagnostics.inputBegin(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> { penDown = true; checkpointHandler.removeCallbacks(checkpoint) }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { penDown = false; scheduleCheckpoint() }
+        }
         try {
             ink?.eraseButton(StylusInput.erasing(event))
             val result = super.dispatchTouchEvent(event)
@@ -602,7 +649,10 @@ class NativeDrawingActivity : Activity() {
         val existing = cardWaiters[target]
         if (existing != null) { existing.add(done); return }
         cardWaiters[target] = mutableListOf(done)
+        val started = android.os.SystemClock.uptimeMillis()
+        InputFlightRecorder.event("prepare_begin index=$target")
         fun complete(error: String?) {
+            InputFlightRecorder.event("prepare_complete index=$target elapsed_ms=${android.os.SystemClock.uptimeMillis() - started} success=${error == null}")
             val callbacks = cardWaiters.remove(target) ?: return
             if (!isFinishing && !isDestroyed) callbacks.forEach { it(error) }
         }
@@ -636,6 +686,7 @@ class NativeDrawingActivity : Activity() {
             if (error != null) { setBusy(false); report(error); return@requestCard }
             val next = {
                 if (!isFinishing && !isDestroyed) {
+                    checkpointHandler.removeCallbacks(checkpoint); cachedInk = emptyList(); penDown = false
                     index = targetIndex; revealed = false; visibleAnswer = true; updateCard()
                     refreshDisplay {
                         setBusy(false)
@@ -647,10 +698,60 @@ class NativeDrawingActivity : Activity() {
             if (!recall && !writingEnabled) next() else ink?.clear(next) ?: next()
         }
     }
+    private fun checkpointInk() {
+        runCatching { ink?.snapshot() }.onSuccess { if (it != null) cachedInk = it }
+            .onFailure { InputFlightRecorder.event("ink_checkpoint_failed=${it.javaClass.simpleName}") }
+    }
+    private fun scheduleCheckpoint() {
+        checkpointHandler.removeCallbacks(checkpoint)
+        checkpointHandler.postDelayed(checkpoint, 150)
+    }
+    private fun observeInputHealth(blocked: Boolean) {
+        if (!recall || restarting || recoveryOffered || isFinishing || isDestroyed) return
+        val safe = hasWindowFocus() && !busy && !inkEditing && !loadingCard && pendingSave.answer == null &&
+            !finishAfterSave && endConfirmation == null && recoveryDialog == null
+        when (recoveryPolicy.observe(android.os.SystemClock.uptimeMillis(), blocked, safe)) {
+            RecallRecoveryPolicy.Action.NONE -> Unit
+            RecallRecoveryPolicy.Action.RESTART -> recoverDrawing(false)
+            RecallRecoveryPolicy.Action.OFFER_FALLBACK -> {
+                recoveryOffered = true
+                InputFlightRecorder.event("recovery_offer_standard=$standardInk")
+                recoveryDialog = android.app.AlertDialog.Builder(this)
+                    .setTitle("Drawing stopped responding")
+                    .setMessage("Your completed answers are safe. Reopen this card with standard drawing? The last unfinished stroke may be lost.")
+                    .setView(dialogActions(if (standardInk) "Reopen drawing" else "Use standard drawing", {
+                        recoveryDialog?.dismiss(); recoverDrawing(true)
+                    }, "Keep waiting", { recoveryDialog?.dismiss() }))
+                    .create().also { dialog ->
+                        dialog.setOnDismissListener { recoveryDialog = null }
+                        dialog.show()
+                    }
+            }
+        }
+    }
+    private fun recoverDrawing(useStandard: Boolean) {
+        if (restarting || busy || inkEditing || loadingCard || pendingSave.answer != null || finishAfterSave || isFinishing || isDestroyed) return
+        restarting = true
+        checkpointHandler.removeCallbacks(checkpoint)
+        stopAudio()
+        standardInk = standardInk || useStandard
+        // Use the last completed-stroke checkpoint; never call the pen firmware
+        // for a new snapshot while its input path may be stalled.
+        retainedRecovery = RecoveryState(cards, index, revealed, revealedAt, visibleAnswer,
+            listeningIndex, cachedInk, recoveryPolicy, standardInk)
+        InputFlightRecorder.event("recovery_begin index=$index strokes=${cachedInk.size} standard=$standardInk")
+        InputFlightRecorder.incident("recovery")
+        runCatching { recreate() }.onFailure {
+            restarting = false; retainedRecovery = null; recoveryPolicy.resetObservation()
+            InputFlightRecorder.event("recovery_failed=${it.javaClass.simpleName}")
+            report("Could not reopen drawing. Your completed answers are kept.")
+        }
+    }
+    override fun onRetainNonConfigurationInstance(): Any? = retainedRecovery
+
     private var endConfirmation: android.app.AlertDialog? = null
-    private fun requestEnd() {
-        if (!recall) { finish(); return }
-        if (endConfirmation != null || isFinishing || isDestroyed) return
+    private fun dialogActions(primary: String, onPrimary: () -> Unit,
+                              secondary: String, onSecondary: () -> Unit): LinearLayout {
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(8), dp(24), dp(24))
@@ -669,12 +770,17 @@ class NativeDrawingActivity : Activity() {
             )
             setOnClickListener { clicked() }
         }
-        actions.addView(action("Keep recalling", true) { endConfirmation?.dismiss() },
-            LinearLayout.LayoutParams(-1, dp(52)))
-        actions.addView(action("End recall", false) {
-            endConfirmation?.dismiss()
-            finish()
-        }, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(12) })
+        actions.addView(action(primary, true, onPrimary), LinearLayout.LayoutParams(-1, dp(52)))
+        actions.addView(action(secondary, false, onSecondary),
+            LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(12) })
+        return actions
+    }
+    private fun requestEnd() {
+        if (!recall) { finish(); return }
+        if (endConfirmation != null || isFinishing || isDestroyed) return
+        val actions = dialogActions("Keep recalling", { endConfirmation?.dismiss() }, "End recall", {
+            endConfirmation?.dismiss(); finish()
+        })
         endConfirmation = android.app.AlertDialog.Builder(this)
             .setTitle("End recall?")
             .setMessage("Your completed answers will be kept.")
@@ -705,6 +811,7 @@ class NativeDrawingActivity : Activity() {
     }
     private fun sendRating(answer: PendingRecallSave.Answer) {
         val started = android.os.SystemClock.uptimeMillis()
+        InputFlightRecorder.event("save_begin index=${answer.index}")
         fun failed() {
             if (isDestroyed || isFinishing) return
             saveErrorPaused = true
@@ -721,12 +828,14 @@ class NativeDrawingActivity : Activity() {
         channel.invokeMethod("rate", answer.arguments(), object : MethodChannel.Result {
             override fun success(result: Any?) {
                 pendingSave.complete(answer)
+                InputFlightRecorder.event("save_complete index=${answer.index} elapsed_ms=${android.os.SystemClock.uptimeMillis() - started}")
                 Log.i("NxCardsPerf", "save_complete index=${answer.index} elapsed_ms=${android.os.SystemClock.uptimeMillis() - started}")
                 if (isFinishing || isDestroyed) return
                 if (finishAfterSave) { finish(); return }
                 if (saveErrorPaused) { saveErrorPaused = false; setBusy(false) }
             }
             override fun error(code: String, message: String?, details: Any?) {
+                InputFlightRecorder.event("save_failed index=${answer.index} code=$code")
                 Log.w("NxCardsPerf", "save_failed index=${answer.index} code=$code")
                 failed()
             }
@@ -737,11 +846,14 @@ class NativeDrawingActivity : Activity() {
         stopAudio()
         if (!soundEnabled) return
         val generation = audioGeneration
+        val audioStarted = android.os.SystemClock.uptimeMillis()
+        InputFlightRecorder.event("audio_load_begin index=$index generation=$generation")
         hint.text = "Loading audio…"
         NativeDrawingBridge.channel?.invokeMethod("audio", mapOf("index" to index, "exampleIndex" to exampleIndex, "characterIndex" to characterIndex, "derivedIndex" to derivedIndex, "similarCardId" to similarCardId), object : MethodChannel.Result {
             override fun success(result: Any?) {
                 if (generation != audioGeneration || isFinishing || isDestroyed) return
                 try {
+                    InputFlightRecorder.event("audio_load_complete elapsed_ms=${android.os.SystemClock.uptimeMillis() - audioStarted}")
                     val bytes = result as ByteArray
                     val file = File.createTempFile("cards-audio-", ".audio", cacheDir); audioFile = file; file.writeBytes(bytes)
                     player = MediaPlayer().apply {
@@ -754,6 +866,7 @@ class NativeDrawingActivity : Activity() {
                 } catch (e: Throwable) { stopAudio(); report("Could not play audio") }
             }
             override fun error(code: String, message: String?, details: Any?) {
+                InputFlightRecorder.event("audio_load_failed code=$code elapsed_ms=${android.os.SystemClock.uptimeMillis() - audioStarted}")
                 Log.e("NxCardsAudio", "load_failed index=$index card=${card["cardId"]} code=$code reason=$message")
                 if (generation == audioGeneration && !isDestroyed) report("Could not load audio. Try again.")
             }
@@ -765,5 +878,5 @@ class NativeDrawingActivity : Activity() {
     override fun onResume() { super.onResume(); InputFlightRecorder.event("resume"); RecallDiagnostics.foreground("drawing"); ink?.setResumed(!busy && writingEnabled) }
     override fun onPause() { InputFlightRecorder.event("pause"); ink?.setResumed(false); stopAudio(); super.onPause(); RecallDiagnostics.background("drawing") }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); InputFlightRecorder.event("focus=$hasFocus"); ink?.setResumed(hasFocus && !busy && writingEnabled) }
-    override fun onDestroy() { InputFlightRecorder.detach(); if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
+    override fun onDestroy() { checkpointHandler.removeCallbacks(checkpoint); recoveryDialog?.dismiss(); endConfirmation?.dismiss(); InputFlightRecorder.detach(); if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }
 }

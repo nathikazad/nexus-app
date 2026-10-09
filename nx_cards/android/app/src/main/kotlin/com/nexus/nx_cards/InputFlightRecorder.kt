@@ -3,19 +3,20 @@ package com.nexus.nx_cards
 import android.app.Activity
 import android.os.SystemClock
 import android.view.ViewTreeObserver
+import android.view.Choreographer
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.ArrayDeque
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Passive recorder: never requests frames, consumes input, or changes ink state. */
+/** Bounded recorder. A single frame probe is requested only when work appears stuck. */
 internal object InputFlightRecorder {
     private val events = ArrayDeque<Pair<Long, String>>()
     private val writer = Executors.newSingleThreadExecutor { Thread(it, "CardsInputRecorder").apply { isDaemon = true } }
     private val writing = AtomicBoolean(false)
     private var activity = WeakReference<Activity>(null)
-    private var directory: File? = null
+    @Volatile private var directory: File? = null
     private var observer: ViewTreeObserver? = null
     private var drawListener: ViewTreeObserver.OnDrawListener? = null
     private var frames = 0L
@@ -25,8 +26,12 @@ internal object InputFlightRecorder {
     private var lastSample = 0L
     private var lastIncident = 0L
     private var state: (() -> String)? = null
+    private var onHealth: ((Boolean) -> Unit)? = null
+    private var initialAnrGeneration = 0L
+    private var frameProbeAt: Long? = null
+    private var frameProbe: Choreographer.FrameCallback? = null
 
-    fun attach(owner: Activity, state: () -> String) {
+    fun attach(owner: Activity, health: (Boolean) -> Unit, state: () -> String) {
         detach()
         activity = WeakReference(owner)
         directory = File(owner.getExternalFilesDir(null) ?: owner.filesDir, "input-diagnostics")
@@ -38,6 +43,10 @@ internal object InputFlightRecorder {
             }
         }
         this.state = state
+        onHealth = health
+        lastSample = 0
+        initialAnrGeneration = RecallDiagnostics.systemAnrGeneration
+        RecallDiagnostics.observeSystemErrors(owner.applicationContext)
         frames = 0; inputs = 0; lastInput = 0; lastFrame = 0
         runCatching {
             org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions(
@@ -50,6 +59,8 @@ internal object InputFlightRecorder {
     }
     fun detach() {
         drawListener?.let { if (observer?.isAlive == true) observer?.removeOnDrawListener(it) }
+        frameProbe?.let { Choreographer.getInstance().removeFrameCallback(it) }
+        frameProbe = null; frameProbeAt = null; onHealth = null
         observer = null; drawListener = null; state = null; activity.clear()
         event("detach")
     }
@@ -71,22 +82,43 @@ internal object InputFlightRecorder {
         return null
     }
     /** Called on the UI heartbeat, independently of vsync/input delivery. */
-    fun sample() {
+    fun sample(syncDelay: Long, asyncDelay: Long) {
         val owner = activity.get() ?: return
         val now = SystemClock.uptimeMillis()
         if (now - lastSample < 2000) return
         lastSample = now
         var outstanding = 0
+        var batched = false
         val queue = runCatching {
             val root = android.view.View::class.java.getDeclaredMethod("getViewRootImpl").apply { isAccessible = true }.invoke(owner.window.decorView)
             val receiver = field(root, "mInputEventReceiver")
             outstanding = (field(receiver, "mSeqMap") as? android.util.SparseIntArray)?.size() ?: 0
             outstanding += (field(root, "mPendingInputEventCount") as? Int) ?: 0
+            batched = field(root, "mConsumeBatchedInputScheduled") == true
             "pending=${field(root, "mPendingInputEventCount")} outstanding=$outstanding batched=${field(root, "mConsumeBatchedInputScheduled")} traversal=${field(root, "mTraversalScheduled")}"
         }.getOrElse { "queue_unavailable=${it.javaClass.simpleName}" }
+        val evidence = InputStallEvidence(owner.hasWindowFocus(), outstanding, batched,
+            now - lastInput, syncDelay, 0,
+            RecallDiagnostics.systemAnrGeneration > initialAnrGeneration && lastInput < RecallDiagnostics.systemAnrAt)
+        val suspect = evidence.needsFrameProbe
+        if (suspect && frameProbe == null) {
+            frameProbeAt = now
+            frameProbe = Choreographer.FrameCallback {
+                event("frame_probe_complete delay_ms=${SystemClock.uptimeMillis() - (frameProbeAt ?: now)}")
+                frameProbeAt = null; frameProbe = null
+            }.also { Choreographer.getInstance().postFrameCallback(it) }
+        } else if (!suspect && frameProbe != null) {
+            Choreographer.getInstance().removeFrameCallback(frameProbe!!)
+            frameProbeAt = null; frameProbe = null
+        }
+        val frameDelay = frameProbeAt?.let { now - it } ?: 0
+        val systemAnr = evidence.newSystemAnr
+        val blocked = evidence.copy(frameProbeDelay = frameDelay).blocked
+        event("heartbeat sync_delay_ms=$syncDelay async_delay_ms=$asyncDelay frame_probe_ms=$frameDelay system_anr=$systemAnr")
         event("sample inputs=$inputs input_age=${now-lastInput} frames=$frames frame_age=${now-lastFrame} focused=${owner.hasWindowFocus()} ${state?.invoke()} $queue")
-        if (outstanding > 0 && now-lastInput > 4000) incident("input_ack_stall")
+        if (blocked) incident("input_or_frame_stall")
         flush(false)
+        onHealth?.invoke(blocked)
     }
     fun incident(reason: String) {
         val now = SystemClock.uptimeMillis()
@@ -95,11 +127,19 @@ internal object InputFlightRecorder {
             lastIncident = now
         }
         event("incident=$reason main_stack=" + android.os.Looper.getMainLooper().thread.stackTrace.take(24).joinToString(" | "))
+        Thread.getAllStackTraces().entries.filter { (thread, _) ->
+            thread.name == "main" || thread.name.startsWith("Binder:") ||
+                thread.name.contains("raster") || thread.name.contains("RenderThread") ||
+                thread.name.contains("hwui")
+        }.take(8).forEach { (thread, stack) ->
+            event("thread=${thread.name} state=${thread.state} stack=" + stack.take(24).joinToString(" | "))
+        }
         flush(true)
     }
     private fun flush(incident: Boolean) {
         val dir = directory ?: return
-        if (!writing.compareAndSet(false, true)) return
+        if (!incident && !writing.compareAndSet(false, true)) return
+        if (incident) writing.set(true)
         val snapshot = synchronized(this) { "wall_ms=${System.currentTimeMillis()}\n" + events.joinToString("\n") { it.second } + "\n" }
         writer.execute {
             try {

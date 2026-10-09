@@ -12,9 +12,9 @@ import java.util.IdentityHashMap
 import kotlin.math.roundToInt
 
 /** The tablet firmware owns all live pen samples and screen refreshes. The activity
- * reads records only for toolbar/layout actions. No drawing-thread hooks or
+ * checkpoints completed strokes after pen-up and reads records for edits/layout. No drawing-thread hooks or
  * live messages cross into Flutter. */
-class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit) : DrawingInkPanel {
+internal class NativeInkPanel(context: Context, restored: List<InkStroke> = emptyList(), private val onError: (Throwable) -> Unit) : DrawingInkPanel {
     private val main = Handler(Looper.getMainLooper())
     private val host = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -32,6 +32,7 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
     private var resumed = true
     private var busy = false
     private var foreground: Bitmap? = null
+    private var restorePending = restored
 
     init { start(context) }
     private fun start(context: Context) {
@@ -43,7 +44,15 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
         widget.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
             if ((r-l != or-ol || b-t != ob-ot) && !stopped) {
                 Log.i("NxCardsPerf", "ink_layout old=${or-ol}x${ob-ot} new=${r-l}x${b-t}")
-                widget.post { if (!stopped) runCatching { RecallDiagnostics.measure("ink_layout_restore") { capture(); render() } }.onFailure { fail(it) } }
+                widget.post { if (!stopped) runCatching { RecallDiagnostics.measure("ink_layout_restore") {
+                    if (restorePending.isNotEmpty() && widget.width > 0 && widget.height > 0) {
+                        strokes.addAll(restorePending.map { stroke -> Stroke(stroke.points.map {
+                            listOf(it.x * widget.width / density, it.y * widget.height / density)
+                        }, stroke.erasing) })
+                        restorePending = emptyList()
+                    }
+                    capture(); render()
+                } }.onFailure { fail(it) } }
             }
         }
         started = true
@@ -101,9 +110,12 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
                     else if (command == "undo" && strokes.isNotEmpty()) strokes.removeAt(strokes.lastIndex)
                     render()
                 }
+            } catch (e: Throwable) { fail(e) }
+            finally {
+                busy = false
+                if (!stopped) setResumed(resumed)
                 complete?.invoke()
-            } catch (e: Throwable) { fail(e); complete?.invoke() }
-            finally { busy = false; if (!stopped) setResumed(resumed) }
+            }
         }, 100)
     }
     private fun render(): Unit = RecallDiagnostics.measure("ink_render") { renderBody() }
@@ -160,8 +172,16 @@ class NativeInkPanel(context: Context, private val onError: (Throwable) -> Unit)
             setPen()
         }.onFailure { fail(it) }
     }
+    override fun snapshot(): List<InkStroke> {
+        check(!stopped && !busy && ink != null && ink!!.width > 0 && ink!!.height > 0) { "Ink not ready for checkpoint" }
+        capture()
+        val w = ink!!.width / density; val h = ink!!.height / density
+        return strokes.map { stroke -> InkStroke(stroke.erasing, stroke.points.map {
+            InkPoint((it[0] / w).toFloat(), (it[1] / h).toFloat())
+        }.toMutableList()) }
+    }
     override fun refresh(complete: () -> Unit) = edit("refresh", complete)
-    override fun undo() = edit("undo")
+    override fun undo(complete: () -> Unit) = edit("undo", complete)
     private fun fail(error: Throwable) {
         Log.e("NxCardsInk", "Native ink unavailable", error)
         runCatching { flag(false) }

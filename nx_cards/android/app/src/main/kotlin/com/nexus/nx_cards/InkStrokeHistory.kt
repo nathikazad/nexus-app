@@ -17,5 +17,6 @@ internal class InkStrokeHistory {
     fun end() { active = false }
     fun clear() { active = false; strokes.clear() }
     fun undo() { active = false; if (strokes.isNotEmpty()) strokes.removeAt(strokes.lastIndex) }
+    fun completedSnapshot() = (if (active) strokes.dropLast(1) else strokes).map { InkStroke(it.erasing, it.points.toMutableList()) }
     fun snapshot() = strokes.map { InkStroke(it.erasing, it.points.toMutableList()) }
 }

@@ -26,12 +26,13 @@ import kotlin.math.floor
  */
 internal class BigmeInkPanel(
     context: Context,
+    restored: List<InkStroke> = emptyList(),
     private val onFailure: (Throwable) -> Unit,
 ) : DrawingInkPanel, SurfaceHolder.Callback {
     private val view = SurfaceView(context)
     private val main = Handler(Looper.getMainLooper())
     private val lock = Any()
-    private val history = InkStrokeHistory()
+    private val history = InkStrokeHistory().apply { strokes.addAll(restored) }
     private val density = context.resources.displayMetrics.density
     private val paint = Paint().apply {
         isAntiAlias = false
@@ -55,7 +56,7 @@ internal class BigmeInkPanel(
 
     init { view.holder.addCallback(this) }
     override fun getView(): View = view
-    fun snapshot(): List<InkStroke> = synchronized(lock) { history.snapshot() }
+    override fun snapshot(): List<InkStroke> = synchronized(lock) { history.completedSnapshot() }
 
     override fun surfaceCreated(holder: SurfaceHolder) { surfaceReady = true }
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -244,7 +245,7 @@ internal class BigmeInkPanel(
         finally { complete() }
     }
     override fun clear(complete: () -> Unit) = edit(true, complete)
-    override fun undo() = edit(false) {}
+    override fun undo(complete: () -> Unit) = edit(false, complete)
     override fun setResumed(value: Boolean) {
         if (closed || failed) return
         resumed = value

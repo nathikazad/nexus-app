@@ -20,10 +20,13 @@ internal class StandardInkPanel(context: Context, restored: List<InkStroke> = em
     override fun getView(): View = this
     override fun clear(complete: () -> Unit) { drawing.clear(); complete() }
     override fun refresh(complete: () -> Unit) { drawing.invalidate(); complete() }
-    override fun undo() = drawing.undo()
+    override fun undo(complete: () -> Unit) { drawing.undo(); complete() }
+    override fun snapshot() = drawing.snapshot()
     private class Drawing(context: Context, private var restored: List<InkStroke>) : View(context) {
         private data class Stroke(val path: Path, val erasing: Boolean)
         private val paths = mutableListOf<Stroke>()
+        private val history = InkStrokeHistory()
+        fun snapshot() = restored + history.completedSnapshot()
         private var active = false
         private var lastX = 0f
         private var lastY = 0f
@@ -31,8 +34,8 @@ internal class StandardInkPanel(context: Context, restored: List<InkStroke> = em
             color = Color.BLACK; strokeWidth = 3 * resources.displayMetrics.density
             style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
         }
-        fun clear() { restored = emptyList(); active = false; paths.clear(); invalidate() }
-        fun undo() { active = false; if (paths.isNotEmpty()) paths.removeAt(paths.lastIndex) else if (restored.isNotEmpty()) restored = restored.dropLast(1); invalidate() }
+        fun clear() { history.clear(); restored = emptyList(); active = false; paths.clear(); invalidate() }
+        fun undo() { history.undo(); active = false; if (paths.isNotEmpty()) paths.removeAt(paths.lastIndex) else if (restored.isNotEmpty()) restored = restored.dropLast(1); invalidate() }
         override fun onDraw(canvas: Canvas) { super.onDraw(canvas);
             for (stroke in restored) {
                 paint.color = if (stroke.erasing) Color.WHITE else Color.BLACK
@@ -50,20 +53,30 @@ internal class StandardInkPanel(context: Context, restored: List<InkStroke> = em
             when(event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     parent.requestDisallowInterceptTouchEvent(true)
+                    history.begin(event.x / width, event.y / height, StylusInput.erasing(event))
                     paths.add(Stroke(Path().apply { moveTo(event.x, event.y); lineTo(event.x + .01f, event.y + .01f) }, StylusInput.erasing(event))); active = true
                 }
                 MotionEvent.ACTION_MOVE -> if (active) {
                     if (paths.last().erasing != StylusInput.erasing(event)) {
+                        history.end(); history.begin(lastX / width, lastY / height, StylusInput.erasing(event))
                         paths.add(Stroke(Path().apply { moveTo(lastX, lastY) }, StylusInput.erasing(event)))
                     }
-                    for (i in 0 until event.historySize) paths.last().path.lineTo(event.getHistoricalX(i), event.getHistoricalY(i))
+                    for (i in 0 until event.historySize) {
+                        paths.last().path.lineTo(event.getHistoricalX(i), event.getHistoricalY(i))
+                        history.move(event.getHistoricalX(i) / width, event.getHistoricalY(i) / height)
+                    }
+                    history.move(event.x / width, event.y / height)
                     paths.last().path.lineTo(event.x, event.y)
                 }
                 MotionEvent.ACTION_UP -> {
                     if (active) paths.last().path.lineTo(event.x, event.y)
+                    history.move(event.x / width, event.y / height); history.end()
                     active = false; parent.requestDisallowInterceptTouchEvent(false)
                 }
-                MotionEvent.ACTION_CANCEL -> { active = false; parent.requestDisallowInterceptTouchEvent(false) }
+                MotionEvent.ACTION_CANCEL -> {
+                    if (active) { history.undo(); if (paths.isNotEmpty()) paths.removeAt(paths.lastIndex) }
+                    active = false; parent.requestDisallowInterceptTouchEvent(false)
+                }
             }
             lastX = event.x; lastY = event.y
             invalidate(); return true

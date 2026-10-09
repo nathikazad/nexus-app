@@ -2,11 +2,12 @@ package com.nexus.nx_cards
 
 import android.view.View
 
-interface DrawingInkPanel {
+internal interface DrawingInkPanel {
     fun getView(): View
     fun clear(complete: () -> Unit)
     fun refresh(complete: () -> Unit) { getView().invalidate(); complete() }
-    fun undo()
+    fun undo(complete: () -> Unit = {})
+    fun snapshot(): List<InkStroke> = emptyList()
     fun setResumed(value: Boolean) {}
     fun eraseButton(held: Boolean) {}
     fun dispose() {}
