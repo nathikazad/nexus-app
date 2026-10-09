@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/session/confirm_end_recall.dart';
 import 'package:nx_cards/study/language/card_study_info.dart';
 import 'package:nx_cards/study/language/revealed_language_answer.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
@@ -84,9 +85,11 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
     if (_groupComplete && !_nativeOpening) _nextGroup();
   }
 
-  void _end() {
+  Future<void> _end() async {
     if (_saving || _batch != null && !_batch!.complete) return;
-    setState(() => _summary = true);
+    if (await confirmEndRecall(context) && mounted) {
+      setState(() => _summary = true);
+    }
   }
 
   Future<bool> _grade(CardRating rating) async {

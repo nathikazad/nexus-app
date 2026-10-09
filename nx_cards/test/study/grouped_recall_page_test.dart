@@ -213,6 +213,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('End'));
     await tester.pumpAndSettle();
+    expect(find.text('End recall?'), findsOneWidget);
+    await tester.tap(find.text('Keep recalling'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RecallRecapPage), findsNothing);
+    await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End recall'));
+    await tester.pumpAndSettle();
     expect(library.saved, hasLength(1));
     final recap = tester.widget<RecallRecapPage>(find.byType(RecallRecapPage));
     expect(recap.totalCount - recap.reviewedCount, 1);

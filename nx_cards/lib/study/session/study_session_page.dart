@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/session/confirm_end_recall.dart';
 import 'package:nx_cards/study/language/card_study_info.dart';
 import 'package:nx_cards/study/language/language_examples_page.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
@@ -120,7 +121,11 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
     }
   }
 
-  void _endReview() => setState(() => _ended = true);
+  Future<void> _endReview() async {
+    if (await confirmEndRecall(context) && mounted) {
+      setState(() => _ended = true);
+    }
+  }
 
   Future<void> _openCardDetails() async {
     await Navigator.of(context).push<void>(

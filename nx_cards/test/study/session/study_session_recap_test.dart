@@ -190,6 +190,14 @@ void main() {
     );
     await tester.tap(find.text('End'));
     await tester.pumpAndSettle();
+    expect(find.text('End recall?'), findsOneWidget);
+    await tester.tap(find.text('Keep recalling'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RecallRecapPage), findsNothing);
+    await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End recall'));
+    await tester.pumpAndSettle();
 
     expect(find.text('WORDS'), findsOneWidget);
     expect(find.text('talent'), findsOneWidget);
@@ -241,6 +249,14 @@ void main() {
       ),
     );
     await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+    expect(find.text('End recall?'), findsOneWidget);
+    await tester.tap(find.text('Keep recalling'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RecallRecapPage), findsNothing);
+    await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End recall'));
     await tester.pumpAndSettle();
 
     final recap = tester.widget<DecoratedBox>(

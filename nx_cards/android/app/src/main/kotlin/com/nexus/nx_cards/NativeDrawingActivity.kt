@@ -89,7 +89,7 @@ class NativeDrawingActivity : Activity() {
             grouped = input["grouped"] == true
             val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(16), dp(8), dp(16), dp(8)) }
             val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-            end = button(if (recall) "End" else "Back") { finish() }
+            end = button(if (recall) "End" else "Back") { requestEnd() }
             if (recall) header.addView(View(this), LinearLayout.LayoutParams(dp(64), dp(48))) else header.addView(end)
             header.addView(label(18f).apply { text = if (recall) input["title"] as? String ?: "Recall" else "${input["title"] ?: "Practice"} · Focus" }, LinearLayout.LayoutParams(0, -2, 1f))
             if (recall) header.addView(end)
@@ -619,7 +619,7 @@ class NativeDrawingActivity : Activity() {
         setBusy(true)
         loadingCard = true
         end.isEnabled = true
-        end.setOnClickListener { if (loadingCard || !busy) finish() }
+        end.setOnClickListener { if (loadingCard || !busy) requestEnd() }
         hint.text = "Loading card…"
         requestCard(targetIndex) { error ->
             loadingCard = false
@@ -636,6 +636,20 @@ class NativeDrawingActivity : Activity() {
             }
             if (!recall && !writingEnabled) next() else ink?.clear(next) ?: next()
         }
+    }
+    private var endConfirmation: android.app.AlertDialog? = null
+    private fun requestEnd() {
+        if (!recall) { finish(); return }
+        if (endConfirmation != null || isFinishing || isDestroyed) return
+        endConfirmation = android.app.AlertDialog.Builder(this)
+            .setTitle("End recall?")
+            .setMessage("Your completed answers will be kept.")
+            .setNegativeButton("Keep recalling", null)
+            .setPositiveButton("End recall") { _, _ -> finish() }
+            .create().also { dialog ->
+                dialog.setOnDismissListener { endConfirmation = null }
+                dialog.show()
+            }
     }
     override fun finish() {
         if (pendingSave.answer != null) {
@@ -706,7 +720,10 @@ class NativeDrawingActivity : Activity() {
                     }
                 } catch (e: Throwable) { stopAudio(); report("Could not play audio") }
             }
-            override fun error(code: String, message: String?, details: Any?) { if (generation == audioGeneration && !isDestroyed) report("Could not load audio. Try again.") }
+            override fun error(code: String, message: String?, details: Any?) {
+                Log.e("NxCardsAudio", "load_failed index=$index card=${card["cardId"]} code=$code reason=$message")
+                if (generation == audioGeneration && !isDestroyed) report("Could not load audio. Try again.")
+            }
             override fun notImplemented() = error("missing", null, null)
         })
     }
