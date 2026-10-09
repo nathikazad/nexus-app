@@ -710,6 +710,7 @@ class NativeDrawingActivity : Activity() {
         if (!recall || restarting || recoveryOffered || isFinishing || isDestroyed) return
         val safe = hasWindowFocus() && !busy && !inkEditing && !loadingCard && pendingSave.answer == null &&
             !finishAfterSave && endConfirmation == null && recoveryDialog == null
+        if (blocked) InputFlightRecorder.event("recovery_gate safe=$safe focused=${hasWindowFocus()} busy=$busy ink_editing=$inkEditing loading=$loadingCard pending_save=${pendingSave.answer != null} finishing_save=$finishAfterSave exit_dialog=${endConfirmation != null} recovery_dialog=${recoveryDialog != null}")
         when (recoveryPolicy.observe(android.os.SystemClock.uptimeMillis(), blocked, safe)) {
             RecallRecoveryPolicy.Action.NONE -> Unit
             RecallRecoveryPolicy.Action.RESTART -> recoverDrawing(false)
@@ -875,7 +876,7 @@ class NativeDrawingActivity : Activity() {
     }
     private fun stopAudio() { audioGeneration++; player?.release(); player = null; audioFile?.delete(); audioFile = null }
     private fun report(message: String) { if (::hint.isInitialized) hint.text = message; Log.e("NxCardsNative", message) }
-    override fun onResume() { super.onResume(); InputFlightRecorder.event("resume"); RecallDiagnostics.foreground("drawing"); ink?.setResumed(!busy && writingEnabled) }
+    override fun onResume() { super.onResume(); InputFlightRecorder.event("resume activity=${System.identityHashCode(this)} keep_screen_on=${window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0}"); RecallDiagnostics.foreground("drawing"); ink?.setResumed(!busy && writingEnabled) }
     override fun onPause() { InputFlightRecorder.event("pause"); ink?.setResumed(false); stopAudio(); super.onPause(); RecallDiagnostics.background("drawing") }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); InputFlightRecorder.event("focus=$hasFocus"); ink?.setResumed(hasFocus && !busy && writingEnabled) }
     override fun onDestroy() { checkpointHandler.removeCallbacks(checkpoint); recoveryDialog?.dismiss(); endConfirmation?.dismiss(); InputFlightRecorder.detach(); if (NativeDrawingBridge.activity?.get() === this) NativeDrawingBridge.activity = null; ink?.dispose(); stopAudio(); super.onDestroy() }

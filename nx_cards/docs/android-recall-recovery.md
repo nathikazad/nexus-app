@@ -50,3 +50,26 @@ that the next grade produces exactly one history entry. For a repeat incident,
 verify the standard-renderer offer and restored drawing. Device behavior remains
 unverified until the new APK is installed and exercised; unit tests cannot
 simulate the tablet firmware or Android's input dispatcher.
+
+## Targeted follow-up after the October 9 ANR
+
+Each snapshot identifies its process and anchors wall time, uptime (excludes
+sleep), and elapsed realtime (includes sleep). A worker records power-state
+transitions and measured suspend time, including while the UI cannot respond.
+This distinguishes a tablet suspend/wake from a main-thread queue stall. Resume
+records the window's keep-screen-on flag. Standby near the last ANR is a lead,
+not an established cause.
+
+Two-second UI samples summarize delivered MOVE count, dispatch depth, maximum
+input age at delivery and maximum dispatch duration. No per-MOVE log or disk
+write is added. Read-only receiver/batching fields remain best-effort. These
+counts describe app delivery; only a contemporaneous `dumpsys input` capture
+shows Android's unacknowledged event queue. Three watchdog stack samples remain
+in the bounded recorder. A newly detected system ANR always gets an incident
+file, even if a UI-stall capture was written in the preceding fifteen seconds.
+
+Recovery logs explain save/edit/modal/focus gates. Focus remains required:
+Android's ANR dialog can prevent automatic recovery, and we do not recreate a
+window over another app. Pressing Close kills the process; its subsequent launch
+must not be interpreted as successful automatic recovery. Incident files survive
+that restart. Capture them before repeated launches overwrite recent snapshots.

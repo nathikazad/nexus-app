@@ -30,10 +30,24 @@ internal object RecallDiagnostics {
         if (anrObserverStarted) return
         anrObserverStarted = true
         val manager = context.applicationContext.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val power = context.applicationContext.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        val keyguard = context.applicationContext.getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
         Thread({
             var previous: String? = null
+            var lastPower: String? = null
+            var lastSleep = SystemClock.elapsedRealtime() - SystemClock.uptimeMillis()
             while (true) {
                 Thread.sleep(2000)
+                val uptime = SystemClock.uptimeMillis()
+                val elapsed = SystemClock.elapsedRealtime()
+                val sleep = elapsed - uptime
+                val slept = (sleep - lastSleep).coerceAtLeast(0)
+                lastSleep = sleep
+                val powerState = "interactive=${power.isInteractive} idle=${power.isDeviceIdleMode} power_save=${power.isPowerSaveMode} locked=${keyguard.isKeyguardLocked} screen=$screen"
+                if (powerState != lastPower || slept >= 100) {
+                    InputFlightRecorder.event("power $powerState slept_ms=$slept wall_ms=${System.currentTimeMillis()} elapsed_ms=$elapsed uptime_ms=$uptime")
+                    lastPower = powerState
+                }
                 if (screen != "drawing") continue
                 runCatching {
                     val error = manager.processesInErrorState?.firstOrNull {
@@ -45,7 +59,7 @@ internal object RecallDiagnostics {
                         systemAnrAt = SystemClock.uptimeMillis()
                         systemAnrGeneration++
                         InputFlightRecorder.event("system_anr generation=$systemAnrGeneration reason=$signature")
-                        InputFlightRecorder.incident("system_anr")
+                        InputFlightRecorder.incident("system_anr", force = true)
                     }
                     previous = signature
                 }.onFailure { Log.w("NxCardsPerf", "System ANR status unavailable", it) }
@@ -89,6 +103,7 @@ internal object RecallDiagnostics {
                         reports++
                         InputFlightRecorder.incident(if (asyncPending.get() && SystemClock.uptimeMillis() - asyncPostedAt >= 1000) "ui_thread_stall" else "synchronous_queue_stall")
                         val stack = Looper.getMainLooper().thread.stackTrace.take(28).joinToString("\n")
+                        InputFlightRecorder.event("watchdog_sample=$reports sync_delay_ms=$delay async_delay_ms=${if (asyncPending.get()) SystemClock.uptimeMillis() - asyncPostedAt else 0} main_stack=${stack.replace("\n", " | ")}")
                         Log.w("NxCardsPerf", "main_stall screen=$screen delay_ms=$delay sample=$reports\n$stack")
                     }
                 }
@@ -118,6 +133,7 @@ internal object RecallDiagnostics {
     }
     fun inputEnd(event: MotionEvent, start: Long) {
         val elapsed = SystemClock.uptimeMillis() - start
+        InputFlightRecorder.inputFinished(elapsed)
         val action = event.actionMasked
         val boundary = action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
         if (boundary || (elapsed >= 32 && start - lastSlowInput >= 1000)) {

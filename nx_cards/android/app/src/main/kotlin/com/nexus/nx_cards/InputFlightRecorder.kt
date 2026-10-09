@@ -21,6 +21,10 @@ internal object InputFlightRecorder {
     private var drawListener: ViewTreeObserver.OnDrawListener? = null
     private var frames = 0L
     private var inputs = 0L
+    private var moves = 0L
+    private var maxQueued = 0L
+    private var maxDispatch = 0L
+    private var dispatchDepth = 0
     private var lastInput = 0L
     private var lastFrame = 0L
     private var lastSample = 0L
@@ -47,7 +51,7 @@ internal object InputFlightRecorder {
         lastSample = 0
         initialAnrGeneration = RecallDiagnostics.systemAnrGeneration
         RecallDiagnostics.observeSystemErrors(owner.applicationContext)
-        frames = 0; inputs = 0; lastInput = 0; lastFrame = 0
+        frames = 0; inputs = 0; moves = 0; maxQueued = 0; maxDispatch = 0; dispatchDepth = 0; lastInput = 0; lastFrame = 0
         runCatching {
             org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions(
                 "Landroid/view/View;", "Landroid/view/ViewRootImpl;", "Landroid/view/InputEventReceiver;",
@@ -55,7 +59,7 @@ internal object InputFlightRecorder {
         }
         drawListener = ViewTreeObserver.OnDrawListener { frames++; lastFrame = SystemClock.uptimeMillis() }
         observer = owner.window.decorView.viewTreeObserver.also { it.addOnDrawListener(drawListener) }
-        event("attach version=${owner.packageManager.getPackageInfo(owner.packageName, 0).longVersionCode}")
+        event("attach pid=${android.os.Process.myPid()} activity=${System.identityHashCode(owner)} version=${owner.packageManager.getPackageInfo(owner.packageName, 0).longVersionCode}")
     }
     fun detach() {
         drawListener?.let { if (observer?.isAlive == true) observer?.removeOnDrawListener(it) }
@@ -70,8 +74,14 @@ internal object InputFlightRecorder {
         while (events.size > 2048 || (events.isNotEmpty() && now - events.first.first > 60000)) events.removeFirst()
     }
     fun input(action: Int, tool: Int, queued: Long) {
-        inputs++; lastInput = SystemClock.uptimeMillis()
+        inputs++; dispatchDepth++; lastInput = SystemClock.uptimeMillis()
+        if (action == 2) moves++
+        maxQueued = maxOf(maxQueued, queued)
         if (action != 2) event("input action=$action tool=$tool queued_ms=$queued")
+    }
+    fun inputFinished(elapsed: Long) {
+        dispatchDepth = (dispatchDepth - 1).coerceAtLeast(0)
+        maxDispatch = maxOf(maxDispatch, elapsed)
     }
     private fun field(target: Any?, name: String): Any? {
         var type: Class<*>? = target?.javaClass
@@ -95,7 +105,7 @@ internal object InputFlightRecorder {
             outstanding = (field(receiver, "mSeqMap") as? android.util.SparseIntArray)?.size() ?: 0
             outstanding += (field(root, "mPendingInputEventCount") as? Int) ?: 0
             batched = field(root, "mConsumeBatchedInputScheduled") == true
-            "pending=${field(root, "mPendingInputEventCount")} outstanding=$outstanding batched=${field(root, "mConsumeBatchedInputScheduled")} traversal=${field(root, "mTraversalScheduled")}"
+            "pending=${field(root, "mPendingInputEventCount")} outstanding=$outstanding batched=${field(root, "mConsumeBatchedInputScheduled")} traversal=${field(root, "mTraversalScheduled")} receiver=${receiver?.javaClass?.simpleName} receiver_batched=${field(receiver, "mBatchedInputScheduled")} stopped=${field(root, "mStopped")}"
         }.getOrElse { "queue_unavailable=${it.javaClass.simpleName}" }
         val evidence = InputStallEvidence(owner.hasWindowFocus(), outstanding, batched,
             now - lastInput, syncDelay, 0,
@@ -115,15 +125,17 @@ internal object InputFlightRecorder {
         val systemAnr = evidence.newSystemAnr
         val blocked = evidence.copy(frameProbeDelay = frameDelay).blocked
         event("heartbeat sync_delay_ms=$syncDelay async_delay_ms=$asyncDelay frame_probe_ms=$frameDelay system_anr=$systemAnr")
-        event("sample inputs=$inputs input_age=${now-lastInput} frames=$frames frame_age=${now-lastFrame} focused=${owner.hasWindowFocus()} ${state?.invoke()} $queue")
+        event("sample inputs=$inputs moves=$moves dispatch_depth=$dispatchDepth max_queue_ms=$maxQueued max_dispatch_ms=$maxDispatch input_age=${now-lastInput} frames=$frames frame_age=${now-lastFrame} focused=${owner.hasWindowFocus()} ${state?.invoke()} $queue")
+        maxQueued = 0; maxDispatch = 0
+        if (systemAnr && !owner.hasWindowFocus()) event("recovery_deferred=window_not_focused system_anr=true")
         if (blocked) incident("input_or_frame_stall")
         flush(false)
         onHealth?.invoke(blocked)
     }
-    fun incident(reason: String) {
+    fun incident(reason: String, force: Boolean = false) {
         val now = SystemClock.uptimeMillis()
         synchronized(this) {
-            if (now-lastIncident < 15000) return
+            if (!force && now-lastIncident < 15000) return
             lastIncident = now
         }
         event("incident=$reason main_stack=" + android.os.Looper.getMainLooper().thread.stackTrace.take(24).joinToString(" | "))
@@ -140,7 +152,7 @@ internal object InputFlightRecorder {
         val dir = directory ?: return
         if (!incident && !writing.compareAndSet(false, true)) return
         if (incident) writing.set(true)
-        val snapshot = synchronized(this) { "wall_ms=${System.currentTimeMillis()}\n" + events.joinToString("\n") { it.second } + "\n" }
+        val snapshot = synchronized(this) { "pid=${android.os.Process.myPid()} wall_ms=${System.currentTimeMillis()} uptime_ms=${SystemClock.uptimeMillis()} elapsed_ms=${SystemClock.elapsedRealtime()}\n" + events.joinToString("\n") { it.second } + "\n" }
         writer.execute {
             try {
                 dir.mkdirs()
