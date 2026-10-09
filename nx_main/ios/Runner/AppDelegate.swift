@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 import flutter_background_service_ios
 import WatchConnectivity
 
@@ -17,11 +18,128 @@ import WatchConnectivity
 
     // Set up the watch bridge method channel
     setupWatchBridge()
+    setupPushBridge()
 
     // Set up WatchConnectivity
     setupWatchConnectivity()
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private var pushChannel: FlutterMethodChannel?
+  private var pushResult: FlutterResult?
+
+  private func setupPushBridge() {
+    guard let controller = window?.rootViewController as? FlutterViewController else { return }
+    UNUserNotificationCenter.current().delegate = self
+    pushChannel = FlutterMethodChannel(name: "com.nexus/push", binaryMessenger: controller.binaryMessenger)
+    pushChannel?.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else { return }
+      if call.method == "unregister" {
+        UIApplication.shared.unregisterForRemoteNotifications()
+        self.pushResult?(FlutterError(code: "CANCELLED", message: "Registration cancelled", details: nil))
+        self.pushResult = nil
+        result(nil)
+        return
+      }
+      guard call.method == "register" else { result(FlutterMethodNotImplemented); return }
+      guard self.pushResult == nil else {
+        result(FlutterError(code: "BUSY", message: "Registration in progress", details: nil)); return
+      }
+      self.pushResult = result
+      UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+        DispatchQueue.main.async {
+          guard self.pushResult != nil else { return }
+          if let error = error {
+            self.pushResult?(FlutterError(code: "PERMISSION", message: error.localizedDescription, details: nil))
+            self.pushResult = nil
+          } else if !granted {
+            self.pushResult?(nil)
+            self.pushResult = nil
+          } else {
+            UIApplication.shared.registerForRemoteNotifications()
+          }
+        }
+      }
+    }
+  }
+
+  override func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                      willPresent notification: UNNotification,
+                                      withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    forwardPushHaptic(notification.request.content.userInfo) { _ in }
+    let metadata = notification.request.content.userInfo["nexus_push"] as? [String: Any]
+    completionHandler(metadata?["target"] as? String == "necklace" ? [] : [.banner, .list, .sound, .badge])
+  }
+
+  // iOS may wake the existing Flutter runtime for an alert carrying content-available.
+  // This is best effort; a force-quit app or disconnected necklace cannot vibrate.
+  override func application(_ application: UIApplication,
+                            didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                            fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+    guard userInfo["nexus_push"] != nil else {
+      super.application(application, didReceiveRemoteNotification: userInfo, fetchCompletionHandler: completionHandler)
+      return
+    }
+    forwardPushHaptic(userInfo) { success in
+      completionHandler(success ? .newData : .noData)
+    }
+  }
+
+  private func forwardPushHaptic(_ userInfo: [AnyHashable: Any], completion: @escaping (Bool) -> Void) {
+    guard let metadata = userInfo["nexus_push"] as? [String: Any], let channel = pushChannel else {
+      completion(false)
+      return
+    }
+    var finished = false
+    let finish: (Bool) -> Void = { success in
+      guard !finished else { return }
+      finished = true
+      completion(success)
+    }
+    // Always complete the OS callback even if the Dart runtime isn't ready.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 20) { finish(false) }
+    channel.invokeMethod("notification", arguments: metadata) { result in
+      finish(result as? Bool ?? false)
+    }
+  }
+
+  override func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+    do {
+      let value: [String: String] = [
+        "token": deviceToken.map { String(format: "%02x", $0) }.joined(),
+        "environment": try pushEnvironment(),
+        "bundleId": Bundle.main.bundleIdentifier ?? ""
+      ]
+      pushResult?(value)
+      pushResult = nil
+    } catch {
+      pushResult?(FlutterError(code: "ENVIRONMENT", message: "Cannot determine APNs environment", details: nil))
+      pushResult = nil
+    }
+  }
+
+  override func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
+    pushResult?(FlutterError(code: "APNS", message: error.localizedDescription, details: nil))
+    pushResult = nil
+  }
+
+  private func pushEnvironment() throws -> String {
+    // Development/ad-hoc builds carry the signing profile. Store builds don't.
+    guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision") else { return "production" }
+    let data = try Data(contentsOf: url)
+    guard let raw = String(data: data, encoding: .isoLatin1),
+          let start = raw.range(of: "<plist"), let end = raw.range(of: "</plist>"),
+          let xml = String(raw[start.lowerBound..<end.upperBound]).data(using: .isoLatin1),
+          let profile = try PropertyListSerialization.propertyList(from: xml, format: nil) as? [String: Any],
+          let entitlements = profile["Entitlements"] as? [String: Any],
+          let environment = entitlements["aps-environment"] as? String,
+          ["development", "production"].contains(environment) else {
+      throw NSError(domain: "NexusPush", code: 1)
+    }
+    return environment == "development" ? "sandbox" : "production"
   }
 
   private func setupWatchBridge() {

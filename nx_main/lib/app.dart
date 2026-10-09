@@ -4,6 +4,7 @@ import 'package:nexus_voice_assistant/data/background/ambient_session_provider.d
 import 'package:nexus_voice_assistant/core/theme/app_theme.dart';
 import 'package:nexus_voice_assistant/data/providers.dart';
 import 'package:nexus_voice_assistant/router.dart';
+import 'data/push/push_registration.dart';
 
 class NexusVoiceAssistantApp extends ConsumerStatefulWidget {
   const NexusVoiceAssistantApp({super.key});
@@ -35,11 +36,15 @@ class _NexusVoiceAssistantAppState extends ConsumerState<NexusVoiceAssistantApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     ref.read(bleBackgroundServiceProvider).updateAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      PushRegistrationSession.current?.refresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     ref.watch(ambientSessionProvider);
+    ref.watch(pushRegistrationProvider);
 
     final router = ref.watch(routerProvider);
 

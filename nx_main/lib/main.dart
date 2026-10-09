@@ -10,6 +10,7 @@ import 'package:nexus_voice_assistant/data/watch/watch_bridge_service.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_voice/nx_voice.dart';
+import 'data/push/push_registration.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,9 @@ void main() async {
     overrides: [
       dbAuditSourceKindProvider.overrideWithValue('nx_main'),
       nexusClientAppIdProvider.overrideWithValue('nx_main'),
+      beforeLogoutProvider.overrideWithValue((_) async {
+        await PushRegistrationSession.current?.logout();
+      }),
     ],
   );
   final bgService = container.read(bleBackgroundServiceProvider);

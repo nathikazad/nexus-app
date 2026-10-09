@@ -16,6 +16,11 @@ final oidcSessionRestoreProvider = Provider<OidcSessionRestore>(
 
 final retainAuthSessionWhenOfflineProvider = Provider<bool>((ref) => false);
 
+/// App cleanup that needs the still-authenticated session (e.g. push tokens).
+final beforeLogoutProvider = Provider<Future<void> Function(User)>(
+  (ref) => (_) async {},
+);
+
 /// Stable identifier used to select this installed app's native OIDC client.
 final nexusClientAppIdProvider = Provider<String>((ref) => 'nx_mobile');
 
@@ -235,6 +240,13 @@ class AuthController extends AsyncNotifier<User?> {
     _generation++;
     print('[AuthController] logout() - Logging out user');
     final currentUser = state.value;
+    if (currentUser != null) {
+      try {
+        await ref.read(beforeLogoutProvider)(currentUser);
+      } catch (_) {
+        // Local logout must remain available when an app cleanup API is offline.
+      }
+    }
     state = const AsyncValue.loading();
     try {
       if (currentUser?.preset.requiresOidc ?? false) {
