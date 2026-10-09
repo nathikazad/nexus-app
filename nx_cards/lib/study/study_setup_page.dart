@@ -741,6 +741,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
             final targetId = args['cardId'];
             final parent = queue[index].content as LanguageCardContent;
             final permitted = {
+              queue[index].id,
               ...parent.examples.map((e) => e.cardId),
               ...characters[index].map((part) => characterCardIds[part]),
               ...derived[index].map((e) => e.example.cardId),
@@ -749,7 +750,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                 linkedLibrary.values,
               ).expand((g) => g.cards).map((c) => c.id),
             };
-            final target = targetId is int ? linkedLibrary[targetId] : null;
+            final target = targetId == queue[index].id
+                ? latest[targetId]
+                : targetId is int
+                ? linkedLibrary[targetId]
+                : null;
             if (target == null ||
                 target.content is! LanguageCardContent ||
                 !permitted.contains(targetId)) {

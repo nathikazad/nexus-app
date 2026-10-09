@@ -60,6 +60,13 @@ void main() {
     expect(NativeDrawingSession.practiceCard(card)['writing'], isTrue);
     expect(NativeDrawingSession.practiceCard(spoken)['writing'], isFalse);
     expect(NativeDrawingSession.practiceCard(spoken)['spokenOnly'], isTrue);
+    expect(NativeDrawingSession.practiceCard(spoken)['cardId'], spoken.id);
+    expect(
+      NativeDrawingSession.recallCard(
+        StudyPrompt(card: card, cue: StudyCue.scriptToMeaning),
+      )['cardId'],
+      card.id,
+    );
     expect(
       NativeDrawingSession.recallCard(
         StudyPrompt(card: spoken, cue: StudyCue.meaningToSound),

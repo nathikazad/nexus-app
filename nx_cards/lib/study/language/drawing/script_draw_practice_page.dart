@@ -1,3 +1,5 @@
+import 'package:nx_cards/study/language/card_study_info.dart';
+import 'package:nx_cards/browser/card_details_page.dart';
 import 'package:nx_cards/study/language/language_examples_page.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:flutter/material.dart';
@@ -216,6 +218,16 @@ class _ScriptDrawPracticePageState extends State<ScriptDrawPracticePage> {
         return Scaffold(
           appBar: AppBar(
             title: Text('${widget.title} · Focus'),
+            actions: [
+              CardStudyInfo(
+                spokenOnly: _card.spokenOnly,
+                onOpen: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CardDetailsPage(card: _card),
+                  ),
+                ),
+              ),
+            ],
             leading: IconButton(
               tooltip: 'Back to study sheet',
               onPressed: () => Navigator.of(context).pop(),

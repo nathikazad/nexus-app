@@ -93,6 +93,7 @@ Future<void> openStudyFocus(
           final targetId = args['cardId'];
           final parent = cards[index].content as LanguageCardContent;
           final permitted = {
+            cards[index].id,
             ...parent.examples.map((e) => e.cardId),
             ...characters[index].map((part) => characterCardIds[part]),
             ...derived[index].map((e) => e.example.cardId),
@@ -101,7 +102,11 @@ Future<void> openStudyFocus(
               linkedLibrary.values,
             ).expand((g) => g.cards).map((c) => c.id),
           };
-          final target = targetId is int ? linkedLibrary[targetId] : null;
+          final target = targetId == cards[index].id
+              ? cards[index]
+              : targetId is int
+              ? linkedLibrary[targetId]
+              : null;
           if (target == null ||
               target.content is! LanguageCardContent ||
               !permitted.contains(targetId)) {

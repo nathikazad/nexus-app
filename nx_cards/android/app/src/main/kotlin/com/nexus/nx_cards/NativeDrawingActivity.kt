@@ -25,6 +25,8 @@ class NativeDrawingActivity : Activity() {
     private lateinit var progress: TextView
     private lateinit var prompt: TextView
     private lateinit var subtitle: TextView
+    private lateinit var audioOnlyBadge: TextView
+    private lateinit var cardInfo: ImageButton
     private lateinit var hint: TextView
     private lateinit var referenceScroll: ScrollView
     private lateinit var practiceFrame: LinearLayout
@@ -92,7 +94,27 @@ class NativeDrawingActivity : Activity() {
             header.addView(label(18f).apply { text = if (recall) input["title"] as? String ?: "Recall" else "${input["title"] ?: "Practice"} · Focus" }, LinearLayout.LayoutParams(0, -2, 1f))
             if (recall) header.addView(end)
             root.addView(header, LinearLayout.LayoutParams(-1, -2))
-            progress = label(13f); root.addView(progress)
+            val cardHeading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+            progress = label(13f)
+            cardHeading.addView(progress, LinearLayout.LayoutParams(0, dp(48), 1f))
+            audioOnlyBadge = label(12f).apply {
+                text = "Audio only"
+                setPadding(dp(10), dp(5), dp(10), dp(5))
+                background = GradientDrawable().apply {
+                    setColor(Color.rgb(239, 241, 243)); cornerRadius = dp(16).toFloat()
+                    setStroke(dp(1), Color.LTGRAY)
+                }
+            }
+            cardHeading.addView(audioOnlyBadge, LinearLayout.LayoutParams(-2, -2))
+            cardInfo = ImageButton(this).apply {
+                contentDescription = "Card details"; tooltipText = "Card details"
+                setImageDrawable(DrawingIcon("info"))
+                setPadding(dp(13), dp(13), dp(13), dp(13))
+                setBackgroundColor(Color.TRANSPARENT)
+                setOnClickListener { if (!busy) (card["cardId"] as? Number)?.let { openExample(it.toInt()) } }
+            }
+            cardHeading.addView(cardInfo, LinearLayout.LayoutParams(dp(48), dp(48)))
+            root.addView(cardHeading, LinearLayout.LayoutParams(-1, -2))
             val reference = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(12), dp(12), dp(12), dp(12)) }
             prompt = label(32f); subtitle = label(16f)
             val textWidth = resources.displayMetrics.widthPixels - dp(144)
@@ -167,6 +189,8 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCard(): Unit = RecallDiagnostics.measure("card_bind") {
         progress.text = "${index + 1} of ${cards.size}"
+        audioOnlyBadge.visibility = if (card["spokenOnly"] != true) View.GONE else if (!recall || revealed) View.VISIBLE else View.INVISIBLE
+        cardInfo.visibility = if (!recall || revealed) View.VISIBLE else View.INVISIBLE
         if ((recall && !revealed || !recall && card["practiceDirection"] == true) && card["listening"] == true && listeningIndex != index) {
             listeningIndex = index
             val expectedIndex = index
@@ -510,6 +534,7 @@ class NativeDrawingActivity : Activity() {
         InputFlightRecorder.event("busy=$value index=$index")
         busy = value; end.isEnabled = !value
         referencePlay.isEnabled = !value
+        cardInfo.isEnabled = !value
         for (i in 0 until controls.childCount) {
             val control = controls.getChildAt(i)
             control.isEnabled = !value && control.tag != false

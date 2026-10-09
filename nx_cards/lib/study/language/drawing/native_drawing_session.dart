@@ -133,6 +133,7 @@ class NativeDrawingSession {
   }) {
     final content = card.content as LanguageCardContent;
     return {
+      'cardId': card.id,
       'practiceDirection': cue != null,
       'spokenOnly': card.spokenOnly,
       'writing': !card.spokenOnly,

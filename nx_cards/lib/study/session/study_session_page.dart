@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/card_study_info.dart';
 import 'package:nx_cards/study/language/language_examples_page.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
@@ -189,6 +190,9 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                           current: _index + 1,
                           total: _prompts.length,
                           onEnd: _endReview,
+                          spokenOnly: _card.spokenOnly,
+                          revealed: _revealed,
+                          onOpen: _openCardDetails,
                         ),
                         const SizedBox(height: 14),
                         LinearProgressIndicator(
@@ -225,15 +229,6 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                                   .toUpperCase(),
                                             ),
                                             const Spacer(),
-                                            if (_revealed)
-                                              IconButton(
-                                                onPressed: _openCardDetails,
-                                                tooltip: 'Card stats',
-                                                icon: const Icon(
-                                                  Icons.style_outlined,
-                                                  size: 20,
-                                                ),
-                                              ),
                                           ],
                                         ),
                                         Expanded(
@@ -481,40 +476,47 @@ class _StudyHeader extends StatelessWidget {
     required this.current,
     required this.total,
     required this.onEnd,
+    required this.spokenOnly,
+    required this.revealed,
+    required this.onOpen,
   });
   final String title;
-  final int current;
-  final int total;
-  final VoidCallback onEnd;
-
+  final int current, total;
+  final bool spokenOnly, revealed;
+  final VoidCallback onEnd, onOpen;
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const SizedBox(width: 64),
-        Expanded(
-          child: Column(
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text('$current of $total', style: monoLabel),
-            ],
+  Widget build(BuildContext context) => Column(
+    children: [
+      Row(
+        children: [
+          const SizedBox(width: 64),
+          Expanded(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
           ),
-        ),
-        SizedBox(
-          width: 64,
-          child: TextButton(onPressed: onEnd, child: const Text('End')),
-        ),
-      ],
-    );
-  }
+          SizedBox(
+            width: 64,
+            child: TextButton(onPressed: onEnd, child: const Text('End')),
+          ),
+        ],
+      ),
+      Row(
+        children: [
+          Expanded(child: Text('$current of $total', style: monoLabel)),
+          CardStudyInfo(
+            spokenOnly: spokenOnly,
+            onOpen: onOpen,
+            visible: revealed,
+          ),
+        ],
+      ),
+    ],
+  );
 }
 
 class _RatingBar extends StatelessWidget {

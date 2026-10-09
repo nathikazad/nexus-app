@@ -21,6 +21,11 @@ internal class DrawingIcon(private val name: String) : Drawable() {
             canvas.drawPath(path, paint)
         }
         when (name) {
+            "info" -> {
+                canvas.drawCircle(12f, 12f, 9f, paint)
+                line(12f, 11f, 12f, 17f)
+                canvas.drawCircle(12f, 7f, .6f, paint)
+            }
             "undo" -> {
                 line(8f, 4f, 3f, 9f, 8f, 14f)
                 canvas.drawPath(Path().apply { moveTo(3f,9f); lineTo(14f,9f); cubicTo(23f,9f,23f,20f,14f,20f) }, paint)

@@ -77,7 +77,7 @@ void main() {
     expect(find.text('Edit card'), findsNothing);
     expect(find.byIcon(Icons.refresh_rounded), findsNothing);
 
-    await tester.tap(find.byTooltip('Card stats'));
+    await tester.tap(find.byTooltip('Card details'));
     await tester.pumpAndSettle();
     expect(find.text('Examples (1)'), findsNothing);
     expect(find.text('അത് ഒരു തട്ടിപ്പായിരുന്നു.'), findsOneWidget);

@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/card_study_info.dart';
 import 'package:nx_cards/study/language/revealed_language_answer.dart';
 import 'package:nx_cards/study/language/tablet_recall_context.dart';
 import 'package:nx_cards/study/session/recall_recap_page.dart';
@@ -227,7 +228,8 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
           }
           if (call.method == 'exampleCard') {
             final id = args['cardId'];
-            if (!content.examples.any((e) => e.cardId == id) &&
+            if (id != _questions[index].cardId &&
+                !content.examples.any((e) => e.cardId == id) &&
                 !similarCards.any((c) => c.id == id)) {
               throw PlatformException(code: 'invalid_example');
             }
@@ -340,8 +342,26 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Group ${_groupIndex + 1} of ${widget.groups.length} · Word ${_wordIndex + 1} of ${_questions.length}',
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Group ${_groupIndex + 1} of ${widget.groups.length} · Word ${_wordIndex + 1} of ${_questions.length}',
+                      ),
+                    ),
+                    CardStudyInfo(
+                      spokenOnly: prompt.card.spokenOnly,
+                      visible: _revealed,
+                      onOpen: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => CardDetailsPage(
+                            card: prompt.card,
+                            allowEdit: false,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 if (!_revealed) Text(prompt.instruction),
