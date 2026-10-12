@@ -298,6 +298,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('All entry ignores remembered category but retains target', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'all-entry': '{"target":90,"category":"Word","path":["Word"]}',
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProgressView(
+            cards: demoCards,
+            language: 'Chinese',
+            preferenceKey: 'all-entry',
+            initialAll: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('At least 90%'), findsOneWidget);
+    expect(find.text('All categories'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'category entry overrides remembered scope and restores other filters',
     (tester) async {

@@ -49,7 +49,17 @@ class BacklogPage extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
                   child: Row(
-                    children: [const Spacer(), const BulkSelectButton()],
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${cards.length} ${cards.length == 1 ? 'card' : 'cards'} in backlog',
+                          key: const ValueKey('backlog-count'),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const BulkSelectButton(),
+                    ],
                   ),
                 ),
                 Expanded(

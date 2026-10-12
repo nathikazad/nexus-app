@@ -246,6 +246,7 @@ class _LanguageCategoryCardState extends ConsumerState<_LanguageCategoryCard> {
     final metrics = <(int, String)>[
       (current + learnt, 'Current'),
       (CardsDashboard(cards: cards).dueCount(DateTime.now()), 'Due'),
+      (count(LearningStage.future), 'Remaining'),
     ];
     final widths = metrics.map((entry) {
       final labelWidth = textWidth(entry.$2, labelStyle);
@@ -502,6 +503,26 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
             sourceKind: StudySourceKind.language,
             child: Column(
               children: [
+                if (language != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1200),
+                        child: DailyGoalBar(
+                          name: language!,
+                          openAllProgress: widget.allCards,
+                          progressGroup: widget.allCards
+                              ? null
+                              : LanguageGroup(
+                                  category,
+                                  tagSystem: widget.tagSystem,
+                                  path: widget.categoryPath,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
                   child: Center(

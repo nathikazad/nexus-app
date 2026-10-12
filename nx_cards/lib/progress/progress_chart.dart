@@ -132,7 +132,9 @@ class ProgressChart extends StatelessWidget {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: scheme.surfaceContainerHighest,
+                            color: scheme.surfaceContainerHighest.withValues(
+                              alpha: .72,
+                            ),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: scheme.outlineVariant),
                           ),

@@ -96,7 +96,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      const priority = ['current', 'due'];
+      const priority = ['current', 'due', 'remaining'];
       int visible() {
         var count = 0;
         for (final label in priority) {
@@ -115,7 +115,7 @@ void main() {
       }
 
       await show(1500, 1);
-      expect(visible(), 2);
+      expect(visible(), 3);
       expect(
         tester.getTopLeft(find.text('Words')).dx,
         tester.getTopLeft(find.text('Phrases')).dx,
@@ -127,7 +127,7 @@ void main() {
       expect(find.byIcon(Icons.chevron_right), findsNothing);
       await show(390, 1);
       final phoneCount = visible();
-      expect(phoneCount, inInclusiveRange(1, 2));
+      expect(phoneCount, 3);
       await show(280, 1);
       expect(visible(), inInclusiveRange(1, phoneCount));
       await show(390, 2);

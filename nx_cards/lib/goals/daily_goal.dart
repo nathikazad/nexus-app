@@ -1,3 +1,4 @@
+import 'package:nx_cards/browser/language/language_groups.dart';
 import 'package:nx_cards/goals/goal_day_clock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -70,9 +71,17 @@ final goalClockProvider = StreamProvider.autoDispose<DateTime>((ref) async* {
 });
 
 class DailyGoalBar extends ConsumerWidget {
-  const DailyGoalBar({super.key, required this.name, this.bookId});
+  const DailyGoalBar({
+    super.key,
+    required this.name,
+    this.bookId,
+    this.progressGroup,
+    this.openAllProgress = false,
+  });
   final String name;
   final int? bookId;
+  final LanguageGroup? progressGroup;
+  final bool openAllProgress;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final source = (language: bookId == null ? name : null, bookId: bookId);
@@ -107,7 +116,12 @@ class DailyGoalBar extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => ProgressPage(language: name, bookId: bookId),
+            builder: (_) => ProgressPage(
+              language: name,
+              bookId: bookId,
+              initialGroup: progressGroup,
+              initialAll: openAllProgress,
+            ),
           ),
         ),
         child: Padding(

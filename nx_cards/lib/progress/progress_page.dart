@@ -77,10 +77,12 @@ class ProgressPage extends ConsumerWidget {
     super.key,
     required this.language,
     this.initialGroup,
+    this.initialAll = false,
     this.bookId,
   });
   final String language;
   final LanguageGroup? initialGroup;
+  final bool initialAll;
   final int? bookId;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,6 +133,7 @@ class ProgressPage extends ConsumerWidget {
                   language: language,
                   preferenceKey: key,
                   initialGroup: initialGroup,
+                  initialAll: initialAll,
                   isBook: bookId != null,
                 ),
               );
@@ -148,12 +151,14 @@ class ProgressView extends StatefulWidget {
     required this.language,
     required this.preferenceKey,
     this.initialGroup,
+    this.initialAll = false,
     this.now,
     this.isBook = false,
   });
   final List<StudyCard> cards;
   final String language, preferenceKey;
   final LanguageGroup? initialGroup;
+  final bool initialAll;
   final DateTime? now;
   final bool isBook;
   @override
@@ -203,7 +208,9 @@ class _ProgressViewState extends State<ProgressView> {
           custom = DateTimeRange(start: start, end: end);
         }
         if (period == 'custom' && custom == null) period = '30';
-        if (widget.initialGroup == null && saved['category'] is String) {
+        if (!widget.initialAll &&
+            widget.initialGroup == null &&
+            saved['category'] is String) {
           group = LanguageGroup(
             saved['category'],
             tagSystem: saved['tagSystem'] ?? 'Category',
