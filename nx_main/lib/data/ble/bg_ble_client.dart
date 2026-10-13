@@ -21,6 +21,7 @@ class BleClient {
   final _setupLifecycle = BleSetupLifecycle();
   BluetoothCharacteristic? _identityCharacteristic;
   BluetoothCharacteristic? _backgroundAudioCharacteristic;
+  BluetoothCharacteristic? _volumeCharacteristic;
   Future<void> _identityTail = Future.value();
   int _identityRequestId = 0;
 
@@ -305,6 +306,7 @@ class BleClient {
     _identityCharacteristic = null;
     _fileCtrlCharacteristic = null;
     _backgroundAudioCharacteristic = null;
+    _volumeCharacteristic = null;
     _cameraCmdCharacteristic = null;
     _cameraStatusCharacteristic = null;
   }
@@ -439,7 +441,9 @@ class BleClient {
 
       for (BluetoothCharacteristic char in targetService.characteristics) {
         final uuid = char.uuid.toString().toLowerCase();
-        if (uuid == 'beb54842-36e1-4688-b7f5-ea07361b26ae') {
+        if (uuid == 'beb54843-36e1-4688-b7f5-ea07361b26ae') {
+          _volumeCharacteristic = char;
+        } else if (uuid == 'beb54842-36e1-4688-b7f5-ea07361b26ae') {
           _backgroundAudioCharacteristic = char;
         } else if (uuid == 'beb54841-36e1-4688-b7f5-ea07361b26ae') {
           _identityCharacteristic = char;
@@ -1047,6 +1051,34 @@ class BleClient {
           'ble.audio_control', {'operation': operation, 'accepted': true});
       return true;
     } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Uint8List?> readVolume() async {
+    final characteristic = _volumeCharacteristic;
+    if (!isConnected || characteristic == null) return null;
+    try {
+      return Uint8List.fromList(await characteristic.read());
+    } catch (e) {
+      _log('Volume read failed: $e');
+      return null;
+    }
+  }
+
+  Future<bool> writeVolume(int output, int percent) async {
+    final characteristic = _volumeCharacteristic;
+    if (!isConnected ||
+        characteristic == null ||
+        output < 0 ||
+        output > 1 ||
+        percent < 0 ||
+        percent > 100) return false;
+    try {
+      await characteristic.write([1, output, percent], withoutResponse: false);
+      return true;
+    } catch (e) {
+      _log('Volume write failed: $e');
       return false;
     }
   }

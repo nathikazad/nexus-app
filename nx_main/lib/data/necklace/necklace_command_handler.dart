@@ -23,6 +23,50 @@ class NecklaceCommandHandler {
             (i) => int.parse(rawId.substring(i * 2, i * 2 + 2), radix: 16)));
       }
       switch (action) {
+        case 'get_volume':
+        case 'set_volume':
+          final target = device;
+          if (target is! NecklaceVolumePort)
+            return jsonEncode(
+                {'success': false, 'error': 'Volume control unavailable'});
+          final volume = target as NecklaceVolumePort;
+          if (action == 'set_volume') {
+            final output = params['output'];
+            final percent = params['percent'];
+            if ((output != 'speaker' && output != 'headset') ||
+                percent is! int ||
+                percent < 0 ||
+                percent > 100) {
+              return jsonEncode({
+                'success': false,
+                'error': 'Expected speaker/headset and integer percent 0–100'
+              });
+            }
+            if (!await volume.writeVolume(output == 'speaker' ? 0 : 1, percent))
+              return jsonEncode(
+                  {'success': false, 'error': 'Volume write rejected'});
+          }
+          final value = await volume.readVolume();
+          if (value == null ||
+              value.length != 7 ||
+              value[0] != 2 ||
+              value[1] > 100 ||
+              value[2] > 100 ||
+              value[3] > 2) {
+            return jsonEncode({
+              'success': false,
+              'error': 'Volume unavailable; update necklace firmware'
+            });
+          }
+          return jsonEncode({
+            'success': true,
+            'connected': ['none', 'left', 'right', 'both'][value[4] & 3],
+            'audio_ready': ['none', 'left', 'right', 'both'][value[5] & 3],
+            'identifying_buds': value[6],
+            'speaker': value[1],
+            'headset': value[2],
+            'persistence': ['saved', 'pending', 'failed'][value[3]]
+          });
         case 'audio.start':
         case 'audio.stop':
         case 'audio.new':

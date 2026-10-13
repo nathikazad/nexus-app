@@ -1,3 +1,4 @@
+import 'volume_section.dart';
 import 'widgets/audio_section.dart';
 import 'package:nexus_voice_assistant/features/devices/devices_page.dart';
 import 'dart:async';
@@ -487,6 +488,12 @@ class _HardwarePageState extends ConsumerState<HardwarePage> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: RefLayout.gap4),
+                        VolumeSection(
+                            isConnected: vm.isConnected,
+                            read: ref.read(hardwareServiceProvider).readVolume,
+                            write:
+                                ref.read(hardwareServiceProvider).writeVolume),
                         const SizedBox(height: RefLayout.gap4),
                         AudioSection(
                             isConnected: vm.isConnected,

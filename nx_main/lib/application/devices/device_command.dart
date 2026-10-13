@@ -3,6 +3,8 @@ enum DeviceCommandKind {
   identityExchange,
   writeAudioControl,
   readAudioStatus,
+  readVolume,
+  writeVolume,
   writeHaptic,
   writeCamera,
   readBattery,

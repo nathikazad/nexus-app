@@ -272,6 +272,17 @@ class BackgroundServiceClient {
           responseParser: (e) => e?.success ?? false,
           timeoutValue: () => false) ??
       false;
+  Future<List<int>?> readVolume() => _sendCommand<List<int>>(
+      command: DeviceCommand(DeviceCommandKind.readVolume),
+      responseParser: (e) => e?.success == true ? e?.bytes : null,
+      timeoutValue: () => null);
+  Future<bool> writeVolume(int output, int percent) async =>
+      await _sendCommand<bool>(
+          command: DeviceCommand(DeviceCommandKind.writeVolume,
+              bytes: [output, percent]),
+          responseParser: (e) => e?.success ?? false,
+          timeoutValue: () => false) ??
+      false;
   Future<List<int>?> readAudioStatus() => _sendCommand<List<int>>(
       command: DeviceCommand(DeviceCommandKind.readAudioStatus),
       responseParser: (e) => e?.success == true ? e?.bytes : null,

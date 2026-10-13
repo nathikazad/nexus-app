@@ -428,6 +428,17 @@ class BackgroundRuntime {
                     bytes.length == 1 &&
                     await bleClient.writeAudioControl(bytes.single));
             break;
+          case DeviceCommandKind.readVolume:
+            final value = await bleClient.readVolume();
+            sendResult(success: value != null, bytes: value);
+            break;
+          case DeviceCommandKind.writeVolume:
+            final value = request.bytes;
+            sendResult(
+                success: value != null &&
+                    value.length == 2 &&
+                    await bleClient.writeVolume(value[0], value[1]));
+            break;
           case DeviceCommandKind.readAudioStatus:
             final status = await bleClient.readAudioStatus();
             sendResult(success: status != null, bytes: status);

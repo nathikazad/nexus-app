@@ -119,6 +119,9 @@ class HardwareService {
 
   Future<bool> writeAudioControl(int operation) =>
       _bgService.writeAudioControl(operation);
+  Future<List<int>?> readVolume() => _bgService.readVolume();
+  Future<bool> writeVolume(int output, int percent) =>
+      _bgService.writeVolume(output, percent);
   Future<List<int>?> readAudioStatus() => _bgService.readAudioStatus();
 
   /// Read auto photo-record status (poll; device does not notify).
