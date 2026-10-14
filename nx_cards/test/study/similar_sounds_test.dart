@@ -52,10 +52,58 @@ StudyCard soundCard(
 );
 void main() {
   test(
+    'meaning groups classify, score meaning, and produce eligible rounds',
+    () {
+      final cards = [
+        soundCard(1, 'néng', groups: ['can-meaning']),
+        soundCard(2, 'huì', groups: ['can-meaning']),
+      ];
+      expect(similarGroupKind('can-meaning'), SimilarGroupKind.meaning);
+      expect(similarGroupTitle('can-meaning'), 'can');
+      expect(similarGroupCues(SimilarGroupKind.meaning), [
+        RecallComponent.meaning,
+      ]);
+      expect(
+        availableSimilarGroupTypes(
+          cards,
+          directions: {RecallComponent.script},
+          writing: false,
+        ),
+        {SimilarGroupType.meaning},
+      );
+      final sessions = manualRecallSession(
+        cards,
+        sound: false,
+        meaning: true,
+        directions: {},
+        groupLimit: 10,
+        writing: false,
+      );
+      expect(sessions, isNotEmpty);
+      for (final session in sessions) {
+        expect(session.label, 'can-meaning');
+        for (final prompt in session.prompts) {
+          for (final cue in prompt.testedCues) {
+            expect(cue.target, isNot(RecallComponent.script));
+            expect(
+              cue.source == RecallComponent.meaning ||
+                  cue.target == RecallComponent.meaning,
+              isTrue,
+            );
+          }
+        }
+      }
+    },
+  );
+  test(
     'cheap availability matches full sessions across directions and writing modes',
     () {
       final cards = [
-        soundCard(1, 'a', groups: ['group-write', 'group-sound']),
+        soundCard(
+          1,
+          'a',
+          groups: ['group-write', 'group-sound', 'group-meaning'],
+        ),
         soundCard(2, 'b', groups: ['group-write']).copyWith(
           content:
               (soundCard(2, 'b', groups: ['group-write']).content
@@ -85,6 +133,7 @@ void main() {
                 if (manualRecallSession(
                   subset,
                   sound: type == SimilarGroupType.sound,
+                  meaning: type == SimilarGroupType.meaning,
                   directions: directions,
                   writing: writing,
                   groupLimit: 1,

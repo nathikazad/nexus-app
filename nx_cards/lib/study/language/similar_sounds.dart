@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 
-enum SimilarGroupType { written, sound }
+enum SimilarGroupType { written, sound, meaning }
 
 class SimilarSoundGroup {
   const SimilarSoundGroup(this.cards, {required this.label});
@@ -89,7 +89,16 @@ Set<SimilarGroupType> availableSimilarGroupTypes(
         )) {
       result.add(SimilarGroupType.written);
     }
-    if (result.length == 2) break;
+    if (groups.any((id) => id.endsWith('-meaning')) &&
+        StudyCue.languageDirections.any(
+          (cue) =>
+              (cue.source == RecallComponent.meaning ||
+                  cue.target == RecallComponent.meaning) &&
+              eligible(cue),
+        )) {
+      result.add(SimilarGroupType.meaning);
+    }
+    if (result.length == SimilarGroupType.values.length) break;
   }
   return result;
 }
@@ -99,6 +108,7 @@ Set<SimilarGroupType> availableSimilarGroupTypes(
 List<SimilarRecallGroup> manualRecallSession(
   Iterable<StudyCard> cards, {
   required bool sound,
+  bool meaning = false,
   required Set<RecallComponent> directions,
   required int groupLimit,
   bool writing = true,
@@ -108,7 +118,10 @@ List<SimilarRecallGroup> manualRecallSession(
   if (groupLimit < 1) return [];
   final cues = StudyCue.languageDirections
       .where(
-        (cue) => sound
+        (cue) => meaning
+            ? cue.source == RecallComponent.meaning ||
+                  cue.target == RecallComponent.meaning
+            : sound
             ? cue.isListening
             : directions.contains(cue.source) ||
                   directions.contains(cue.target),
@@ -118,7 +131,15 @@ List<SimilarRecallGroup> manualRecallSession(
   final groups = manualSimilarSoundGroups(cards.where((c) => c.active));
   final sessions = <SimilarRecallGroup>[];
   for (final group in groups) {
-    if (!group.label.endsWith(sound ? '-sound' : '-write')) continue;
+    if (!group.label.endsWith(
+      meaning
+          ? '-meaning'
+          : sound
+          ? '-sound'
+          : '-write',
+    )) {
+      continue;
+    }
     for (final source in RecallComponent.values) {
       final prompts = combineRecallPrompts([
         for (final cue in StudyCue.languageDirections.where(
@@ -176,21 +197,24 @@ List<SimilarRecallGroup> manualRecallSession(
   return selected;
 }
 
-enum SimilarGroupKind { sound, written, other }
+enum SimilarGroupKind { sound, written, meaning, other }
 
 SimilarGroupKind similarGroupKind(String id) => id.endsWith('-sound')
     ? SimilarGroupKind.sound
     : id.endsWith('-write')
     ? SimilarGroupKind.written
+    : id.endsWith('-meaning')
+    ? SimilarGroupKind.meaning
     : SimilarGroupKind.other;
 
 String similarGroupTitle(String id) =>
-    id.replaceFirst(RegExp(r'-(sound|write|other)$'), '');
+    id.replaceFirst(RegExp(r'-(sound|write|meaning|other)$'), '');
 
 Iterable<RecallComponent> similarGroupCues(SimilarGroupKind kind) =>
     switch (kind) {
       SimilarGroupKind.sound => [RecallComponent.sound],
       SimilarGroupKind.written => [RecallComponent.script],
+      SimilarGroupKind.meaning => [RecallComponent.meaning],
       SimilarGroupKind.other => RecallComponent.values,
     };
 

@@ -40,13 +40,14 @@ class SimilarSoundsPage extends ConsumerWidget {
             );
           }
           return DefaultTabController(
-            length: 3,
+            length: SimilarGroupKind.values.length,
             child: Column(
               children: [
                 const TabBar(
                   tabs: [
                     Tab(text: 'Sound'),
                     Tab(text: 'Written'),
+                    Tab(text: 'Meaning'),
                     Tab(text: 'Other'),
                   ],
                 ),

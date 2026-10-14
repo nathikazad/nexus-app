@@ -127,6 +127,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   }) => manualRecallSession(
     cards,
     sound: sound ?? _effectiveSimilarType == SimilarGroupType.sound,
+    meaning: sound == null && _effectiveSimilarType == SimilarGroupType.meaning,
     directions: _writtenDirections,
     groupLimit: limit ?? 1000000,
     writing: _writing,
@@ -1335,6 +1336,13 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                               const ButtonSegment(
                                 value: SimilarGroupType.sound,
                                 label: Text('Sound'),
+                              ),
+                            if (_similarTypes.contains(
+                              SimilarGroupType.meaning,
+                            ))
+                              const ButtonSegment(
+                                value: SimilarGroupType.meaning,
+                                label: Text('Meaning'),
                               ),
                           ],
                           selected: {_effectiveSimilarType},
