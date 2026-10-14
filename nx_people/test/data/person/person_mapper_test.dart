@@ -15,6 +15,7 @@ void main() {
               Model(
                 id: 99,
                 name: 'Conversation with Rachel',
+                description: 'Discussed the launch.',
                 modelTypeId: 2,
                 createdAt: '2026-10-06T12:00:00Z',
               ),
@@ -23,6 +24,7 @@ void main() {
         ),
       );
       expect(mapped.actualMeetings.single.id, 99);
+      expect(mapped.actualMeetings.single.description, 'Discussed the launch.');
       expect(mapped.actualMeetings.single.startTime, isNull);
       expect(
         mapped.actualMeetings.single.createdAt,

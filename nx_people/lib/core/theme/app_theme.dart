@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const Color bg = Color(0xfffdfcf8);
+  static const Color bg = Color(0xfffaf9f6);
   static const Color panel = Color(0xffffffff);
-  static const Color sidebar = Color(0xfffdfcf8);
+  static const Color sidebar = Color(0xfffaf9f6);
   static const Color subtle = Color(0xfff5f2eb);
   static const Color hover = Color(0xffeae6db);
   static const Color line = Color(0xffeae6db);
@@ -14,7 +14,7 @@ class AppColors {
   static const Color faint = Color(0xff8b8881);
   static const Color blue = Color(0xff3f6ca8);
   static const Color amber = Color(0xff9a6a18);
-  static const Color green = Color(0xff3d7c72);
+  static const Color green = Color(0xff2f5138);
   static const Color red = Color(0xffa6534f);
   static const Color resultHover = Color(0xffeef5f4);
 }
@@ -22,7 +22,7 @@ class AppColors {
 ThemeData buildAppTheme() {
   final base = ThemeData(
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.text,
+      seedColor: AppColors.green,
       surface: AppColors.bg,
     ),
     useMaterial3: true,
@@ -33,6 +33,11 @@ ThemeData buildAppTheme() {
       base.textTheme,
     ).apply(bodyColor: AppColors.text, displayColor: AppColors.text),
     dividerColor: AppColors.line,
+    cardTheme: const CardThemeData(
+      elevation: 0,
+      color: AppColors.panel,
+      surfaceTintColor: Colors.transparent,
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: AppColors.panel,
@@ -53,7 +58,7 @@ ThemeData buildAppTheme() {
       hintStyle: const TextStyle(color: AppColors.faint),
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.panel,
+      backgroundColor: AppColors.bg,
       foregroundColor: AppColors.text,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -72,3 +77,14 @@ ThemeData buildAppTheme() {
     ),
   );
 }
+
+/// Editorial headings inspired by the Aura concept; native iOS serif typography.
+TextStyle peopleEditorialTitle(double size) => TextStyle(
+  fontFamily: 'Georgia',
+  fontFamilyFallback: const ['Times New Roman', 'serif'],
+  fontSize: size,
+  height: 1.18,
+  letterSpacing: -.7,
+  fontWeight: FontWeight.w400,
+  color: AppColors.text,
+);

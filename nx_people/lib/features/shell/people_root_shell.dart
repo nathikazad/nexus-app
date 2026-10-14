@@ -1,4 +1,8 @@
-import 'package:nx_people/features/meeting/meeting_detail_page.dart';
+import 'package:nx_people/features/assistant/people_assistant.dart';
+import 'package:nx_people/features/settings/people_settings_page.dart';
+import 'package:nx_people/features/events/events_page.dart';
+import 'package:nx_people/features/meeting/meetings_page.dart';
+import 'package:nx_people/features/meeting/meeting_card.dart';
 import 'package:nx_people/features/sync/people_sync_status.dart';
 import 'package:nx_people/data/sync/people_image.dart';
 import 'package:file_picker/file_picker.dart';
@@ -6,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
-import 'package:nx_db/external_messages.dart';
 import 'package:nx_people/core/layout/is_desktop_layout.dart';
 import 'package:nx_people/core/theme/app_theme.dart';
 import 'package:nx_people/data/person/person_attr_keys.dart';
@@ -17,16 +20,6 @@ import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/domain/person/person_query.dart';
 import 'package:nx_people/features/shell/people_state.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-const _softInputBorder = OutlineInputBorder(
-  borderRadius: BorderRadius.all(Radius.circular(12)),
-  borderSide: BorderSide(color: Colors.transparent),
-);
-
-const _focusedSoftInputBorder = OutlineInputBorder(
-  borderRadius: BorderRadius.all(Radius.circular(12)),
-  borderSide: BorderSide(color: AppColors.lineStrong),
-);
 
 void _invalidatePeopleData(WidgetRef ref, {int? personId}) {
   ref.invalidate(recentPeopleProvider);
@@ -63,7 +56,7 @@ Future<void> _showLogForm(BuildContext context) {
 
 enum _CreateKind { person, meeting, log }
 
-enum _AppMenuAction { funnels, logout }
+enum _AppMenuAction { logout }
 
 Future<void> _showCreateMenu(BuildContext context) async {
   final selection = await showModalBottomSheet<_CreateKind>(
@@ -95,11 +88,6 @@ Future<void> _showAppMenu(BuildContext context, WidgetRef ref) async {
   );
   if (action == null) return;
   switch (action) {
-    case _AppMenuAction.funnels:
-      ref
-          .read(peopleWorkspaceProvider.notifier)
-          .setSection(PeopleAppSection.funnels);
-      return;
     case _AppMenuAction.logout:
       await ref.read(authProvider.notifier).logout();
       return;
@@ -111,8 +99,18 @@ class PeopleRootShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    if (auth.isLoading || auth.value == null) {
+      return const Scaffold(body: SizedBox.shrink());
+    }
     final workspace = ref.watch(peopleWorkspaceProvider);
     final desktop = isDesktopLayout(context);
+    final selectedPerson =
+        desktop &&
+            workspace.section == PeopleAppSection.people &&
+            workspace.activePersonId != null
+        ? ref.watch(personByIdProvider(workspace.activePersonId!)).value
+        : null;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -129,18 +127,17 @@ class PeopleRootShell extends ConsumerWidget {
         ),
       ),
       bottomNavigationBar: desktop ? null : const _BottomTabs(),
-      floatingActionButton:
-          !desktop && workspace.section == PeopleAppSection.people
-          ? FloatingActionButton(
-              key: const ValueKey('people-add-fab'),
-              onPressed: () => _showCreateMenu(context),
-              backgroundColor: AppColors.text,
-              foregroundColor: AppColors.bg,
-              tooltip: 'Create',
-              child: const Icon(Icons.add),
+      floatingActionButton: desktop
+          ? PeopleAssistantButton(
+              selection: selectedPerson == null
+                  ? null
+                  : PeopleAssistantContext(
+                      kind: 'Person',
+                      id: selectedPerson.id,
+                      name: selectedPerson.name,
+                    ),
             )
           : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
@@ -181,15 +178,17 @@ class _SectionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (section) {
       PeopleAppSection.people => _PeopleView(desktop: desktop),
-      PeopleAppSection.meetings => _MeetingsView(desktop: desktop),
-      PeopleAppSection.pending => _PendingView(desktop: desktop),
-      PeopleAppSection.logs => _LogsView(desktop: desktop),
-      PeopleAppSection.funnels => const _PlaceholderView(
-        icon: Icons.filter_alt_outlined,
-        title: 'Funnels',
-        body:
-            'Customer, engineer hire, investor, and other relationship pipelines will live here.',
+      PeopleAppSection.meetings => MeetingsPage(
+        onCreate: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const _MeetingFormSheet(),
+        ),
       ),
+      PeopleAppSection.events => const EventsPage(),
+      PeopleAppSection.settings => const PeopleSettingsPage(),
+      PeopleAppSection.logs => _LogsView(desktop: desktop),
     };
   }
 }
@@ -266,10 +265,6 @@ class _NavButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pendingCount = _pendingCount(ref.watch(recentPeopleProvider));
-    final badge = item.section == PeopleAppSection.pending && pendingCount > 0
-        ? pendingCount.toString()
-        : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
@@ -299,11 +294,6 @@ class _NavButton extends ConsumerWidget {
                     ),
                   ),
                 ),
-                if (badge != null)
-                  _CountBadge(
-                    label: badge,
-                    urgent: item.section == PeopleAppSection.pending,
-                  ),
               ],
             ),
           ),
@@ -328,16 +318,7 @@ class _PeopleView extends ConsumerWidget {
       skipLoadingOnReload: true,
       data: (people) {
         _selectFirstPersonIfNeeded(ref, people);
-        final filter = ref.watch(peopleWorkspaceProvider).peopleFilter;
-        final filtered = _filterPeople(people, query)
-            .where(
-              (person) => switch (filter) {
-                'Pinned' => person.pinned,
-                'Follow up' => person.status.toLowerCase().contains('follow'),
-                _ => true,
-              },
-            )
-            .toList();
+        final filtered = _filterPeople(people, query);
         final activeId = ref.watch(peopleWorkspaceProvider).activePersonId;
         final active =
             _personById(filtered, activeId) ?? _personById(people, activeId);
@@ -364,511 +345,96 @@ class _PeopleView extends ConsumerWidget {
   }
 }
 
-class _PendingView extends ConsumerWidget {
-  const _PendingView({required this.desktop});
-
-  final bool desktop;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ref
-        .watch(recentPeopleProvider)
-        .when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) =>
-              Center(child: Text('Could not load pending replies: $error')),
-          data: (people) {
-            final pending =
-                [
-                  for (final person in people)
-                    for (final conversation in person.conversations)
-                      if (conversation.responsePending)
-                        (person: person, conversation: conversation),
-                ]..sort(
-                  (a, b) => (b.conversation.lastMessageAt ?? DateTime(0))
-                      .compareTo(a.conversation.lastMessageAt ?? DateTime(0)),
-                );
-            return ListView(
-              padding: EdgeInsets.fromLTRB(
-                desktop ? 40 : 20,
-                28,
-                desktop ? 40 : 20,
-                80,
-              ),
-              children: <Widget>[
-                const Text(
-                  'Pending replies',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${pending.length} conversation${pending.length == 1 ? '' : 's'} waiting on you.',
-                  style: const TextStyle(color: AppColors.muted),
-                ),
-                const SizedBox(height: 24),
-                if (pending.isEmpty)
-                  const _EmptyPanel(
-                    title: 'You are caught up',
-                    body:
-                        'Imported conversations marked as awaiting your reply will appear here.',
-                  )
-                else
-                  for (final row in pending)
-                    Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        leading: _PersonAvatar(person: row.person, size: 42),
-                        title: Text(
-                          row.person.name,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: Text(
-                          '${row.conversation.name}\n${row.conversation.summary}',
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        isThreeLine: true,
-                        trailing: Text(
-                          row.conversation.lastMessageAt == null
-                              ? row.conversation.provider
-                              : _shortDate(row.conversation.lastMessageAt!),
-                          style: const TextStyle(
-                            color: AppColors.faint,
-                            fontSize: 11,
-                          ),
-                        ),
-                        onTap: () => _openConversation(
-                          context,
-                          row.person,
-                          row.conversation,
-                        ),
-                      ),
-                    ),
-              ],
-            );
-          },
-        );
-  }
-}
-
-Future<void> _openConversation(
-  BuildContext context,
-  Person person,
-  PersonConversation conversation,
-) {
-  return Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) =>
-          _ConversationPage(person: person, conversation: conversation),
-    ),
-  );
-}
-
-class _ConversationPage extends ConsumerWidget {
-  const _ConversationPage({required this.person, required this.conversation});
-
-  final Person person;
-  final PersonConversation conversation;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final messages = ref.watch(conversationMessagesProvider(conversation));
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              person.name,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-            ),
-            Text(
-              conversation.provider,
-              style: const TextStyle(fontSize: 11, color: AppColors.muted),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Add media',
-            onPressed: ref.watch(conversationAttachmentServiceProvider) == null
-                ? null
-                : () => _addConversationAttachments(
-                    context,
-                    ref,
-                    person,
-                    conversation,
-                  ),
-            icon: const Icon(Icons.attach_file),
-          ),
-          TextButton(
-            onPressed: () async {
-              await ref
-                  .read(conversationRepositoryProvider)
-                  .setResponsePending(
-                    personId: person.id,
-                    conversation: conversation,
-                    pending: !conversation.responsePending,
-                  );
-              _invalidatePeopleData(ref, personId: person.id);
-              if (context.mounted) Navigator.of(context).pop();
-            },
-            child: Text(
-              conversation.responsePending ? 'Mark replied' : 'Needs reply',
-            ),
-          ),
-        ],
-      ),
-      body: messages.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Could not load messages: $error')),
-        data: (rows) => rows.isEmpty
-            ? const Center(
-                child: Text('No raw messages imported for this conversation.'),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
-                itemCount: rows.length,
-                itemBuilder: (context, index) =>
-                    _MessageBubble(message: rows[index]),
-              ),
-      ),
-    );
-  }
-}
-
-class _MessageBubble extends ConsumerWidget {
-  const _MessageBubble({required this.message});
-
-  final ExternalMessage message;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mine = message.fromCurrentUser;
-    final imageConfig = ref.watch(peopleImageConfigProvider);
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: mine ? const Color(0xffe4f3e7) : AppColors.panel,
-          border: Border.all(color: AppColors.line),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (message.text.trim().isNotEmpty)
-              Text(message.text, style: const TextStyle(height: 1.4)),
-            for (final attachment in message.attachments)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _ConversationAttachment(
-                  attachment: attachment,
-                  imageConfig: imageConfig,
-                ),
-              ),
-            if (message.messageTime != null) ...<Widget>[
-              const SizedBox(height: 6),
-              Text(
-                _shortDateTime(message.messageTime!),
-                style: const TextStyle(fontSize: 10, color: AppColors.faint),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ConversationAttachment extends StatelessWidget {
-  const _ConversationAttachment({required this.attachment, this.imageConfig});
-
-  final Map<String, dynamic> attachment;
-  final PeopleImageConfig? imageConfig;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = (attachment['name'] ?? attachment['filename'] ?? 'Attachment')
-        .toString();
-    final type = (attachment['content_type'] ?? attachment['mime_type'] ?? '')
-        .toString();
-    final rawUrl = attachment['url']?.toString() ?? '';
-    final uri = _absolutePeopleAssetUri(rawUrl, imageConfig?.baseUrl);
-    if (type.startsWith('image/') && uri != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: PeopleImage(
-          uri.toString(),
-          headers: imageConfig?.headers,
-          width: 240,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _AttachmentLabel(name: name, type: type),
-        ),
-      );
-    }
-    return _AttachmentLabel(name: name, type: type);
-  }
-}
-
-class _AttachmentLabel extends StatelessWidget {
-  const _AttachmentLabel({required this.name, required this.type});
-  final String name;
-  final String type;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: <Widget>[
-      Icon(
-        type == 'application/pdf'
-            ? Icons.picture_as_pdf_outlined
-            : Icons.attach_file,
-        size: 16,
-        color: AppColors.muted,
-      ),
-      const SizedBox(width: 5),
-      Flexible(
-        child: Text(name, style: const TextStyle(color: AppColors.muted)),
-      ),
-    ],
-  );
-}
-
-Uri? _absolutePeopleAssetUri(String value, String? baseUrl) {
-  final parsed = Uri.tryParse(value);
-  if (parsed == null) return null;
-  if (parsed.hasScheme) return parsed;
-  final base = Uri.tryParse(baseUrl ?? '');
-  if (base == null || !base.hasScheme) return null;
-  return base.resolveUri(parsed);
-}
-
-Future<void> _importConversationJson(
-  BuildContext context,
-  WidgetRef ref,
-  Person person,
-) async {
-  final result = await FilePicker.platform.pickFiles(
-    type: FileType.custom,
-    allowedExtensions: const ['json'],
-    withData: true,
-  );
-  final bytes = result?.files.single.bytes;
-  if (bytes == null || !context.mounted) return;
-  try {
-    await ref
-        .read(conversationRepositoryProvider)
-        .importJson(personId: person.id, bytes: bytes);
-    _invalidatePeopleData(ref, personId: person.id);
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Conversation synced.')));
-    }
-  } catch (error) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not import conversation: $error'),
-          backgroundColor: AppColors.red,
-        ),
-      );
-    }
-  }
-}
-
-Future<void> _addConversationAttachments(
-  BuildContext context,
-  WidgetRef ref,
-  Person person,
-  PersonConversation conversation,
-) async {
-  final picked = await FilePicker.platform.pickFiles(
-    allowMultiple: true,
-    withData: true,
-  );
-  if (picked == null || !context.mounted) return;
-  final uploader = ref.read(conversationAttachmentServiceProvider);
-  if (uploader == null) return;
-  try {
-    final uploaded = <Map<String, dynamic>>[];
-    for (final file in picked.files) {
-      final bytes = file.bytes;
-      if (bytes == null) continue;
-      uploaded.add(
-        await uploader.upload(
-          provider: conversation.provider,
-          externalAccountId: conversation.externalAccountId,
-          externalThreadId: conversation.externalThreadId,
-          filename: file.name,
-          bytes: bytes,
-        ),
-      );
-    }
-    if (uploaded.isNotEmpty) {
-      await ref
-          .read(conversationRepositoryProvider)
-          .addAttachments(
-            personId: person.id,
-            conversation: conversation,
-            attachments: uploaded,
-          );
-      ref.invalidate(conversationMessagesProvider(conversation));
-      _invalidatePeopleData(ref, personId: person.id);
-    }
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${uploaded.length} attachment${uploaded.length == 1 ? '' : 's'} added.',
-          ),
-        ),
-      );
-    }
-  } catch (error) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not add attachment: $error'),
-          backgroundColor: AppColors.red,
-        ),
-      );
-    }
-  }
-}
-
-String _shortDate(DateTime value) =>
-    '${value.toLocal().year}-${value.toLocal().month.toString().padLeft(2, '0')}-${value.toLocal().day.toString().padLeft(2, '0')}';
-
-String _shortDateTime(DateTime value) {
-  final local = value.toLocal();
-  return '${_shortDate(local)} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-}
-
 class _PeopleList extends ConsumerWidget {
   const _PeopleList({required this.people, this.fullHeight = false});
-
   final List<Person> people;
   final bool fullHeight;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeId = ref.watch(peopleWorkspaceProvider).activePersonId;
-    final pinned = people.where((person) => person.pinned).toList();
-    final followUp = people
-        .where((person) => person.status.toLowerCase().contains('follow'))
-        .toList();
-
     return Column(
-      children: <Widget>[
-        _ViewHeader(
-          title: 'People',
-          actionIcon: fullHeight ? Icons.menu : Icons.add,
-          actionFilled: !fullHeight,
-          actionKey: fullHeight
-              ? const ValueKey('people-menu-button')
-              : const ValueKey('people-create-button'),
-          onActionPressed: fullHeight
-              ? () => _showAppMenu(context, ref)
-              : () => _showCreateMenu(context),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 16, 24),
           child: Row(
-            children: <Widget>[
-              Expanded(
-                child: TextField(
-                  key: const ValueKey('people-search-field'),
-                  onChanged: ref
-                      .read(peopleWorkspaceProvider.notifier)
-                      .setSearchText,
-                  decoration: InputDecoration(
-                    hintText: 'Search everyone...',
-                    prefixIcon: const Icon(Icons.search, size: 19),
-                    fillColor: fullHeight
-                        ? AppColors.subtle.withValues(alpha: 0.62)
-                        : AppColors.panel,
-                    border: fullHeight ? _softInputBorder : null,
-                    enabledBorder: fullHeight ? _softInputBorder : null,
-                    focusedBorder: fullHeight ? _focusedSoftInputBorder : null,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const _FilterIconButton(),
+            children: [
+              Expanded(child: Text('People', style: peopleEditorialTitle(30))),
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 3,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: TextField(
+              key: const ValueKey('people-search-field'),
+              style: const TextStyle(fontSize: 14),
+              onChanged: ref
+                  .read(peopleWorkspaceProvider.notifier)
+                  .setSearchText,
+              decoration: InputDecoration(
+                hintText: 'Search',
+                hintStyle: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xffa3a09a),
+                ),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 16, right: 12),
+                  child: CustomPaint(
+                    size: Size(20, 20),
+                    painter: _SearchIconPainter(),
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 48,
+                  maxWidth: 48,
+                  minHeight: 20,
+                  maxHeight: 20,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(100),
+                  borderSide: const BorderSide(color: AppColors.line),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(100),
+                  borderSide: const BorderSide(color: AppColors.line),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(100),
+                  borderSide: const BorderSide(color: AppColors.green),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
         Expanded(
           child: ListView(
             key: const PageStorageKey('people-list'),
-            padding: EdgeInsets.fromLTRB(16, 10, 16, fullHeight ? 96 : 24),
-            children: <Widget>[
-              _FilterRow(
-                selected: ref.watch(peopleWorkspaceProvider).peopleFilter,
-                onSelected: ref
-                    .read(peopleWorkspaceProvider.notifier)
-                    .setPeopleFilter,
-                labels: const <String>['Pinned', 'Recent', 'Follow up'],
-              ),
-              SizedBox(height: fullHeight ? 8 : 6),
-              if (fullHeight)
-                for (final person in people)
-                  _PersonRow(person: person, selected: person.id == activeId)
-              else ...<Widget>[
-                if (pinned.isNotEmpty)
-                  _PeopleGroup(
-                    title: 'Pinned',
-                    people: pinned,
-                    activeId: activeId,
-                  ),
-                _PeopleGroup(
-                  title: 'Recently added',
-                  people: people,
-                  activeId: activeId,
-                ),
-                if (followUp.isNotEmpty)
-                  _PeopleGroup(
-                    title: 'Needs follow-up',
-                    people: followUp,
-                    activeId: activeId,
-                  ),
-              ],
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+            children: [
+              for (final person in people)
+                _PersonRow(person: person, selected: person.id == activeId),
             ],
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PeopleGroup extends StatelessWidget {
-  const _PeopleGroup({
-    required this.title,
-    required this.people,
-    required this.activeId,
-  });
-
-  final String title;
-  final List<Person> people;
-  final int? activeId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _SectionLabel(title),
-          const SizedBox(height: 8),
-          for (final person in people)
-            _PersonRow(person: person, selected: person.id == activeId),
-        ],
-      ),
     );
   }
 }
@@ -884,14 +450,12 @@ class _PersonRow extends ConsumerWidget {
     final desktop = isDesktopLayout(context);
     final selectedStyle = selected && desktop;
     final subtitle = _personListSubtitle(person);
-    final pending = _personHasPending(person);
-    final timestamp = _personListTimestamp(person);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.zero,
       child: Material(
         color: selectedStyle ? AppColors.panel : Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        elevation: selectedStyle ? 1 : 0,
+        elevation: 0,
         shadowColor: Colors.black.withValues(alpha: 0.08),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -906,18 +470,15 @@ class _PersonRow extends ConsumerWidget {
             }
           },
           child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: selectedStyle ? AppColors.line : Colors.transparent,
-              ),
-              borderRadius: BorderRadius.circular(16),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                _PersonAvatar(person: person, size: 48),
-                const SizedBox(width: 13),
+                _PersonAvatar(person: person, size: 40),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -927,8 +488,8 @@ class _PersonRow extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       if (subtitle.isNotEmpty) ...<Widget>[
@@ -939,39 +500,13 @@ class _PersonRow extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppColors.muted,
-                            fontSize: 13,
+                            fontSize: 14,
                           ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                if (timestamp != null || pending) ...<Widget>[
-                  const SizedBox(width: 8),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      if (timestamp != null)
-                        Text(
-                          timestamp,
-                          style: const TextStyle(
-                            color: AppColors.faint,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      if (pending) ...<Widget>[
-                        if (timestamp != null) const SizedBox(height: 8),
-                        _StatusDot(
-                          key: ValueKey('person-pending-dot-${person.id}'),
-                          color: const Color(0xffd97757),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
               ],
             ),
           ),
@@ -991,6 +526,15 @@ class _PersonDetailPage extends ConsumerWidget {
     final personValue = ref.watch(personByIdProvider(personId));
     return Scaffold(
       backgroundColor: AppColors.bg,
+      floatingActionButton: personValue.value == null
+          ? null
+          : PeopleAssistantButton(
+              selection: PeopleAssistantContext(
+                kind: 'Person',
+                id: personId,
+                name: personValue.value!.name,
+              ),
+            ),
       body: SafeArea(
         child: personValue.when(
           skipLoadingOnReload: true,
@@ -1023,10 +567,7 @@ class _ProfileTopBar extends ConsumerWidget {
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: const BoxDecoration(
-        color: AppColors.bg,
-        border: Border(bottom: BorderSide(color: AppColors.line)),
-      ),
+      decoration: const BoxDecoration(color: AppColors.bg),
       child: Row(
         children: <Widget>[
           IconButton(
@@ -1038,18 +579,7 @@ class _ProfileTopBar extends ConsumerWidget {
               foregroundColor: AppColors.muted,
             ),
           ),
-          const SizedBox(width: 4),
-          const Expanded(
-            child: Text(
-              'PROFILE',
-              style: TextStyle(
-                color: AppColors.faint,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ),
+          const Spacer(),
           TextButton(
             onPressed: () => _showPersonForm(context, person: person),
             child: const Text('Edit'),
@@ -1088,7 +618,7 @@ class _PersonDetailState extends State<_PersonDetail> {
     return ListView(
       padding: EdgeInsets.fromLTRB(
         desktop ? 44 : 22,
-        desktop ? 28 : 22,
+        desktop ? 28 : 0,
         desktop ? 44 : 22,
         80,
       ),
@@ -1099,14 +629,39 @@ class _PersonDetailState extends State<_PersonDetail> {
               ? () => _showPersonForm(context, person: person)
               : null,
         ),
-        SizedBox(height: desktop ? 20 : 14),
+        SizedBox(height: desktop ? 20 : 0),
         _ProfileTabBar(
           selected: _selectedTab,
           onSelected: (tab) => setState(() => _selectedTab = tab),
         ),
-        SizedBox(height: desktop ? 24 : 18),
+        SizedBox(height: desktop ? 24 : 4),
         if (_selectedTab == _ProfileDetailTab.background)
-          _BackgroundContent(person: person, desktop: desktop)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ProfileStatement(label: 'Summary', body: person.summary),
+              if (person.desires.isNotEmpty)
+                _ProfileStatement(
+                  label: 'Looking for',
+                  body: person.desires.join(', '),
+                ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final tag in person.tags) _TinyChip(tag),
+                  Consumer(
+                    builder: (context, ref, _) => _AddTagChip(
+                      onTap: () => _addProfileTag(context, ref, person),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _BackgroundContent(person: person, desktop: desktop),
+            ],
+          )
         else
           _ActivityContent(person: person, desktop: desktop),
       ],
@@ -1169,11 +724,7 @@ class _ProfileHeader extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         person.name,
-                        style: TextStyle(
-                          fontSize: compact ? 24 : 28,
-                          height: 1.1,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: peopleEditorialTitle(compact ? 30 : 34),
                       ),
                       const SizedBox(height: 7),
                       Wrap(
@@ -1225,28 +776,34 @@ class _ProfileHeader extends StatelessWidget {
 
             if (compact) {
               return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(child: identity),
-                      if (onEdit != null) ...<Widget>[
-                        const SizedBox(width: 8),
-                        TextButton(
-                          key: ValueKey('person-edit-button-${person.id}'),
-                          onPressed: onEdit,
-                          child: const Text('Edit'),
-                        ),
-                      ],
-                    ],
-                  ),
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 8),
+                  _PersonAvatar(person: person, size: 96),
                   const SizedBox(height: 16),
-                  details,
-                  if (person.contacts.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 14),
+                  Text(
+                    person.name,
+                    textAlign: TextAlign.center,
+                    style: peopleEditorialTitle(30),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    [
+                      if (currentTitle.isNotEmpty) currentTitle,
+                      if (currentCompany.isNotEmpty) currentCompany,
+                    ].join(' at '),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.muted,
+                      height: 1.5,
+                    ),
+                  ),
+                  if (person.contacts.isNotEmpty) ...[
+                    const SizedBox(height: 24),
                     _ContactActions(contacts: person.contacts),
                   ],
+                  const SizedBox(height: 24),
                 ],
               );
             }
@@ -1664,7 +1221,7 @@ class _ProfileTabBar extends StatelessWidget {
       child: Row(
         children: <Widget>[
           _ProfileTabButton(
-            label: 'Activity',
+            label: 'Meetings',
             selected: selected == _ProfileDetailTab.activity,
             onTap: () => onSelected(_ProfileDetailTab.activity),
           ),
@@ -1696,11 +1253,11 @@ class _ProfileTabButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: selected ? AppColors.text : Colors.transparent,
+              color: selected ? AppColors.green : Colors.transparent,
               width: 2,
             ),
           ),
@@ -1710,7 +1267,7 @@ class _ProfileTabButton extends StatelessWidget {
           style: TextStyle(
             color: selected ? AppColors.text : AppColors.faint,
             fontSize: 14,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+            fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
           ),
         ),
       ),
@@ -1720,162 +1277,21 @@ class _ProfileTabButton extends StatelessWidget {
 
 class _ActivityContent extends StatelessWidget {
   const _ActivityContent({required this.person, required this.desktop});
-
   final Person person;
   final bool desktop;
-
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final split = desktop && constraints.maxWidth > 760;
-        if (split) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(child: _TimelineAndMeetingsSection(person: person)),
-              const SizedBox(width: 24),
-              SizedBox(
-                width: 300,
-                child: Column(
-                  children: <Widget>[
-                    _NextActionCard(person: person),
-                    const SizedBox(height: 14),
-                    _ActiveFunnelCard(person: person),
-                    const SizedBox(height: 14),
-                    _UpcomingMeetingCard(person: person),
-                  ],
-                ),
-              ),
-            ],
-          );
-        }
-
-        return Column(
-          children: <Widget>[
-            _NextActionCard(person: person),
-            const SizedBox(height: 14),
-            _ActiveFunnelCard(person: person),
-            const SizedBox(height: 14),
-            _UpcomingMeetingCard(person: person),
-            const SizedBox(height: 26),
-            _TimelineAndMeetingsSection(person: person),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _TimelineAndMeetingsSection extends StatelessWidget {
-  const _TimelineAndMeetingsSection({required this.person});
-
-  final Person person;
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = <Widget>[
-      for (final conversation in person.conversations)
-        InkWell(
-          onTap: () => _openConversation(context, person, conversation),
-          borderRadius: BorderRadius.circular(12),
-          child: _TimelineRow(
-            label: conversation.provider,
-            title: conversation.name,
-            body: conversation.summary.isEmpty
-                ? 'Open the imported message thread.'
-                : conversation.summary,
-          ),
-        ),
-      for (final planned in person.planned.take(2))
-        _TimelineRow(
-          label: 'Planned check-in',
-          title: planned,
-          body: 'Upcoming conversation with ${person.name}.',
-        ),
-      for (final log in person.logs)
-        _TimelineRow(
-          label: log.time,
-          title: log.time == 'Today' ? 'Today note' : 'Relationship note',
-          body: log.body,
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if (person.actualMeetings.isEmpty)
+        const _EmptyPanel(
+          title: 'No meetings yet',
+          body: 'Your meetings with this person will appear here.',
         ),
       for (final meeting in person.actualMeetings)
-        InkWell(
-          onTap: () => openMeeting(context, meeting),
-          child: _TimelineRow(
-            label: 'Meeting',
-            title: meeting.name,
-            body: 'Open conversation and transcript',
-          ),
-        ),
-      for (final name in person.meetings.where(
-        (name) => !person.actualMeetings.any((meeting) => meeting.name == name),
-      ))
-        _TimelineRow(
-          label: 'Meeting',
-          title: name,
-          body: 'Conversation with ${person.name}.',
-        ),
-    ];
-
-    return _DetailSection(
-      icon: Icons.history,
-      title: 'Timeline and meetings',
-      child: rows.isEmpty
-          ? const _EmptyPanel(
-              title: 'No relationship history yet',
-              body:
-                  'Notes, meetings, and follow-ups will appear here as you interact.',
-            )
-          : Column(children: rows),
-    );
-  }
-}
-
-class _UpcomingMeetingCard extends StatelessWidget {
-  const _UpcomingMeetingCard({required this.person});
-
-  final Person person;
-
-  @override
-  Widget build(BuildContext context) {
-    final planned = person.planned.firstOrNull;
-    final recent = person.meetings.firstOrNull;
-    final hasPlanned = planned != null && planned.trim().isNotEmpty;
-    final title = hasPlanned
-        ? planned
-        : recent != null && recent.trim().isNotEmpty
-        ? recent
-        : 'No meeting scheduled';
-    final body = hasPlanned
-        ? 'Upcoming check-in with ${person.name}.'
-        : recent != null && recent.trim().isNotEmpty
-        ? 'Most recent meeting with ${person.name}.'
-        : 'Add a meeting when there is a live touchpoint.';
-
-    return _InfoPanel(
-      icon: Icons.calendar_today_outlined,
-      title: hasPlanned ? 'Upcoming meeting' : 'Meetings',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            body,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 13,
-              height: 1.45,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        MeetingCard(meeting: meeting),
+    ],
+  );
 }
 
 class _BackgroundContent extends StatelessWidget {
@@ -2067,126 +1483,6 @@ class _BackgroundEntry {
   final String title;
   final String subtitle;
   final String body;
-}
-
-class _NextActionCard extends ConsumerWidget {
-  const _NextActionCard({required this.person});
-
-  final Person person;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final thread = person.conversations
-        .where((row) => row.responsePending)
-        .firstOrNull;
-    return _InfoPanel(
-      icon: Icons.inbox_outlined,
-      title: 'Next action',
-      urgent: person.status.toLowerCase().contains('follow'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            thread?.name ?? 'No reply pending',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            thread?.summary ?? 'Nothing pending with this person right now.',
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 13,
-              height: 1.45,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Text(
-                  thread?.lastMessageAt == null
-                      ? 'Last sync: ${thread?.lastSyncedAt == null ? '—' : _shortDate(thread!.lastSyncedAt!)}'
-                      : 'Last message: ${_shortDate(thread!.lastMessageAt!)}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
-                ),
-              ),
-              TextButton(
-                onPressed: () => _importConversationJson(context, ref, person),
-                child: const Text('Import / sync'),
-              ),
-              if (thread != null)
-                FilledButton(
-                  onPressed: () => _openConversation(context, person, thread),
-                  child: const Text('Open'),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveFunnelCard extends StatelessWidget {
-  const _ActiveFunnelCard({required this.person});
-
-  final Person person;
-
-  @override
-  Widget build(BuildContext context) {
-    final funnel = person.tags.contains('Investor')
-        ? 'Investor'
-        : person.role.toLowerCase().contains('engineer')
-        ? 'Engineer hire'
-        : 'Relationship';
-    return _InfoPanel(
-      icon: Icons.filter_alt_outlined,
-      title: 'Active funnel',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const _StatusDot(color: AppColors.green),
-              const SizedBox(width: 8),
-              Text(
-                funnel,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Stage: Active conversation',
-            style: TextStyle(color: AppColors.muted, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              for (var index = 0; index < 5; index++)
-                Expanded(
-                  child: Container(
-                    height: 6,
-                    margin: EdgeInsets.only(right: index == 4 ? 0 : 4),
-                    decoration: BoxDecoration(
-                      color: index < 3 ? AppColors.green : AppColors.line,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SuggestionReviewSection extends ConsumerStatefulWidget {
@@ -2650,402 +1946,6 @@ class _ResolvedSuggestionChip extends StatelessWidget {
   }
 }
 
-class _MeetingsView extends ConsumerWidget {
-  const _MeetingsView({required this.desktop});
-
-  final bool desktop;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final peopleValue = ref.watch(recentPeopleProvider);
-    return peopleValue.when(
-      skipLoadingOnReload: true,
-      data: (people) {
-        final offset = ref.watch(peopleWorkspaceProvider).selectedDayOffset;
-        final items = _agendaFor(people, offset);
-        final selectedPerson = ref
-            .watch(peopleWorkspaceProvider)
-            .activePersonId;
-        final activePerson =
-            _personById(people, selectedPerson) ?? people.firstOrNull;
-
-        if (desktop) {
-          return Row(
-            children: <Widget>[
-              SizedBox(
-                width: 460,
-                child: _MeetingAgenda(items: items, selectedDayOffset: offset),
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: activePerson == null
-                    ? const _EmptyDetail()
-                    : _PersonDetail(person: activePerson, desktop: true),
-              ),
-            ],
-          );
-        }
-
-        return _MeetingAgenda(
-          items: items,
-          selectedDayOffset: offset,
-          fullHeight: true,
-        );
-      },
-      error: (error, stackTrace) => Center(child: Text('$error')),
-      loading: () => const Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
-class _MeetingAgenda extends StatelessWidget {
-  const _MeetingAgenda({
-    required this.items,
-    required this.selectedDayOffset,
-    this.fullHeight = false,
-  });
-
-  final List<_AgendaItem> items;
-  final int selectedDayOffset;
-  final bool fullHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final meetings = items
-        .where((item) => item.kind == _AgendaKind.meeting)
-        .length;
-    final checkIns = items
-        .where((item) => item.kind == _AgendaKind.checkIn)
-        .length;
-    return Column(
-      children: <Widget>[
-        _ViewHeader(
-          title: 'Meetings',
-          actionIcon: Icons.add,
-          onActionPressed: () => _showCreateMenu(context),
-          child: fullHeight
-              ? _MobileMeetingDateCard(
-                  selectedOffset: selectedDayOffset,
-                  meetings: meetings,
-                  checkIns: checkIns,
-                )
-              : _DateStrip(selectedOffset: selectedDayOffset),
-        ),
-        Expanded(
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, fullHeight ? 96 : 24),
-            children: <Widget>[
-              if (!fullHeight) ...<Widget>[
-                _SummaryRow(
-                  cells: <_SummaryCell>[
-                    _SummaryCell('$meetings', 'Meetings'),
-                    _SummaryCell('$checkIns', 'Check-ins'),
-                    _SummaryCell('${items.length}', 'People touched'),
-                  ],
-                ),
-                const SizedBox(height: 20),
-              ],
-              _SectionLabel(
-                selectedDayOffset == 0
-                    ? "Today's agenda"
-                    : '${_dayTitle(selectedDayOffset)} agenda',
-              ),
-              const SizedBox(height: 10),
-              if (items.isEmpty)
-                const _EmptyPanel(
-                  title: 'No meetings on this day',
-                  body:
-                      'Use the date strip to browse past notes and upcoming check-ins.',
-                )
-              else
-                for (final item in items) _AgendaRow(item: item),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MobileMeetingDateCard extends ConsumerWidget {
-  const _MobileMeetingDateCard({
-    required this.selectedOffset,
-    required this.meetings,
-    required this.checkIns,
-  });
-
-  final int selectedOffset;
-  final int meetings;
-  final int checkIns;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final date = DateTime.now().add(Duration(days: selectedOffset));
-    final title = selectedOffset == 0
-        ? 'Today, ${_month(date.month)} ${date.day}'
-        : '${_dayTitle(selectedOffset)}, ${_month(date.month)} ${date.day}';
-    final notifier = ref.read(peopleWorkspaceProvider.notifier);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.subtle.withValues(alpha: 0.62),
-        border: Border.all(color: AppColors.line),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: <Widget>[
-          _SoftIconButton(
-            icon: Icons.chevron_left,
-            onTap: () => notifier.setSelectedDayOffset(selectedOffset - 1),
-          ),
-          Expanded(
-            child: Column(
-              children: <Widget>[
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '$meetings Meetings • $checkIns Follow-ups',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.faint,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _SoftIconButton(
-            icon: Icons.calendar_today_outlined,
-            onTap: () => notifier.setSelectedDayOffset(0),
-          ),
-          const SizedBox(width: 6),
-          _SoftIconButton(
-            icon: Icons.chevron_right,
-            onTap: () => notifier.setSelectedDayOffset(selectedOffset + 1),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SoftIconButton extends StatelessWidget {
-  const _SoftIconButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: SizedBox(
-          width: 34,
-          height: 34,
-          child: Icon(icon, size: 18, color: AppColors.muted),
-        ),
-      ),
-    );
-  }
-}
-
-class _DateStrip extends ConsumerWidget {
-  const _DateStrip({required this.selectedOffset});
-
-  final int selectedOffset;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      height: 72,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: <Widget>[
-          for (var offset = -3; offset <= 3; offset++)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _DateButton(
-                offset: offset,
-                selected: offset == selectedOffset,
-                onTap: () => ref
-                    .read(peopleWorkspaceProvider.notifier)
-                    .setSelectedDayOffset(offset),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DateButton extends StatelessWidget {
-  const _DateButton({
-    required this.offset,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final int offset;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final date = DateTime.now().add(Duration(days: offset));
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Container(
-        width: 62,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.text : AppColors.subtle,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? AppColors.text : AppColors.line),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              offset == 0 ? 'Today' : _weekday(date.weekday),
-              style: TextStyle(
-                color: selected ? AppColors.bg : AppColors.muted,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${date.day}',
-              style: TextStyle(
-                color: selected ? AppColors.bg : AppColors.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AgendaRow extends ConsumerWidget {
-  const _AgendaRow({required this.item});
-
-  final _AgendaItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: AppColors.panel,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            if (item.meeting != null) {
-              openMeeting(context, item.meeting!);
-              return;
-            }
-            ref
-                .read(peopleWorkspaceProvider.notifier)
-                .openPerson(item.person.id);
-            if (!isDesktopLayout(context)) {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => _PersonDetailPage(personId: item.person.id),
-                ),
-              );
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.line),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _AgendaIcon(kind: item.kind),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              item.title,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            item.time,
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        item.subtitle,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 9),
-                      Row(
-                        children: <Widget>[
-                          _PersonAvatar(person: item.person, size: 24),
-                          const SizedBox(width: 7),
-                          Expanded(
-                            child: Text(
-                              item.person.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.muted,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _LogsView extends ConsumerWidget {
   const _LogsView({required this.desktop});
 
@@ -3270,50 +2170,16 @@ String _logTimestamp(DateTime value) {
       '${two(value.hour)}:${two(value.minute)}';
 }
 
-class _PlaceholderView extends StatelessWidget {
-  const _PlaceholderView({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: _EmptyPanel(title: title, body: body, icon: icon),
-        ),
-      ),
-    );
-  }
-}
-
 class _BottomTabs extends ConsumerWidget {
   const _BottomTabs();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(peopleWorkspaceProvider).section;
-    final pendingCount = _pendingCount(ref.watch(recentPeopleProvider));
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.panel.withValues(alpha: 0.94),
-        border: const Border(top: BorderSide(color: AppColors.line)),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 30,
-            offset: const Offset(0, -8),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: AppColors.bg,
+        border: Border(top: BorderSide(color: AppColors.line)),
       ),
       child: SafeArea(
         top: false,
@@ -3322,17 +2188,20 @@ class _BottomTabs extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              for (final item in _navItems)
-                _BottomTabButton(
-                  item: item,
-                  showPending:
-                      item.section == PeopleAppSection.pending &&
-                      pendingCount > 0,
-                  selected: selected == item.section,
-                  onTap: () => ref
-                      .read(peopleWorkspaceProvider.notifier)
-                      .setSection(item.section),
+              for (var i = 0; i < _navItems.length; i++) ...[
+                if (i == 2)
+                  const Expanded(child: Center(child: PeopleAssistantButton())),
+                Expanded(
+                  child: _BottomTabButton(
+                    item: _navItems[i],
+                    showPending: false,
+                    selected: selected == _navItems[i].section,
+                    onTap: () => ref
+                        .read(peopleWorkspaceProvider.notifier)
+                        .setSection(_navItems[i].section),
+                  ),
                 ),
+              ],
             ],
           ),
         ),
@@ -3370,8 +2239,8 @@ class _BottomTabButton extends StatelessWidget {
               children: <Widget>[
                 Icon(
                   item.icon,
-                  size: 24,
-                  color: selected ? AppColors.text : AppColors.faint,
+                  size: 22,
+                  color: selected ? AppColors.green : AppColors.muted,
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -3379,9 +2248,9 @@ class _BottomTabButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: selected ? AppColors.text : AppColors.faint,
+                    color: selected ? AppColors.green : AppColors.muted,
                     fontSize: 11,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
                   ),
                 ),
               ],
@@ -3417,7 +2286,6 @@ class _ViewHeader extends StatelessWidget {
     required this.title,
     required this.actionIcon,
     required this.child,
-    this.actionFilled = true,
     this.actionKey,
     this.onActionPressed,
   });
@@ -3425,7 +2293,7 @@ class _ViewHeader extends StatelessWidget {
   final String title;
   final IconData actionIcon;
   final Widget child;
-  final bool actionFilled;
+  final bool actionFilled = true;
   final Key? actionKey;
   final VoidCallback? onActionPressed;
 
@@ -3535,12 +2403,6 @@ class _AppMenuSheet extends ConsumerWidget {
               child: const Text('Switch'),
             ),
           ),
-        _MenuOption(
-          key: const ValueKey('menu-funnels-option'),
-          icon: Icons.filter_alt_outlined,
-          label: 'Funnels',
-          onTap: () => Navigator.of(context).pop(_AppMenuAction.funnels),
-        ),
         _MenuOption(
           key: const ValueKey('menu-logout-option'),
           icon: Icons.logout,
@@ -4565,438 +3427,6 @@ class _EditableTagChip extends StatelessWidget {
   }
 }
 
-class _FilterIconButton extends StatelessWidget {
-  const _FilterIconButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.panel,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        key: const ValueKey('people-filter-button'),
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (context) => const FractionallySizedBox(
-            heightFactor: 0.85,
-            child: _PeopleFilterSheet(),
-          ),
-        ),
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.line),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.025),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.tune, color: AppColors.muted, size: 19),
-        ),
-      ),
-    );
-  }
-}
-
-class _PeopleFilterSheet extends StatelessWidget {
-  const _PeopleFilterSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 18, 16, 16),
-              child: Row(
-                children: <Widget>[
-                  const Expanded(
-                    child: Text(
-                      'Filter & Sort',
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, size: 20),
-                    color: AppColors.muted,
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            const Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(22, 22, 22, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    _FilterSection(label: 'Sort By', child: _SortSelector()),
-                    SizedBox(height: 26),
-                    _FilterSection(
-                      label: 'Company',
-                      child: _FilterTextField(
-                        icon: Icons.business_outlined,
-                        hint: 'Search company...',
-                      ),
-                    ),
-                    SizedBox(height: 26),
-                    _FilterSection(
-                      label: 'Role',
-                      child: _FilterTextField(
-                        icon: Icons.badge_outlined,
-                        hint: 'Search role...',
-                      ),
-                    ),
-                    SizedBox(height: 26),
-                    _FilterSection(
-                      label: 'Tags',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          _FilterTextField(
-                            icon: Icons.sell_outlined,
-                            hint: 'Search tags...',
-                          ),
-                          SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: <Widget>[
-                              _SelectedFilterChip('Top Tier'),
-                              _SelectedFilterChip('SF Bay Area'),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(22, 14, 22, 16),
-              decoration: const BoxDecoration(
-                color: AppColors.bg,
-                border: Border(top: BorderSide(color: AppColors.line)),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Reset'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Apply'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterSection extends StatelessWidget {
-  const _FilterSection({required this.label, required this.child});
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.faint,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 10),
-        child,
-      ],
-    );
-  }
-}
-
-class _SortSelector extends StatelessWidget {
-  const _SortSelector();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.subtle.withValues(alpha: 0.8),
-        border: Border.all(color: AppColors.line),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        children: <Widget>[
-          Expanded(child: _SortOption(label: 'Recent', selected: true)),
-          Expanded(child: _SortOption(label: 'Last Meeting')),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortOption extends StatelessWidget {
-  const _SortOption({required this.label, this.selected = false});
-
-  final String label;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.panel : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
-        boxShadow: selected
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 5,
-                  offset: const Offset(0, 1),
-                ),
-              ]
-            : null,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: selected ? AppColors.text : AppColors.muted,
-          fontSize: 13,
-          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterTextField extends StatelessWidget {
-  const _FilterTextField({required this.icon, required this.hint});
-
-  final IconData icon;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Icon(icon, size: 19),
-        fillColor: AppColors.panel,
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.line),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.line),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.lineStrong),
-        ),
-      ),
-    );
-  }
-}
-
-class _SelectedFilterChip extends StatelessWidget {
-  const _SelectedFilterChip(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.subtle,
-        border: Border.all(color: AppColors.line),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.close, size: 14, color: AppColors.faint),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
-    required this.labels,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final List<String> labels;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: <Widget>[
-          for (final label in labels)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(label),
-                selected: label == selected,
-                onSelected: (_) => onSelected(label),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.cells});
-
-  final List<_SummaryCell> cells;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        for (final cell in cells) ...<Widget>[
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: AppColors.panel,
-                border: Border.all(color: AppColors.line),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    cell.value,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    cell.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (cell != cells.last) const SizedBox(width: 8),
-        ],
-      ],
-    );
-  }
-}
-
-class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({
-    required this.icon,
-    required this.title,
-    required this.child,
-    this.urgent = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final Widget child;
-  final bool urgent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.panel,
-        border: Border.all(color: urgent ? AppColors.amber : AppColors.line),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _PanelTitle(icon: icon, title: title),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
 class _DetailSection extends StatelessWidget {
   const _DetailSection({
     required this.icon,
@@ -5042,69 +3472,6 @@ class _PanelTitle extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({
-    required this.label,
-    required this.title,
-    required this.body,
-  });
-
-  final String label;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: AppColors.line)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(
-              color: AppColors.subtle,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -5178,7 +3545,7 @@ class _InitialsBadge extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.subtle,
+        color: const Color(0xffe8eae6),
         border: Border.all(color: AppColors.line),
         shape: BoxShape.circle,
       ),
@@ -5247,9 +3614,10 @@ class _AvatarInitialsText extends StatelessWidget {
       child: Text(
         initials,
         style: TextStyle(
-          color: AppColors.muted,
-          fontSize: size < 30 ? 10 : 14,
-          fontWeight: FontWeight.w800,
+          color: const Color(0xff224a2d),
+          fontFamily: size >= 80 ? 'Georgia' : null,
+          fontSize: size >= 80 ? 30 : (size < 30 ? 10 : 16),
+          fontWeight: FontWeight.w400,
         ),
       ),
     );
@@ -5453,73 +3821,6 @@ String _ensureUrlScheme(String value) {
   return 'https://$value';
 }
 
-class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.color, super.key});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-class _AgendaIcon extends StatelessWidget {
-  const _AgendaIcon({required this.kind});
-
-  final _AgendaKind kind;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.subtle,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(
-        kind == _AgendaKind.meeting
-            ? Icons.calendar_today
-            : Icons.event_available,
-        size: 18,
-        color: AppColors.muted,
-      ),
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.label, this.urgent = false});
-
-  final String label;
-  final bool urgent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: urgent ? AppColors.amber.withValues(alpha: 0.1) : AppColors.line,
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: urgent ? AppColors.amber : AppColors.muted,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
 class _SmallDot extends StatelessWidget {
   const _SmallDot();
 
@@ -5578,14 +3879,14 @@ const _navItems = <_NavItem>[
     icon: Icons.calendar_today_outlined,
   ),
   _NavItem(
-    section: PeopleAppSection.pending,
-    label: 'Pending',
-    icon: Icons.inbox_outlined,
+    section: PeopleAppSection.events,
+    label: 'Events',
+    icon: Icons.event_outlined,
   ),
   _NavItem(
-    section: PeopleAppSection.logs,
-    label: 'Logs',
-    icon: Icons.notes_outlined,
+    section: PeopleAppSection.settings,
+    label: 'Settings',
+    icon: Icons.settings_outlined,
   ),
 ];
 
@@ -5593,34 +3894,7 @@ final _searchPeopleProvider = FutureProvider.family<List<Person>, String>(
   (ref, query) => ref.watch(peopleRepositoryProvider).search(query),
 );
 
-class _SummaryCell {
-  const _SummaryCell(this.value, this.label);
-
-  final String value;
-  final String label;
-}
-
 enum _ProfileDetailTab { activity, background }
-
-enum _AgendaKind { meeting, checkIn }
-
-class _AgendaItem {
-  const _AgendaItem({
-    required this.title,
-    required this.subtitle,
-    required this.time,
-    required this.person,
-    required this.kind,
-    this.meeting,
-  });
-
-  final String title;
-  final String subtitle;
-  final String time;
-  final Person person;
-  final _AgendaKind kind;
-  final PersonMeeting? meeting;
-}
 
 List<Person> _filterPeople(List<Person> people, String query) {
   final trimmed = query.trim();
@@ -5636,33 +3910,13 @@ Person? _personById(List<Person> people, int? id) {
   return null;
 }
 
-bool _personHasPending(Person person) {
-  return person.conversations.any(
-    (conversation) => conversation.responsePending,
-  );
-}
-
-int _pendingCount(AsyncValue<List<Person>> state) => switch (state) {
-  AsyncData(:final value) => value.fold<int>(
-    0,
-    (count, person) =>
-        count + person.conversations.where((row) => row.responsePending).length,
-  ),
-  _ => 0,
-};
-
 String _personListSubtitle(Person person) {
   final company = person.company.trim();
-  if (company.isEmpty) return '';
-  return company;
-}
-
-String? _personListTimestamp(Person person) {
-  final lastContact = person.lastContact.trim();
-  if (_isMeaningfulTimestamp(lastContact)) return lastContact;
-  final updatedAt = _compactUpdatedAt(person.updatedAt);
-  if (updatedAt.isEmpty) return null;
-  return updatedAt;
+  final role = _profileCurrentTitle(person);
+  return [
+    if (role.isNotEmpty) role,
+    if (company.isNotEmpty) company,
+  ].join(' at ');
 }
 
 String _profileCurrentTitle(Person person) {
@@ -5774,121 +4028,6 @@ String _displayEducationType(String value) {
   return trimmed[0].toUpperCase() + trimmed.substring(1);
 }
 
-bool _isMeaningfulTimestamp(String value) {
-  final normalized = value.trim().toLowerCase();
-  return normalized.isNotEmpty &&
-      normalized != 'unknown' &&
-      normalized != 'none';
-}
-
-String _compactUpdatedAt(String value) {
-  final trimmed = value.trim();
-  if (trimmed.isEmpty) return '';
-  final datePart = trimmed.split('T').first.trim();
-  return datePart.isEmpty ? trimmed : datePart;
-}
-
-void _selectFirstPersonIfNeeded(WidgetRef ref, List<Person> people) {
-  final state = ref.read(peopleWorkspaceProvider);
-  if (state.activePersonId != null || people.isEmpty) return;
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    ref.read(peopleWorkspaceProvider.notifier).openPerson(people.first.id);
-  });
-}
-
-List<_AgendaItem> _agendaFor(List<Person> people, int dayOffset) {
-  final selectedDate = DateUtils.dateOnly(
-    DateTime.now().add(Duration(days: dayOffset)),
-  );
-  final datedMeetings = <_AgendaItem>[
-    for (final person in people)
-      for (final meeting in person.actualMeetings)
-        if (DateUtils.isSameDay(
-              (meeting.startTime ?? meeting.createdAt)?.toLocal(),
-              selectedDate,
-            ) ||
-            (dayOffset == 0 &&
-                meeting.startTime == null &&
-                meeting.createdAt == null))
-          _AgendaItem(
-            title: meeting.name,
-            meeting: meeting,
-            subtitle: meeting.startTime == null
-                ? 'Start time not set • ${person.name}'
-                : dayOffset == 0
-                ? 'Today with ${person.name}'
-                : 'Past meeting with ${person.name}',
-            time: _compactUpdatedAt(
-              meeting.startTime?.toLocal().toIso8601String() ?? "",
-            ),
-            person: person,
-            kind: _AgendaKind.meeting,
-          ),
-  ];
-
-  if (dayOffset == 0) {
-    return <_AgendaItem>[
-      ...datedMeetings,
-      if (!people.any((person) => person.actualMeetings.isNotEmpty))
-        for (final person in people)
-          if (person.logs.any((log) => log.time == 'Today'))
-            _AgendaItem(
-              title: person.meetings.firstOrNull ?? 'Relationship check-in',
-              subtitle: 'Today touchpoint with ${person.company}',
-              time: 'Today',
-              person: person,
-              kind: _AgendaKind.meeting,
-            ),
-      for (final person in people)
-        if (person.nextFollowUp == 'Today')
-          _AgendaItem(
-            title: 'Follow up with ${person.name}',
-            subtitle:
-                person.conversations
-                    .where((row) => row.responsePending)
-                    .firstOrNull
-                    ?.name ??
-                'Open loop',
-            time: 'Due',
-            person: person,
-            kind: _AgendaKind.checkIn,
-          ),
-    ];
-  }
-
-  if (dayOffset > 0) {
-    return <_AgendaItem>[
-      for (final person in people)
-        for (final planned in person.planned.take(dayOffset == 1 ? 1 : 2))
-          _AgendaItem(
-            title: planned,
-            subtitle: 'Planned check-in with ${person.name}',
-            time: dayOffset == 1 ? 'Tomorrow' : 'Upcoming',
-            person: person,
-            kind: _AgendaKind.checkIn,
-          ),
-    ].take(5).toList();
-  }
-
-  if (datedMeetings.isNotEmpty ||
-      people.any((p) => p.actualMeetings.isNotEmpty)) {
-    return datedMeetings;
-  }
-
-  // Preserve the legacy fallback for backends that only expose meeting names.
-  return <_AgendaItem>[
-    for (final person in people)
-      for (final meeting in person.meetings.take(1))
-        _AgendaItem(
-          title: meeting,
-          subtitle: 'Past meeting with ${person.name}',
-          time: person.lastContact,
-          person: person,
-          kind: _AgendaKind.meeting,
-        ),
-  ].take(5).toList();
-}
-
 String _suggestionDateRange(String startDate, String? endDate) {
   final start = _suggestionDateLabel(startDate);
   final end = _suggestionDateLabel(endDate);
@@ -5935,9 +4074,27 @@ String _month(int month) {
   }[month]!;
 }
 
-String _dayTitle(int offset) {
-  if (offset == 0) return 'Today';
-  if (offset == 1) return 'Tomorrow';
-  if (offset == -1) return 'Yesterday';
-  return offset > 0 ? 'Upcoming day' : 'Past day';
+void _selectFirstPersonIfNeeded(WidgetRef ref, List<Person> people) {
+  final state = ref.read(peopleWorkspaceProvider);
+  if (state.activePersonId != null || people.isEmpty) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    ref.read(peopleWorkspaceProvider.notifier).openPerson(people.first.id);
+  });
+}
+
+class _SearchIconPainter extends CustomPainter {
+  const _SearchIconPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.muted
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.25
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(const Offset(8.5, 8.5), 6.5, paint);
+    canvas.drawLine(const Offset(13.3, 13.3), const Offset(18, 18), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SearchIconPainter oldDelegate) => false;
 }

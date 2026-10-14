@@ -158,14 +158,29 @@ class PersonMeeting {
     required this.id,
     required this.name,
     this.startTime,
+    this.startPrecision = 'datetime',
     this.createdAt,
+    this.description = '',
   });
 
   final int id;
   final DateTime? createdAt;
+  final String description;
 
   final String name;
   final DateTime? startTime;
+  final String startPrecision;
+
+  bool get isDateOnly => startTime != null && startPrecision == 'date';
+
+  DateTime? get displayDate {
+    final value = startTime ?? createdAt;
+    if (value == null) return null;
+    // A calendar date must never shift when converted between time zones.
+    return isDateOnly
+        ? DateTime(value.year, value.month, value.day)
+        : value.toLocal();
+  }
 }
 
 class PersonContact {

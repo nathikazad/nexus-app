@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/auth.dart';
 
-enum PeopleAppSection { people, meetings, pending, logs, funnels }
+enum PeopleAppSection { people, meetings, events, settings, logs }
 
 class PeopleWorkspaceState {
   const PeopleWorkspaceState({

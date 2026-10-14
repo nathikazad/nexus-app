@@ -1,4 +1,8 @@
+import 'package:nx_people/features/assistant/people_assistant.dart';
+import 'package:nx_people/data/meeting/meeting_list.dart';
+import 'package:nx_people/data/meeting/meeting_transcripts.dart';
 import 'dart:async';
+import 'package:nx_people/features/shell/people_state.dart';
 import 'package:nx_people/domain/person/person.dart';
 import 'package:nx_people/data/sync/people_sync_providers.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +23,9 @@ void main() {
     WidgetTester tester,
     Size size, {
     FakePeopleRepository? people,
+    bool failDomainSwitch = false,
   }) async {
+    var domainLoads = 0;
     final logs = _FakeLogRepository();
     final meetings = _FakeMeetingRepository();
     SharedPreferences.setMockInitialValues({});
@@ -31,6 +37,34 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          domainLoaderProvider.overrideWithValue((_) async {
+            if (failDomainSwitch && domainLoads++ > 0) {
+              throw StateError('offline');
+            }
+            return [
+              const DomainMembership(
+                id: 1,
+                name: 'Personal',
+                role: 'owner',
+                kind: 'personal',
+              ),
+              const DomainMembership(id: 2, name: 'Home', role: 'owner'),
+            ];
+          }),
+          allMeetingsProvider.overrideWith(
+            (ref) async => [
+              PersonMeeting(
+                id: 99,
+                name: 'Weekly Planning',
+                startTime: DateTime.now(),
+                description: 'Caught up with Maya',
+              ),
+            ],
+          ),
+          meetingTranscriptsProvider(99).overrideWith(
+            (ref) =>
+                Stream.value(const MeetingTranscriptState([], connected: true)),
+          ),
           peopleDataSessionProvider.overrideWithValue(null),
           peopleOfflineStoreProvider.overrideWithValue(null),
           authProvider.overrideWith(
@@ -61,12 +95,7 @@ void main() {
     (tester) async {
       final repository = _RefreshingPeopleRepository();
       await pumpApp(tester, const Size(390, 500), people: repository);
-      expect(
-        tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Recent'))
-            .selected,
-        isTrue,
-      );
+      expect(find.text('RECENT CONTACTS'), findsNothing);
       final scrollable = find
           .descendant(
             of: find.byKey(const PageStorageKey('people-list')),
@@ -91,14 +120,6 @@ void main() {
       expect(tester.state<ScrollableState>(scrollable).position.pixels, before);
       await tester.drag(scrollable, const Offset(0, 500));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Pinned'));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Pinned'))
-            .selected,
-        isTrue,
-      );
     },
   );
 
@@ -109,18 +130,13 @@ void main() {
 
     expect(find.text('nx_people'), findsOneWidget);
     expect(find.text('People'), findsWidgets);
-    expect(find.text('Meetings'), findsOneWidget);
-    expect(find.text('Pending'), findsOneWidget);
-    expect(find.text('Logs'), findsOneWidget);
+    expect(find.text('Meetings'), findsWidgets);
+    expect(find.text('Events'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Funnels'), findsNothing);
     expect(find.text('Sarah Chen'), findsWidgets);
-    expect(find.text('NEXT ACTION'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('TIMELINE AND MEETINGS'),
-      300,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.text('TIMELINE AND MEETINGS'), findsOneWidget);
+    expect(find.text('NEXT ACTION'), findsNothing);
+    expect(find.text('No meetings yet'), findsOneWidget);
   });
 
   testWidgets('desktop resolves and creates LinkedIn suggestions', (
@@ -183,43 +199,27 @@ void main() {
     expect(find.text('Sarah Chen'), findsNothing);
   });
 
-  testWidgets('mobile people tab shows corrected filter pills', (tester) async {
+  testWidgets('people list follows the uncluttered Aura layout', (
+    tester,
+  ) async {
     await pumpApp(tester, const Size(390, 844));
-
-    expect(find.text('Pinned'), findsOneWidget);
-    expect(find.text('Recent'), findsOneWidget);
-    expect(find.text('Follow up'), findsWidgets);
-    expect(find.text('Company'), findsNothing);
-    expect(find.text('RECENTLY CONTACTED'), findsNothing);
-    expect(find.text('Active'), findsNothing);
-    expect(find.byKey(const ValueKey('person-pending-dot-1')), findsOneWidget);
-    expect(find.byKey(const ValueKey('person-pending-dot-4')), findsNothing);
-    expect(find.text('Unknown'), findsNothing);
-    expect(find.text('2026-07-05'), findsOneWidget);
-  });
-
-  testWidgets('mobile people filter button opens bottom sheet', (tester) async {
-    await pumpApp(tester, const Size(390, 844));
-
-    await tester.tap(find.byKey(const ValueKey('people-filter-button')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Filter & Sort'), findsOneWidget);
-    expect(find.text('Sort By'), findsOneWidget);
-    expect(find.text('Company'), findsOneWidget);
-    expect(find.text('Role'), findsOneWidget);
-    expect(find.text('Tags'), findsOneWidget);
-    expect(find.text('Reset'), findsOneWidget);
-    expect(find.text('Apply'), findsOneWidget);
+    expect(find.text('RECENT CONTACTS'), findsNothing);
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.byKey(const ValueKey('people-filter-button')), findsNothing);
+    expect(find.text('Search'), findsOneWidget);
   });
 
   testWidgets('mobile adds a person from people tab', (tester) async {
     await pumpApp(tester, const Size(390, 844));
 
     expect(find.byKey(const ValueKey('people-create-button')), findsNothing);
-    expect(find.byKey(const ValueKey('people-menu-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('people-menu-button')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('people-add-fab')));
+    ProviderScope.containerOf(
+      tester.element(find.byType(NexusPeopleApp)),
+    ).read(peopleWorkspaceProvider.notifier).setSection(PeopleAppSection.logs);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('logs-create-button')));
     await tester.pumpAndSettle();
 
     expect(find.text('Create'), findsOneWidget);
@@ -248,11 +248,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Add Person'), findsNothing);
+    await tester.tap(find.text('People'));
+    await tester.pumpAndSettle();
     expect(find.text('Jane Doe'), findsOneWidget);
 
     await tester.tap(find.text('Jane Doe'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Background'));
+    await tester.pumpAndSettle();
     expect(
       find.textContaining('PCB hiring context', findRichText: true),
       findsOneWidget,
@@ -264,7 +268,11 @@ void main() {
   ) async {
     final logs = await pumpApp(tester, const Size(390, 844));
 
-    await tester.tap(find.byKey(const ValueKey('people-add-fab')));
+    ProviderScope.containerOf(
+      tester.element(find.byType(NexusPeopleApp)),
+    ).read(peopleWorkspaceProvider.notifier).setSection(PeopleAppSection.logs);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('logs-create-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('create-log-option')));
     await tester.pumpAndSettle();
@@ -288,12 +296,12 @@ void main() {
   testWidgets('mobile top action logs out', (tester) async {
     await pumpApp(tester, const Size(390, 844));
 
-    await tester.tap(find.byKey(const ValueKey('people-menu-button')));
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Funnels'), findsOneWidget);
-    expect(find.text('Logout'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('menu-logout-option')));
+    expect(find.text('Funnels'), findsNothing);
+    expect(find.text('Log out'), findsOneWidget);
+    await tester.tap(find.text('Log out'));
     await tester.pumpAndSettle();
 
     expect(find.text('nx_people'), findsOneWidget);
@@ -301,33 +309,33 @@ void main() {
     expect(find.byKey(const ValueKey('people-add-fab')), findsNothing);
   });
 
-  testWidgets('Logs replaces Funnels and the burger opens Funnels', (
-    tester,
-  ) async {
+  testWidgets('Settings replaces Logs and switches domain', (tester) async {
     await pumpApp(tester, const Size(390, 844));
+    expect(find.text('Logs'), findsNothing);
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.text('SWITCH DOMAIN'), findsOneWidget);
+    expect(find.text('Personal'), findsOneWidget);
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(NexusPeopleApp)),
+    );
+    expect(container.read(authProvider).value?.domainId, 2);
+    expect(container.read(authProvider).value?.domainName, 'Home');
+  });
 
-    await tester.tap(find.text('Logs'));
+  testWidgets('failed domain switch preserves current session', (tester) async {
+    await pumpApp(tester, const Size(390, 844), failDomainSwitch: true);
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
-    expect(find.text('No logs yet'), findsOneWidget);
-    expect(find.textContaining('Today ·'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('logs-previous-day-button')));
+    await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Today ·'), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey('logs-today-button')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Today ·'), findsOneWidget);
-
-    await tester.tap(find.text('People'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('people-menu-button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('menu-funnels-option')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Funnels'), findsOneWidget);
-    expect(find.text('Logs'), findsOneWidget);
+    expect(find.text('Could not switch domain. Please retry.'), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(NexusPeopleApp)),
+    );
+    expect(container.read(authProvider).value?.domainId, 1);
   });
 
   testWidgets('mobile edits a person from profile detail', (tester) async {
@@ -370,6 +378,8 @@ void main() {
 
     expect(find.text('Edit Person'), findsNothing);
     expect(find.text('Sarah Chen Updated'), findsOneWidget);
+    await tester.tap(find.text('Background'));
+    await tester.pumpAndSettle();
     expect(
       find.textContaining('Updated relationship notes.', findRichText: true),
       findsOneWidget,
@@ -387,6 +397,8 @@ void main() {
 
     await tester.tap(find.text('Sarah Chen').first);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Background'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Add tag'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sales').last);
@@ -395,24 +407,33 @@ void main() {
     expect(find.text('Sales'), findsOneWidget);
   });
 
-  testWidgets('meetings tab shows date agenda and opens person detail', (
+  testWidgets('meetings tab opens the meeting notes and transcript', (
     tester,
   ) async {
     await pumpApp(tester, const Size(1200, 800));
 
-    await tester.tap(find.text('Meetings'));
+    await tester.tap(find.text('Meetings').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Today'), findsWidgets);
+    expect(find.byTooltip('Choose date'), findsOneWidget);
     expect(find.text('Meetings'), findsWidgets);
-    expect(find.text('People touched'), findsOneWidget);
+    expect(find.textContaining('Caught up with Maya'), findsOneWidget);
     expect(find.text('Weekly Planning'), findsWidgets);
 
     await tester.tap(find.text('Weekly Planning').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Maya Ioseliani'), findsWidgets);
-    expect(find.text('NEXT ACTION'), findsOneWidget);
+    expect(find.text('No recording attached to this meeting.'), findsOneWidget);
+    expect(find.text('NEXT ACTION'), findsNothing);
+    expect(
+      tester
+          .widget<PeopleAssistantButton>(
+            find.byType(PeopleAssistantButton).last,
+          )
+          .selection!
+          .id,
+      99,
+    );
   });
 
   testWidgets('mobile uses bottom tabs and pushes profile detail', (
@@ -421,15 +442,29 @@ void main() {
     await pumpApp(tester, const Size(390, 844));
 
     expect(find.text('People'), findsWidgets);
-    expect(find.text('Meetings'), findsOneWidget);
-    expect(find.text('Pending'), findsOneWidget);
-    expect(find.text('Logs'), findsOneWidget);
+    expect(find.text('Meetings'), findsWidgets);
+    expect(find.text('Events'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    final mainAi = find.byType(PeopleAssistantButton);
+    expect(tester.getCenter(mainAi).dx, closeTo(195, 1));
+    expect(tester.widget<PeopleAssistantButton>(mainAi).selection, isNull);
+    await tester.tap(mainAi);
+    await tester.pumpAndSettle();
+    expect(find.text('People assistant'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Sarah Chen').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('PROFILE'), findsOneWidget);
-    expect(find.text('Activity'), findsOneWidget);
+    final profileAi = find.byType(PeopleAssistantButton).last;
+    expect(
+      tester.widget<PeopleAssistantButton>(profileAi).selection!.name,
+      'Sarah Chen',
+    );
+    expect(tester.getCenter(profileAi).dx, greaterThan(300));
+    expect(find.text('Background'), findsOneWidget);
+    expect(find.text('Meetings').last, findsOneWidget);
     expect(find.text('Background'), findsOneWidget);
 
     await tester.tap(find.text('Background'));
@@ -438,15 +473,10 @@ void main() {
     expect(find.text('EDUCATION'), findsWidgets);
     expect(find.text('NEXT ACTION'), findsNothing);
 
-    await tester.tap(find.text('Activity'));
+    await tester.tap(find.text('Meetings').last);
     await tester.pumpAndSettle();
-    expect(find.text('NEXT ACTION'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('TIMELINE AND MEETINGS'),
-      300,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.text('TIMELINE AND MEETINGS'), findsOneWidget);
+    expect(find.text('NEXT ACTION'), findsNothing);
+    expect(find.text('No meetings yet'), findsOneWidget);
   });
 }
 

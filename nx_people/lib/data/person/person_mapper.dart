@@ -1,3 +1,4 @@
+import 'package:nx_people/data/meeting/meeting_time.dart';
 import 'dart:convert';
 
 import 'package:nx_db/kgql.dart';
@@ -5,7 +6,7 @@ import 'package:nx_people/data/person/person_attr_keys.dart';
 import 'package:nx_people/domain/person/person.dart';
 
 const String _meetStartTimeAttr = 'start_time';
-const String _meetActualStartTimeAttr = 'actual_start_time';
+const String _meetStartPrecisionAttr = 'start_precision';
 const String _meetScheduledStartTimeAttr = 'scheduled_start_time';
 const String _meetPlanningStatusAttr = 'planning_status';
 const String kWorkForRelationName = 'work_for';
@@ -117,7 +118,7 @@ Map<String, dynamic> personFetchStruct(ModelType schema) {
       'name': true,
       'description': true,
       _meetStartTimeAttr: true,
-      _meetActualStartTimeAttr: true,
+      _meetStartPrecisionAttr: true,
       _meetScheduledStartTimeAttr: true,
       _meetPlanningStatusAttr: true,
     },
@@ -285,9 +286,13 @@ List<PersonMeeting> _actualMeetings(Model model) {
       if (!_isPlannedMeet(meet) && !_hasInactivePlanningStatus(meet))
         PersonMeeting(
           id: meet.id,
+          description: meet.description ?? '',
           name: meet.name.isEmpty ? "Conversation" : meet.name,
           startTime: _actualMeetingTime(meet),
-          createdAt: DateTime.tryParse(meet.createdAt ?? ""),
+          startPrecision:
+              meet.attributes?[_meetStartPrecisionAttr]?.toString() ??
+              'datetime',
+          createdAt: parseMeetingCreatedAt(meet.createdAt),
         ),
   ];
   rows.sort(
@@ -333,7 +338,6 @@ bool _hasActualMeetingTime(Model meet) {
 }
 
 DateTime? _actualMeetingTime(Model meet) =>
-    meet.attrDateTime(_meetActualStartTimeAttr) ??
     meet.attrDateTime(_meetStartTimeAttr);
 
 bool _isPlannedMeet(Model meet) {

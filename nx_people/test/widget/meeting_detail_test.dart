@@ -26,7 +26,10 @@ void main() {
       stream.add(const MeetingTranscriptState([], connected: true));
       await tester.pump();
       await tester.pump();
-      expect(find.text('Waiting for recording audio…'), findsOneWidget);
+      expect(
+        find.text('No recording attached to this meeting.'),
+        findsOneWidget,
+      );
       final rows = [
         {'text': 'Hello Rachel', 'status': 'recording'},
       ];
@@ -39,7 +42,7 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(find.text('Hello Rachel'), findsOneWidget);
-      expect(find.textContaining('Offline or reconnecting'), findsOneWidget);
+      expect(find.textContaining('Reconnecting'), findsOneWidget);
       stream.add(
         const MeetingTranscriptState([
           {'text': 'Hello Rachel. Nice to meet you.', 'status': 'complete'},
