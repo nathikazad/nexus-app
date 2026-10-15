@@ -55,6 +55,21 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
   }
 
   @override
+  Widget build(BuildContext context) =>
+      VoiceStudySessionView(title: widget.title, controller: controller);
+}
+
+class VoiceStudySessionView extends StatelessWidget {
+  const VoiceStudySessionView({
+    super.key,
+    required this.title,
+    required this.controller,
+  });
+
+  final String title;
+  final VoiceTutorController controller;
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
@@ -63,7 +78,7 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
         child: Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            title: Text(widget.title),
+            title: Text(title),
             actions: [
               if (controller.phase != VoiceStudyPhase.completed)
                 Padding(
@@ -100,9 +115,12 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
                       if (controller.phase == VoiceStudyPhase.completed)
                         Expanded(child: _SessionBody(controller: controller))
                       else ...[
-                        const Spacer(),
-                        _SessionBody(controller: controller),
-                        const Spacer(),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: _SessionBody(controller: controller),
+                          ),
+                        ),
                         _VoiceControls(controller: controller),
                         const SizedBox(height: 18),
                         const Text(
@@ -499,7 +517,6 @@ class _LatestTurn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 34, child: Text(label, style: monoLabel)),
-        const SizedBox(width: 8),
         Expanded(
           child: scrollable
               ? ConstrainedBox(
@@ -712,15 +729,17 @@ class _VoiceControls extends StatelessWidget {
         controller.phase == VoiceStudyPhase.connecting ||
         controller.phase == VoiceStudyPhase.error ||
         controller.phase == VoiceStudyPhase.completed;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 10,
+      runSpacing: 8,
       children: [
         IconButton.filledTonal(
           tooltip: controller.muted ? 'Unmute' : 'Mute',
           onPressed: unavailable ? null : controller.toggleMuted,
           icon: Icon(controller.muted ? Icons.mic_off : Icons.mic),
         ),
-        const SizedBox(width: 14),
         FilledButton.icon(
           onPressed: unavailable ? null : controller.togglePaused,
           icon: Icon(
@@ -732,13 +751,11 @@ class _VoiceControls extends StatelessWidget {
             controller.phase == VoiceStudyPhase.paused ? 'Resume' : 'Pause',
           ),
         ),
-        const SizedBox(width: 14),
         IconButton.filledTonal(
           tooltip: 'Repeat question',
           onPressed: unavailable ? null : controller.repeat,
           icon: const Icon(Icons.replay),
         ),
-        const SizedBox(width: 8),
         IconButton(
           tooltip: 'Skip card',
           onPressed: unavailable ? null : controller.skip,

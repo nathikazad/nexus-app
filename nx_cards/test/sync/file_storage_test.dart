@@ -10,6 +10,33 @@ import 'package:nx_offline/src/storage/content_files_native.dart';
 
 void main() {
   test(
+    'sync timestamps survive store recreation and remain domain scoped',
+    () async {
+      final db = CardsDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      DriftLocalCardsStore store(int domain) => DriftLocalCardsStore(
+        database: db,
+        account: AccountIdentity(
+          domainId: domain,
+          serverId: 'test',
+          userId: '1',
+          application: 'cards',
+        ),
+      );
+      final sent = DateTime.utc(2026, 10, 14, 20);
+      final received = sent.add(const Duration(minutes: 5));
+      expect(await store(1).readSyncTimes(), isEmpty);
+      await store(1).recordSyncTime('sent', sent);
+      await store(1).recordSyncTime('received', received);
+      expect(await store(1).readSyncTimes(), {
+        'sent': sent,
+        'received': received,
+      });
+      expect(await store(2).readSyncTimes(), isEmpty);
+    },
+  );
+
+  test(
     'dashboard reuses unchanged cards and refreshes changed and removed rows',
     () async {
       final db = CardsDatabase(NativeDatabase.memory());

@@ -582,7 +582,7 @@ class _LanguageCategoryPageState extends ConsumerState<LanguageCategoryPage> {
                           builder: (onPressed) => LibraryActionButton(
                             filled: true,
                             onPressed: onPressed,
-                            icon: Icons.replay_rounded,
+                            icon: Icons.psychology_rounded,
                             label: 'Recall',
                           ),
                         ),

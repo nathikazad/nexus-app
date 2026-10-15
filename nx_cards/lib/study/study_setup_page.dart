@@ -82,6 +82,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   late Set<RecallComponent> _directions;
   bool _writing = true;
   bool _sound = true;
+  bool get _sessionSound => _mode == StudyMode.ai || _sound;
   bool get _allowsWriting => _writing && _supportsDrawing;
   Set<RecallComponent>? _regularDirections;
   RecallPresentation get _effectiveRecallPresentation =>
@@ -320,7 +321,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         _directions,
 
         writing: _writing,
-        sound: _sound,
+        sound: _sessionSound,
         minimum: (dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
         maximum: dueOnly ? 1 : _retainedMaxPercentage / 100,
         weakOnly: !dueOnly && _weakOnly,
@@ -943,7 +944,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       when !latestCard.suspended &&
                           latestCard.supportsCue(cue) &&
                           (_writing || cue.target != RecallComponent.script) &&
-                          (_sound ||
+                          (_sessionSound ||
                               (cue.source != RecallComponent.sound &&
                                   cue.target != RecallComponent.sound)) &&
                           (!_usesRecallFilters ||

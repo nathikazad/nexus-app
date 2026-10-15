@@ -17,6 +17,7 @@ import 'package:nx_offline/nx_offline_drift.dart';
 final class DriftLocalCardsStore
     implements
         LocalCardsStore,
+        CardsSyncDiagnosticsStore,
         TransactionalCardsStore,
         QueuedCardReader,
         HashCardsStore,
@@ -205,6 +206,33 @@ final class DriftLocalCardsStore
   final DriftCardsMapper mapper;
 
   String get _accountKey => account.key;
+
+  @override
+  Future<void> recordSyncTime(
+    String event,
+    DateTime time,
+  ) => database.customStatement(
+    'INSERT OR REPLACE INTO offline_sync_metadata(account_key, dataset, cursor) VALUES (?, ?, ?)',
+    [_accountKey, 'cards.diagnostics.$event', time.toUtc().toIso8601String()],
+  );
+
+  @override
+  Future<Map<String, DateTime>> readSyncTimes() async {
+    final rows = await database
+        .customSelect(
+          'SELECT dataset, cursor FROM offline_sync_metadata WHERE account_key = ? AND dataset LIKE ?',
+          variables: [Variable(_accountKey), Variable('cards.diagnostics.%')],
+        )
+        .get();
+    return {
+      for (final row in rows)
+        if (DateTime.tryParse(row.readNullable<String>('cursor') ?? '')
+            case final DateTime time)
+          row.read<String>('dataset').replaceFirst('cards.diagnostics.', ''):
+              time,
+    };
+  }
+
   DriftOutboxPersistence get _outbox =>
       DriftOutboxPersistence(database: database, account: account);
 
@@ -428,6 +456,10 @@ final class DriftLocalCardsStore
       final operation = await _outbox.operation(receipt.operationId);
       if (operation == null) return;
       await _outbox.deleteOperation(receipt.operationId);
+      if (receipt.metadata[cardMutationStatusMetadataKey] !=
+          CardMutationStatus.stale.name) {
+        await recordSyncTime('sent', DateTime.now());
+      }
 
       final snapshot = receipt.metadata[cardSnapshotMetadataKey];
       if (snapshot is List<StudyCard>) await _applyCardSnapshot(snapshot);

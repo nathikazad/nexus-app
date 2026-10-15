@@ -14,6 +14,7 @@ import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'package:nx_cards/study/study_setup_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nx_cards/tutor/voice_tutor_page.dart';
 
 StudyCard sample(
   int id,
@@ -128,6 +129,74 @@ Future<void> showSetup(
 }
 
 void main() {
+  testWidgets(
+    'AI Start opens the selected ten cards with regular recall sound off',
+    (tester) async {
+      await showSetup(
+        tester,
+        studyCards: [for (var id = 1; id <= 15; id++) sample(id, 0)],
+        library: _ReviewLibrary(),
+        preferences: {
+          'study_setup.v4.recall.Chinese':
+              '{"mode":"ai","sound":false,"writing":false,"count":5,"retainedMinPercentage":0,"retainedMaxPercentage":100}',
+        },
+      );
+      final slider = tester.widget<Slider>(
+        find.byKey(const ValueKey('card-count')),
+      );
+      slider.onChanged!(10);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Slider>(find.byKey(const ValueKey('card-count'))).value,
+        10,
+      );
+      await tester.tap(find.text('Start AI tutor'));
+      await tester.pumpAndSettle();
+      expect(find.text('No cards match these filters'), findsNothing);
+      final page = tester.widget<VoiceStudySessionPage>(
+        find.byType(VoiceStudySessionPage),
+      );
+      expect(page.prompts.map((p) => p.cardId).toSet(), hasLength(10));
+      expect(page.prompts.every((p) => !p.cue.involvesScript), isTrue);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets('AI recall ignores silent recall preference and preserves it', (
+    tester,
+  ) async {
+    await showSetup(
+      tester,
+      studyCards: [sample(1, 0)],
+      preferences: {
+        'study_setup.v4.recall.Chinese':
+            '{"mode":"ai","sound":false,"writing":false,"retainedMinPercentage":0,"retainedMaxPercentage":100}',
+      },
+    );
+    expect(find.text('No cards match these filters'), findsNothing);
+    expect(find.text('1 card available'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Start AI tutor'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(find.text('Recall').first);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<SwitchListTile>(find.byKey(const ValueKey('recall-sound')))
+          .value,
+      isFalse,
+    );
+    await tester.tap(find.text('AI').first);
+    await tester.pumpAndSettle();
+    expect(find.text('1 card available'), findsOneWidget);
+  });
+
   testWidgets('mixed spoken-only and written cards keep native recall', (
     tester,
   ) async {

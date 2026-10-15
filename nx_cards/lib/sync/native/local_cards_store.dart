@@ -24,6 +24,12 @@ abstract interface class QueuedCardReader {
   Future<StudyCard?> readQueuedCard(int cardId, String reference);
 }
 
+/// Device-local, account-scoped successful sync checkpoints.
+abstract interface class CardsSyncDiagnosticsStore {
+  Future<Map<String, DateTime>> readSyncTimes();
+  Future<void> recordSyncTime(String event, DateTime time);
+}
+
 abstract interface class HashCardsStore {
   int get editGeneration;
   Future<bool> verifiedCard(CardHash entry);

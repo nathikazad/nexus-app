@@ -6,6 +6,7 @@ import 'package:nx_cards/browser/browser_providers.dart';
 import 'package:nx_cards/app/theme.dart';
 import 'package:nx_cards/scheduling/review_progression.dart';
 import 'package:nx_cards/settings/appearance.dart';
+import 'package:nx_cards/settings/sync_diagnostics.dart';
 import 'package:nx_db/auth.dart';
 
 Future<void> _logoutAndClearSession(WidgetRef ref) async {
@@ -206,9 +207,26 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               const SizedBox(height: 22),
               const Divider(),
               const SizedBox(height: 18),
-              const Text(
-                'Offline library',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Offline library',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SyncDiagnosticsPage(),
+                      ),
+                    ),
+                    child: const Text('Diagnostics'),
+                  ),
+                ],
               ),
               const SizedBox(height: 7),
               const Text(

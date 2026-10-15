@@ -168,6 +168,12 @@ final class _CardPullReconciler implements PullReconciler<int> {
     } else {
       await store.applyCardSnapshot(await transport.syncCards());
     }
+    if (store is CardsSyncDiagnosticsStore) {
+      await (store as CardsSyncDiagnosticsStore).recordSyncTime(
+        'received',
+        DateTime.now(),
+      );
+    }
     _afterPull();
   }
 
