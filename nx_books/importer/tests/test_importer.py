@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from importer.book_importer import BookImporter, BookPackageCompiler
+from importer.book_importer import BookImporter, BookPackageCompiler, ImporterError
 from importer.tests.helpers import (
     FakeKgqlClient,
     FakeMarkdownConverter,
@@ -37,6 +37,7 @@ class BookImporterTest(unittest.TestCase):
                 manifest["chapters"][0]
             )
             self.assertEqual(chapter_payload["model_type"], "Book Chapter")
+            self.assertNotIn("tags", chapter_payload)
             self.assertNotIn("document", chapter_payload)
             self.assertEqual(
                 {item["key"] for item in chapter_payload["attributes"]},
@@ -88,6 +89,10 @@ class BookImporterTest(unittest.TestCase):
             )
 
             self.assertEqual(len(client.chapters), 2)
+            for chapter in client.chapters.values():
+                self.assertEqual(chapter["tags"], {})
+                self.assertEqual(chapter["publish"]["status"], "draft")
+                self.assertFalse(chapter["publish"]["enabled"])
             self.assertEqual(client.book["tags"], {"Topic": ["People"]})
             self.assertEqual(client.book["reading_state"], "to_read")
             self.assertEqual(client.book["rank"], 4)
@@ -102,6 +107,17 @@ class BookImporterTest(unittest.TestCase):
             book_mutation = client.mutations[-1]
             self.assertNotIn("model_type", book_mutation)
             self.assertIn("relations", book_mutation)
+
+    def test_verification_rejects_enabled_publishing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            manifest_path, manifest = self._manifest(directory)
+            client = FakeKgqlClient(77, "Sample Book")
+            importer = BookImporter(client)
+            result = importer.execute(manifest, manifest_path.with_name("receipt.json"))
+            ids = {int(k): v for k, v in result["verification"]["chapter_ids"].items()}
+            client.chapters[ids[1]]["publish"]["enabled"] = True
+            with self.assertRaisesRegex(ImporterError, "unpublished draft"):
+                importer.verify(manifest, ids)
 
     def test_resume_reuses_chapters_and_does_not_duplicate_links(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

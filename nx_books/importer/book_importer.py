@@ -1033,7 +1033,6 @@ class BookImporter:
                     "chapter_number": int(chapter["number"]),
                 }
             ),
-            "tags": [{"system": "Status", "nodes": ["Draft"]}],
         }
 
     @staticmethod
@@ -1199,11 +1198,13 @@ class BookImporter:
             raise ImporterError(
                 f"{chapter['document_name']}: description mismatch"
             )
-        if row.get("tags") != {"Status": ["Draft"]}:
-            raise ImporterError(f"{chapter['document_name']}: Status is not Draft")
+        if row.get("tags") not in ({}, {"Status": ["Draft"]}, None):
+            raise ImporterError(f"{chapter['document_name']}: unexpected chapter tags")
         if row.get("pinned") is not False:
             raise ImporterError(f"{chapter['document_name']}: pinned must be false")
         publish = row.get("publish") or {}
+        if publish.get("status") != "draft" or publish.get("enabled") is not False:
+            raise ImporterError(f"{chapter['document_name']}: chapter must remain an unpublished draft")
         if publish.get("content_hash") != chapter["publish"]["content_hash"]:
             raise ImporterError(
                 f"{chapter['document_name']}: publish hash mismatch"
