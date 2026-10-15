@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 import unittest
 from unittest.mock import patch
@@ -24,6 +25,8 @@ class SshGraphQLKgqlClientTest(unittest.TestCase):
         self.assertIn("hetzner-personal", argv)
         self.assertTrue(argv[-1].endswith(" 1"))
         self.assertNotIn("x-nexus-internal-secret", argv[:-1])
+        self.assertEqual(shlex.split(argv[-1])[-2:], ["1", "1"])
+        self.assertIn('"x-domain-id": domain_id', argv[-1])
         request = json.loads(run.call_args.kwargs["input"])
         self.assertEqual(request["variables"]["input"], {"model_types": ["Book"]})
 

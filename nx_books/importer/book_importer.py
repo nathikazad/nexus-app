@@ -43,6 +43,7 @@ import urllib.request
 
 payload = sys.stdin.buffer.read()
 user_id = sys.argv[1]
+domain_id = sys.argv[2]
 with open("/run/secrets/graphql_secret", encoding="utf-8") as source:
     secret = source.read().strip()
 request = urllib.request.Request(
@@ -51,6 +52,7 @@ request = urllib.request.Request(
     {
         "content-type": "application/json",
         "x-user-id": user_id,
+        "x-domain-id": domain_id,
         "x-nexus-internal-secret": secret,
     },
 )
@@ -651,7 +653,8 @@ class GraphQLKgqlClient:
                 {"query": query, "variables": variables},
                 ensure_ascii=False,
             ).encode("utf-8"),
-            {"content-type": "application/json", "x-user-id": self.user_id},
+            {"content-type": "application/json", "x-user-id": self.user_id,
+             "x-domain-id": str(self.domain_id)},
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             result = json.load(response)
@@ -741,6 +744,7 @@ class SshGraphQLKgqlClient(GraphQLKgqlClient):
                 "docker exec -i nexus-server python -c",
                 shlex.quote(_SSH_GRAPHQL_RELAY),
                 shlex.quote(self.user_id),
+                shlex.quote(str(self.domain_id)),
             ]
         )
         try:
