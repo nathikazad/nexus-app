@@ -535,6 +535,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
                                       DocumentInteractionMode.highlightOnly
                                   ? shared_documents.DocumentReader(
                                       extraBlockBuilders: {
+                                        nxMermaidBlockType:
+                                            NxMermaidBlockComponentBuilder(),
                                         nxCanvasBlockType:
                                             NxCanvasBlockComponentBuilder(),
                                       },

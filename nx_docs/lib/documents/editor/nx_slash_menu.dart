@@ -122,6 +122,13 @@ List<SelectionMenuItem> _nxStaticSelectionMenuItems({
       nodeBuilder: (_, __) => nxCanvasNode(),
       replace: _replaceCurrentParagraph,
     ),
+    SelectionMenuItem.node(
+      getName: () => 'Mermaid',
+      keywords: const <String>['mermaid', 'flowchart', 'diagram', 'sequence'],
+      iconData: Icons.account_tree_outlined,
+      nodeBuilder: (_, __) => nxMermaidNode(),
+      replace: _replaceCurrentParagraph,
+    ),
     _nxImageSelectionMenuItem(uploadDocumentImage: uploadDocumentImage),
   ];
 }

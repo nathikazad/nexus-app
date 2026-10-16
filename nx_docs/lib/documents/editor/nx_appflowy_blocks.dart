@@ -22,6 +22,7 @@ import 'package:nx_docs/documents/editor/nx_document_link.dart';
 import 'package:nx_docs/documents/editor/nx_excalidraw_frame.dart';
 import 'package:nx_documents/nx_documents.dart';
 import 'package:provider/provider.dart';
+import 'package:nx_docs/documents/editor/mermaid_editor.dart';
 
 part 'nx_slash_menu.dart';
 part 'element_picker_scope.dart';
@@ -31,6 +32,7 @@ part 'nx_toggle_block.dart';
 part 'nx_kgql_link_block.dart';
 part 'nx_drag_to_reorder.dart';
 part 'nx_excalidraw_block.dart';
+part 'nx_mermaid_block.dart';
 part 'nx_canvas_block.dart';
 part 'excalidraw_dialog.dart';
 part 'excalidraw_preview.dart';
@@ -39,6 +41,7 @@ part 'nx_document_image_block.dart';
 const String nxToggleBlockType = 'nx_toggle';
 const String nxBlogLinkBlockType = 'nx_blog_link';
 const String nxExcalidrawBlockType = 'nx_excalidraw';
+const String nxMermaidBlockType = 'nx_mermaid';
 
 Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
   bool useReadTable = false,
@@ -69,6 +72,7 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
     nxToggleBlockType: NxToggleBlockComponentBuilder(),
     nxBlogLinkBlockType: NxBlogLinkBlockComponentBuilder(),
     nxExcalidrawBlockType: NxExcalidrawBlockComponentBuilder(),
+    nxMermaidBlockType: NxMermaidBlockComponentBuilder(),
     nxCanvasBlockType: NxCanvasBlockComponentBuilder(
       documentId: canvasDocumentId,
       convert: convertCanvas,
@@ -130,6 +134,8 @@ String nxPlainTextForCustomNode(Node node) {
       return 'Blog: $title';
     case nxCanvasBlockType:
       return _stringAttribute(node, 'title', 'Canvas');
+    case nxMermaidBlockType:
+      return _stringAttribute(node, 'source', '');
     case nxExcalidrawBlockType:
       return _stringAttribute(node, 'title', 'Excalidraw');
     default:
