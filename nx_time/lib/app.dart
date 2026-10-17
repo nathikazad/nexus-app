@@ -23,7 +23,6 @@ class NexusTimeApp extends ConsumerWidget {
           ? null
           : workspace.synchronize,
       onlineChanges: timeOnlineChanges,
-      checkInterval: const Duration(seconds: 30),
       child: MaterialApp.router(
         title: 'Nexus Time',
         debugShowCheckedModeBanner: false,

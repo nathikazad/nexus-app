@@ -13,7 +13,8 @@ final class AppSyncLifecycle extends StatefulWidget {
     required this.child,
     this.onlineChanges,
     this.remoteChanges,
-    this.checkInterval,
+    this.resumeInterval = const Duration(minutes: 5),
+    this.now,
     super.key,
   });
 
@@ -24,7 +25,10 @@ final class AppSyncLifecycle extends StatefulWidget {
   final AppSynchronize? synchronize;
   final Stream<bool>? onlineChanges;
   final Stream<String>? remoteChanges;
-  final Duration? checkInterval;
+
+  /// Resume checks are skipped until this long after a successful sync check.
+  final Duration resumeInterval;
+  final DateTime Function()? now;
   final Widget child;
 
   @override
@@ -36,7 +40,7 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
   StreamSubscription<bool>? _connectivitySubscription;
   StreamSubscription<String>? _remoteSubscription;
   AppStateCoordinator? _coordinator;
-  Timer? _periodic;
+  DateTime? _lastSuccessfulSync;
   bool _foreground = true;
 
   @override
@@ -63,8 +67,6 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
     if (!identical(oldWidget.synchronize, widget.synchronize)) {
       _configureCoordinator();
       _synchronize(SyncReason.appStarted);
-    } else if (oldWidget.checkInterval != widget.checkInterval) {
-      _configureCoordinator();
     }
   }
 
@@ -86,7 +88,6 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
     unawaited(_connectivitySubscription?.cancel());
     unawaited(_remoteSubscription?.cancel());
     unawaited(_coordinator?.close());
-    _periodic?.cancel();
     super.dispose();
   }
 
@@ -97,32 +98,41 @@ final class _AppSyncLifecycleState extends State<AppSyncLifecycle>
   }
 
   void _synchronize(SyncReason reason) {
+    final last = _lastSuccessfulSync;
+    if (reason == SyncReason.appResumed &&
+        last != null &&
+        (widget.now?.call() ?? DateTime.now()).difference(last) <=
+            widget.resumeInterval) {
+      return;
+    }
     unawaited(_coordinator?.request(reason));
   }
 
   void _configureCoordinator() {
     unawaited(_coordinator?.close());
-    _periodic?.cancel();
     final synchronize = widget.synchronize;
+    _lastSuccessfulSync = null;
     _coordinator = synchronize == null
         ? null
-        : AppStateCoordinator(synchronize: synchronize);
-    if (widget.checkInterval case final interval? when synchronize != null) {
-      _periodic = Timer.periodic(interval, (_) {
-        if (_foreground) _synchronize(SyncReason.timer);
-      });
-    }
+        : AppStateCoordinator(
+            synchronize: (reason) async {
+              await synchronize(reason);
+              if (mounted && identical(widget.synchronize, synchronize)) {
+                _lastSuccessfulSync = widget.now?.call() ?? DateTime.now();
+              }
+            },
+          );
   }
 
   void _listenToRemoteChanges() {
-    // Keep this subscription when callbacks or timer settings change. A
+    // Keep this subscription when callbacks change. A
     // single-subscription stream cannot be listened to again after cancellation.
     _remoteSubscription = widget.remoteChanges?.listen(
       (hint) {
         if (_foreground) _coordinator?.hint(hint);
       },
       onError: (Object _) {
-        // Startup/resume and periodic state reads recover missed notifications.
+        // Startup and stale resume checks recover missed notifications.
       },
     );
   }

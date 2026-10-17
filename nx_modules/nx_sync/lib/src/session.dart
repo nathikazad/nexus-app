@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'record_session.dart';
 import 'record_graph.dart';
 export 'record_session.dart'
@@ -83,33 +84,26 @@ final class AppSyncSession {
     final hashes = {
       for (final e in remote.entries) e['id'] as String: e['hash'] as String,
     };
-    final graph = RecordGraph(next, hashes);
-    final views = <int, Map<String, dynamic>>{};
-    final entries = <Map<String, dynamic>>[];
-    for (final entry in remote.entries) {
-      if (entry['role'] == 'support') continue;
-      final key = entry['id'] as String;
-      final payload = graph.view(app, key);
-      final id = payload['id'] as int;
-      final hash =
-          'v1:${sha256.convert(utf8.encode(jsonEncode(_ordered(payload))))}';
-      if (views.containsKey(id))
-        throw StateError('Duplicate app view identity');
-      views[id] = {'id': id, 'hash': hash, 'payload': payload};
-      entries.add({...entry, 'id': id, 'hash': hash});
-    }
+    // Pass only snapshot data to the worker, never this session or its
+    // network/storage callbacks. Awaiting lets the UI continue handling input.
+    final projection = await compute(_projectViews, (
+      app: app,
+      records: next,
+      hashes: hashes,
+      entries: remote.entries,
+    ), debugLabel: 'nx_sync.projectViews');
     final result = AppSyncManifest(
       remote.revision,
       remote.root,
       remote.collections,
-      entries,
+      projection.entries,
     );
     if (save != null && (_manifest?.root != remote.root || wanted.isNotEmpty)) {
       await save!({...remote.toJson(), 'bodies': next, 'hashes': hashes});
     }
     _records = next;
     _hashes = hashes;
-    _views = views;
+    _views = projection.views;
     _manifest = result;
     return result;
   }
@@ -127,6 +121,38 @@ final class AppSyncSession {
         if (_views.containsKey(id)) _views[id]!,
     ];
   }
+}
+
+typedef _ProjectionInput = ({
+  String app,
+  Map<String, Map<String, dynamic>> records,
+  Map<String, String> hashes,
+  List<Map<String, dynamic>> entries,
+});
+
+typedef _ProjectionResult = ({
+  Map<int, Map<String, dynamic>> views,
+  List<Map<String, dynamic>> entries,
+});
+
+// compute uses a background isolate on native platforms. On web it runs on
+// the current event loop, matching Flutter's compute contract.
+_ProjectionResult _projectViews(_ProjectionInput input) {
+  final graph = RecordGraph(input.records, input.hashes);
+  final views = <int, Map<String, dynamic>>{};
+  final entries = <Map<String, dynamic>>[];
+  for (final entry in input.entries) {
+    if (entry['role'] == 'support') continue;
+    final key = entry['id'] as String;
+    final payload = graph.view(input.app, key);
+    final id = payload['id'] as int;
+    final hash =
+        'v1:${sha256.convert(utf8.encode(jsonEncode(_ordered(payload))))}';
+    if (views.containsKey(id)) throw StateError('Duplicate app view identity');
+    views[id] = {'id': id, 'hash': hash, 'payload': payload};
+    entries.add({...entry, 'id': id, 'hash': hash});
+  }
+  return (views: views, entries: entries);
 }
 
 Object? _ordered(Object? value) {

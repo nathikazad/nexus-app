@@ -36,7 +36,6 @@ final class AppDataSession {
   final Stream<bool>? onlineChanges;
   final AppStateCoordinator? _offline;
   bool _closed = false;
-  static const recoveryInterval = Duration(seconds: 30);
 
   late final Future<void> Function(SyncReason) synchronize = _synchronize;
 
@@ -67,7 +66,6 @@ final class AppDataHost extends StatelessWidget {
     synchronize: session?.synchronize,
     remoteChanges: session?.remoteChanges,
     onlineChanges: session?.onlineChanges,
-    checkInterval: AppDataSession.recoveryInterval,
     child: child,
   );
 }

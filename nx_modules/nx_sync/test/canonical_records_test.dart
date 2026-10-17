@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_sync/nx_sync.dart';
 import 'package:nx_sync/src/record_graph.dart';
@@ -88,7 +89,89 @@ class Server {
   }
 }
 
+// Reports where serialization actually runs without depending on timing.
+class SerializationProbe {
+  SerializationProbe(this.port);
+  final SendPort port;
+  String toJson() {
+    port.send(Isolate.current.debugName);
+    return 'probe';
+  }
+}
+
 void main() {
+  test(
+    'projection runs in a worker and publishes back on the caller isolate',
+    () async {
+      final port = ReceivePort();
+      addTearDown(port.close);
+      final workerName = port.first;
+      final caller = Isolate.current;
+      final s = Server()
+        ..put(
+          1,
+          'a',
+          model(
+            1,
+            'Book',
+            'Book',
+            attributes: {'probe': SerializationProbe(port.sendPort)},
+          ),
+        );
+      var saves = 0;
+      final session = AppSyncSession(
+        app: 'books',
+        request: (operation, args) {
+          expect(Isolate.current, same(caller));
+          return s.request(operation, args);
+        },
+        save: (_) async {
+          expect(Isolate.current, same(caller));
+          saves++;
+        },
+      );
+      final pending = session.manifest();
+      expect(session.manifest(), same(pending));
+      final manifest = (await pending)!;
+      expect(await workerName, 'nx_sync.projectViews');
+      expect(saves, 1);
+      expect(
+        (await session.download(manifest, {1})).single['payload']['name'],
+        'Book',
+      );
+      await session.manifest();
+      expect(saves, 1);
+    },
+  );
+
+  test(
+    'worker failure preserves published views and checkpoint, then retries',
+    () async {
+      final s = Server()..put(1, 'a', model(1, 'Original', 'Book'));
+      final session = s.session('books');
+      final original = (await session.manifest())!;
+      final checkpoint = jsonEncode(s.saved);
+      s.revision++;
+      s.put(1, 'b', model(1, 'Changed', 'Book'));
+      s.bodies['timeline:1'] = {'id': 1};
+      s.hashes['timeline:1'] = 'duplicate';
+      await expectLater(session.manifest(), throwsStateError);
+      expect(jsonEncode(s.saved), checkpoint);
+      expect(
+        (await session.download(original, {1})).single['payload']['name'],
+        'Original',
+      );
+      s.revision++;
+      s.bodies.remove('timeline:1');
+      s.hashes.remove('timeline:1');
+      final updated = (await session.manifest())!;
+      expect(
+        (await session.download(updated, {1})).single['payload']['name'],
+        'Changed',
+      );
+    },
+  );
+
   test(
     'renaming a neighbor downloads only that model and refreshes the local meeting view',
     () async {
