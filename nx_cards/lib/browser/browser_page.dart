@@ -124,6 +124,7 @@ class _HomeScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(cardsSourcesProvider);
     final body = dashboard.when(
+      skipLoadingOnReload: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => BrowserLoadError(
         error: error,

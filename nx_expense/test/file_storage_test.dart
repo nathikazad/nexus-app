@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/kgql.dart';
@@ -20,12 +21,53 @@ void main() {
       ),
       files: files,
     );
-    cache = ExpenseFileCache(library);
+    cache = ExpenseFileCache(library, cacheFirst: false);
   });
   tearDown(() async {
     await library.close();
     await dir.delete(recursive: true);
   });
+
+  test(
+    'cached rows return before a stalled refresh and publish fresh data later',
+    () async {
+      final filter = <String, dynamic>{'month': '2026-10'};
+      final struct = <String, dynamic>{'id': true, 'name': true};
+      await cache.models(
+        'Expense',
+        filter,
+        struct,
+        () async => [
+          Model.fromJson({'id': 1, 'name': 'Cached'}),
+        ],
+      );
+      final remote = Completer<List<Model>>();
+      final changed = Completer<void>();
+      final fast = ExpenseFileCache(
+        library,
+        onChanged: () => changed.complete(),
+      );
+      final rows = await fast
+          .models('Expense', filter, struct, () => remote.future)
+          .timeout(const Duration(milliseconds: 500));
+      expect(rows.single.name, 'Cached');
+      expect(remote.isCompleted, false);
+      remote.complete([
+        Model.fromJson({'id': 1, 'name': 'Fresh'}),
+      ]);
+      await changed.future.timeout(const Duration(seconds: 2));
+      expect(
+        (await fast.models(
+          'Expense',
+          filter,
+          struct,
+          () => throw StateError('should not wait'),
+        )).single.name,
+        'Fresh',
+      );
+      await fast.close();
+    },
+  );
 
   test(
     'only the exact downloaded query is available offline; empty is distinct from unknown',

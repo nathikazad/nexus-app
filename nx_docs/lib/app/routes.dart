@@ -27,7 +27,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authProvider);
       final activeSession = ref.read(activeOfflineSessionProvider);
       final path = state.uri.path;
-      if (auth.isLoading && activeSession.isLoading) {
+      if (auth.isLoading && activeSession.value == null) {
         if (path == '/initializing') return null;
         return '/initializing?from=${Uri.encodeComponent(_routeDestination(state))}';
       }

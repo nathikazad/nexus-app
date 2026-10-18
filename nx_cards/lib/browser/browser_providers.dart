@@ -199,10 +199,8 @@ final cardsSourcesProvider = StreamProvider<List<LibrarySource>>((ref) async* {
   final reader = ref.watch(appReadsProvider('cards'));
   final workspace = ref.watch(cardWorkspaceProvider);
   if (ref.watch(cardsOfflineEnabledProvider) && workspace != null) {
-    final cached = await workspace.watchDashboard().first;
-    if (cached.cards.isNotEmpty) {
-      yield summarizeLibrary(cached);
-    }
+    yield* workspace.watchDashboard().map(summarizeLibrary);
+    return;
   }
   if (reader != null) {
     try {
@@ -232,35 +230,19 @@ final cardsCollectionProvider = StreamProvider.autoDispose
       ref.onDispose(() => observed.remove(source));
       if (ref.watch(cardsOfflineEnabledProvider)) {
         final workspace = ref.watch(cardWorkspaceProvider)!;
-        Set<int>? visibleIds;
-        var attempted = false;
-        await for (final dashboard in workspace.watchDashboard()) {
-          if (!attempted) {
-            attempted = true;
-            yield dashboard;
-            try {
-              final cards = await _refreshCardCollection(ref, source);
-              visibleIds = cards.map((card) => card.id).toSet();
-              // Re-read merged cards so pending local edits win over server data.
-              final local = ref.read(localCardsStoreProvider)!;
-              final merged = await Future.wait([
-                for (final card in cards)
-                  local.getCard(card.id).then((value) => value ?? card),
-              ]);
-              yield CardsDashboard(cards: merged);
-            } catch (_) {
-              yield dashboard;
-            }
-          } else {
-            yield visibleIds == null
-                ? dashboard
-                : CardsDashboard(
-                    cards: dashboard.cards
-                        .where((card) => visibleIds!.contains(card.id))
-                        .toList(),
-                  );
-          }
-        }
+        yield* workspace.watchDashboard().map(
+          (dashboard) => CardsDashboard(
+            cards: dashboard.cards
+                .where(
+                  (card) =>
+                      (source.language == null ||
+                          card.language == source.language) &&
+                      (source.bookId == null ||
+                          card.sourceBookId == source.bookId),
+                )
+                .toList(),
+          ),
+        );
         return;
       }
       final reader = ref.watch(appReadsProvider('cards'));

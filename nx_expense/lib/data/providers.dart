@@ -11,6 +11,7 @@ import 'package:nx_db/auth.dart';
 import 'package:nx_db/goals.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
+import 'package:nx_offline/nx_offline.dart' show SyncReason;
 
 import 'package:nx_expense/core/formatting/format.dart';
 import 'package:nx_expense/data/expense/expense_struct.dart';
@@ -39,11 +40,31 @@ final expenseFileCacheProvider = Provider<ExpenseFileCache?>((ref) {
   final user = ref.watch(authProvider).value;
   if (user?.domainId == null) return null;
   final library = FileLibrary.application('nx_expense:${user!.sessionKey}');
-  ref.onDispose(() => unawaited(library.close()));
+
   final data = ref.watch(expenseDataRepositoryProvider);
-  return data == null
-      ? ExpenseFileCache(library)
-      : ExpenseModelCache(library, data);
+  void changed() {
+    if (ref.mounted) ref.read(expenseDataGenerationProvider.notifier).changed();
+  }
+
+  final cache = data == null
+      ? ExpenseFileCache(library, onChanged: changed)
+      : ExpenseModelCache(
+          library,
+          data,
+          onChanged: changed,
+          onInvalidated: () {
+            if (ref.mounted) {
+              unawaited(
+                ref
+                    .read(expenseLibrarySyncProvider)
+                    ?.requestFull(SyncReason.foregroundDemand)
+                    .catchError((Object _) {}),
+              );
+            }
+          },
+        );
+  ref.onDispose(() => unawaited(cache.close().then((_) => library.close())));
+  return cache;
 });
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
@@ -51,14 +72,7 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
   return KgqlExpenseRepository(
     client: ref.watch(graphqlClientProvider),
     cache: ref.watch(expenseFileCacheProvider),
-    loadExpenseSchema: () =>
-        ref
-            .read(expenseFileCacheProvider)
-            ?.schema(
-              kExpenseModelTypeName,
-              () => ref.read(expenseSchemaProvider.future),
-            ) ??
-        ref.read(expenseSchemaProvider.future),
+    loadExpenseSchema: () => ref.read(expenseSchemaProvider.future),
   );
 });
 
@@ -67,21 +81,24 @@ final orderRepositoryProvider = Provider<KgqlOrderRepository>((ref) {
   return KgqlOrderRepository(
     client: ref.watch(graphqlClientProvider),
     cache: ref.watch(expenseFileCacheProvider),
-    loadOrderSchema: () =>
-        ref
-            .read(expenseFileCacheProvider)
-            ?.schema(
-              kOrderModelTypeName,
-              () => ref.read(orderSchemaProvider.future),
-            ) ??
-        ref.read(orderSchemaProvider.future),
+    loadOrderSchema: () => ref.read(orderSchemaProvider.future),
   );
 });
 
-final expenseSchemaProvider = kgqlModelTypeByNameProvider(
-  kExpenseModelTypeName,
+Future<ModelType> _cachedSchema(Ref ref, String name) {
+  ref.watch(expenseDataGenerationProvider);
+  final cache = ref.watch(expenseFileCacheProvider);
+  final client = ref.watch(graphqlClientProvider);
+  Future<ModelType> load() => fetchKgqlModelTypeByName(client, name);
+  return cache?.schema(name, load) ?? load();
+}
+
+final expenseSchemaProvider = FutureProvider<ModelType>(
+  (ref) => _cachedSchema(ref, kExpenseModelTypeName),
 );
-final orderSchemaProvider = kgqlModelTypeByNameProvider(kOrderModelTypeName);
+final orderSchemaProvider = FutureProvider<ModelType>(
+  (ref) => _cachedSchema(ref, kOrderModelTypeName),
+);
 
 final budgetExpenseGoalsMonthProvider =
     FutureProvider<ExpenseGoalMonthResponse>((ref) async {

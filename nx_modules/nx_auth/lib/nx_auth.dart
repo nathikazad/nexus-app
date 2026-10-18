@@ -16,3 +16,4 @@ export 'src/session_availability.dart';
 export 'src/domain_session.dart';
 
 export 'src/remembered_login_profile.dart';
+export 'src/startup_timing.dart';

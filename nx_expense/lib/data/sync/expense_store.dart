@@ -1,8 +1,13 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/nx_offline_drift.dart';
 import 'package:nx_offline/nx_offline_storage.dart';
+
+List<Map<String, dynamic>> _decodeExpenseRows(List<String> bodies) => [
+  for (final body in bodies) Map<String, dynamic>.from(jsonDecode(body) as Map),
+];
 
 /// One native server/user/domain/app partition. Commands and optimistic views
 /// share a SQLite transaction; immutable payload files are finalized first.
@@ -88,23 +93,28 @@ class ExpenseStore implements OutboxStore {
 
   Future<List<Map<String, dynamic>>> all() async {
     await initialize();
-    final result = <Map<String, dynamic>>[];
-    String? after;
-    while (true) {
-      final rows = await library.list('expense', limit: 200, after: after);
-      for (final row in rows) {
-        if (!row.deleted) {
-          result.add(
-            Map<String, dynamic>.from(
-              jsonDecode(await library.files.read(row.reference)) as Map,
-            ),
-          );
-        }
-      }
-      if (rows.length < 200) break;
-      after = rows.last.id;
+    // Confirmed bodies already live in SQLite. Avoid thousands of sequential
+    // file opens at startup; pending edits still use their exact local version.
+    final rows = await library.database.customSelect('''
+      SELECT s.body_ref, s.pending, c.payload FROM stored_items s
+      LEFT JOIN expense_confirmed c ON c.local_id = s.item_id
+      WHERE s.collection = 'expense' AND s.deleted = 0
+      ORDER BY s.item_id
+    ''').get();
+    final bodies = <String>[];
+    for (final row in rows) {
+      final confirmed = row.readNullable<String>('payload');
+      bodies.add(
+        row.read<int>('pending') == 0 &&
+                confirmed != null &&
+                confirmed != 'null'
+            ? confirmed
+            : await library.files.read(row.read<String>('body_ref')),
+      );
     }
-    return result;
+    return bodies.length > 200
+        ? compute(_decodeExpenseRows, bodies)
+        : _decodeExpenseRows(bodies);
   }
 
   Future<void> enqueue({

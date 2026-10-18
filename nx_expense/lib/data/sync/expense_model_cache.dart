@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:nx_db/kgql.dart';
+import 'package:nx_db/auth.dart';
 import '../expense/expense_file_cache.dart';
 import 'expense_data_repository.dart';
 
@@ -18,26 +20,65 @@ Model expenseSyncModel(Map<String, dynamic> row) {
 
 /// Keeps the existing screen mappers while reading the synchronized library.
 class ExpenseModelCache extends ExpenseFileCache {
-  ExpenseModelCache(super.library, this.data);
+  ExpenseModelCache(
+    super.library,
+    this.data, {
+    super.onChanged,
+    this.onInvalidated,
+  });
   final ExpenseDataRepository data;
+  final void Function()? onInvalidated;
+  String? _invalidatedCoverage;
+
+  Future<bool> _libraryCurrent() async {
+    final coverage = await data.store?.library.read(
+      'expense_state',
+      'coverage',
+    );
+    return coverage != null && coverage != _invalidatedCoverage;
+  }
+
+  @override
+  Future<void> invalidate() async {
+    _invalidatedCoverage = await data.store?.library.read(
+      'expense_state',
+      'coverage',
+    );
+    await super.invalidate();
+    onInvalidated?.call();
+  }
+
+  @override
+  Future<ModelType> schema(
+    String name,
+    Future<ModelType> Function() load,
+  ) async {
+    final references = await data.store?.get('0');
+    final raw = references?['schemas'];
+    final schemas = raw is String ? jsonDecode(raw) : raw;
+    if (schemas is List) {
+      final match = schemas.where((s) => s['name'] == name).firstOrNull;
+      if (match is Map) {
+        StartupTiming.mark('offline_schema_ready');
+        return ModelType.fromJson(Map<String, dynamic>.from(match));
+      }
+    }
+    return super.schema(name, load);
+  }
+
   @override
   Future<Model?> model(
     String type,
     int id,
     Future<Model?> Function() load,
   ) async {
-    try {
-      final live = await load();
-      return super.model(type, id, () async => live);
-    } catch (error) {
-      if (!await data.isComplete()) {
-        return super.model(type, id, () async => throw error);
-      }
+    if (await _libraryCurrent()) {
       final row = await data.get(id);
       return row == null || row['model_type']?['name'] != type
           ? null
           : expenseSyncModel(row);
     }
+    return super.model(type, id, load);
   }
 
   @override
@@ -47,15 +88,11 @@ class ExpenseModelCache extends ExpenseFileCache {
     Map<String, dynamic> struct,
     Future<List<Model>> Function() load,
   ) async {
-    try {
-      final live = await load();
-      return super.models(type, filter, struct, () async => live);
-    } catch (error) {
-      if (!await data.isComplete()) {
-        return super.models(type, filter, struct, () async => throw error);
-      }
+    if (!await _libraryCurrent()) {
+      return super.models(type, filter, struct, load);
     }
     final rows = await data.list(type);
+    StartupTiming.mark('offline_rows_ready');
     final references = (filter['tag_filters'] as List? ?? []).isEmpty
         ? null
         : await data.get(0);

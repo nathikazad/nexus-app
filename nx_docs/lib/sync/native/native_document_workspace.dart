@@ -213,20 +213,18 @@ final class _NativeCatalogFeed {
               },
             );
       }
-      if (_state.items.isEmpty) {
-        // On a new installation, show the visible catalog without waiting for
-        // the complete offline library. Bodies continue hydrating separately.
-        try {
-          final items = await remoteApi.fetchCatalog(query);
-          if (!_closed && _state.items.isEmpty) {
-            _state = CatalogState(items: items, isInitialLoading: false);
-          }
-        } catch (error) {
-          if (!_closed)
-            _state = _state.copyWith(error: error, isInitialLoading: false);
-        }
-      }
       yield _state;
+      if (_state.items.isEmpty) {
+        // Even an empty local library is a usable first frame. Hydrate it
+        // independently; a slow server must not hold the catalog subscription.
+        unawaited(
+          refresh().catchError((Object error) {
+            if (!_closed) {
+              _emit(_state.copyWith(error: error, isInitialLoading: false));
+            }
+          }),
+        );
+      }
       yield* _states.stream;
     } finally {
       _listeners--;
@@ -245,7 +243,8 @@ final class _NativeCatalogFeed {
     await _localStore.replaceCatalog(query, items);
     if (_closed) return;
     final visible = query.persistsMembership
-        ? await _localStore.readCatalog(query) : items;
+        ? await _localStore.readCatalog(query)
+        : items;
     _emit(CatalogState(items: visible, isInitialLoading: false));
   }
 

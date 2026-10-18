@@ -17,6 +17,11 @@ class NexusIdentity {
 }
 
 class NexusOidcService {
+  void prepareRestore(BackendPreset preset, String clientAppId) {
+    _restorePreset = preset;
+    _restoreClientAppId = clientAppId;
+  }
+
   OidcUserManager? _manager;
   BackendPreset? _preset;
   String? _clientAppId;

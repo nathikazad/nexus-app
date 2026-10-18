@@ -7,6 +7,7 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    UserDefaults.standard.set(Date().timeIntervalSince1970 * 1000, forKey: "nx_startup_native_ms")
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

@@ -57,6 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     initialLocation: '/expenses',
     redirect: (context, state) {
+      if (ref.read(authProvider).isLoading) return null;
       final user = ref.read(authProvider).value;
       if (user == null && state.uri.path != '/login') {
         return Uri(

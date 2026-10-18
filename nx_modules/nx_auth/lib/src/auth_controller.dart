@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,6 +8,7 @@ import 'oidc_service.dart';
 import 'user.dart';
 import 'session_availability.dart';
 import 'domain_session.dart';
+import 'startup_timing.dart';
 
 typedef OidcSessionRestore =
     Future<NexusIdentity?> Function(BackendPreset preset, String clientAppId);
@@ -15,6 +18,19 @@ final oidcSessionRestoreProvider = Provider<OidcSessionRestore>(
 );
 
 final retainAuthSessionWhenOfflineProvider = Provider<bool>((ref) => false);
+
+/// Only apps with an account/domain-scoped offline library may open locally
+/// before network validation. Other applications keep their existing policy.
+final restoreCachedSessionImmediatelyProvider = Provider<bool>(
+  (ref) =>
+      !kIsWeb &&
+      const {
+        'nx_expense',
+        'nx_books',
+        'nx_cards',
+        'nx_docs',
+      }.contains(ref.watch(nexusClientAppIdProvider)),
+);
 
 /// App cleanup that needs the still-authenticated session (e.g. push tokens).
 final beforeLogoutProvider = Provider<Future<void> Function(User)>(
@@ -43,7 +59,10 @@ class AuthController extends AsyncNotifier<User?> {
 
   @override
   Future<User?> build() async {
-    if (initialDelay > Duration.zero) await Future.delayed(initialDelay);
+    final generation = ++_generation;
+    final openLocally = ref.read(restoreCachedSessionImmediatelyProvider);
+    if (!openLocally && initialDelay > Duration.zero)
+      await Future.delayed(initialDelay);
     print('[AuthController] build() - Initializing auth state');
 
     try {
@@ -68,6 +87,43 @@ class AuthController extends AsyncNotifier<User?> {
         await prefs.setString(PrefsKeys.endpoint, urls.graphqlHttp);
         await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
         print('[AuthController] Migrated legacy prefs to preset=${preset.key}');
+      }
+
+      if (preset != null &&
+          userId != null &&
+          userId.isNotEmpty &&
+          openLocally &&
+          ref.read(retainAuthSessionWhenOfflineProvider)) {
+        final savedUser = User(userId: userId, preset: preset);
+        final domain = prefs.getInt(_domainKey(savedUser));
+        if (domain != null) {
+          final cached = User(
+            userId: userId,
+            preset: preset,
+            domainId: domain,
+            domainName: prefs.getString('${_domainKey(savedUser)}.name'),
+          );
+          // Configure token access before any data clients can start. Network
+          // validation is independent of publishing the exact saved partition.
+          if (preset.requiresOidc) {
+            nexusOidcService.prepareRestore(
+              preset,
+              ref.read(nexusClientAppIdProvider),
+            );
+          }
+          final restore = ref.read(oidcSessionRestoreProvider);
+          final domains = ref.read(domainLoaderProvider);
+          final app = ref.read(nexusClientAppIdProvider);
+          Timer.run(() {
+            if (ref.mounted && generation == _generation) {
+              unawaited(
+                _validateCached(cached, generation, restore, domains, app),
+              );
+            }
+          });
+          StartupTiming.mark('cached_session_ready');
+          return cached;
+        }
       }
 
       if (preset != null && preset.requiresOidc) {
@@ -112,6 +168,51 @@ class AuthController extends AsyncNotifier<User?> {
     } catch (e) {
       print('[AuthController] Error loading saved credentials: $e');
       return null;
+    }
+  }
+
+  Future<void> _validateCached(
+    User cached,
+    int generation,
+    OidcSessionRestore restore,
+    DomainLoader loadDomains,
+    String app,
+  ) async {
+    bool current() =>
+        ref.mounted && generation == _generation && state.value == cached;
+    try {
+      if (cached.preset.requiresOidc) {
+        final identity = await restore(cached.preset, app);
+        if (!current()) return;
+        if (identity == null || identity.userId != cached.userId) {
+          throw const AuthSessionRejected();
+        }
+      }
+      final memberships = await loadDomains(cached);
+      StartupTiming.mark('session_validated');
+      if (!current()) return;
+      final selected = memberships
+          .where((d) => d.id == cached.domainId)
+          .firstOrNull;
+      if (selected == null) {
+        final prefs = await SharedPreferences.getInstance();
+        if (!current()) return;
+        await prefs.remove(_domainKey(cached));
+        if (!current()) return;
+        state = AsyncValue.data(
+          User(userId: cached.userId, preset: cached.preset),
+        );
+      }
+    } on AuthSessionRejected {
+      if (!current()) return;
+      final prefs = await SharedPreferences.getInstance();
+      if (!current()) return;
+      await _clearSessionPrefs(prefs);
+      if (current()) state = const AsyncValue.data(null);
+    } catch (_) {
+      // Unavailable validation must not discard an explicitly saved local
+      // session. Remote transports still require valid tokens and domain access.
+      StartupTiming.mark('session_validation_unavailable');
     }
   }
 

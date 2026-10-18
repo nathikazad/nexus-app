@@ -21,11 +21,16 @@ rsync -az --delete build/web/ nathik@100.108.43.37:~/Nexus/nexus-server/mcp/serv
 ### Expense sync and receipt files
 
 `AppDataHost` connects Expense to the shared session used by Books and Docs.
-It checks the server revision on launch, resume, reconnect and server change
-notifications, with a 30-second recovery check. Changed revisions invalidate
-visible providers. Native devices also reconcile the complete Expense manifest
-into a server/user/domain-scoped `ExpenseStore`; web sessions never create it.
-Foreground pages use live reads, with the native snapshot available offline.
+It checks the server revision on launch, stale resume, reconnect and server change
+notifications. Native startup restores the saved account/domain immediately and
+validates it in the background. Native devices reconcile the complete Expense
+manifest into a server/user/domain-scoped `ExpenseStore`; web sessions never
+create it. The expense list and schema open from that offline library first.
+Confirmed record bodies are read together from SQLite; pending local edits retain
+their file-backed versions. Sync updates visible providers after local records
+change. Older exact-query snapshots remain a fallback while a complete library
+is unavailable, and refresh independently without blocking cached content.
+Web reads remain live.
 Expense and Order screen mappers preserve relation attributes in that fallback.
 
 Receipt uploads use `/apps/expense/receipts`, which publishes an immutable file

@@ -25,6 +25,7 @@ class _BooksRootShellState extends ConsumerState<BooksRootShell> {
   Widget build(BuildContext context) {
     final books = ref.watch(booksProvider);
     return books.when(
+      skipLoadingOnReload: true,
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(

@@ -1,3 +1,9 @@
+import 'dart:convert';
+import 'package:http/testing.dart';
+import 'package:nx_db/app_reads.dart';
+import 'package:nx_expense/data/sync/expense_data_repository.dart';
+import 'package:nx_expense/data/sync/expense_transport.dart';
+import 'package:nx_expense/data/sync/expense_model_cache.dart';
 import 'dart:io';
 import 'package:nx_offline/src/storage/content_files_native.dart';
 import 'package:drift/native.dart';
@@ -77,6 +83,81 @@ void main() {
           },
         },
       );
+
+  test(
+    'schema and list come from the synchronized library without a network read',
+    () async {
+      await seed();
+      await store.acceptLive([
+        {
+          'id': 0,
+          'kind': 'references',
+          'schemas': [
+            {
+              'id': 9,
+              'name': 'Expense',
+              'attributes': [],
+              'relations': [],
+              'tag_systems': [],
+            },
+          ],
+        },
+      ]);
+      await library.saveRemote(
+        'expense_state',
+        'coverage',
+        jsonEncode({'complete': true, 'root': 'h1'}),
+      );
+      final reads = AppReads(
+        MockClient((_) => throw StateError('Network must not block startup')),
+        Uri.parse('https://example.invalid'),
+        'expense',
+      );
+      addTearDown(reads.close);
+      final data = ExpenseDataRepository(
+        reads: reads,
+        remote: ExpenseTransport(reads),
+        domainId: 1,
+        store: store,
+      );
+      final cache = ExpenseModelCache(library, data);
+      expect(
+        (await cache.schema(
+          'Expense',
+          () => throw StateError('live schema'),
+        )).name,
+        'Expense',
+      );
+      final rows = await cache.models(
+        'Expense',
+        {},
+        {},
+        () => throw StateError('live rows'),
+      );
+      expect(rows.single.name, 'Original');
+    },
+  );
+
+  test(
+    'startup reads confirmed SQLite bodies while preserving pending local edits',
+    () async {
+      await seed();
+      final files = library.files as DirectoryContentFiles;
+      final before = files.reads;
+      expect((await store.all()).single['name'], 'Original');
+      expect(files.reads, before);
+      await edit('startup-pending', 'Local edit');
+      expect((await store.all()).single['name'], 'Local edit');
+      expect(files.reads, greaterThan(before));
+      await store.applySnapshot(
+        [
+          {'id': 1, 'hash': 'h2', 'payload': entity(1, 'Remote edit', 'r2')},
+        ],
+        {1},
+      );
+      expect((await store.all()).single['name'], 'Local edit');
+    },
+  );
 
   test('create and frozen request survive process restart', () async {
     await edit(

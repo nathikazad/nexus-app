@@ -47,6 +47,9 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) StartupTiming.mark('login_frame');
+    });
     final authState = ref.watch(authProvider);
     final loading = authState.isLoading || restoringLoginProfile;
 

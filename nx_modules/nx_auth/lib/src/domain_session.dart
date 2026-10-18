@@ -71,7 +71,11 @@ class DomainSessionGate extends ConsumerWidget {
   final Widget child;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).value;
+    final auth = ref.watch(authProvider);
+    if (auth.isLoading && auth.value == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final user = auth.value;
     if (user == null) return child;
     if (user.domainId == null) {
       final domains = ref.watch(domainMembershipsProvider);

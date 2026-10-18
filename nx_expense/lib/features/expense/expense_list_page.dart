@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:nx_db/auth.dart';
+import 'package:nx_expense/data/sync/expense_sync_providers.dart';
+import 'package:nx_offline/nx_offline.dart' show SyncReason;
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nx_expense/core/theme/app_theme.dart';
@@ -74,6 +78,12 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
   }
 
   Future<void> _refresh() async {
+    unawaited(
+      ref
+          .read(expenseLibrarySyncProvider)
+          ?.requestFull(SyncReason.manual)
+          .catchError((Object _) {}),
+    );
     ref.invalidate(expenseSchemaProvider);
     ref.invalidate(expenseSchemaViewProvider);
     invalidateExpenseListCache(ref);
@@ -91,6 +101,11 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
   Widget build(BuildContext context) {
     final schemaAsync = ref.watch(expenseSchemaViewProvider);
     final listAsync = ref.watch(expenseListDisplayedProvider);
+    if (schemaAsync.hasValue && listAsync.hasValue) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) StartupTiming.mark('expense_content_frame');
+      });
+    }
     final summaryAsync = ref.watch(expenseListSummaryProvider);
     final filter = ref.watch(expenseListFilterProvider);
     final dateRange = ref.watch(expenseDateRangeProvider);
@@ -130,6 +145,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
       backgroundColor: Colors.white,
       endDrawer: widget.showDrawer ? const ExpenseAppEndDrawer() : null,
       body: schemaAsync.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: SelectableText('Schema: $e')),
         data: (schema) {
@@ -564,6 +580,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                         onRefresh: _refresh,
                         color: AppColors.teal600,
                         child: listAsync.when(
+                          skipLoadingOnReload: true,
                           loading: () =>
                               const Center(child: CircularProgressIndicator()),
                           error: (e, _) => Center(

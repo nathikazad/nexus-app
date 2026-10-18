@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:nx_db/auth.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'expense_store.dart';
 import 'expense_transport.dart';
@@ -96,6 +97,7 @@ class ExpenseReconciler implements PullReconciler<int> {
       onChanged?.call();
     }
     debugPrint('[ExpenseSync] Records saved; downloading receipts');
+    StartupTiming.mark('offline_library_synchronized');
     await syncAssets?.call();
     debugPrint('[ExpenseSync] Complete');
   }
