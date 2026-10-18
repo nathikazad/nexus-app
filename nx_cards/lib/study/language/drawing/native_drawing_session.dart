@@ -221,7 +221,8 @@ class NativeDrawingSession {
       'listening': prompt.isListening,
       'answer': content.originalScript,
       'subtitle': '${content.transliteration}\n${content.english}',
-      'writing': !prompt.card.spokenOnly && (writing ?? prompt.recallsTarget),
+      // Drawing is an ungraded scratchpad, including pinyin on spoken-only cards.
+      'writing': writing ?? prompt.recallsTarget,
       'sound': sound,
       'instruction': prompt.instruction,
       'audio': sound && content.audioUrl?.isNotEmpty == true,

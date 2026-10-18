@@ -1,3 +1,4 @@
+import 'package:nx_cards/scheduling/card_scheduler.dart';
 import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -53,7 +54,7 @@ void main() {
       isFalse,
     );
   });
-  test('native focus disables writing only for spoken-only cards', () {
+  test('native recall allows an ungraded scratchpad for spoken-only cards', () {
     final spoken = card.copyWith(
       content: (card.content as LanguageCardContent).copyWith(spokenOnly: true),
     );
@@ -72,7 +73,7 @@ void main() {
         StudyPrompt(card: spoken, cue: StudyCue.meaningToSound),
         writing: true,
       )['writing'],
-      isFalse,
+      isTrue,
     );
     expect(
       NativeDrawingSession.recallCard(
@@ -83,6 +84,36 @@ void main() {
     );
     expect(NativeDrawingSession.practiceCard(spoken)['prompt'], '很长的句子');
   });
+  for (final cue in [StudyCue.meaningToSound, StudyCue.soundToMeaning]) {
+    test('spoken-only scratchpad does not score script: $cue', () {
+      final spoken = card.copyWith(
+        content: (card.content as LanguageCardContent).copyWith(
+          spokenOnly: true,
+        ),
+      );
+      final prompt = StudyPrompt(card: spoken, cue: cue);
+      expect(
+        NativeDrawingSession.recallCard(prompt, writing: true)['writing'],
+        isTrue,
+      );
+      expect(
+        NativeDrawingSession.recallCard(prompt, writing: false)['writing'],
+        isFalse,
+      );
+      expect(prompt.testedCues, {cue});
+      final result = FsrsCardScheduler()
+          .preview(prompt, DateTime.utc(2026, 10, 18))[CardRating.good]!
+          .card;
+      expect(result.reviewHistoryFor(cue), hasLength(1));
+      for (final other in StudyCue.languageDirections.where(
+        (value) => value != cue,
+      )) {
+        expect(result.reviewHistoryFor(other), isEmpty);
+        expect(result.scheduleFor(other), same(spoken.scheduleFor(other)));
+      }
+    });
+  }
+
   test('native reveal carries complete similar groups with display titles', () {
     final payload = NativeDrawingSession.recallCard(
       StudyPrompt(card: card, cue: StudyCue.meaningToScript),

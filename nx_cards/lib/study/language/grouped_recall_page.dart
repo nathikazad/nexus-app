@@ -374,8 +374,7 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
                     padding: EdgeInsets.all(fast ? 18 : 28),
                     child:
                         widget.format != GroupedRecallFormat.fast &&
-                            widget.writing &&
-                            !prompt.card.spokenOnly
+                            widget.writing
                         ? SizedBox(
                             height: max(420, constraints.maxHeight - 160),
                             child: WritingRecallCard(

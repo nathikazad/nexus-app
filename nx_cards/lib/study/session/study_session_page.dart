@@ -240,8 +240,7 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                                               _interaction ==
                                                       RecallInteraction
                                                           .writing &&
-                                                  _card.isLanguageCard &&
-                                                  !_card.spokenOnly
+                                                  _card.isLanguageCard
                                               ? LayoutBuilder(
                                                   builder:
                                                       (

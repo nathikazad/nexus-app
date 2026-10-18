@@ -38,7 +38,7 @@ void main() {
   }
 
   for (final cue in [StudyCue.meaningToSound, StudyCue.soundToMeaning]) {
-    testWidgets('spoken-only skips drawing even in writing mode: $cue', (
+    testWidgets('spoken-only offers an ungraded pinyin scratchpad: $cue', (
       tester,
     ) async {
       final original = _scriptCard();
@@ -48,7 +48,10 @@ void main() {
         ),
       );
       await _pumpRecall(tester, card, cue, writing: true);
-      expect(find.byKey(const ValueKey('script-drawing-canvas')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('script-drawing-canvas')),
+        findsOneWidget,
+      );
       expect(find.text('ക'), findsNothing);
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
