@@ -108,24 +108,12 @@ class _InteractiveMermaidState extends State<_InteractiveMermaid> {
     _needsFit = false;
   }
 
-  void _zoom(double factor) {
-    final current = _transform.value.getMaxScaleOnAxis();
-    final scale = (current * factor).clamp(_minScale, _maxScale) / current;
-    final center = _viewport.center(Offset.zero);
-    _transform.value =
-        (Matrix4.identity()
-              ..translateByDouble(center.dx, center.dy, 0, 1)
-              ..scaleByDouble(scale, scale, scale, 1)
-              ..translateByDouble(-center.dx, -center.dy, 0, 1))
-            .multiplied(_transform.value);
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Column(
+    return Stack(
       children: [
-        Expanded(
+        Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
               if (_viewport != constraints.biggest) {
@@ -157,40 +145,20 @@ class _InteractiveMermaidState extends State<_InteractiveMermaid> {
             },
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        Positioned(
+          top: 12,
+          right: 12,
           child: Material(
             color: colors.surfaceContainerLow,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(24),
               side: BorderSide(color: colors.outlineVariant),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: 'Zoom out',
-                    onPressed: () => _zoom(1 / 1.25),
-                    icon: const Icon(Icons.remove, size: 20),
-                  ),
-                  IconButton(
-                    tooltip: 'Zoom in',
-                    onPressed: () => _zoom(1.25),
-                    icon: const Icon(Icons.add, size: 20),
-                  ),
-                  SizedBox(
-                    height: 20,
-                    child: VerticalDivider(
-                      width: 16,
-                      color: colors.outlineVariant,
-                    ),
-                  ),
-                  TextButton(onPressed: _fit, child: const Text('Fit')),
-                ],
-              ),
+            child: TextButton(
+              onPressed: _fit,
+              style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+              child: const Text('Fit'),
             ),
           ),
         ),

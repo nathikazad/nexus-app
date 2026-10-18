@@ -117,7 +117,25 @@ void main() {
         );
         final transform = interactive.transformationController!;
         final fitted = transform.value.clone();
-        await tester.tap(find.byTooltip('Zoom in'));
+        expect(find.byTooltip('Zoom in'), findsNothing);
+        expect(find.byTooltip('Zoom out'), findsNothing);
+        final center = tester.getCenter(find.byType(InteractiveViewer));
+        final left = await tester.startGesture(
+          center - const Offset(30, 0),
+          pointer: 1,
+        );
+        final right = await tester.startGesture(
+          center + const Offset(30, 0),
+          pointer: 2,
+        );
+        await left.moveTo(center - const Offset(60, 0));
+        await right.moveTo(center + const Offset(60, 0));
+        await tester.pump();
+        await left.moveTo(center - const Offset(90, 0));
+        await right.moveTo(center + const Offset(90, 0));
+        await tester.pump();
+        await left.up();
+        await right.up();
         await tester.pumpAndSettle();
         expect(
           transform.value.getMaxScaleOnAxis(),
