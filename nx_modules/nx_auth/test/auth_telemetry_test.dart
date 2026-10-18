@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -86,4 +87,41 @@ void main() {
       expect(bodies[1], contains('auth.session_rejected'));
     },
   );
+
+  test('serializes concurrent flushes without duplicate uploads', () async {
+    var attempts = 0;
+    final firstRequest = Completer<void>();
+    final releaseRequest = Completer<void>();
+    final recorder = AuthTelemetryRecorder(
+      client: MockClient((request) async {
+        attempts++;
+        firstRequest.complete();
+        await releaseRequest.future;
+        return http.Response('{"ok":true}', 200);
+      }),
+    );
+    await recorder.enqueue(
+      app: 'nx_books',
+      userId: '7',
+      event: 'session_restored',
+    );
+
+    final first = recorder.flush(
+      preset: BackendPreset.hosted,
+      app: 'nx_books',
+      userId: '7',
+      accessToken: 'credential',
+    );
+    await firstRequest.future;
+    final second = recorder.flush(
+      preset: BackendPreset.hosted,
+      app: 'nx_books',
+      userId: '7',
+      accessToken: 'credential',
+    );
+    releaseRequest.complete();
+    await Future.wait([first, second]);
+
+    expect(attempts, 1);
+  });
 }

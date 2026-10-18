@@ -20,6 +20,7 @@ final class AuthTelemetryRecorder {
   static const _maximumQueuedEvents = 100;
   final http.Client? _client;
   Future<void> _writes = Future.value();
+  Future<void> _flushes = Future.value();
 
   Future<void> beginSession({
     required String app,
@@ -107,6 +108,24 @@ final class AuthTelemetryRecorder {
   }
 
   Future<void> flush({
+    required BackendPreset preset,
+    required String app,
+    required String userId,
+    required String accessToken,
+  }) {
+    final operation = _flushes.then(
+      (_) => _flush(
+        preset: preset,
+        app: app,
+        userId: userId,
+        accessToken: accessToken,
+      ),
+    );
+    _flushes = operation.catchError((_) {});
+    return operation;
+  }
+
+  Future<void> _flush({
     required BackendPreset preset,
     required String app,
     required String userId,
