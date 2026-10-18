@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:nx_cards/scheduling/study_scope.dart';
 import 'dart:async';
 
@@ -35,8 +36,14 @@ class _VoiceStudySessionPageState extends ConsumerState<VoiceStudySessionPage> {
   @override
   void initState() {
     super.initState();
+    final trace = const bool.fromEnvironment('NX_CARDS_VOICE_TRACE')
+        ? VoiceTrace(write: (line) => debugPrintSynchronously(line))
+        : null;
     controller = VoiceTutorController(
-      session: LiveAgentSession(transport: OpenAiRealtimeTransport()),
+      session: LiveAgentSession(
+        transport: OpenAiRealtimeTransport(trace: trace),
+        trace: trace,
+      ),
       repository: ref.read(cardLibraryProvider),
       scheduler: ref.read(cardSchedulerProvider),
       prompts: widget.prompts,

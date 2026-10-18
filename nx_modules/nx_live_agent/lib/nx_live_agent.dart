@@ -6,3 +6,4 @@ export 'src/input/live_agent_input_controller.dart';
 export 'src/openai_realtime_transport.dart';
 export 'src/openai_realtime_websocket_transport.dart';
 export 'src/session/live_agent_control_state.dart';
+export 'src/voice_trace.dart';

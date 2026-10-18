@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'voice_trace.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -256,7 +257,7 @@ abstract interface class LiveAgentPlaybackControlTransport {
 }
 
 final class LiveAgentSession extends ChangeNotifier {
-  LiveAgentSession({required LiveAgentTransport transport})
+  LiveAgentSession({required LiveAgentTransport transport, this.trace})
     : _transport = transport,
       inputController = LiveAgentInputController(
         setInputEnabled: (enabled) =>
@@ -272,6 +273,7 @@ final class LiveAgentSession extends ChangeNotifier {
     inputController.addListener(_notify);
   }
 
+  final VoiceTrace? trace;
   final LiveAgentTransport _transport;
   final LiveAgentInputController inputController;
   final Set<String> _handledCallIds = <String>{};
@@ -436,7 +438,15 @@ final class LiveAgentSession extends ChangeNotifier {
   }
 
   Future<void> _invokeTool(LiveAgentToolCall call) async {
-    if (!_handledCallIds.add(call.callId)) return;
+    if (!_handledCallIds.add(call.callId)) {
+      trace?.log('tool_duplicate_ignored', {'call_id': call.callId});
+      return;
+    }
+    trace?.log('tool_started', {
+      'call_id': call.callId,
+      'name': call.name,
+      'arguments': call.arguments,
+    });
     phase = LiveAgentPhase.thinking;
     _notify();
     final tool = _tools[call.name];
@@ -450,6 +460,11 @@ final class LiveAgentSession extends ChangeNotifier {
     }
     try {
       final result = await tool.invoke(call.arguments);
+      trace?.log('tool_completed', {
+        'call_id': call.callId,
+        'name': call.name,
+        'output': result.output,
+      });
       if (result.discardConversationBeforeResponse) {
         await _transport.discardConversation(
           keepItemIds: <String>{if (call.itemId != null) call.itemId!},
@@ -458,6 +473,10 @@ final class LiveAgentSession extends ChangeNotifier {
       await _transport.sendToolResult(call.callId, result.output);
       if (result.requestResponse) await _transport.requestResponse();
     } catch (caught) {
+      trace?.log('tool_failed', {
+        'call_id': call.callId,
+        'error_type': caught.runtimeType.toString(),
+      });
       await _transport.sendToolResult(call.callId, <String, Object?>{
         'ok': false,
         'error': caught.toString(),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'response_coordinator.dart';
+import 'voice_trace.dart';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
@@ -20,10 +21,11 @@ final class OpenAiRealtimeTransport
         LiveAgentTransport,
         LiveAgentInputControlTransport,
         LiveAgentPlaybackControlTransport {
-  OpenAiRealtimeTransport({http.Client? httpClient})
+  OpenAiRealtimeTransport({http.Client? httpClient, this.trace})
     : _http = httpClient ?? http.Client(),
       _ownsHttpClient = httpClient == null;
 
+  final VoiceTrace? trace;
   final http.Client _http;
   final bool _ownsHttpClient;
   final StreamController<LiveAgentEvent> _events =
@@ -108,6 +110,7 @@ final class OpenAiRealtimeTransport
   bool _readingStats = false;
 
   void _diagnostic(String event, [Map<String, Object?> fields = const {}]) {
+    trace?.log(event, fields);
     if (!_diagnosticsEnabled) return;
     debugPrint(
       'NxLiveAgent ${jsonEncode({'ms': _diagnosticClock.elapsedMilliseconds, 'event': event, ...fields})}',
@@ -145,6 +148,10 @@ final class OpenAiRealtimeTransport
           'totalSamplesReceived',
           'audioLevel',
           'totalAudioEnergy',
+          'jitterBufferDelay',
+          'jitterBufferEmittedCount',
+          'totalPlayoutDelay',
+          'totalSamplesCount',
           'roundTripTime',
           'currentRoundTripTime',
         ]) {
@@ -295,7 +302,7 @@ final class OpenAiRealtimeTransport
         RTCSessionDescription(response.body, 'answer'),
       );
       await _dataChannelReady!.future.timeout(const Duration(seconds: 15));
-      if (_diagnosticsEnabled) {
+      if (_diagnosticsEnabled || trace != null) {
         _diagnosticTimer = Timer.periodic(
           const Duration(seconds: 5),
           (_) => unawaited(_logAudioStats()),
@@ -388,11 +395,13 @@ final class OpenAiRealtimeTransport
   }
 
   Future<void> _send(Map<String, Object?> event) async {
+    trace?.wire('send_attempt', event);
     _diagnostic('send', {'type': event['type']});
     final channel = _dataChannel;
     if (channel == null) throw StateError('The live agent is not connected.');
     await _dataChannelReady?.future;
     await channel.send(RTCDataChannelMessage(jsonEncode(event)));
+    trace?.log('send_completed', {'type': event['type']});
   }
 
   @visibleForTesting
@@ -401,6 +410,7 @@ final class OpenAiRealtimeTransport
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
       final event = Map<String, dynamic>.from(decoded);
+      trace?.wire('receive', event);
       if (_diagnosticsEnabled) {
         final type = event['type']?.toString() ?? '';
         if (!type.endsWith('.delta')) {

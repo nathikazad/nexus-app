@@ -172,6 +172,8 @@ class VoiceTutorController extends ChangeNotifier {
       return;
     }
 
+    _session.trace?.log('study_started', {'cards': total});
+    _session.trace?.card(currentPrompt?.card.id, _index);
     await _session.start(
       credentialProvider: credentials,
       spec: LiveAgentSpec(
@@ -311,6 +313,11 @@ Keep spoken responses short unless the learner asks for more detail.
     final reviewedAt = _now().toUtc();
     final updated = _scheduler.preview(prompt, reviewedAt)[rating]!.card;
     await _repository.saveSchedule(updated);
+    _session.trace?.log('assessment_saved', {
+      'card_id': prompt.card.id,
+      'rating': rating.name,
+      'heard': arguments['heard'],
+    });
 
     _replaceCard(prompt.card.id, updated);
     _assessmentRating = rating;
@@ -405,6 +412,11 @@ Keep spoken responses short unless the learner asks for more detail.
 
   LiveAgentToolResult _moveToNextCard() {
     _index += 1;
+    if (currentPrompt != null) {
+      _session.trace?.card(currentPrompt!.card.id, _index);
+    } else {
+      _session.trace?.log('study_cards_completed');
+    }
     _currentCardAssessed = false;
     _assessmentRating = null;
     _heard = '';
@@ -585,6 +597,7 @@ Keep spoken responses short unless the learner asks for more detail.
   @override
   void dispose() {
     _session.removeListener(_syncSession);
+    _session.trace?.log('study_disposed', {'reviewed': _reviewedCount});
     _session.dispose();
     super.dispose();
   }
