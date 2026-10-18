@@ -567,6 +567,10 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                 child: Text(
                                   controller?.recording == true
                                       ? 'Recording… tap stop to send'
+                                      : controller
+                                                ?.requestingMicrophonePermission ==
+                                            true
+                                      ? 'Waiting for microphone permission…'
                                       : controller?.busy == true
                                       ? 'Working…'
                                       : 'Tap mic to record · up to 60s · text replies',
@@ -574,6 +578,8 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                 ),
                               ),
                               if (controller?.busy == true ||
+                                  controller?.requestingMicrophonePermission ==
+                                      true ||
                                   controller?.recording == true)
                                 IconButton(
                                   tooltip: 'Cancel turn',
@@ -595,13 +601,19 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                   enabled:
                                       !_loading &&
                                       controller != null &&
+                                      !controller
+                                          .requestingMicrophonePermission &&
                                       !controller.recording,
                                   onSubmitted: (_) => _send(),
                                 ),
                               ),
                               ReadingMicrophoneButton(
                                 controller: controller,
-                                enabled: !_loading,
+                                enabled:
+                                    !_loading &&
+                                    controller
+                                            ?.requestingMicrophonePermission !=
+                                        true,
                                 selection: _questionContext,
                               ),
                               IconButton(
@@ -610,6 +622,8 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                     _loading ||
                                         controller == null ||
                                         controller.busy ||
+                                        controller
+                                            .requestingMicrophonePermission ||
                                         controller.recording
                                     ? null
                                     : _send,
@@ -712,7 +726,11 @@ class ReadingMicrophoneButton extends StatelessWidget {
     final recording = controller?.recording == true;
     return IconButton(
       tooltip: recording ? 'Stop recording and send' : 'Record a question',
-      onPressed: !enabled || controller == null || controller!.busy
+      onPressed:
+          !enabled ||
+              controller == null ||
+              controller!.busy ||
+              controller!.requestingMicrophonePermission
           ? null
           : () {
               if (recording) {

@@ -34,6 +34,7 @@ class ReadingCompanionController extends ChangeNotifier {
   final messages = <ReadingMessage>[];
   bool busy = false;
   bool recording = false;
+  bool requestingMicrophonePermission = false;
   String? error;
   bool _disposed = false;
   bool _held = false;
@@ -49,7 +50,9 @@ class ReadingCompanionController extends ChangeNotifier {
   Future<ReadingHistory?> syncHistory(
     Future<ReadingHistory> Function() fetch,
   ) async {
-    if (_disposed || recording || syncing) return null;
+    if (_disposed || recording || requestingMicrophonePermission || syncing) {
+      return null;
+    }
     syncing = true;
     busy = true;
     _generation++;
@@ -89,7 +92,9 @@ class ReadingCompanionController extends ChangeNotifier {
   }
 
   Future<bool> clearTranscript(Future<void> Function() clearSaved) async {
-    if (busy || recording || _disposed) return false;
+    if (busy || recording || requestingMicrophonePermission || _disposed) {
+      return false;
+    }
     busy = true;
     _acceptResponses = false;
     _notify();
@@ -132,7 +137,13 @@ class ReadingCompanionController extends ChangeNotifier {
 
   Future<bool> send(String raw, {String selection = ''}) async {
     final text = raw.trim();
-    if (text.isEmpty || busy || recording || _disposed) return false;
+    if (text.isEmpty ||
+        busy ||
+        recording ||
+        requestingMicrophonePermission ||
+        _disposed) {
+      return false;
+    }
     final generation = ++_generation;
     _responseStart = messages.length;
     error = null;
@@ -157,16 +168,33 @@ class ReadingCompanionController extends ChangeNotifier {
   }
 
   Future<void> startRecording({String selection = ''}) async {
-    if (busy || recording || _disposed) return;
+    if (busy || recording || requestingMicrophonePermission || _disposed) {
+      return;
+    }
     _held = true;
     final generation = ++_generation;
     _responseStart = messages.length;
     error = null;
-    busy = true;
     _notify();
     try {
       if (!await _canConnect()) return;
       if (_disposed || !_held || generation != _generation) return;
+      requestingMicrophonePermission = true;
+      _notify();
+      final permitted = await microphone.ensurePermission();
+      requestingMicrophonePermission = false;
+      if (_disposed || !_held || generation != _generation) {
+        if (!_disposed) _notify();
+        return;
+      }
+      if (!permitted) {
+        _held = false;
+        error = 'Allow microphone access to record a question.';
+        _notify();
+        return;
+      }
+      busy = true;
+      _notify();
       await session.connect(config);
       if (_disposed || !_held || generation != _generation) {
         busy = false;
@@ -250,6 +278,7 @@ class ReadingCompanionController extends ChangeNotifier {
     _timeout?.cancel();
     _recordingLimit?.cancel();
     recording = false;
+    requestingMicrophonePermission = false;
     busy = false;
     _notify();
     await microphone.stop(flushRemainder: false);

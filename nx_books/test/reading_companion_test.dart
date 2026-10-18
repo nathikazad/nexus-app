@@ -222,6 +222,25 @@ void main() {
     expect(controller.recording, false);
   });
 
+  test('requests microphone permission before connecting', () async {
+    mic.permissionGate = Completer<bool>();
+    final starting = controller.startRecording();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.requestingMicrophonePermission, isTrue);
+    expect(controller.busy, isFalse);
+    expect(session.connects, 0);
+    expect(session.audioStarts, 0);
+
+    mic.permissionGate!.complete(false);
+    await starting;
+    expect(controller.requestingMicrophonePermission, isFalse);
+    expect(controller.busy, isFalse);
+    expect(controller.recording, isFalse);
+    expect(controller.error, 'Allow microphone access to record a question.');
+    expect(session.connects, 0);
+  });
+
   test(
     'clear waits for database and retains local history on failure',
     () async {
@@ -461,19 +480,25 @@ class _Session extends DocumentAiSession {
   final contexts = <String>[];
   var audioStarts = 0;
   var audioEnds = 0;
+  var connects = 0;
   @override
   Future<void> connect(DocumentAiSessionConfig config) async {
+    connects++;
     await gate?.future;
   }
 
   @override
-  void sendTextTurn(String text, {String context = ''}) {
+  void sendTextTurn(
+    String text, {
+    String context = '',
+    bool preserveContext = false,
+  }) {
     sent.add(text);
     contexts.add(context);
   }
 
   @override
-  void beginAudioTurn({String context = ''}) {
+  void beginAudioTurn({String context = '', bool preserveContext = false}) {
     audioStarts++;
   }
 
@@ -488,6 +513,12 @@ class _Session extends DocumentAiSession {
 
 class _Microphone extends NxMicrophoneOpusStreamer {
   var starts = 0;
+  Completer<bool>? permissionGate;
+  bool permission = true;
+
+  @override
+  Future<bool> ensurePermission() async => permissionGate?.future ?? permission;
+
   @override
   Future<bool> start({
     required FutureOr<void> Function(Uint8List) onOpusPacket,
