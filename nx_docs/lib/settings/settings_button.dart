@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart';
+import 'package:nx_docs/account/account_providers.dart';
 import 'package:nx_db/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -150,8 +152,8 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 6),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
                   IconButton.outlined(
                     key: const Key('document-text-smaller'),
@@ -302,6 +304,19 @@ class _DocsSettingsDialogState extends ConsumerState<_DocsSettingsDialog> {
         ),
       ),
       actions: <Widget>[
+        TextButton.icon(
+          key: const Key('settings-logout'),
+          icon: const Icon(Icons.logout),
+          label: const Text('Log out'),
+          onPressed: () async {
+            final router = GoRouter.of(context);
+            await ref.read(accountLogoutProvider)();
+            if (context.mounted) {
+              Navigator.of(context).pop();
+              router.go('/login');
+            }
+          },
+        ),
         TextButton(
           onPressed: _refetching ? null : () => Navigator.of(context).pop(),
           child: const Text('Close'),

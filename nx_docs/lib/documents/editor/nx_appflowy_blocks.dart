@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:appflowy_editor/appflowy_editor.dart';
+import 'package:appflowy_editor/src/editor/block_component/base_component/widget/ignore_parent_gesture.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ part 'element_picker_scope.dart';
 part 'slash_menu_overlay.dart';
 part 'slash_menu_rows.dart';
 part 'nx_toggle_block.dart';
+part 'nx_time_entry_block.dart';
 part 'nx_kgql_link_block.dart';
 part 'nx_drag_to_reorder.dart';
 part 'nx_excalidraw_block.dart';
@@ -37,6 +39,8 @@ part 'nx_canvas_block.dart';
 part 'excalidraw_dialog.dart';
 part 'excalidraw_preview.dart';
 part 'nx_document_image_block.dart';
+
+const String nxTimeEntryBlockType = 'nx_time_entry';
 
 const String nxToggleBlockType = 'nx_toggle';
 const String nxBlogLinkBlockType = 'nx_blog_link';
@@ -70,6 +74,7 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
       documentImageBaseUrl: documentImageBaseUrl,
     ),
     nxToggleBlockType: NxToggleBlockComponentBuilder(),
+    nxTimeEntryBlockType: NxTimeEntryBlockComponentBuilder(),
     nxBlogLinkBlockType: NxBlogLinkBlockComponentBuilder(),
     nxExcalidrawBlockType: NxExcalidrawBlockComponentBuilder(),
     nxMermaidBlockType: NxMermaidBlockComponentBuilder(),
@@ -124,6 +129,9 @@ EdgeInsets _nxHeadingPadding(Node node) {
 
 String nxPlainTextForCustomNode(Node node) {
   switch (node.type) {
+    case nxTimeEntryBlockType:
+      return '${_stringAttribute(node, 'time', '')} ${node.delta?.toPlainText() ?? ''}'
+          .trim();
     case nxToggleBlockType:
       final title = node.delta?.toPlainText().trim().isNotEmpty == true
           ? node.delta!.toPlainText().trim()

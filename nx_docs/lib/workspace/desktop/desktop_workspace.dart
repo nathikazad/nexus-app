@@ -1,3 +1,4 @@
+import 'package:nx_docs/journal/journal_calendar.dart';
 import 'package:nx_docs/documents/browser/document_browser_session.dart';
 import 'dart:async';
 

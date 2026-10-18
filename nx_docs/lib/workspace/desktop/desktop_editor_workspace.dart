@@ -195,7 +195,12 @@ class _EditorTab extends ConsumerWidget {
               ],
               Expanded(
                 child: Text(
-                  document?.title ?? 'Document ${tab.documentId}',
+                  document?.isJournalEntry == true &&
+                          document?.journalDate != null
+                      ? MaterialLocalizations.of(
+                          context,
+                        ).formatShortDate(document!.journalDate!)
+                      : document?.title ?? 'Document ${tab.documentId}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

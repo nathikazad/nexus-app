@@ -92,8 +92,13 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
-    final document = await _remoteApi.createDocument(title: title, kind: kind);
+    final document = await _remoteApi.createDocument(
+      title: title,
+      kind: kind,
+      journalDate: journalDate,
+    );
     await _localStore.importRemoteDocuments(<RemoteDocument>[
       RemoteDocument(
         key: DocumentKey(

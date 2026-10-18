@@ -18,6 +18,7 @@ abstract class DocumentRepository {
   Future<NxDocument> create({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   });
   Future<NxDocument> updateDraft(NxDocument document);
   Future<RemoteSaveResult> mutateDraft(NxDocument document);

@@ -167,6 +167,15 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                         .setSidebarTab(SidebarTab.tags),
                   ),
                 ),
+                Expanded(
+                  child: _SidebarTabButton(
+                    label: 'Calendar',
+                    active: workspace.sidebarTab == SidebarTab.calendar,
+                    onTap: () => ref
+                        .read(desktopWorkspaceProvider.notifier)
+                        .setSidebarTab(SidebarTab.calendar),
+                  ),
+                ),
               ],
             ),
           ),
@@ -180,6 +189,11 @@ class _DesktopSidebarState extends ConsumerState<_DesktopSidebar> {
                 liveResults: liveDocuments,
               ),
               SidebarTab.tags => _SidebarTags(tagSystems: tagSystems),
+              SidebarTab.calendar => JournalCalendar(
+                onOpen: (id) => ref
+                    .read(desktopWorkspaceProvider.notifier)
+                    .openDocument(id),
+              ),
             },
           ),
           const Divider(height: 1),
@@ -465,7 +479,7 @@ class _SidebarTabButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
         decoration: active
             ? BoxDecoration(
                 color: AppColors.panel,
@@ -481,6 +495,9 @@ class _SidebarTabButton extends StatelessWidget {
             : null,
         child: Text(
           label,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,

@@ -192,7 +192,12 @@ final class DocumentMutationHandler implements offline.MutationHandler {
   ) async {
     final created = await remoteApi.createDocument(
       title: local.title,
-      kind: local.isBook ? DocumentKind.book : DocumentKind.document,
+      kind: local.isJournalEntry
+          ? DocumentKind.journalEntry
+          : local.isBook
+          ? DocumentKind.book
+          : DocumentKind.document,
+      journalDate: local.journalDate,
     );
     final remote = _remoteDocument(created);
     return _receipt(mutation, remote: remote, resolution: _createResolution);

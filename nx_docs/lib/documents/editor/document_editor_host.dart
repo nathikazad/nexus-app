@@ -35,6 +35,7 @@ class DocumentEditorView extends ConsumerStatefulWidget {
 }
 
 class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
+  bool? _readMode;
   BrowserArticle? _article;
   Future<BrowserArticle> Function()? _readArticle;
 
@@ -58,6 +59,7 @@ class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
   void didUpdateWidget(covariant DocumentEditorView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.documentId != widget.documentId) {
+      _readMode = null;
       _article = null;
       _readArticle = null;
     }
@@ -99,6 +101,7 @@ class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
             Positioned.fill(
               child: DocumentEditorBody(
                 scrollStore: ref.watch(documentScrollStoreProvider),
+                onReadModeChanged: (value) => setState(() => _readMode = value),
                 document: document,
                 changeOrigin: sessionState.origin,
                 contextBar: widget.contextBar,
@@ -139,27 +142,36 @@ class _DocumentEditorViewState extends ConsumerState<DocumentEditorView> {
                 child: SafeArea(
                   top: false,
                   left: false,
-                  child: NoteCompanion(
-                    key: ValueKey('document-companion-${document.id}'),
-                    document: document,
-                    browserOpen: browserUrl != null,
-                    article: _article,
-                    readArticle: () async {
-                      final read = _readArticle;
-                      if (read == null) {
-                        throw StateError('Waiting for article text.');
-                      }
-                      return read();
-                    },
-                    onAudioBlockChanged: (block) {
-                      documentAudioBlockRequestNotifier.value =
-                          DocumentAudioBlockRequest(
-                            documentId: document.id,
-                            blockIndex: block.blockIndex,
-                            blockKey: block.blockKey,
-                          );
-                      _saveAudioScrollAnchor(ref, document, block);
-                    },
+                  child: Offstage(
+                    offstage:
+                        !(widget.interactionMode.isReader ||
+                            (_readMode ??
+                                (_editorModeFromJsonDocument(
+                                      document.jsonDocument,
+                                    ) ==
+                                    _DocumentEditorMode.read))),
+                    child: NoteCompanion(
+                      key: ValueKey('document-companion-${document.id}'),
+                      document: document,
+                      browserOpen: browserUrl != null,
+                      article: _article,
+                      readArticle: () async {
+                        final read = _readArticle;
+                        if (read == null) {
+                          throw StateError('Waiting for article text.');
+                        }
+                        return read();
+                      },
+                      onAudioBlockChanged: (block) {
+                        documentAudioBlockRequestNotifier.value =
+                            DocumentAudioBlockRequest(
+                              documentId: document.id,
+                              blockIndex: block.blockIndex,
+                              blockKey: block.blockKey,
+                            );
+                        _saveAudioScrollAnchor(ref, document, block);
+                      },
+                    ),
                   ),
                 ),
               ),

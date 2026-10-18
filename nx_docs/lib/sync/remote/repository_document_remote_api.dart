@@ -69,8 +69,13 @@ final class RepositoryDocumentRemoteApi implements DocumentRemoteApi {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) {
-    return repository.create(title: title, kind: kind);
+    return repository.create(
+      title: title,
+      kind: kind,
+      journalDate: journalDate,
+    );
   }
 
   @override

@@ -121,6 +121,9 @@ Map<String, Object?> _documentToJson(NxDocument document) {
     'publish': document.publish.toJson(),
     'reading_state': document.readingState,
     'book_rank': document.bookRank,
+    'journal_date': document.journalDate == null
+        ? null
+        : journalDateKey(document.journalDate!),
     if (document.audio case final audio?)
       'audio': <String, Object>{
         'url': audio.url,
@@ -140,6 +143,7 @@ NxDocument _documentFromJson(Map<String, Object?> json) {
     id: json['id']! as int,
     title: json['title']! as String,
     modelTypeName: json['model_type_name']! as String,
+    journalDate: DateTime.tryParse(json['journal_date'] as String? ?? ''),
     document: json['document']! as String,
     jsonDocument: Map<String, dynamic>.from(json['json_document']! as Map),
     wordCount: json['word_count']! as int,

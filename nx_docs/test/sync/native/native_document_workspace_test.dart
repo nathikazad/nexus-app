@@ -1,3 +1,4 @@
+import 'package:nx_docs/journal/journal_service.dart';
 import 'package:nx_offline/nx_offline.dart' as offline;
 import 'dart:async';
 
@@ -61,6 +62,28 @@ void main() {
     await uploader.close();
     await local.dispose();
   });
+
+  test(
+    'journal creation retains its date in the native catalog and opens offline',
+    () async {
+      final day = DateTime(2028, 2, 29);
+      final service = JournalService(workspace);
+      final created = await service.openDate(day, title: 'February 29, 2028');
+      expect(created.isJournalEntry, isTrue);
+      expect(created.journalDate, day);
+      expect(
+        (await local.getDocumentByRemoteId(created.id))!.document.journalDate,
+        day,
+      );
+      expect(
+        (await local.readCatalog(const CatalogQuery.all())).single.journalDate,
+        day,
+      );
+      remote.error = StateError('offline');
+      expect((await service.openDate(day, title: 'same date')).id, created.id);
+      expect(remote.documents, hasLength(1));
+    },
+  );
 
   test(
     'demand before subscription publishes notFound for a deleted restored tab',

@@ -21,6 +21,7 @@ abstract interface class DocumentWorkspace {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   });
 
   Future<void> deleteDocument(int documentId);

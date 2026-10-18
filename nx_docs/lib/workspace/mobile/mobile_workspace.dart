@@ -1,8 +1,7 @@
+import 'package:nx_docs/journal/journal_calendar.dart';
 import 'package:nx_docs/documents/browser/document_browser_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:nx_docs/account/account_providers.dart';
 import 'package:nx_docs/workspace/mobile/mobile_create_button.dart';
 import 'package:nx_docs/workspace/desktop/desktop_workspace.dart';
 import 'package:nx_docs/documents/document_providers.dart';
@@ -60,16 +59,46 @@ class _MobileSectionPage extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget>[
               IconButton(
-                tooltip: 'Log out',
-                onPressed: () async {
-                  await ref.read(accountLogoutProvider)();
-                  if (context.mounted) context.go('/login');
-                },
+                tooltip: 'Calendar',
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  showDragHandle: true,
+                  builder: (sheetContext) => SizedBox(
+                    height: MediaQuery.sizeOf(sheetContext).height * .75,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Journal calendar',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Expanded(
+                          child: JournalCalendar(
+                            onOpen: (id) {
+                              Navigator.of(sheetContext).pop();
+                              ref
+                                  .read(mobileWorkspaceProvider.notifier)
+                                  .openDocument(id);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 style: IconButton.styleFrom(
                   minimumSize: const Size.square(34),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                icon: Icon(Icons.logout, size: 20, color: AppColors.muted),
+                icon: Icon(
+                  Icons.calendar_month_outlined,
+                  size: 20,
+                  color: AppColors.muted,
+                ),
                 splashRadius: 18,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.tightFor(

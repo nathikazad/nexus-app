@@ -62,6 +62,8 @@ extension _MobileEditorSurface on _NxAppFlowyEditorState {
                                           widget.onLinkableModelSelected!,
                                       uploadDocumentImage:
                                           widget.uploadDocumentImage,
+                                      isJournalEntry:
+                                          widget.document.isJournalEntry,
                                     ),
                               ),
                               textDecorationMobileToolbarItemV2,

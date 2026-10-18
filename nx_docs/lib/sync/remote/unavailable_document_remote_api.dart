@@ -41,6 +41,7 @@ final class UnavailableDocumentRemoteApi implements DocumentRemoteApi {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async => _unavailable();
 
   @override

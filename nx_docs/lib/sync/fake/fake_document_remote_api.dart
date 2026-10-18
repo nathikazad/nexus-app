@@ -190,6 +190,7 @@ final class FakeDocumentRemoteApi
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
     _throwIfConfigured();
     final now = DateTime.now().toUtc();
@@ -200,6 +201,7 @@ final class FakeDocumentRemoteApi
           ? title!.trim()
           : 'Untitled document',
       modelTypeName: kind.modelTypeName,
+      journalDate: journalDate,
       document: '',
       jsonDocument: const <String, dynamic>{
         'format': 'appflowy_document',
@@ -263,6 +265,9 @@ final class FakeDocumentRemoteApi
               'id': document.id,
               'title': document.title,
               'model_type': document.modelTypeName,
+              'journal_date': document.journalDate == null
+                  ? null
+                  : journalDateKey(document.journalDate!),
               'document': document.document,
               'json_document': document.jsonDocument,
               'pinned': document.pinned,

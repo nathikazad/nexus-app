@@ -113,6 +113,7 @@ final class FakeDocumentWorkspace implements DocumentWorkspace {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
     final existing = _documents.values.firstOrNull;
     if (existing == null) {
@@ -121,12 +122,14 @@ final class FakeDocumentWorkspace implements DocumentWorkspace {
     final created = existing.copyWith(
       title: title ?? 'Untitled document',
       modelTypeName: kind.modelTypeName,
+      journalDate: journalDate,
       updatedAt: DateTime.now().toUtc(),
     );
     final withId = NxDocument(
       id: _nextId++,
       title: created.title,
       modelTypeName: created.modelTypeName,
+      journalDate: created.journalDate,
       document: created.document,
       jsonDocument: created.jsonDocument,
       wordCount: created.wordCount,

@@ -26,6 +26,9 @@ NxDocument documentFromModel(Model model, {int versionNumber = 0}) {
     id: model.id,
     title: model.name,
     modelTypeName: model.modelType?.name ?? '',
+    journalDate: DateTime.tryParse(
+      model.attributes?['journal_date']?.toString() ?? '',
+    ),
     document: document,
     jsonDocument: jsonDocument,
     wordCount: _countWords(document),
@@ -67,6 +70,9 @@ NxDocument documentSummaryFromModel(Model model) {
     id: model.id,
     title: model.name,
     modelTypeName: model.modelType?.name ?? '',
+    journalDate: DateTime.tryParse(
+      model.attributes?['journal_date']?.toString() ?? '',
+    ),
     document: '',
     jsonDocument: const <String, dynamic>{},
     wordCount: model.attrInt(kDocumentAttrWordCount) ?? 0,
@@ -111,7 +117,11 @@ DocumentSnap documentSnapFromModel(Model model, {required int documentId}) {
 SetModelRequest setModelRequestForCreateDocument({
   String? title,
   DocumentKind kind = DocumentKind.document,
+  DateTime? journalDate,
 }) {
+  if (kind == DocumentKind.journalEntry && journalDate == null) {
+    throw ArgumentError('Journal entries require a journal date');
+  }
   const document = '';
   final documentTitle = _documentTitleOrFallback(title);
   return SetModelRequest(
@@ -119,6 +129,11 @@ SetModelRequest setModelRequestForCreateDocument({
     name: documentTitle,
     description: _excerptFrom(document),
     attributes: [
+      if (journalDate != null)
+        SetModelAttribute(
+          key: 'journal_date',
+          value: journalDateKey(journalDate),
+        ),
       SetModelAttribute(key: kDocumentAttrDocument, value: document),
       SetModelAttribute(
         key: kDocumentAttrJsonDocument,
@@ -140,6 +155,7 @@ NxDocument documentForCreatedId(
   DateTime? now,
   String? title,
   DocumentKind kind = DocumentKind.document,
+  DateTime? journalDate,
 }) {
   const document = '';
   final updatedAt = now ?? DateTime.now();
@@ -147,6 +163,7 @@ NxDocument documentForCreatedId(
     id: id,
     title: _documentTitleOrFallback(title),
     modelTypeName: kind.modelTypeName,
+    journalDate: journalDate,
     document: document,
     jsonDocument: _blankDocumentJson(document),
     wordCount: _countWords(document),
@@ -272,6 +289,7 @@ Map<String, dynamic> documentFetchStruct(ModelType schema) {
     ),
     kDocumentAttrDocument: true,
     kDocumentAttrJsonDocument: true,
+    'journal_date': true,
     kDocumentAttrPinned: true,
     kDocumentAttrPublish: true,
     kDocumentAttrAudioUrl: true,
@@ -306,6 +324,7 @@ Map<String, dynamic> documentSummaryFetchStruct() {
     'description': true,
     'created_at': true,
     'updated_at': true,
+    'journal_date': true,
     kDocumentAttrPinned: true,
     kDocumentAttrPublish: true,
     kDocumentAttrWordCount: true,

@@ -51,6 +51,7 @@ enum DocumentInteractionMode {
 class DocumentEditorBody extends ConsumerStatefulWidget {
   const DocumentEditorBody({
     this.scrollStore,
+    this.onReadModeChanged,
     required this.document,
     this.changeOrigin = DocumentChangeOrigin.localCache,
     this.contextBar,
@@ -68,6 +69,7 @@ class DocumentEditorBody extends ConsumerStatefulWidget {
   });
 
   final DocumentScrollStore? scrollStore;
+  final ValueChanged<bool>? onReadModeChanged;
   final NxDocument document;
   final DocumentChangeOrigin changeOrigin;
   final Widget? contextBar;
@@ -312,6 +314,7 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
       FocusManager.instance.primaryFocus?.unfocus();
     }
     setState(() => _editorMode = mode);
+    widget.onReadModeChanged?.call(mode == _DocumentEditorMode.read);
   }
 
   void _setFindBarPresentation(_EditorFindBarPresentation? presentation) {
@@ -535,6 +538,8 @@ class _DocumentEditorBodyState extends ConsumerState<DocumentEditorBody>
                                       DocumentInteractionMode.highlightOnly
                                   ? shared_documents.DocumentReader(
                                       extraBlockBuilders: {
+                                        nxTimeEntryBlockType:
+                                            NxTimeEntryBlockComponentBuilder(),
                                         nxMermaidBlockType:
                                             NxMermaidBlockComponentBuilder(),
                                         nxCanvasBlockType:

@@ -18,6 +18,7 @@ class FakeDocumentRepository implements DocumentRepository {
   Future<NxDocument> create({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
     final id = _nextDocumentId++;
     final now = DateTime.now();
@@ -27,6 +28,7 @@ class FakeDocumentRepository implements DocumentRepository {
         : trimmedTitle;
     final document = NxDocument(
       id: id,
+      journalDate: journalDate,
       title: documentTitle,
       modelTypeName: kind.modelTypeName,
       document: '',

@@ -13,6 +13,7 @@ Future<void> appendNxDocumentElement(
   required Future<LinkedModel> Function(String title) createLinkedDocument,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
+  bool isJournalEntry = false,
   Future<String> Function(String source)? uploadDocumentImage,
 }) async {
   if (!editorState.editable || editorState.isDisposed) return;
@@ -47,6 +48,7 @@ Future<void> appendNxDocumentElement(
       searchLinkableModels: searchLinkableModels,
       createLinkedDocument: createLinkedDocument,
       onLinkableModelSelected: onLinkableModelSelected,
+      isJournalEntry: isJournalEntry,
       uploadDocumentImage: uploadDocumentImage,
     );
   } finally {
@@ -63,6 +65,7 @@ CharacterShortcutEvent nxSlashCommand({
   required Future<LinkedModel> Function(String title) createLinkedDocument,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
+  bool isJournalEntry = false,
   Future<String> Function(String source)? uploadDocumentImage,
 }) {
   return CharacterShortcutEvent(
@@ -88,6 +91,7 @@ CharacterShortcutEvent nxSlashCommand({
         searchLinkableModels: searchLinkableModels,
         createLinkedDocument: createLinkedDocument,
         onLinkableModelSelected: onLinkableModelSelected,
+        isJournalEntry: isJournalEntry,
         uploadDocumentImage: uploadDocumentImage,
       );
       return true;
@@ -96,9 +100,18 @@ CharacterShortcutEvent nxSlashCommand({
 }
 
 List<SelectionMenuItem> _nxStaticSelectionMenuItems({
+  bool isJournalEntry = false,
   Future<String> Function(String source)? uploadDocumentImage,
 }) {
   return <SelectionMenuItem>[
+    if (isJournalEntry)
+      SelectionMenuItem.node(
+        getName: () => 'Time entry',
+        keywords: const ['time', 'entry', 'journal'],
+        iconData: Icons.schedule,
+        nodeBuilder: (_, __) => nxTimeEntryNode(),
+        replace: _replaceCurrentParagraph,
+      ),
     for (final item in standardSelectionMenuItems)
       if (!item.allKeywords.contains('image')) item,
     SelectionMenuItem.node(
@@ -593,6 +606,7 @@ void _showNxSlashOverlay(
   required Future<LinkedModel> Function(String title) createLinkedDocument,
   required Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected,
+  bool isJournalEntry = false,
   Future<String> Function(String source)? uploadDocumentImage,
 }) {
   final picker =
@@ -612,6 +626,7 @@ void _showNxSlashOverlay(
       searchLinkableModels: searchLinkableModels,
       createLinkedDocument: createLinkedDocument,
       onLinkableModelSelected: onLinkableModelSelected,
+      isJournalEntry: isJournalEntry,
       uploadDocumentImage: uploadDocumentImage,
       onDismiss: picker.close,
     ),

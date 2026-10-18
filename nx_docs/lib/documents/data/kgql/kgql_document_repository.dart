@@ -27,13 +27,23 @@ class KgqlDocumentRepository implements DocumentRepository {
   Future<NxDocument> create({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
     final result = await document_api.mutateDocument(
       _client,
-      setModelRequestForCreateDocument(title: title, kind: kind),
+      setModelRequestForCreateDocument(
+        title: title,
+        kind: kind,
+        journalDate: journalDate,
+      ),
       auditSourceKind: 'nx_docs',
     );
-    return documentForCreatedId(result.documentId, title: title, kind: kind);
+    return documentForCreatedId(
+      result.documentId,
+      title: title,
+      kind: kind,
+      journalDate: journalDate,
+    );
   }
 
   @override

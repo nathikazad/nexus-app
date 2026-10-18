@@ -1,3 +1,4 @@
+import 'package:nx_docs/documents/document_models.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_docs/documents/browser/document_browser_session.dart';
 import 'package:nx_docs/documents/browser/document_browser.dart';
@@ -24,6 +25,52 @@ import 'package:nx_docs/workspace/workspace_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  for (final width in [390.0, 1440.0]) {
+    testWidgets('journal navigation creates a dated empty entry at $width', (
+      tester,
+    ) async {
+      final repo = await _pumpWorkspace(tester, width);
+      if (width < 700) {
+        expect(find.byTooltip('Log out'), findsNothing);
+        final calendar = tester.getCenter(find.byTooltip('Calendar'));
+        final settings = tester.getCenter(find.byTooltip('Settings'));
+        expect(calendar.dx, lessThan(settings.dx));
+        await tester.tap(find.byTooltip('Settings'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('settings-logout')), findsOneWidget);
+        await tester.tap(find.text('Close'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Calendar'));
+      } else {
+        await tester.tap(find.text('Calendar'));
+        await tester.pumpAndSettle();
+        final label = tester.widget<Text>(find.text('Calendar'));
+        expect(label.maxLines, 1);
+        expect(label.softWrap, false);
+      }
+      await tester.pumpAndSettle();
+      final today = DateTime.now();
+      await tester.tap(
+        find.byKey(ValueKey('journal-day-${journalDateKey(today)}')),
+      );
+      await tester.pumpAndSettle();
+      final entries = (await repo.listAll())
+          .where((d) => d.isJournalEntry)
+          .toList();
+      expect(entries, hasLength(1));
+      expect(entries.single.document, isEmpty);
+      expect(
+        journalDateKey(entries.single.journalDate!),
+        journalDateKey(today),
+      );
+      expect(find.byType(AppFlowyEditor), findsOneWidget);
+      expect(find.text(entries.single.title), findsWidgets);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    });
+  }
+
   for (final width in [1100.0, 1440.0]) {
     testWidgets('browser hides inspector at width $width', (tester) async {
       await _pumpWorkspace(tester, width);

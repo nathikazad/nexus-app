@@ -8,6 +8,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
     required this.createLinkedDocument,
     required this.onLinkableModelSelected,
     this.uploadDocumentImage,
+    this.isJournalEntry = false,
     required this.onDismiss,
     super.key,
   });
@@ -23,6 +24,7 @@ class NxSlashMenuOverlay extends StatefulWidget {
   final Future<void> Function(LinkableModelType modelType, LinkedModel model)
   onLinkableModelSelected;
   final Future<String> Function(String source)? uploadDocumentImage;
+  final bool isJournalEntry;
   final VoidCallback onDismiss;
 
   @override
@@ -54,6 +56,7 @@ class _NxSlashMenuOverlayState extends State<NxSlashMenuOverlay> {
     );
     _staticItems = _nxStaticSelectionMenuItems(
       uploadDocumentImage: widget.uploadDocumentImage,
+      isJournalEntry: widget.isJournalEntry,
     );
     for (final item in _staticItems) {
       item.onSelected = widget.onDismiss;

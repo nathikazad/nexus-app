@@ -467,6 +467,7 @@ final class DocumentSummary {
     required this.publish,
     required this.readingState,
     this.bookRank,
+    this.journalDate,
   });
 
   factory DocumentSummary.fromDocument(NxDocument document) {
@@ -486,6 +487,7 @@ final class DocumentSummary {
       publish: document.publish,
       readingState: document.readingState,
       bookRank: document.bookRank,
+      journalDate: document.journalDate,
     );
   }
 
@@ -504,6 +506,8 @@ final class DocumentSummary {
   final DocumentPublishState publish;
   final String readingState;
   final int? bookRank;
+  final DateTime? journalDate;
+  bool get isJournalEntry => modelTypeName == 'Journal Entry';
 
   bool get isBook => modelTypeName == 'Book';
   bool get isBookContent => isBook || modelTypeName == 'Book Chapter';
@@ -532,13 +536,15 @@ final class DocumentSummary {
       publish: publish,
       readingState: readingState,
       bookRank: bookRank,
+      journalDate: journalDate,
     );
   }
 }
 
 enum DocumentKind {
   document('Document', 'Document'),
-  book('Book', 'Book');
+  book('Book', 'Book'),
+  journalEntry('Journal Entry', 'Journal Entry');
 
   const DocumentKind(this.modelTypeName, this.label);
 
@@ -567,6 +573,7 @@ class NxDocument {
     this.publish = const DocumentPublishState(enabled: false, dirty: false),
     this.readingState = '',
     this.bookRank,
+    this.journalDate,
     this.audio,
   });
 
@@ -589,6 +596,8 @@ class NxDocument {
   final DocumentPublishState publish;
   final String readingState;
   final int? bookRank;
+  final DateTime? journalDate;
+  bool get isJournalEntry => modelTypeName == 'Journal Entry';
   final DocumentAudio? audio;
 
   bool get hasFullDocument =>
@@ -625,6 +634,7 @@ class NxDocument {
     DocumentPublishState? publish,
     String? readingState,
     int? bookRank,
+    DateTime? journalDate,
     bool clearBookRank = false,
     DocumentAudio? audio,
     bool clearAudio = false,
@@ -648,8 +658,13 @@ class NxDocument {
       links: links ?? this.links,
       publish: publish ?? this.publish,
       readingState: readingState ?? this.readingState,
+      journalDate: journalDate ?? this.journalDate,
       bookRank: clearBookRank ? null : bookRank ?? this.bookRank,
       audio: clearAudio ? null : audio ?? this.audio,
     );
   }
 }
+
+/// Calendar dates are wall-clock dates; never convert them to UTC.
+String journalDateKey(DateTime date) =>
+    '${date.year.toString().padLeft(4, "0")}-${date.month.toString().padLeft(2, "0")}-${date.day.toString().padLeft(2, "0")}';

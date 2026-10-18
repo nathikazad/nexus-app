@@ -30,10 +30,12 @@ class DocumentMutationController {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
     final document = await _workspace().createDocument(
       title: title,
       kind: kind,
+      journalDate: journalDate,
     );
     _logDbSync('create_document', documentId: document.id);
     return document;

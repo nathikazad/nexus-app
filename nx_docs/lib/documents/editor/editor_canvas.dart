@@ -479,7 +479,9 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
   String _documentPlainText(Document document) {
     final buffer = StringBuffer();
     void visit(Node node) {
-      final text = node.delta?.toPlainText().isNotEmpty == true
+      final text = node.type == nxTimeEntryBlockType
+          ? nxPlainTextForCustomNode(node)
+          : node.delta?.toPlainText().isNotEmpty == true
           ? node.delta?.toPlainText()
           : nxPlainTextForCustomNode(node);
       if (text != null && text.isNotEmpty) {
@@ -924,6 +926,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
                 createLinkedDocument: widget.createLinkedDocument!,
                 onLinkableModelSelected: widget.onLinkableModelSelected!,
                 uploadDocumentImage: widget.uploadDocumentImage,
+                isJournalEntry: widget.document.isJournalEntry,
               ),
             ],
       commandShortcutEvents: _commandShortcutEvents(),
@@ -953,6 +956,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
                       createLinkedDocument: widget.createLinkedDocument!,
                       onLinkableModelSelected: widget.onLinkableModelSelected!,
                       uploadDocumentImage: widget.uploadDocumentImage,
+                      isJournalEntry: widget.document.isJournalEntry,
                     ),
                   ),
                 ),

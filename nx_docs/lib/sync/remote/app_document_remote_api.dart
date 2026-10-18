@@ -103,8 +103,13 @@ final class AppDocumentRemoteApi implements DocumentRemoteApi {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
-    final result = await mutations.createDocument(title: title, kind: kind);
+    final result = await mutations.createDocument(
+      title: title,
+      kind: kind,
+      journalDate: journalDate,
+    );
     reads.invalidate();
     return result;
   }

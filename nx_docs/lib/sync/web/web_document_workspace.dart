@@ -62,8 +62,13 @@ final class WebDocumentWorkspace implements DocumentWorkspace {
   Future<NxDocument> createDocument({
     String? title,
     DocumentKind kind = DocumentKind.document,
+    DateTime? journalDate,
   }) async {
-    final created = await _remoteApi.createDocument(title: title, kind: kind);
+    final created = await _remoteApi.createDocument(
+      title: title,
+      kind: kind,
+      journalDate: journalDate,
+    );
     await _refreshVisibleCatalogs();
     return created;
   }
