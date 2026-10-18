@@ -105,7 +105,7 @@ class _MermaidBlockState extends State<_MermaidBlock> with SelectableMixin {
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: _openEditor,
+          onTap: _openViewer,
           child: Column(
             children: [
               Padding(

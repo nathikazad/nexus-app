@@ -151,6 +151,12 @@ void main() {
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
         expect(find.byType(NxMermaidViewer), findsNothing);
+        await tester.tap(find.byType(NxMermaidPreview));
+        await tester.pumpAndSettle();
+        expect(find.byType(NxMermaidViewer), findsOneWidget);
+        expect(find.byType(NxMermaidEditor), findsNothing);
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
         expect(node.attributes['source'], source);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
@@ -196,7 +202,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Mermaid'));
+    await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('mermaid-source')),
