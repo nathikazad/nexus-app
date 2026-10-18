@@ -28,6 +28,11 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private var overview:NativeBoardGrid?=null
     private lateinit var boardControls:NativeBoardControls
     private var overlayTouch=false
+    private var twoFingerScroll=false
+    private var scrollTracking=false
+    private var scrollAnchorY=0.0
+    private var scrollBase=InkViewport()
+    private var fingerSequence=false
     private val buttons=mutableMapOf<NativeTool,Button>()
     private lateinit var undoButton:Button
     private lateinit var redoButton:Button
@@ -233,7 +238,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private fun nativeTool()=overview==null && tool in listOf(NativeTool.PEN,NativeTool.RUB,NativeTool.REGION)
     private fun flag(enabled:Boolean){if(::input.isInitialized)input.enable(enabled)}
     private fun resumeInk(){
-        val enabled = ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&!rendering&&nativeTool()
+        val enabled = ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&!twoFingerScroll&&!rendering&&nativeTool()
         flag(enabled)
         scheduleErasureRepaint()
         if (enabled && initialPresented && !openReported) {
@@ -348,12 +353,55 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             hardwareEraser(stylusToolOverride(type, event.buttonState))
         }
     }
+    /** Finger navigation never changes the active pen tool or interprets a stylus as a finger. */
+    private fun tabletScroll(event:MotionEvent):Boolean {
+        if(resources.configuration.smallestScreenWidthDp < 600 || !::engine.isInitialized) return false
+        val fingers=(0 until event.pointerCount).all { event.getToolType(it)==MotionEvent.TOOL_TYPE_FINGER }
+        if(event.actionMasked==MotionEvent.ACTION_DOWN) {
+            val rect=Rect()
+            fingerSequence=fingers && body.getGlobalVisibleRect(rect) &&
+                rect.contains(event.rawX.toInt(),event.rawY.toInt()) && !overlayTouch
+        }
+        if(!twoFingerScroll && fingerSequence && fingers && event.pointerCount==2 &&
+            event.actionMasked==MotionEvent.ACTION_POINTER_DOWN && ready && resumed &&
+            !busy && !closing && !dialogOpen && !rendering && !penPending &&
+            pendingImports==0 && !importFailed && nativeTool()) {
+            twoFingerScroll=true;scrollTracking=true
+            flag(false)
+            scrollBase=model.view
+            scrollAnchorY=(event.getY(0)+event.getY(1))/2.0/density
+            engine.dispatch(CanvasCommand.RememberView)
+            editing.tool=NativeTool.HAND
+            editing.visibility=View.VISIBLE
+            editing.invalidate()
+        }
+        if(!twoFingerScroll) {
+            if(event.actionMasked==MotionEvent.ACTION_UP || event.actionMasked==MotionEvent.ACTION_CANCEL) fingerSequence=false
+            return false
+        }
+        when(event.actionMasked) {
+            MotionEvent.ACTION_MOVE -> if(scrollTracking && fingers && event.pointerCount==2) {
+                val y=(event.getY(0)+event.getY(1))/2.0/density
+                engine.dispatch(CanvasCommand.SetView(scrollBase.copy(y=scrollBase.y+y-scrollAnchorY)))
+                editing.postInvalidateOnAnimation()
+            }
+            // Once either finger lifts (or a third contact appears), freeze until all lift.
+            MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_POINTER_DOWN -> if(event.pointerCount!=2 || event.actionMasked==MotionEvent.ACTION_POINTER_UP) scrollTracking=false
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if(event.actionMasked==MotionEvent.ACTION_CANCEL) engine.dispatch(CanvasCommand.SetView(scrollBase))
+                twoFingerScroll=false;scrollTracking=false;fingerSequence=false
+                checkpointSafely();showTool()
+            }
+        }
+        return true
+    }
     fun dispatchTouchEvent(event:MotionEvent, dispatch: () -> Boolean):Boolean {
         if(event.actionMasked==MotionEvent.ACTION_DOWN && ::boardControls.isInitialized) {
             val rect=Rect()
             overlayTouch=listOf(boardControls,boardLabel).any{it.getGlobalVisibleRect(rect) && rect.contains(event.rawX.toInt(),event.rawY.toInt())}
             if(overlayTouch && ready)flag(false)
         }
+        if(tabletScroll(event)) return true
         if(!overlayTouch) {
             stylusButtons(event)
 
@@ -476,6 +524,11 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         try {
         if(::boardControls.isInitialized)boardControls.cancelPress()
         overlayTouch=false
+        if(twoFingerScroll && ::engine.isInitialized) {
+            engine.dispatch(CanvasCommand.SetView(scrollBase))
+            editing.visibility=View.GONE
+        }
+        twoFingerScroll=false;scrollTracking=false;fingerSequence=false
         resumed=false
         if(::engine.isInitialized)runCatching {
             flag(false)

@@ -862,11 +862,17 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
       // Keep the title in the first scroll item so document block indexes stay
       // stable for heading navigation, saved positions, and audio playback.
       blockWrapper: (context, {required node, required child}) {
+        final block = NxBlockDeleteControl(
+          node: node,
+          editorState: _editorState,
+          enabled: widget.interactionMode.canEditContent && showsCaret,
+          child: child,
+        );
         final first = identical(
           node,
           _editorState.document.root.children.firstOrNull,
         );
-        if (!first || isDesktopLayout(context)) return child;
+        if (!first || isDesktopLayout(context)) return block;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -876,7 +882,7 @@ class _NxAppFlowyEditorState extends State<_NxAppFlowyEditor>
               const SizedBox(height: 64),
             if (widget.header != null)
               IgnoreEditorSelectionGesture(child: widget.header!),
-            child,
+            block,
           ],
         );
       },

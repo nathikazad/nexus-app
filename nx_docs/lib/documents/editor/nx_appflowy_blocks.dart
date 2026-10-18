@@ -30,6 +30,7 @@ part 'element_picker_scope.dart';
 part 'slash_menu_overlay.dart';
 part 'slash_menu_rows.dart';
 part 'nx_toggle_block.dart';
+part 'nx_block_delete.dart';
 part 'nx_time_entry_block.dart';
 part 'nx_kgql_link_block.dart';
 part 'nx_drag_to_reorder.dart';
@@ -90,13 +91,7 @@ Map<String, BlockComponentBuilder> nxBlockComponentBuilders({
       continue;
     }
     final builder = entry.value;
-    builder.showActions = (_) => true;
-    builder.actionBuilder = (context, _) {
-      return NxDragToReorderAction(
-        blockComponentContext: context,
-        builder: builder,
-      );
-    };
+    builder.showActions = (_) => false;
   }
   return builders;
 }
