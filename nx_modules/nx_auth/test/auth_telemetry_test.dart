@@ -124,4 +124,37 @@ void main() {
 
     expect(attempts, 1);
   });
+
+  test('records one restore when auth initializes twice', () async {
+    late List<dynamic> rows;
+    final recorder = AuthTelemetryRecorder(
+      client: MockClient((request) async {
+        rows =
+            (jsonDecode(request.body) as Map<String, dynamic>)['rows']
+                as List<dynamic>;
+        return http.Response('{"ok":true}', 200);
+      }),
+    );
+
+    for (var i = 0; i < 2; i++) {
+      await recorder.beginSession(
+        app: 'nx_books',
+        userId: '7',
+        interactive: false,
+        token: const {'access_token_lifetime_seconds': 43200},
+      );
+    }
+    await recorder.flush(
+      preset: BackendPreset.hosted,
+      app: 'nx_books',
+      userId: '7',
+      accessToken: 'credential',
+    );
+
+    expect(rows, hasLength(1));
+    expect(
+      (rows.single as Map<String, dynamic>)['event_name'],
+      'auth.session_restored',
+    );
+  });
 }

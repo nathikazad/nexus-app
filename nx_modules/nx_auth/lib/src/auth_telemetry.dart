@@ -21,6 +21,7 @@ final class AuthTelemetryRecorder {
   final http.Client? _client;
   Future<void> _writes = Future.value();
   Future<void> _flushes = Future.value();
+  final Set<String> _restoredThisProcess = {};
 
   Future<void> beginSession({
     required String app,
@@ -28,6 +29,8 @@ final class AuthTelemetryRecorder {
     required bool interactive,
     required Map<String, Object?> token,
   }) async {
+    final restoreKey = '$app\u0000$userId';
+    if (!interactive && !_restoredThisProcess.add(restoreKey)) return;
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().toUtc();
     final id = interactive
