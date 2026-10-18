@@ -411,7 +411,9 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
-  testWidgets('popup selects any of the five layouts', (tester) async {
+  testWidgets('layout button toggles compact and full-screen panels', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1100);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -429,45 +431,13 @@ void main() {
     final compact = tester.getSize(panel);
     expect(compact, const Size(400, 540));
 
-    await tester.tap(find.byTooltip('Change panel layout'));
-    await tester.pumpAndSettle();
-    final layoutButton = tester.getRect(
-      find.byKey(const ValueKey('panel-layout-button-anchor')),
-    );
-    final picker = tester.getRect(
-      find.byKey(const ValueKey('panel-layout-picker')),
-    );
-    expect(picker.right, closeTo(layoutButton.right, 1));
-    expect(picker.top, closeTo(layoutButton.bottom, 1));
-    expect(picker.width, greaterThan(picker.height * 4));
-    expect(find.byType(PanelLayoutIcon), findsNWidgets(6));
-    await tester.tap(find.byTooltip('Expanded panel'));
-    await tester.pump();
-    expect(tester.getSize(panel), const Size(560, 760));
-
-    await tester.tap(find.byTooltip('Change panel layout'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Full-width bottom panel'));
-    await tester.pump();
-    final bottom = tester.getSize(panel);
-    expect(bottom.width, 800);
-    expect(bottom.height, lessThan(1100));
-
-    await tester.tap(find.byTooltip('Change panel layout'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Full-height right panel'));
-    await tester.pump();
-    expect(tester.getSize(panel), const Size(560, 1100));
-
-    await tester.tap(find.byTooltip('Change panel layout'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Full-screen panel'));
+    expect(find.byType(PanelLayoutIcon), findsOneWidget);
+    expect(find.byKey(const ValueKey('panel-layout-picker')), findsNothing);
+    await tester.tap(find.byTooltip('Expand companion to full screen'));
     await tester.pump();
     expect(tester.getSize(panel), const Size(800, 1100));
 
-    await tester.tap(find.byTooltip('Change panel layout'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Compact panel'));
+    await tester.tap(find.byTooltip('Shrink companion to bottom-right'));
     await tester.pump();
     expect(tester.getSize(panel), compact);
     expect(tester.takeException(), isNull);

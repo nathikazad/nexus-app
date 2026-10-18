@@ -49,7 +49,6 @@ class ReadingCompanion extends ConsumerStatefulWidget {
 class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
     with WidgetsBindingObserver {
   final _input = TextEditingController();
-  final _layoutButtonLink = LayerLink();
   late final ValueNotifier<ReadingSelectionRequest?> _selectionRequests;
   String get _questionContext => widget.passage?.value ?? _selection;
 
@@ -63,7 +62,6 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
 
   ReadingCompanionController? _controller;
   bool _open = false;
-  bool _layoutPickerOpen = false;
   bool _confirmClear = false;
   int _panelLayoutIndex = 0;
   bool _loading = false;
@@ -140,7 +138,6 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
       _controller = null;
       _loading = false;
       _open = false;
-      _layoutPickerOpen = false;
       _confirmClear = false;
       _title = '';
       _selection = '';
@@ -365,21 +362,9 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
             math.min(floatingWidth, 400.0),
             math.min(floatingHeight, 540.0),
           ),
-          PanelLayout.expanded => (
-            math.min(floatingWidth, 560.0),
-            math.min(floatingHeight, 760.0),
-          ),
-          PanelLayout.bottom => (
-            bounds.maxWidth,
-            math.min(usableHeight, math.max(420.0, usableHeight * 0.46)),
-          ),
-          PanelLayout.right => (math.min(bounds.maxWidth, 560.0), usableHeight),
           PanelLayout.fullScreen => (bounds.maxWidth, usableHeight),
         };
-        final docked =
-            layout == PanelLayout.bottom ||
-            layout == PanelLayout.right ||
-            layout == PanelLayout.fullScreen;
+        final docked = layout == PanelLayout.fullScreen;
         return Stack(
           children: [
             widget.child,
@@ -435,15 +420,19 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                                     )
                                   : const Icon(Icons.sync),
                             ),
-                          CompositedTransformTarget(
-                            key: const ValueKey('panel-layout-button-anchor'),
-                            link: _layoutButtonLink,
-                            child: IconButton(
-                              tooltip: 'Change panel layout',
-                              onPressed: () => setState(
-                                () => _layoutPickerOpen = !_layoutPickerOpen,
-                              ),
-                              icon: PanelLayoutIcon(layout: layout),
+                          IconButton(
+                            tooltip: layout == PanelLayout.compact
+                                ? 'Expand companion to full screen'
+                                : 'Shrink companion to bottom-right',
+                            onPressed: () => setState(() {
+                              _panelLayoutIndex = layout == PanelLayout.compact
+                                  ? PanelLayout.fullScreen.index
+                                  : PanelLayout.compact.index;
+                            }),
+                            icon: PanelLayoutIcon(
+                              layout: layout == PanelLayout.compact
+                                  ? PanelLayout.fullScreen
+                                  : PanelLayout.compact,
                             ),
                           ),
                           if (widget.identity != null)
@@ -637,48 +626,14 @@ class _ReadingCompanionState extends ConsumerState<ReadingCompanion>
                   ),
                 ),
               ),
-            if (_layoutPickerOpen || _confirmClear)
+            if (_confirmClear)
               Positioned.fill(
                 child: ModalBarrier(
                   color: Colors.black26,
                   dismissible: true,
                   onDismiss: () => setState(() {
-                    _layoutPickerOpen = false;
                     _confirmClear = false;
                   }),
-                ),
-              ),
-            if (_layoutPickerOpen)
-              Positioned(
-                left: 0,
-                top: 0,
-                width: 48.0 * PanelLayout.values.length,
-                height: 48,
-                child: CompositedTransformFollower(
-                  link: _layoutButtonLink,
-                  targetAnchor: Alignment.bottomRight,
-                  followerAnchor: Alignment.topRight,
-                  showWhenUnlinked: false,
-                  child: Material(
-                    key: const ValueKey('panel-layout-picker'),
-                    elevation: 16,
-                    borderRadius: BorderRadius.circular(24),
-                    clipBehavior: Clip.antiAlias,
-                    child: Row(
-                      children: [
-                        for (final option in PanelLayout.values)
-                          IconButton(
-                            tooltip: option.label,
-                            isSelected: option == layout,
-                            onPressed: () => setState(() {
-                              _panelLayoutIndex = option.index;
-                              _layoutPickerOpen = false;
-                            }),
-                            icon: PanelLayoutIcon(layout: option),
-                          ),
-                      ],
-                    ),
-                  ),
                 ),
               ),
             if (_confirmClear)
@@ -746,16 +701,7 @@ class ReadingMicrophoneButton extends StatelessWidget {
   }
 }
 
-enum PanelLayout {
-  compact('Compact panel'),
-  expanded('Expanded panel'),
-  bottom('Full-width bottom panel'),
-  right('Full-height right panel'),
-  fullScreen('Full-screen panel');
-
-  const PanelLayout(this.label);
-  final String label;
-}
+enum PanelLayout { compact, fullScreen }
 
 class PanelLayoutIcon extends StatelessWidget {
   const PanelLayoutIcon({required this.layout, super.key});
@@ -799,9 +745,6 @@ class _PanelLayoutIconPainter extends CustomPainter {
     );
     final panel = switch (layout) {
       PanelLayout.compact => Rect.fromLTWH(13, 12, 7, 8),
-      PanelLayout.expanded => Rect.fromLTWH(10, 8, 10, 12),
-      PanelLayout.bottom => Rect.fromLTWH(2, 13, 20, 9),
-      PanelLayout.right => Rect.fromLTWH(11, 2, 11, 20),
       PanelLayout.fullScreen => Rect.fromLTWH(2, 2, 20, 20),
     };
     canvas.drawRRect(
