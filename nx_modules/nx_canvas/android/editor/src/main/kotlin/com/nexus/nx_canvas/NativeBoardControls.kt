@@ -2,26 +2,16 @@ package com.nexus.nx_canvas
 
 import android.content.Context
 import android.graphics.*
-import android.os.Handler
-import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
 
-/** Small overlay, isolated from NoteView. Long holds fire once, never also tap. */
+/** Each arrow press navigates one whole page; dragging handles fine scrolling. */
 class NativeBoardControls(context:Context,private val navigate:(Int,Int,Boolean)->Unit,private val overview:()->Unit):View(context) {
-    private val main=Handler(Looper.getMainLooper())
     private val gesture=BoardPressTracker()
     private var active:Int?=null
     private val centers=listOf(76f to 28f,28f to 76f,76f to 76f,124f to 76f,76f to 124f)
     private val directions=listOf(0 to -1,-1 to 0,0 to 0,1 to 0,0 to 1)
-    private val hold=Runnable {
-        val index=active
-        if(index!=null && index!=2 && gesture.hold()) {
-            val direction=directions[index];navigate(direction.first,direction.second,true)
-            invalidate()
-        }
-    }
-    init { contentDescription="Board navigation: tap an arrow for a quarter board, hold for the next board. Center dot opens overview." }
+    init { contentDescription="Page navigation: tap an arrow for the adjacent page. Center dot opens overview. Use two fingers to scroll." }
     private fun hit(x:Float,y:Float):Int? {
         val px=x*152/width;val py=y*152/height
         return centers.indexOfFirst{(cx,cy)->kotlin.math.abs(px-cx)<=24 && kotlin.math.abs(py-cy)<=24}.takeIf{it>=0}
@@ -54,23 +44,21 @@ class NativeBoardControls(context:Context,private val navigate:(Int,Int,Boolean)
         when(event.actionMasked) {
             MotionEvent.ACTION_DOWN->{
                 active=hit(event.x,event.y);gesture.down();invalidate()
-                if(active!=null && active!=2)main.postDelayed(hold,500)
             }
             MotionEvent.ACTION_MOVE->if(hit(event.x,event.y)!=active)cancelPress()
             MotionEvent.ACTION_POINTER_DOWN,MotionEvent.ACTION_CANCEL->cancelPress()
             MotionEvent.ACTION_UP->{
-                main.removeCallbacks(hold)
                 val index=active
                 val tap=gesture.up();active=null;invalidate()
                 if(index!=null && tap) {
-                    if(index==2)overview() else directions[index].let{navigate(it.first,it.second,false)}
+                    if(index==2)overview() else directions[index].let{navigate(it.first,it.second,true)}
                     performClick()
                 }
             }
         }
         return true
     }
-    fun cancelPress(){main.removeCallbacks(hold);active=null;gesture.cancel();invalidate()}
+    fun cancelPress(){active=null;gesture.cancel();invalidate()}
     override fun onDetachedFromWindow(){cancelPress();super.onDetachedFromWindow()}
     override fun performClick():Boolean{super.performClick();return true}
 }

@@ -31,8 +31,10 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private var twoFingerScroll=false
     private var scrollTracking=false
     private var scrollAnchorY=0.0
+    private var scrollAnchorX=0.0
+    private val scrollAxis by lazy { CanvasAxisLock(android.view.ViewConfiguration.get(this).scaledTouchSlop/density) }
     private var scrollBase=InkViewport()
-    private var fingerSequence=false
+    private val palmGuard=CanvasPalmGuard()
     private val buttons=mutableMapOf<NativeTool,Button>()
     private lateinit var undoButton:Button
     private lateinit var redoButton:Button
@@ -359,47 +361,71 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         val fingers=(0 until event.pointerCount).all { event.getToolType(it)==MotionEvent.TOOL_TYPE_FINGER }
         if(event.actionMasked==MotionEvent.ACTION_DOWN) {
             val rect=Rect()
-            fingerSequence=fingers && body.getGlobalVisibleRect(rect) &&
-                rect.contains(event.rawX.toInt(),event.rawY.toInt()) && !overlayTouch
+            palmGuard.fingersDown(fingers && body.getGlobalVisibleRect(rect) &&
+                rect.contains(event.rawX.toInt(),event.rawY.toInt()) && !overlayTouch)
         }
-        if(!twoFingerScroll && fingerSequence && fingers && event.pointerCount==2 &&
+        if(!twoFingerScroll && !palmGuard.stylusTouching && palmGuard.fingerSequenceEligible && fingers && event.pointerCount==2 &&
             event.actionMasked==MotionEvent.ACTION_POINTER_DOWN && ready && resumed &&
             !busy && !closing && !dialogOpen && !rendering && !penPending &&
             pendingImports==0 && !importFailed && nativeTool()) {
             twoFingerScroll=true;scrollTracking=true
             flag(false)
             scrollBase=model.view
-            scrollAnchorY=(event.getY(0)+event.getY(1))/2.0/density
+            scrollAxis.reset()
+            scrollAnchorX=(0 until event.pointerCount).sumOf { event.getX(it).toDouble() }/event.pointerCount/density
+            scrollAnchorY=(0 until event.pointerCount).sumOf { event.getY(it).toDouble() }/event.pointerCount/density
             engine.dispatch(CanvasCommand.RememberView)
             editing.tool=NativeTool.HAND
             editing.visibility=View.VISIBLE
             editing.invalidate()
         }
         if(!twoFingerScroll) {
-            if(event.actionMasked==MotionEvent.ACTION_UP || event.actionMasked==MotionEvent.ACTION_CANCEL) fingerSequence=false
+            if(event.actionMasked==MotionEvent.ACTION_UP || event.actionMasked==MotionEvent.ACTION_CANCEL) palmGuard.fingersUp()
             return false
         }
         when(event.actionMasked) {
-            MotionEvent.ACTION_MOVE -> if(scrollTracking && fingers && event.pointerCount==2) {
-                val y=(event.getY(0)+event.getY(1))/2.0/density
-                engine.dispatch(CanvasCommand.SetView(scrollBase.copy(y=scrollBase.y+y-scrollAnchorY)))
+            MotionEvent.ACTION_MOVE -> if(scrollTracking && !palmGuard.stylusTouching && fingers && event.pointerCount==2) {
+                val x=(0 until event.pointerCount).sumOf { event.getX(it).toDouble() }/event.pointerCount/density
+                val y=(0 until event.pointerCount).sumOf { event.getY(it).toDouble() }/event.pointerCount/density
+                val movement=scrollAxis.movement(x-scrollAnchorX,y-scrollAnchorY)
+                engine.dispatch(CanvasCommand.SetView(scrollBase.copy(x=scrollBase.x+movement.x,y=scrollBase.y+movement.y)))
                 editing.postInvalidateOnAnimation()
             }
-            // Once either finger lifts (or a third contact appears), freeze until all lift.
+            // Once any finger lifts (or a third contact appears), freeze until all lift.
             MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_POINTER_DOWN -> if(event.pointerCount!=2 || event.actionMasked==MotionEvent.ACTION_POINTER_UP) scrollTracking=false
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if(event.actionMasked==MotionEvent.ACTION_CANCEL) engine.dispatch(CanvasCommand.SetView(scrollBase))
-                twoFingerScroll=false;scrollTracking=false;fingerSequence=false
+                twoFingerScroll=false;scrollTracking=false;palmGuard.fingersUp()
                 checkpointSafely();showTool()
             }
         }
         return true
     }
+    private fun trackStylusContact(event:MotionEvent) {
+        val index=event.actionIndex
+        val tool=event.getToolType(index)
+        if(tool!=MotionEvent.TOOL_TYPE_STYLUS && tool!=MotionEvent.TOOL_TYPE_ERASER) return
+        when(event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                palmGuard.stylusDown()
+                // A palm sequence that began during writing must lift before it can pan.
+                palmGuard.fingersUp()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                palmGuard.stylusUp()
+            }
+        }
+    }
     fun dispatchTouchEvent(event:MotionEvent, dispatch: () -> Boolean):Boolean {
+        trackStylusContact(event)
         if(event.actionMasked==MotionEvent.ACTION_DOWN && ::boardControls.isInitialized) {
             val rect=Rect()
             overlayTouch=listOf(boardControls,boardLabel).any{it.getGlobalVisibleRect(rect) && rect.contains(event.rawX.toInt(),event.rawY.toInt())}
             if(overlayTouch && ready)flag(false)
+        }
+        if(palmGuard.stylusTouching && twoFingerScroll) {
+            twoFingerScroll=false;scrollTracking=false;palmGuard.fingersUp()
+            checkpointSafely();showTool()
         }
         if(tabletScroll(event)) return true
         if(!overlayTouch) {
@@ -528,7 +554,8 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             engine.dispatch(CanvasCommand.SetView(scrollBase))
             editing.visibility=View.GONE
         }
-        twoFingerScroll=false;scrollTracking=false;fingerSequence=false
+        twoFingerScroll=false;scrollTracking=false;palmGuard.fingersUp()
+        palmGuard.stylusUp()
         resumed=false
         if(::engine.isInitialized)runCatching {
             flag(false)

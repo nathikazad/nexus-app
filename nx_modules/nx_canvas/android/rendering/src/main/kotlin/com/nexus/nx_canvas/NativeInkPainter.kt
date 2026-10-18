@@ -30,13 +30,24 @@ object NativeInkPainter {
         model.boards?.let { boards ->
             // Board guides are part of the static background, never live pen processing.
             val bounds=canvas.clipBounds
-            paint.color=0xffdddddd.toInt();paint.strokeWidth=(1/(model.view.scale*density)).toFloat()
+            // Use solid dark dashes: pale antialiased guides disappear on e-ink displays.
+            paint.color=0xff404040.toInt();paint.strokeWidth=(1.25/model.view.scale).toFloat()
+            paint.strokeCap=Paint.Cap.BUTT
+            paint.pathEffect=DashPathEffect(floatArrayOf((8/model.view.scale).toFloat(),(6/model.view.scale).toFloat()),0f)
+            val guides=Path()
+            // Keep dashes tied to world coordinates, not the moving viewport edge.
+            val period=14/model.view.scale
+            val startX=(floor(bounds.left/period)*period).toFloat()
+            val startY=(floor(bounds.top/period)*period).toFloat()
             for(column in ceil(bounds.left/boards.width).toInt()..floor(bounds.right/boards.width).toInt()) {
-                val x=(column*boards.width).toFloat();canvas.drawLine(x,bounds.top.toFloat(),x,bounds.bottom.toFloat(),paint)
+                val x=(column*boards.width).toFloat();guides.moveTo(x,startY);guides.lineTo(x,bounds.bottom.toFloat())
             }
             for(row in ceil(bounds.top/boards.height).toInt()..floor(bounds.bottom/boards.height).toInt()) {
-                val y=(row*boards.height).toFloat();canvas.drawLine(bounds.left.toFloat(),y,bounds.right.toFloat(),y,paint)
+                val y=(row*boards.height).toFloat();guides.moveTo(startX,y);guides.lineTo(bounds.right.toFloat(),y)
             }
+            canvas.drawPath(guides,paint)
+            paint.pathEffect=null
+            paint.strokeCap=Paint.Cap.ROUND
         }
 
         for(stroke in model.strokes) {
