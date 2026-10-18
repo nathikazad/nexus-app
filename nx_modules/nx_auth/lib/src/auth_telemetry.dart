@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -130,6 +131,9 @@ final class AuthTelemetryRecorder {
           )
           .timeout(const Duration(seconds: 5));
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint(
+          '[AuthTelemetry] Uploaded ${rows.length} authentication event(s)',
+        );
         final cleanup = _writes.then((_) async {
           final current = _readQueue(prefs, app, userId);
           if (current.length < rows.length ||
@@ -146,8 +150,17 @@ final class AuthTelemetryRecorder {
         });
         _writes = cleanup.catchError((_) {});
         await cleanup;
+      } else {
+        debugPrint(
+          '[AuthTelemetry] Upload rejected (${response.statusCode}); '
+          'events remain queued',
+        );
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint(
+        '[AuthTelemetry] Upload failed (${error.runtimeType}); '
+        'events remain queued',
+      );
       // Authentication must never fail because diagnostics are unavailable.
     } finally {
       if (ownsClient) client.close();
