@@ -2,6 +2,7 @@
 library;
 
 export 'src/auth_controller.dart';
+export 'src/auth_telemetry.dart';
 export 'src/auth_providers.dart';
 export 'src/authenticated_http_client.dart';
 export 'src/backend_ping.dart';

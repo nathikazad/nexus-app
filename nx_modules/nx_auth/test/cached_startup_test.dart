@@ -67,6 +67,68 @@ void main() {
     },
   );
 
+  for (final unavailable in [false, true]) {
+    test('Books cached startup handles unavailable=$unavailable', () async {
+      final remote = Completer<NexusIdentity?>();
+      final c = ProviderContainer(
+        overrides: [
+          nexusClientAppIdProvider.overrideWithValue('nx_books'),
+          retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
+          oidcSessionRestoreProvider.overrideWithValue(
+            (_, __) => remote.future,
+          ),
+          domainLoaderProvider.overrideWithValue((_) async => const []),
+        ],
+      );
+      addTearDown(c.dispose);
+      expect((await c.read(authProvider.future))?.domainId, 2);
+      await Future<void>.delayed(Duration.zero);
+      remote.completeError(
+        unavailable
+            ? const AuthServiceUnavailable()
+            : const AuthSessionRejected(),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.read(authProvider).value?.userId, unavailable ? '7' : null);
+    });
+  }
+
+  test(
+    'token rejection after startup clears Books session, not its partition',
+    () async {
+      final events = StreamController<RejectedOidcSession>.broadcast();
+      addTearDown(events.close);
+      final c = ProviderContainer(
+        overrides: [
+          nexusClientAppIdProvider.overrideWithValue('nx_books'),
+          retainAuthSessionWhenOfflineProvider.overrideWithValue(true),
+          oidcSessionRejectionsProvider.overrideWithValue(events.stream),
+          oidcSessionRestoreProvider.overrideWithValue(
+            (_, __) async => const NexusIdentity(userId: '7'),
+          ),
+          domainLoaderProvider.overrideWithValue(
+            (_) async => const [
+              DomainMembership(id: 2, name: 'Home', role: 'member'),
+            ],
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(authProvider.future);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      events.add(const RejectedOidcSession(BackendPreset.hosted, 'nx_cards'));
+      await Future<void>.delayed(Duration.zero);
+      expect(c.read(authProvider).value?.userId, '7');
+      events.add(const RejectedOidcSession(BackendPreset.hosted, 'nx_books'));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.read(authProvider).value, isNull);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(PrefsKeys.userId), isNull);
+      expect(prefs.getInt('nexus.domain.hosted.7'), 2);
+      expect(prefs.getString(PrefsKeys.lastUserId), '7');
+    },
+  );
+
   test('late validation cannot restore or clear a new selection', () async {
     final remote = Completer<NexusIdentity?>();
     final c = ProviderContainer(

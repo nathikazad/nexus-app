@@ -21,6 +21,14 @@ Future<T> withAuthAvailability<T>(Future<T> Function() operation) async {
   try {
     return await operation();
   } catch (error) {
+    if (error is OidcException) {
+      if (error.kind == OidcTokenRefreshFailureKind.terminal) {
+        throw const AuthSessionRejected();
+      }
+      if (error.kind == OidcTokenRefreshFailureKind.transient) {
+        throw const AuthServiceUnavailable();
+      }
+    }
     final type = OidcOfflineAuthErrorHandler.categorizeError(error);
     if (type == OfflineAuthErrorType.authenticationError) {
       throw const AuthSessionRejected();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -5,6 +6,7 @@ import 'package:oidc/oidc.dart';
 import 'package:oidc_default_store/oidc_default_store.dart';
 
 import 'backend_presets.dart';
+import 'auth_telemetry.dart';
 import 'oidc_config.dart';
 import 'user.dart';
 import 'session_availability.dart';
@@ -16,10 +18,31 @@ class NexusIdentity {
   final String userId;
 }
 
+class RejectedOidcSession {
+  const RejectedOidcSession(this.preset, this.clientAppId);
+  final BackendPreset preset;
+  final String clientAppId;
+}
+
 class NexusOidcService {
-  void prepareRestore(BackendPreset preset, String clientAppId) {
+  NexusOidcService({AuthTelemetryRecorder? telemetry})
+    : _telemetry = telemetry ?? authTelemetryRecorder;
+
+  final AuthTelemetryRecorder _telemetry;
+  final _rejections = StreamController<RejectedOidcSession>.broadcast(
+    sync: true,
+  );
+  Stream<RejectedOidcSession> get rejections => _rejections.stream;
+  int _sessionGeneration = 0;
+
+  void prepareRestore(
+    BackendPreset preset,
+    String clientAppId, {
+    String? userId,
+  }) {
     _restorePreset = preset;
     _restoreClientAppId = clientAppId;
+    _telemetryUserId = userId;
   }
 
   OidcUserManager? _manager;
@@ -27,7 +50,12 @@ class NexusOidcService {
   String? _clientAppId;
   BackendPreset? _restorePreset;
   String? _restoreClientAppId;
+  String? _telemetryUserId;
   Future<void>? _initializing;
+  StreamSubscription<OidcEvent>? _eventSubscription;
+  StreamSubscription<OidcUser?>? _userSubscription;
+  DateTime? _lastTokenCreationTime;
+  DateTime? _refreshStartedForTokenCreation;
 
   Future<void> _ensureInitialized() async {
     final preset = _restorePreset;
@@ -73,9 +101,14 @@ class NexusOidcService {
       ),
     );
     await manager.init();
+    await _eventSubscription?.cancel();
+    await _userSubscription?.cancel();
     _manager = manager;
     _preset = preset;
     _clientAppId = clientAppId;
+    _lastTokenCreationTime = manager.currentUser?.token.creationTime;
+    _eventSubscription = manager.events().listen(_handleOidcEvent);
+    _userSubscription = manager.userChanges().listen(_handleUserChange);
   }
 
   Future<NexusIdentity?> restore(
@@ -86,8 +119,27 @@ class NexusOidcService {
     _restoreClientAppId = clientAppId;
     return withAuthAvailability(() async {
       await _ensureInitialized();
-      if (_manager!.currentUser == null) return null;
-      return _loadIdentity(preset);
+      if (_manager!.currentUser == null) {
+        final userId = _telemetryUserId;
+        if (userId != null) {
+          await _telemetry.endSession(
+            app: clientAppId,
+            userId: userId,
+            event: 'session_missing',
+          );
+        }
+        return null;
+      }
+      final identity = await _loadIdentity(preset);
+      _telemetryUserId = identity.userId;
+      await _telemetry.beginSession(
+        app: clientAppId,
+        userId: identity.userId,
+        interactive: false,
+        token: _tokenFields(_manager!.currentUser!.token),
+      );
+      unawaited(_flushTelemetry());
+      return identity;
     });
   }
 
@@ -96,6 +148,7 @@ class NexusOidcService {
     String clientAppId, {
     AuthLoginProfile? profile,
   }) async {
+    _sessionGeneration++;
     _restorePreset = preset;
     _restoreClientAppId = clientAppId;
     await _ensureInitialized();
@@ -112,18 +165,58 @@ class NexusOidcService {
         'Please sign in as ${profile.label}. A different account was authenticated.',
       );
     }
+    _telemetryUserId = identity.userId;
+    await _telemetry.beginSession(
+      app: clientAppId,
+      userId: identity.userId,
+      interactive: true,
+      token: _tokenFields(_manager!.currentUser!.token),
+    );
+    unawaited(_flushTelemetry());
     return identity;
   }
 
   Future<String> accessToken({bool forceRefresh = false}) async {
-    // A cold offline restore may have failed before constructing the manager.
-    // Retry that initialization on a later request after the network returns.
-    await withAuthAvailability(_ensureInitialized);
-    final token = await _manager?.getAccessToken(forceRefresh: forceRefresh);
-    if (token == null || token.isEmpty) {
-      throw Exception('Your sign-in session has expired');
+    final generation = _sessionGeneration;
+    final preset = _restorePreset;
+    final app = _restoreClientAppId;
+    try {
+      return await withAuthAvailability(() async {
+        // Retry initialization after a cold offline startup.
+        await _ensureInitialized();
+        final currentToken = _manager?.currentUser?.token;
+        if (currentToken != null &&
+            (forceRefresh ||
+                currentToken.isAccessTokenAboutToExpire(
+                  tolerance: const Duration(seconds: 30),
+                ))) {
+          _recordRefreshStarted(
+            forceRefresh ? 'forced' : 'on_demand',
+            currentToken,
+          );
+        }
+        final token = await _manager?.getAccessToken(
+          forceRefresh: forceRefresh,
+        );
+        if (token == null || token.isEmpty) {
+          throw const AuthSessionRejected();
+        }
+        return token;
+      });
+    } on AuthSessionRejected {
+      final userId = _telemetryUserId;
+      if (userId != null && app != null) {
+        await _telemetry.endSession(
+          app: app,
+          userId: userId,
+          event: 'session_rejected',
+        );
+      }
+      if (generation == _sessionGeneration && preset != null && app != null) {
+        _rejections.add(RejectedOidcSession(preset, app));
+      }
+      rethrow;
     }
-    return token;
   }
 
   Future<NexusIdentity> _loadIdentity(
@@ -163,10 +256,116 @@ class NexusOidcService {
   }
 
   Future<void> logout() async {
+    _sessionGeneration++;
     final manager = _manager;
+    final userId = _telemetryUserId;
+    final app = _restoreClientAppId;
+    if (userId != null && app != null) {
+      await _telemetry.endSession(
+        app: app,
+        userId: userId,
+        event: 'signed_out',
+      );
+      unawaited(_flushTelemetry());
+    }
     if (manager != null && manager.currentUser != null) await manager.logout();
+    _telemetryUserId = null;
+  }
+
+  void _handleOidcEvent(OidcEvent event) {
+    if (event is OidcTokenExpiringEvent) {
+      _recordRefreshStarted('auto_expiry', event.currentToken);
+      return;
+    }
+    if (event is OidcTokenRefreshFailedEvent) {
+      final userId = _telemetryUserId;
+      final app = _restoreClientAppId;
+      if (userId != null && app != null) {
+        unawaited(
+          _telemetry.enqueue(
+            app: app,
+            userId: userId,
+            event: 'token_refresh_failed',
+            fields: {
+              'source': event.source.name,
+              'failure_kind': event.kind.name,
+              'will_retry': event.willRetry,
+              if (event.oauthErrorCode != null)
+                'oauth_error_code': event.oauthErrorCode,
+              if (event.httpStatusCode != null)
+                'http_status_code': event.httpStatusCode,
+            },
+            at: event.at,
+          ),
+        );
+      }
+      _refreshStartedForTokenCreation = null;
+    }
+  }
+
+  void _handleUserChange(OidcUser? user) {
+    final token = user?.token;
+    if (token == null) return;
+    final previous = _lastTokenCreationTime;
+    _lastTokenCreationTime = token.creationTime;
+    if (previous == null || !token.creationTime.isAfter(previous)) return;
+    final userId = _telemetryUserId;
+    final app = _restoreClientAppId;
+    if (userId != null && app != null) {
+      unawaited(
+        _telemetry.enqueue(
+          app: app,
+          userId: userId,
+          event: 'token_refresh_succeeded',
+          fields: _tokenFields(token),
+        ),
+      );
+      unawaited(_flushTelemetry());
+    }
+    _refreshStartedForTokenCreation = null;
+  }
+
+  void _recordRefreshStarted(String source, OidcToken token) {
+    if (_refreshStartedForTokenCreation == token.creationTime) return;
+    _refreshStartedForTokenCreation = token.creationTime;
+    final userId = _telemetryUserId;
+    final app = _restoreClientAppId;
+    if (userId == null || app == null) return;
+    unawaited(
+      _telemetry.enqueue(
+        app: app,
+        userId: userId,
+        event: 'token_refresh_started',
+        fields: {'source': source, ..._tokenFields(token)},
+      ),
+    );
+  }
+
+  Future<void> _flushTelemetry() async {
+    final manager = _manager;
+    final preset = _restorePreset;
+    final app = _restoreClientAppId;
+    final userId = _telemetryUserId;
+    final token = manager?.currentUser?.token.accessToken;
+    if (preset == null || app == null || userId == null || token == null)
+      return;
+    await _telemetry.flush(
+      preset: preset,
+      app: app,
+      userId: userId,
+      accessToken: token,
+    );
   }
 }
+
+Map<String, Object?> _tokenFields(OidcToken token) => {
+  'access_token_issued_at': token.creationTime.toUtc().toIso8601String(),
+  if (token.calculateExpiresAt() case final expiresAt?)
+    'access_token_expires_at': expiresAt.toUtc().toIso8601String(),
+  if (token.expiresIn case final lifetime?)
+    'access_token_lifetime_seconds': lifetime.inSeconds,
+  'has_refresh_token': token.refreshToken?.isNotEmpty ?? false,
+};
 
 final nexusOidcService = NexusOidcService();
 

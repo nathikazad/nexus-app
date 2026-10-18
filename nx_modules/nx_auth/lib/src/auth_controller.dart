@@ -17,6 +17,10 @@ final oidcSessionRestoreProvider = Provider<OidcSessionRestore>(
   (ref) => nexusOidcService.restore,
 );
 
+final oidcSessionRejectionsProvider = Provider<Stream<RejectedOidcSession>>(
+  (ref) => nexusOidcService.rejections,
+);
+
 final retainAuthSessionWhenOfflineProvider = Provider<bool>((ref) => false);
 
 /// Only apps with an account/domain-scoped offline library may open locally
@@ -60,6 +64,17 @@ class AuthController extends AsyncNotifier<User?> {
   @override
   Future<User?> build() async {
     final generation = ++_generation;
+    final subscription = ref.read(oidcSessionRejectionsProvider).listen((
+      event,
+    ) {
+      final user = state.value;
+      if (user == null ||
+          user.preset != event.preset ||
+          ref.read(nexusClientAppIdProvider) != event.clientAppId)
+        return;
+      unawaited(_rejectCurrentSession(user, _generation));
+    });
+    ref.onDispose(subscription.cancel);
     final openLocally = ref.read(restoreCachedSessionImmediatelyProvider);
     if (!openLocally && initialDelay > Duration.zero)
       await Future.delayed(initialDelay);
@@ -109,6 +124,7 @@ class AuthController extends AsyncNotifier<User?> {
             nexusOidcService.prepareRestore(
               preset,
               ref.read(nexusClientAppIdProvider),
+              userId: userId,
             );
           }
           final restore = ref.read(oidcSessionRestoreProvider);
@@ -128,6 +144,11 @@ class AuthController extends AsyncNotifier<User?> {
 
       if (preset != null && preset.requiresOidc) {
         print('[AuthController] Restoring OIDC session for ${preset.key}');
+        nexusOidcService.prepareRestore(
+          preset,
+          ref.read(nexusClientAppIdProvider),
+          userId: userId,
+        );
         NexusIdentity? identity;
         try {
           identity = await ref.read(oidcSessionRestoreProvider)(
@@ -169,6 +190,17 @@ class AuthController extends AsyncNotifier<User?> {
       print('[AuthController] Error loading saved credentials: $e');
       return null;
     }
+  }
+
+  Future<void> _rejectCurrentSession(User user, int generation) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!ref.mounted || generation != _generation || state.value != user)
+      return;
+    // Publish rejection immediately so routers leave the cached reader.
+    // Keep the partition's cached files and pending edits for the next login.
+    _generation++;
+    state = const AsyncValue.data(null);
+    await _clearSessionPrefs(prefs);
   }
 
   Future<void> _validateCached(

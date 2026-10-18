@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:nx_auth/nx_auth.dart';
+import 'package:oidc/oidc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -103,6 +104,13 @@ void main() {
     },
   );
 
+  test('missing access token is a typed session rejection', () async {
+    await expectLater(
+      NexusOidcService().accessToken(),
+      throwsA(isA<AuthSessionRejected>()),
+    );
+  });
+
   test(
     'transport and server failures are unavailable; auth rejection is not',
     () async {
@@ -110,13 +118,23 @@ void main() {
         TimeoutException('offline'),
         http.ClientException('unreachable'),
         http.Response('', 503),
+        const OidcException(
+          'refresh unavailable',
+          kind: OidcTokenRefreshFailureKind.transient,
+        ),
       ]) {
         await expectLater(
           withAuthAvailability(() async => throw error),
           throwsA(isA<AuthServiceUnavailable>()),
         );
       }
-      for (final error in [http.Response('', 401), http.Response('', 403)]) {
+      for (final error in [
+        http.Response('', 401),
+        http.Response('', 403),
+        const OidcInteractionRequiredException(
+          message: 'refresh token unavailable',
+        ),
+      ]) {
         await expectLater(
           withAuthAvailability(() async => throw error),
           throwsA(isA<AuthSessionRejected>()),
