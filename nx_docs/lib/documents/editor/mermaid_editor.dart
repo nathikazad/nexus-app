@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:mermaid_core/mermaid_core.dart' as core;
@@ -36,14 +37,7 @@ class NxMermaidPreview extends StatelessWidget {
       );
     }
     if (interactive) {
-      return MermaidView(
-        source: source,
-        theme: theme,
-        semanticNodes: true,
-        keepLastGoodSceneOnError: false,
-        errorBuilder: error,
-        allowFullscreen: false,
-      );
+      return _InteractiveMermaid(source: source, errorBuilder: error);
     }
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -59,6 +53,170 @@ class NxMermaidPreview extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Owns the viewport so the controls can match the app's Material theme.
+class _InteractiveMermaid extends StatefulWidget {
+  const _InteractiveMermaid({required this.source, required this.errorBuilder});
+
+  final String source;
+  final Widget Function(BuildContext, Object) errorBuilder;
+
+  @override
+  State<_InteractiveMermaid> createState() => _InteractiveMermaidState();
+}
+
+class _InteractiveMermaidState extends State<_InteractiveMermaid> {
+  final _transform = TransformationController();
+  final _diagramKey = GlobalKey();
+  Size _viewport = Size.zero;
+  bool _needsFit = true;
+  static const _minScale = 0.01;
+  static const _maxScale = 8.0;
+
+  @override
+  void didUpdateWidget(covariant _InteractiveMermaid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.source != widget.source) _needsFit = true;
+  }
+
+  @override
+  void dispose() {
+    _transform.dispose();
+    super.dispose();
+  }
+
+  void _fit() {
+    final box = _diagramKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize || box.size.isEmpty || _viewport.isEmpty) {
+      return;
+    }
+    final scale = math
+        .min(
+          (_viewport.width - 40) / box.size.width,
+          (_viewport.height - 40) / box.size.height,
+        )
+        .clamp(_minScale, _maxScale);
+    _transform.value = Matrix4.identity()
+      ..translateByDouble(
+        (_viewport.width - box.size.width * scale) / 2,
+        (_viewport.height - box.size.height * scale) / 2,
+        0,
+        1,
+      )
+      ..scaleByDouble(scale, scale, scale, 1);
+    _needsFit = false;
+  }
+
+  void _zoom(double factor) {
+    final current = _transform.value.getMaxScaleOnAxis();
+    final scale = (current * factor).clamp(_minScale, _maxScale) / current;
+    final center = _viewport.center(Offset.zero);
+    _transform.value =
+        (Matrix4.identity()
+              ..translateByDouble(center.dx, center.dy, 0, 1)
+              ..scaleByDouble(scale, scale, scale, 1)
+              ..translateByDouble(-center.dx, -center.dy, 0, 1))
+            .multiplied(_transform.value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (_viewport != constraints.biggest) {
+                _viewport = constraints.biggest;
+                _needsFit = true;
+              }
+              if (_needsFit) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _needsFit) _fit();
+                });
+              }
+              return ClipRect(
+                child: InteractiveViewer(
+                  transformationController: _transform,
+                  constrained: false,
+                  boundaryMargin: const EdgeInsets.all(double.infinity),
+                  minScale: _minScale,
+                  maxScale: _maxScale,
+                  child: MermaidDiagram(
+                    key: _diagramKey,
+                    source: widget.source,
+                    theme: MaterialMermaidTheme.fromTheme(Theme.of(context)),
+                    semanticNodes: true,
+                    keepLastGoodSceneOnError: false,
+                    errorBuilder: widget.errorBuilder,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Material(
+            color: colors.surfaceContainerLow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: BorderSide(color: colors.outlineVariant),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Zoom out',
+                    onPressed: () => _zoom(1 / 1.25),
+                    icon: const Icon(Icons.remove, size: 20),
+                  ),
+                  IconButton(
+                    tooltip: 'Zoom in',
+                    onPressed: () => _zoom(1.25),
+                    icon: const Icon(Icons.add, size: 20),
+                  ),
+                  SizedBox(
+                    height: 20,
+                    child: VerticalDivider(
+                      width: 16,
+                      color: colors.outlineVariant,
+                    ),
+                  ),
+                  TextButton(onPressed: _fit, child: const Text('Fit')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A diagram-only view that fills the app window on every device.
+class NxMermaidViewer extends StatelessWidget {
+  const NxMermaidViewer({super.key, required this.source});
+
+  final String source;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      leading: IconButton(
+        tooltip: 'Close',
+        icon: const Icon(Icons.close),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      title: const Text('Mermaid diagram'),
+    ),
+    body: SafeArea(child: NxMermaidPreview(source: source, interactive: true)),
+  );
 }
 
 /// Returns new source only on Save; closing leaves the document unchanged.

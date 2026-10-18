@@ -59,13 +59,90 @@ void main() {
           MaterialApp(home: NxMermaidEditor(source: source)),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(MermaidView), findsOneWidget);
+        expect(find.byType(InteractiveViewer), findsOneWidget);
         expect(tester.takeException(), isNull);
       }
     },
     variant: const TargetPlatformVariant({
       TargetPlatform.android,
       TargetPlatform.iOS,
+      TargetPlatform.macOS,
+    }),
+  );
+
+  testWidgets(
+    'View opens a full-window diagram with zoom, pan and reset',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      for (final size in [
+        const Size(390, 844),
+        const Size(820, 1180),
+        const Size(1200, 900),
+      ]) {
+        tester.view.physicalSize = size;
+        final node = nxMermaidNode(source: source);
+        final editor = EditorState(
+          document: Document(
+            root: Node(type: 'page', children: [node]),
+          ),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: AppFlowyEditor(
+                editorState: editor,
+                editorStyle: const EditorStyle.desktop(
+                  padding: EdgeInsets.zero,
+                ),
+                blockComponentBuilders: nxBlockComponentBuilders(),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.getCenter(find.text('View')).dx,
+          lessThan(tester.getCenter(find.text('Edit')).dx),
+        );
+        await tester.tap(find.text('View'));
+        await tester.pumpAndSettle();
+        expect(find.byType(NxMermaidViewer), findsOneWidget);
+        expect(find.byType(NxMermaidEditor), findsNothing);
+        expect(find.byType(TextField), findsNothing);
+        expect(tester.getSize(find.byType(NxMermaidViewer)), size);
+        final interactive = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        final transform = interactive.transformationController!;
+        final fitted = transform.value.clone();
+        await tester.tap(find.byTooltip('Zoom in'));
+        await tester.pumpAndSettle();
+        expect(
+          transform.value.getMaxScaleOnAxis(),
+          greaterThan(fitted.getMaxScaleOnAxis()),
+        );
+        final zoomed = transform.value.clone();
+        await tester.drag(find.byType(InteractiveViewer), const Offset(60, 40));
+        await tester.pumpAndSettle();
+        expect(transform.value, isNot(zoomed));
+        await tester.tap(find.text('Fit'));
+        await tester.pumpAndSettle();
+        expect(transform.value, fitted);
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+        expect(find.byType(NxMermaidViewer), findsNothing);
+        expect(node.attributes['source'], source);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+        editor.dispose();
+      }
+    },
+    variant: const TargetPlatformVariant({
+      TargetPlatform.iOS,
+      TargetPlatform.android,
       TargetPlatform.macOS,
     }),
   );

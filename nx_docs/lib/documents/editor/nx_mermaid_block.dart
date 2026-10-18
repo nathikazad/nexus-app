@@ -39,6 +39,21 @@ class _MermaidBlockState extends State<_MermaidBlock> with SelectableMixin {
   bool _opening = false;
   String get _source => _stringAttribute(widget.node, 'source', '');
 
+  Future<void> _openViewer() async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        useSafeArea: false,
+        builder: (_) =>
+            Dialog.fullscreen(child: NxMermaidViewer(source: _source)),
+      );
+    } finally {
+      _opening = false;
+    }
+  }
+
   Future<void> _openEditor() async {
     if (_opening) return;
     _opening = true;
@@ -102,13 +117,25 @@ class _MermaidBlockState extends State<_MermaidBlock> with SelectableMixin {
                   children: [
                     const Icon(Icons.account_tree_outlined, size: 18),
                     const SizedBox(width: 8),
-                    const Text('Mermaid'),
-                    const Spacer(),
-                    Icon(
-                      widget.editorState.editable
-                          ? Icons.edit_outlined
-                          : Icons.open_in_full,
-                      size: 18,
+                    const Expanded(
+                      child: Text('Mermaid', overflow: TextOverflow.ellipsis),
+                    ),
+                    TextButton.icon(
+                      onPressed: _openViewer,
+                      icon: const Icon(Icons.open_in_full, size: 18),
+                      label: const Text('View'),
+                    ),
+                    TextButton.icon(
+                      onPressed: _openEditor,
+                      icon: Icon(
+                        widget.editorState.editable
+                            ? Icons.edit_outlined
+                            : Icons.code,
+                        size: 18,
+                      ),
+                      label: Text(
+                        widget.editorState.editable ? 'Edit' : 'Source',
+                      ),
                     ),
                   ],
                 ),

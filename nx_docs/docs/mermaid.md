@@ -1,7 +1,12 @@
 # Mermaid in NX Docs
 
 Insert a Mermaid block from the slash menu or end-of-document element picker.
-Tap its preview to open the source editor and zoomable diagram. Wide windows show
+Use **View**, to the left of **Edit**, to open a diagram-only view filling the app
+window on desktop, tablet, and phone. Pinch or scroll to zoom, drag to pan, or use
+the compact bottom toolbar (minus, plus, and Fit). Fit frames the whole diagram
+again; Close returns to the document without changing its source.
+
+Tap **Edit** or the preview to open the source editor and zoomable diagram. Wide windows show
 source and preview side by side; narrow screens use Preview and Source tabs.
 Save applies one undoable editor transaction. Close leaves the document unchanged.
 Read-only documents allow viewing and source inspection, but not saving.
