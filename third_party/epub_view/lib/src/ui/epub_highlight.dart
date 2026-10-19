@@ -43,7 +43,7 @@ class EpubHighlight {
         color: value['color']);
   }
 
-  Color get paintColor => Color(color).withValues(alpha: .35);
+  Color get paintColor => Color(color).withValues(alpha: .65);
 }
 
 int compareEpubLocations(EpubLocation a, EpubLocation b) {

@@ -262,10 +262,21 @@ class PagedEpubContentState extends State<PagedEpubContent> {
     });
   }
 
+  Rect _selectionBounds() {
+    final visible = Offset.zero & viewport;
+    final rects = _highlightRects(_selection!)
+        .where((rect) => rect.overlaps(visible))
+        .map((rect) => rect.intersect(visible));
+    return rects.isEmpty
+        ? Rect.fromCenter(center: visible.center, width: 0, height: 0)
+        : rects.reduce((a, b) => a.expandToInclude(b));
+  }
+
   Widget _highlightToolbar() => Material(
+        key: const ValueKey('epub-highlight-toolbar'),
         elevation: 6,
         borderRadius: BorderRadius.circular(24),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
+        child: Wrap(alignment: WrapAlignment.center, children: [
           for (final item in const [
             (0xffffe082, 'Yellow'),
             (0xffa5d6a7, 'Green'),
@@ -707,6 +718,20 @@ class PagedEpubContentState extends State<PagedEpubContent> {
                     ),
                   ),
                 ),
+              Positioned.fill(
+                  child: IgnorePointer(
+                      child: ClipRect(
+                          child: Stack(children: [
+                for (final highlight in <EpubHighlight>[
+                  for (final highlight in widget.highlights)
+                    if (_selection?.id != highlight.id) highlight,
+                  if (_selection != null) _selection!
+                ])
+                  for (final rect in _highlightRects(highlight))
+                    Positioned.fromRect(
+                        rect: rect,
+                        child: ColoredBox(color: highlight.paintColor)),
+              ])))),
               Align(
                   alignment: Alignment.topLeft,
                   child: SizedBox(
@@ -749,25 +774,11 @@ class PagedEpubContentState extends State<PagedEpubContent> {
                       ),
                     )),
                   )),
-              Positioned.fill(
-                  child: IgnorePointer(
-                      child: ClipRect(
-                          child: Stack(children: [
-                for (final highlight in [
-                  ...widget.highlights,
-                  if (_selection != null) _selection!
-                ])
-                  for (final rect in _highlightRects(highlight))
-                    Positioned.fromRect(
-                        rect: rect,
-                        child: ColoredBox(color: highlight.paintColor)),
-              ])))),
               if (_selection != null)
-                Positioned(
-                    bottom: 8,
-                    left: 0,
-                    right: 0,
-                    child: Center(child: _highlightToolbar())),
+                Positioned.fill(
+                    child: CustomSingleChildLayout(
+                        delegate: _HighlightToolbarLayout(_selectionBounds()),
+                        child: _highlightToolbar())),
               if (_error != null)
                 Positioned.fill(
                     child: ColoredBox(
@@ -780,4 +791,32 @@ class PagedEpubContentState extends State<PagedEpubContent> {
           ),
         );
       });
+}
+
+/// Positions the actual toolbar size next to the visible passage, keeping every
+/// action inside the reader even near page edges or in a narrow window.
+class _HighlightToolbarLayout extends SingleChildLayoutDelegate {
+  const _HighlightToolbarLayout(this.selection);
+  final Rect selection;
+  static const margin = 8.0;
+  static const gap = 8.0;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints(maxWidth: math.max(0, constraints.maxWidth - margin * 2));
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final maxX = math.max(margin, size.width - childSize.width - margin);
+    final maxY = math.max(margin, size.height - childSize.height - margin);
+    final above = selection.top - gap - childSize.height;
+    final y = above >= margin ? above : selection.bottom + gap;
+    return Offset(
+        (selection.center.dx - childSize.width / 2).clamp(margin, maxX),
+        y.clamp(margin, maxY));
+  }
+
+  @override
+  bool shouldRelayout(_HighlightToolbarLayout oldDelegate) =>
+      selection != oldDelegate.selection;
 }
