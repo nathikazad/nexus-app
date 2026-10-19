@@ -164,7 +164,9 @@ class PagedEpubContentState extends State<PagedEpubContent> {
       final end = EpubLocation(
           run.block, run.index, run.render.text.toPlainText().length);
       if (compareEpubLocations(end, highlight.start) <= 0 ||
-          compareEpubLocations(start, highlight.end) >= 0) continue;
+          compareEpubLocations(start, highlight.end) >= 0) {
+        continue;
+      }
       final from = compareEpubLocations(start, highlight.start) < 0
           ? highlight.start.character
           : 0;
@@ -190,7 +192,9 @@ class PagedEpubContentState extends State<PagedEpubContent> {
       final plain = run.render.text.toPlainText();
       final b = EpubLocation(run.block, run.index, plain.length);
       if (compareEpubLocations(b, start) <= 0 ||
-          compareEpubLocations(a, end) >= 0) continue;
+          compareEpubLocations(a, end) >= 0) {
+        continue;
+      }
       final from = compareEpubLocations(a, start) < 0 ? start.character : 0;
       final to =
           compareEpubLocations(b, end) > 0 ? end.character : plain.length;
@@ -241,7 +245,9 @@ class PagedEpubContentState extends State<PagedEpubContent> {
   void _applyHighlight(int color, {bool deleted = false}) {
     final selection = _selection;
     if (selection == null ||
-        compareEpubLocations(selection.start, selection.end) >= 0) return;
+        compareEpubLocations(selection.start, selection.end) >= 0) {
+      return;
+    }
     widget.onHighlightChanged?.call(
         EpubHighlight(
             id: selection.id,

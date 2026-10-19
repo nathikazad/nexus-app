@@ -32,7 +32,9 @@ class EpubHighlight {
         value['id'] is! String ||
         value['text'] is! String ||
         value['color'] is! int ||
-        compareEpubLocations(start, end) >= 0) return null;
+        compareEpubLocations(start, end) >= 0) {
+      return null;
+    }
     return EpubHighlight(
         id: value['id'],
         start: start,
