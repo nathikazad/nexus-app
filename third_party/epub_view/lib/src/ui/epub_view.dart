@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'paged_content.dart';
+import 'epub_highlight.dart';
 
 export 'package:epubx/epubx.dart' hide Image;
 
@@ -35,6 +36,8 @@ class EpubView extends StatefulWidget {
     ),
     this.shrinkWrap = false,
     this.paginated = false,
+    this.highlights = const [],
+    this.onHighlightChanged,
     super.key,
   });
 
@@ -42,6 +45,9 @@ class EpubView extends StatefulWidget {
   final ExternalLinkPressed? onExternalLinkPressed;
   final bool shrinkWrap;
   final bool paginated;
+  final List<EpubHighlight> highlights;
+  final void Function(EpubHighlight highlight, bool deleted)?
+      onHighlightChanged;
   final void Function(EpubChapterViewValue? value)? onChapterChanged;
 
   /// Called when a document is loaded
@@ -339,15 +345,18 @@ class _EpubViewState extends State<EpubView> {
               tagsToExtend: {"img"},
               builder: (imageContext) {
                 final source = imageContext.attributes['src'];
-                final filename = chapters[paragraphs[index].chapterIndex].ContentFileName;
+                final filename =
+                    chapters[paragraphs[index].chapterIndex].ContentFileName;
                 final images = document.Content?.Images;
                 final key = source == null || filename == null || images == null
-                    ? null : resolveEpubImageKey(source, filename, images.keys);
+                    ? null
+                    : resolveEpubImageKey(source, filename, images.keys);
                 final bytes = key == null ? null : images?[key]?.Content;
                 if (bytes == null) {
                   final alt = imageContext.attributes['alt']?.trim();
                   return Text(alt == null || alt.isEmpty
-                      ? 'Image unavailable' : 'Image unavailable: $alt');
+                      ? 'Image unavailable'
+                      : 'Image unavailable: $alt');
                 }
                 final content =
                     bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
@@ -385,6 +394,8 @@ class _EpubViewState extends State<EpubView> {
     if (widget.paginated) {
       return PagedEpubContent(
         key: _pagedKey,
+        highlights: widget.highlights,
+        onHighlightChanged: widget.onHighlightChanged,
         blockCount: _paragraphs.length,
         chapterStarts: _chapterIndexes,
         initialBlock: _epubCfiReader!.paragraphIndexByCfiFragment ?? 0,

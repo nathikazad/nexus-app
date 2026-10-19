@@ -1,3 +1,4 @@
+import '../book/epub_highlights_repository.dart';
 import 'dart:convert';
 
 import 'package:nx_db/documents.dart';
@@ -14,7 +15,14 @@ import 'reading_history_store.dart';
 
 /// Local verification and projections, independent of networking and UI.
 final class BooksSyncStore {
-  BooksSyncStore(this.library, this.documents, this.histories, this.catalog);
+  BooksSyncStore(
+    this.library,
+    this.documents,
+    this.histories,
+    this.catalog, {
+    this.highlights,
+  });
+  final EpubHighlightsRepository? highlights;
   final FileLibrary library;
   final CachedDocumentContentRepository documents;
   final ReadingHistoryStore histories;
@@ -172,6 +180,15 @@ final class BooksSyncStore {
     for (final entry in manifest.where((e) => e.modelType == 'Book')) {
       final marker =
           jsonDecode((await library.read('book_sync', '${entry.id}'))!) as Map;
+      final attributes = (marker['book'] as Map)['attributes'];
+      final file = attributes is Map ? attributes['book_file'] : null;
+      final records = file is Map ? file['highlights'] : null;
+      if (records is Map) {
+        await highlights?.acceptRemote(
+          entry.id,
+          Map<String, dynamic>.from(records),
+        );
+      }
       books.add(
         bookFromModel(
           Model.fromJson(Map<String, dynamic>.from(marker['book'] as Map)),

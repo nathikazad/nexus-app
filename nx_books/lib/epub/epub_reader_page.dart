@@ -23,6 +23,8 @@ class EpubReaderPage extends StatefulWidget {
     required this.title,
     this.target,
     this.savedPosition,
+    this.highlights = const [],
+    this.onHighlightChanged,
     this.textScaleFactor = 1,
     this.onPositionChanged,
     this.onReadingContextChanged,
@@ -37,6 +39,9 @@ class EpubReaderPage extends StatefulWidget {
   final String? target;
   final Map<String, dynamic>? savedPosition;
   final double textScaleFactor;
+  final List<EpubHighlight> highlights;
+  final void Function(EpubHighlight highlight, bool deleted)?
+  onHighlightChanged;
   final Future<void> Function(Map<String, dynamic>)? onPositionChanged;
   final ValueChanged<String>? onReadingContextChanged;
   final Future<EpubBook> Function(String path) loadBook;
@@ -187,6 +192,8 @@ class _EpubReaderPageState extends State<EpubReaderPage> {
     ),
     body: EpubView(
       paginated: true,
+      highlights: widget.highlights,
+      onHighlightChanged: widget.onHighlightChanged,
       controller: _controller,
       onExternalLinkPressed: (_) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,3 +1,4 @@
+import 'package:nx_books/data/book/epub_highlights_repository.dart';
 import 'package:epub_view/epub_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,13 @@ class _Remote implements EpubProgressRemote {
   Future<Map<String, dynamic>?> load(int id) async => null;
   @override
   Future<void> save(int id, Map<String, dynamic> value) async {}
+}
+
+class _HighlightsRemote implements EpubHighlightsRemote {
+  @override
+  Future<Map<String, dynamic>> load(int id) async => {};
+  @override
+  Future<void> save(int id, Map<String, dynamic> records) async {}
 }
 
 NxBook book(int id) => NxBook(
@@ -44,7 +52,17 @@ void main() {
         remote: _Remote(),
       );
       final container = ProviderContainer(
-        overrides: [epubProgressRepositoryProvider.overrideWithValue(progress)],
+        overrides: [
+          epubProgressRepositoryProvider.overrideWithValue(progress),
+          epubHighlightsRepositoryProvider.overrideWith((ref) {
+            final repo = EpubHighlightsRepository(
+              account: 'test',
+              remote: _HighlightsRemote(),
+            );
+            ref.onDispose(repo.dispose);
+            return repo;
+          }),
+        ],
       );
       EpubRouteRequest request(int id, {int? block}) => EpubRouteRequest(
         book: book(id),

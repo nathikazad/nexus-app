@@ -1,3 +1,4 @@
+import 'book/epub_highlights_repository.dart';
 import 'package:nx_db/app_session.dart';
 import 'book/app_document_repository.dart';
 import 'package:nx_db/app_reads.dart';
@@ -60,6 +61,19 @@ final epubProgressRepositoryProvider = Provider<EpubProgressRepository>((ref) {
     persistData: offline.AppDataPolicy.current.storesOfflineData,
     account: user?.domainId == null ? 'no-session' : user!.storageKey,
     remote: KgqlEpubProgressRemote(ref.watch(graphqlClientProvider)),
+  );
+  ref.onDispose(repository.dispose);
+  return repository;
+});
+
+final epubHighlightsRepositoryProvider = Provider<EpubHighlightsRepository>((
+  ref,
+) {
+  final user = ref.watch(authProvider).value;
+  final repository = EpubHighlightsRepository(
+    account: user?.domainId == null ? 'no-session' : user!.storageKey,
+    persistData: offline.AppDataPolicy.current.storesOfflineData,
+    remote: KgqlEpubHighlightsRemote(ref.watch(graphqlClientProvider)),
   );
   ref.onDispose(repository.dispose);
   return repository;
@@ -179,6 +193,7 @@ final booksLibrarySyncProvider =
       final library = ref.watch(booksFileLibraryProvider);
       final catalog = ref.watch(bookRepositoryProvider);
       final epubProgress = ref.watch(epubProgressRepositoryProvider);
+      final highlights = ref.watch(epubHighlightsRepositoryProvider);
       if (library == null ||
           histories == null ||
           catalog is! CachedBookRepository) {
@@ -191,6 +206,7 @@ final booksLibrarySyncProvider =
             throw StateError('Offline. Sync will retry automatically.');
           }
           unawaited(epubProgress.flush().catchError((Object _) {}));
+          await highlights.flush();
         },
         reconciler: BooksHashPull(
           transport: KgqlBooksSyncTransport(client),
@@ -199,6 +215,7 @@ final booksLibrarySyncProvider =
             ref.watch(bookDocumentRepositoryProvider),
             histories,
             catalog,
+            highlights: highlights,
           ),
           reportStore: ref.watch(downloadReportStoreProvider),
           onChanged: () {

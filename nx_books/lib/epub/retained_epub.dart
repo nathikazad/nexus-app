@@ -106,7 +106,11 @@ class _RetainedEpubHostState extends ConsumerState<RetainedEpubHost>
           child: TickerMode(
             enabled: widget.request != null,
             child: EpubRoutePage(
-              key: ValueKey((request.book.id, request.book.bookFileHash)),
+              key: ValueKey((
+                widget.account,
+                request.book.id,
+                request.book.bookFileHash,
+              )),
               request: request,
               routeKey: _routeKey!,
               onBack: widget.onBack,

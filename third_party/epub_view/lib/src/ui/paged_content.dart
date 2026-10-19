@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'page_breaks.dart';
+import 'epub_highlight.dart';
 
 class EpubPageInfo {
   const EpubPageInfo(this.page, this.pages, this.atStart, this.atEnd);
@@ -107,6 +108,8 @@ class PagedEpubContent extends StatefulWidget {
     this.onBookPage,
     this.onMeasured,
     this.measureOnly = false,
+    this.highlights = const [],
+    this.onHighlightChanged,
     super.key,
   });
   final int blockCount;
@@ -123,12 +126,171 @@ class PagedEpubContent extends StatefulWidget {
   final ValueChanged<EpubPageInfo?>? onBookPage;
   final ValueChanged<int>? onMeasured;
   final bool measureOnly;
+  final List<EpubHighlight> highlights;
+  final void Function(EpubHighlight highlight, bool deleted)?
+      onHighlightChanged;
 
   @override
   State<PagedEpubContent> createState() => PagedEpubContentState();
 }
 
 class PagedEpubContentState extends State<PagedEpubContent> {
+  EpubHighlight? _selection;
+  EpubLocation? _selectionOrigin;
+  final _viewportKey = GlobalKey();
+
+  double get _pageStart => _breaks.isEmpty ? 0 : _breaks[_page];
+
+  (_Run, int)? _textAt(Offset global) {
+    final box = _viewportKey.currentContext?.findRenderObject();
+    if (box is! RenderBox) return null;
+    final point = box.globalToLocal(global) + Offset(0, _pageStart);
+    for (final run in _runs.reversed) {
+      final local = point - run.offset;
+      if (!(Offset.zero & run.render.size).contains(local)) continue;
+      final index = run.render.getPositionForOffset(local).offset;
+      if (_textSelections(run.render.text)
+          .any((s) => index >= s.start && index <= s.end)) {
+        return (run, index);
+      }
+    }
+    return null;
+  }
+
+  List<Rect> _highlightRects(EpubHighlight highlight) {
+    final result = <Rect>[];
+    for (final run in _runs) {
+      final start = EpubLocation(run.block, run.index);
+      final end = EpubLocation(
+          run.block, run.index, run.render.text.toPlainText().length);
+      if (compareEpubLocations(end, highlight.start) <= 0 ||
+          compareEpubLocations(start, highlight.end) >= 0) continue;
+      final from = compareEpubLocations(start, highlight.start) < 0
+          ? highlight.start.character
+          : 0;
+      final to = compareEpubLocations(end, highlight.end) > 0
+          ? highlight.end.character
+          : end.character;
+      for (final range in _textSelections(run.render.text)) {
+        final a = math.max(from, range.start), b = math.min(to, range.end);
+        if (a >= b) continue;
+        for (final rect in run.render.getBoxesForSelection(
+            TextSelection(baseOffset: a, extentOffset: b))) {
+          result.add(rect.toRect().shift(run.offset - Offset(0, _pageStart)));
+        }
+      }
+    }
+    return result;
+  }
+
+  String _selectedText(EpubLocation start, EpubLocation end) {
+    final text = <String>[];
+    for (final run in _runs) {
+      final a = EpubLocation(run.block, run.index);
+      final plain = run.render.text.toPlainText();
+      final b = EpubLocation(run.block, run.index, plain.length);
+      if (compareEpubLocations(b, start) <= 0 ||
+          compareEpubLocations(a, end) >= 0) continue;
+      final from = compareEpubLocations(a, start) < 0 ? start.character : 0;
+      final to =
+          compareEpubLocations(b, end) > 0 ? end.character : plain.length;
+      text.add(plain.substring(from, to).replaceAll('\uFFFC', ''));
+    }
+    return text.join('\n');
+  }
+
+  void _startSelection(Offset global) {
+    final hit = _textAt(global);
+    if (hit == null) return;
+    final (run, index) = hit;
+    final word = run.render.getWordBoundary(TextPosition(offset: index));
+    final start = EpubLocation(run.block, run.index, word.start);
+    final end = EpubLocation(run.block, run.index, word.end);
+    setState(() {
+      _selectionOrigin = start;
+      _selection = EpubHighlight(
+          id: '', start: start, end: end, text: _selectedText(start, end));
+    });
+  }
+
+  void _extendSelection(Offset global) {
+    final hit = _textAt(global);
+    final origin = _selectionOrigin;
+    if (hit == null || origin == null) return;
+    final (run, index) = hit;
+    final word = run.render.getWordBoundary(TextPosition(offset: index));
+    final point = EpubLocation(run.block, run.index, word.end);
+    final backwards = compareEpubLocations(point, origin) < 0;
+    final start =
+        backwards ? EpubLocation(run.block, run.index, word.start) : origin;
+    final end = backwards ? origin : point;
+    setState(() => _selection = EpubHighlight(
+        id: '', start: start, end: end, text: _selectedText(start, end)));
+  }
+
+  void _tapHighlight(Offset local) {
+    for (final highlight in widget.highlights.reversed) {
+      if (_highlightRects(highlight).any((rect) => rect.contains(local))) {
+        setState(() => _selection = highlight);
+        return;
+      }
+    }
+    setState(() => _selection = null);
+  }
+
+  void _applyHighlight(int color, {bool deleted = false}) {
+    final selection = _selection;
+    if (selection == null ||
+        compareEpubLocations(selection.start, selection.end) >= 0) return;
+    widget.onHighlightChanged?.call(
+        EpubHighlight(
+            id: selection.id,
+            start: selection.start,
+            end: selection.end,
+            text: selection.text,
+            color: color),
+        deleted);
+    setState(() {
+      _selection = null;
+      _selectionOrigin = null;
+    });
+  }
+
+  Widget _highlightToolbar() => Material(
+        elevation: 6,
+        borderRadius: BorderRadius.circular(24),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final item in const [
+            (0xffffe082, 'Yellow'),
+            (0xffa5d6a7, 'Green'),
+            (0xfff48fb1, 'Pink')
+          ])
+            IconButton(
+                key: ValueKey('epub-highlight-${item.$2}'),
+                tooltip: 'Highlight ${item.$2.toLowerCase()}',
+                icon: Icon(Icons.circle, color: Color(item.$1)),
+                onPressed: () => _applyHighlight(item.$1)),
+          if (_selection!.id.isNotEmpty)
+            IconButton(
+                key: const ValueKey('epub-highlight-remove'),
+                tooltip: 'Remove highlight',
+                icon: const Icon(Icons.format_color_reset),
+                onPressed: () =>
+                    _applyHighlight(_selection!.color, deleted: true)),
+          IconButton(
+              tooltip: 'Copy selected text',
+              icon: const Icon(Icons.copy),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: _selection!.text));
+                setState(() => _selection = null);
+              }),
+          IconButton(
+              tooltip: 'Close highlight toolbar',
+              icon: const Icon(Icons.close),
+              onPressed: () => setState(() => _selection = null)),
+        ]),
+      );
+
   String readingContext() {
     final buffer = StringBuffer();
     var character = 0;
@@ -263,9 +425,11 @@ class PagedEpubContentState extends State<PagedEpubContent> {
   void jumpToLocation(EpubLocation location) {
     if (!mounted) return;
     _releaseTrackedImages();
-    final index = location.block.clamp(0, math.max(0, widget.blockCount - 1)).toInt();
+    final index =
+        location.block.clamp(0, math.max(0, widget.blockCount - 1)).toInt();
     if (_chapterFor(index) != _chapter) widget.onChapterChanged?.call();
     setState(() {
+      _selection = null;
       _anchor = EpubLocation(index, location.run, location.character);
       _chapter = _chapterFor(index);
       _breaks = [];
@@ -299,6 +463,7 @@ class PagedEpubContentState extends State<PagedEpubContent> {
 
   void _showPage(int page) {
     setState(() {
+      _selection = null;
       _page = page;
       _anchor = _anchorAt(_breaks[page]);
     });
@@ -485,7 +650,17 @@ class PagedEpubContentState extends State<PagedEpubContent> {
             return KeyEventResult.ignored;
           },
           child: GestureDetector(
+            key: _viewportKey,
             behavior: HitTestBehavior.opaque,
+            onLongPressStart: widget.onHighlightChanged == null
+                ? null
+                : (details) => _startSelection(details.globalPosition),
+            onLongPressMoveUpdate: widget.onHighlightChanged == null
+                ? null
+                : (details) => _extendSelection(details.globalPosition),
+            onTapUp: widget.onHighlightChanged == null
+                ? null
+                : (details) => _tapHighlight(details.localPosition),
             onHorizontalDragStart: (_) => _dragDistance = 0,
             onHorizontalDragUpdate: (details) =>
                 _dragDistance += details.primaryDelta ?? 0,
@@ -568,6 +743,25 @@ class PagedEpubContentState extends State<PagedEpubContent> {
                       ),
                     )),
                   )),
+              Positioned.fill(
+                  child: IgnorePointer(
+                      child: ClipRect(
+                          child: Stack(children: [
+                for (final highlight in [
+                  ...widget.highlights,
+                  if (_selection != null) _selection!
+                ])
+                  for (final rect in _highlightRects(highlight))
+                    Positioned.fromRect(
+                        rect: rect,
+                        child: ColoredBox(color: highlight.paintColor)),
+              ])))),
+              if (_selection != null)
+                Positioned(
+                    bottom: 8,
+                    left: 0,
+                    right: 0,
+                    child: Center(child: _highlightToolbar())),
               if (_error != null)
                 Positioned.fill(
                     child: ColoredBox(
