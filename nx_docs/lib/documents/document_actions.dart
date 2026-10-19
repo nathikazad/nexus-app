@@ -266,6 +266,9 @@ class DocumentResultController {
         .watchCatalog(catalogQuery)
         .firstWhere((state) => !state.isInitialLoading);
     return state.items
+        .where(
+          (summary) => query.tagFilters.isNotEmpty || !summary.isJournalEntry,
+        )
         .map((summary) => summary.toDocument())
         .toList(growable: false);
   }

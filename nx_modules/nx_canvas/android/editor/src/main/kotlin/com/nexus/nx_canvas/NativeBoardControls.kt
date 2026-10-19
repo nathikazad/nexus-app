@@ -9,19 +9,19 @@ import android.view.View
 class NativeBoardControls(context:Context,private val navigate:(Int,Int,Boolean)->Unit,private val overview:()->Unit):View(context) {
     private val gesture=BoardPressTracker()
     private var active:Int?=null
-    private val centers=listOf(76f to 28f,28f to 76f,76f to 76f,124f to 76f,76f to 124f)
+    private val centers=listOf(72f to 24f,120f to 24f,24f to 48f,120f to 72f,72f to 72f)
     private val directions=listOf(0 to -1,-1 to 0,0 to 0,1 to 0,0 to 1)
-    init { contentDescription="Page navigation: tap an arrow for the adjacent page. Center dot opens overview. Use two fingers to scroll." }
+    init { contentDescription="Page navigation: tap an arrow for the adjacent page. Left dot opens overview. Hold the pen button and drag to scroll." }
     private fun hit(x:Float,y:Float):Int? {
-        val px=x*152/width;val py=y*152/height
+        val px=x*152/width;val py=y*96/height
         return centers.indexOfFirst{(cx,cy)->kotlin.math.abs(px-cx)<=24 && kotlin.math.abs(py-cy)<=24}.takeIf{it>=0}
     }
     override fun onDraw(canvas:Canvas) {
-        canvas.save();canvas.scale(width/152f,height/152f)
+        canvas.save();canvas.scale(width/152f,height/96f)
         val paint=Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color=Color.WHITE;canvas.drawRoundRect(4f,4f,148f,148f,30f,30f,paint)
+        paint.color=Color.WHITE;canvas.drawRoundRect(4f,4f,148f,92f,12f,12f,paint)
         paint.color=0xffd5d5d5.toInt();paint.style=Paint.Style.STROKE;paint.strokeWidth=1f
-        canvas.drawRoundRect(4f,4f,148f,148f,30f,30f,paint)
+        canvas.drawRoundRect(4f,4f,148f,92f,12f,12f,paint)
         for((index,center) in centers.withIndex()) {
             val (x,y)=center
             if(active==index){paint.style=Paint.Style.FILL;paint.color=0xffe3e3e3.toInt();canvas.drawCircle(x,y,21f,paint)}

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:nx_docs/documents/document_session.dart';
 import 'package:nx_docs/sync/native/background_uploader.dart';
@@ -94,10 +95,15 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
     DocumentKind kind = DocumentKind.document,
     DateTime? journalDate,
   }) async {
+    final timer = Stopwatch()..start();
+    debugPrint('[NX Docs create] stage=remote_start kind=${kind.name}');
     final document = await _remoteApi.createDocument(
       title: title,
       kind: kind,
       journalDate: journalDate,
+    );
+    debugPrint(
+      '[NX Docs create] id=${document.id} stage=remote_end elapsed_ms=${timer.elapsedMilliseconds}',
     );
     await _localStore.importRemoteDocuments(<RemoteDocument>[
       RemoteDocument(
@@ -109,6 +115,9 @@ final class NativeDocumentWorkspace implements DocumentWorkspace {
         revision: RemoteRevision(document.updatedAt.toUtc().toIso8601String()),
       ),
     ]);
+    debugPrint(
+      '[NX Docs create] id=${document.id} stage=local_saved elapsed_ms=${timer.elapsedMilliseconds}',
+    );
     return document;
   }
 
@@ -240,7 +249,14 @@ final class _NativeCatalogFeed {
     }
   }
 
-  Future<void> refresh() async {
+  Future<void>? _activeRefresh;
+  Future<void> refresh() {
+    return _activeRefresh ??= _refresh().whenComplete(
+      () => _activeRefresh = null,
+    );
+  }
+
+  Future<void> _refresh() async {
     if (_closed) return;
     final items = await remoteApi.fetchCatalog(query);
     if (_closed) return;

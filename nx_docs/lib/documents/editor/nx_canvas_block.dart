@@ -55,6 +55,8 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
   final _blockKey = GlobalKey();
   double? _height;
   bool _opening = false;
+  bool _pageMode = false;
+  int _pageIndex = 0;
   String? _error;
   bool _converting = false;
   String? _conversionMessage;
@@ -164,7 +166,11 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
           child: Text(_canEdit && _android ? 'Tap to draw' : 'Empty canvas'),
         );
       }
-      return CustomPaint(painter: _CanvasOverviewPainter(drawing));
+      final pages = canvasPreviewPages(drawing);
+      final page = _pageMode && pages.isNotEmpty
+          ? pages[_pageIndex % pages.length]
+          : null;
+      return CustomPaint(painter: _CanvasOverviewPainter(drawing, page: page));
     } catch (_) {
       return const Center(child: Text('Cannot display this canvas format'));
     }
@@ -195,7 +201,12 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
                 children: [
                   Positioned.fill(
                     child: Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: EdgeInsets.fromLTRB(
+                        14,
+                        48,
+                        14,
+                        _pageMode ? 44 : 14,
+                      ),
                       child: _preview(),
                     ),
                   ),
@@ -207,29 +218,87 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
                       style: TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
                   ),
-                  if (_canEdit && widget.convert != null)
-                    Positioned(
-                      right: 8,
-                      top: 4,
-                      child: TextButton.icon(
-                        onPressed: _opening || _converting ? null : _convert,
-                        icon: _converting
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.auto_awesome, size: 16),
-                        label: Text(
-                          _converting
-                              ? 'Converting…'
-                              : _conversion?.pendingSave == true
-                              ? 'Save converted text'
-                              : 'Convert to text',
+                  Positioned(
+                    right: 4,
+                    top: 0,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.muted),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _viewButton(
+                                false,
+                                Icons.grid_view,
+                                'Whole canvas',
+                              ),
+                              Container(
+                                width: 1,
+                                height: 24,
+                                color: AppColors.muted,
+                              ),
+                              _viewButton(
+                                true,
+                                Icons.description_outlined,
+                                'One page at a time',
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                        if (_canEdit && widget.convert != null)
+                          IconButton(
+                            style: nxBlockActionStyle,
+                            tooltip: _conversion?.pendingSave == true
+                                ? 'Save converted text'
+                                : 'Convert to text',
+                            onPressed: _opening || _converting
+                                ? null
+                                : _convert,
+                            icon: _converting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.text_fields,
+                                    size: nxBlockActionIconSize,
+                                  ),
+                          ),
+                        if (widget.editor.editable)
+                          IconButton(
+                            key: ValueKey('delete-block-${widget.node.id}'),
+                            tooltip: 'Delete block',
+                            style: nxBlockActionStyle,
+                            onPressed: _opening || _converting
+                                ? null
+                                : () => deleteNxBlock(
+                                    context,
+                                    widget.node,
+                                    widget.editor,
+                                  ),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: nxBlockActionIconSize,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (_pageMode)
+                    Positioned(
+                      left: 0,
+                      right: 28,
+                      bottom: 0,
+                      child: _pageNavigation(),
                     ),
                   if (_canEdit)
                     Positioned(
@@ -286,6 +355,64 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
     return child;
   }
 
+  Widget _viewButton(bool pages, IconData icon, String tooltip) {
+    final selected = _pageMode == pages;
+    return Semantics(
+      selected: selected,
+      child: IconButton(
+        tooltip: tooltip,
+        style: nxBlockActionStyle,
+        onPressed: () => setState(() {
+          if (_pageMode != pages) {
+            _pageMode = pages;
+            _pageIndex = 0;
+          }
+        }),
+        icon: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: selected ? Colors.black : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Icon(
+            icon,
+            size: nxBlockActionIconSize,
+            color: selected ? Colors.white : AppColors.muted,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pageNavigation() {
+    final pages = canvasPreviewPages(canvasDrawing(widget.node));
+    if (pages.isEmpty) return const SizedBox.shrink();
+    final index = _pageIndex % pages.length;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          tooltip: 'Previous canvas page',
+          onPressed: pages.length < 2
+              ? null
+              : () => setState(
+                  () => _pageIndex = (index - 1 + pages.length) % pages.length,
+                ),
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Text('${index + 1} / ${pages.length}'),
+        IconButton(
+          tooltip: 'Next canvas page',
+          onPressed: pages.length < 2
+              ? null
+              : () => setState(() => _pageIndex = (index + 1) % pages.length),
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    );
+  }
+
   void _saveHeight() {
     if (_height == null || !_canEdit) return;
     unawaited(
@@ -331,16 +458,17 @@ class _CanvasBlockState extends State<_CanvasBlock> with SelectableMixin {
 }
 
 class _CanvasOverviewPainter extends CustomPainter {
-  _CanvasOverviewPainter(this.drawing);
+  _CanvasOverviewPainter(this.drawing, {this.page});
+  final Rect? page;
   final Drawing drawing;
   @override
   void paint(Canvas canvas, Size size) {
     final points = drawing.strokes.expand((s) => s.points).toList();
     if (points.isEmpty) return;
-    final minX = points.map((p) => p.x).reduce(math.min),
-        maxX = points.map((p) => p.x).reduce(math.max);
-    final minY = points.map((p) => p.y).reduce(math.min),
-        maxY = points.map((p) => p.y).reduce(math.max);
+    final minX = page?.left ?? points.map((p) => p.x).reduce(math.min),
+        maxX = page?.right ?? points.map((p) => p.x).reduce(math.max);
+    final minY = page?.top ?? points.map((p) => p.y).reduce(math.min),
+        maxY = page?.bottom ?? points.map((p) => p.y).reduce(math.max);
     final scale = math
         .min(
           (size.width - 24) / math.max(1, maxX - minX),
@@ -354,6 +482,7 @@ class _CanvasOverviewPainter extends CustomPainter {
       size.height / 2 - (minY + maxY) / 2 * scale,
     );
     canvas.scale(scale);
+    if (page != null) canvas.clipRect(page!);
     for (final stroke in drawing.strokes) {
       paintStroke(canvas, stroke);
     }
@@ -361,5 +490,6 @@ class _CanvasOverviewPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CanvasOverviewPainter old) => old.drawing != drawing;
+  bool shouldRepaint(_CanvasOverviewPainter old) =>
+      old.drawing != drawing || old.page != page;
 }

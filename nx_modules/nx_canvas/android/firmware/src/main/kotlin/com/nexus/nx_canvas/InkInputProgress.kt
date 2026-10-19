@@ -10,6 +10,7 @@ class InkInputProgress {
     private var penDown = false
     private var admitting = false
     @Synchronized fun admitNewStrokes(enabled: Boolean) { admitting = enabled }
+    @Synchronized fun admitsNewContact() = admitting
     @Synchronized fun acceptsInput() = admitting || penDown
     @Synchronized fun isPenDown() = penDown
     @Synchronized fun isDrained() = processed == submitted && !penDown

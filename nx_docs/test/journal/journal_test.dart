@@ -1,3 +1,6 @@
+import 'package:nx_docs/sync/fake/fake_document_workspace.dart';
+import 'package:nx_docs/library/library_providers.dart';
+import 'package:nx_docs/library/models/catalog_query.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +16,41 @@ import 'package:nx_docs/sync/web/web_document_workspace.dart';
 import 'package:nx_docs/workspace/workspace_providers.dart';
 
 void main() {
+  test(
+    'Docs lists hide journals while the calendar catalog retains them',
+    () async {
+      final workspace = FakeDocumentWorkspace(
+        documents: [
+          documentForCreatedId(1, title: 'Document'),
+          documentForCreatedId(
+            2,
+            title: 'Journal',
+            kind: DocumentKind.journalEntry,
+            journalDate: DateTime(2026, 10, 19),
+          ),
+        ],
+      );
+      final container = ProviderContainer(
+        overrides: [documentWorkspaceProvider.overrideWithValue(workspace)],
+      );
+      addTearDown(() async {
+        container.dispose();
+        await workspace.close();
+      });
+      container.listen(offlineAllDocumentsProvider, (_, __) {});
+      container.listen(
+        catalogStateProvider(const CatalogQuery.all()),
+        (_, __) {},
+      );
+      final docs = await container.read(offlineAllDocumentsProvider.future);
+      expect(docs.map((d) => d.id), [1]);
+      final catalog = await container.read(
+        catalogStateProvider(const CatalogQuery.all()).future,
+      );
+      expect(catalog.items.map((d) => d.id), containsAll([1, 2]));
+    },
+  );
+
   test(
     'journal creation and summaries preserve calendar dates through storage',
     () {
@@ -66,6 +104,25 @@ void main() {
       expect(created.document, isEmpty);
       expect((await service.openDate(date, title: 'same date')).id, created.id);
       expect(remote.documents, hasLength(1));
+    },
+  );
+
+  test(
+    'new dates reuse the calendar refresh instead of reloading before each create',
+    () async {
+      final remote = FakeDocumentRemoteApi();
+      final workspace = WebDocumentWorkspace(remoteApi: remote);
+      final service = JournalService(workspace);
+      addTearDown(() async {
+        service.dispose();
+        await workspace.close();
+      });
+      await service.openDate(DateTime(2026, 10, 17), title: 'First');
+      final before = remote.catalogFetchCount;
+      await service.openDate(DateTime(2026, 10, 18), title: 'Second');
+      // Web refreshes visible catalogs after a write, but there is no pre-write reload.
+      expect(remote.catalogFetchCount - before, 1);
+      expect(remote.documents, hasLength(2));
     },
   );
 

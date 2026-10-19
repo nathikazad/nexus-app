@@ -28,6 +28,9 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private var overview:NativeBoardGrid?=null
     private lateinit var boardControls:NativeBoardControls
     private var overlayTouch=false
+    private var penPanButton=false
+    private var penPanContact=false
+    private var penPanning=false
     private var twoFingerScroll=false
     private var scrollTracking=false
     private var scrollAnchorY=0.0
@@ -195,7 +198,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             editing=NativeEditingView(this,engine){checkpointSafely();updateControls()}.apply{visibility=View.GONE}
             body.addView(editing,FrameLayout.LayoutParams(-1,-1))
             boardControls=NativeBoardControls(this,{dx,dy,jump->navigateBoard(dx,dy,jump)},{showOverview()})
-            body.addView(boardControls,FrameLayout.LayoutParams(dp(152),dp(152),Gravity.BOTTOM or Gravity.RIGHT).apply{
+            body.addView(boardControls,FrameLayout.LayoutParams(dp(152),dp(96),Gravity.BOTTOM or Gravity.RIGHT).apply{
                 rightMargin=dp(16);bottomMargin=dp(16)
             })
             boardLabel=TextView(this).apply{
@@ -240,7 +243,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
     private fun nativeTool()=overview==null && tool in listOf(NativeTool.PEN,NativeTool.RUB,NativeTool.REGION)
     private fun flag(enabled:Boolean){if(::input.isInitialized)input.enable(enabled)}
     private fun resumeInk(){
-        val enabled = ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&!twoFingerScroll&&!rendering&&nativeTool()
+        val enabled = ready&&resumed&&!closing&&!busy&&!dialogOpen&&!overlayTouch&&!twoFingerScroll&&!penPanButton&&!penPanContact&&navigation.isEmpty&&!navigationScheduled&&!rendering&&nativeTool()
         flag(enabled)
         scheduleErasureRepaint()
         if (enabled && initialPresented && !openReported) {
@@ -352,8 +355,46 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         if(event.pointerCount==0)return
         val type=event.getToolType(0)
         if(type==MotionEvent.TOOL_TYPE_STYLUS || type==MotionEvent.TOOL_TYPE_ERASER) {
+            val buttonWasHeld=penPanButton
+            penPanButton=stylusPanButton(type,event.buttonState)
+            if(penPanButton && !buttonWasHeld)flag(false)
             hardwareEraser(stylusToolOverride(type, event.buttonState))
+            if(buttonWasHeld && !penPanButton && !penPanContact)resumeInk()
         }
+    }
+    /** Button-held tip gestures are navigation, never ink or erasure. */
+    private fun stylusPan(event:MotionEvent):Boolean {
+        if(event.pointerCount==0 || event.getToolType(0)!=MotionEvent.TOOL_TYPE_STYLUS)return false
+        val held=stylusPanButton(event.getToolType(0),event.buttonState)
+        if(event.actionMasked==MotionEvent.ACTION_DOWN && held && !overlayTouch && ready && resumed &&
+            !busy && !closing && !dialogOpen && !rendering && nativeTool()) {
+            val rect=Rect()
+            if(!body.getGlobalVisibleRect(rect) || !rect.contains(event.rawX.toInt(),event.rawY.toInt()))return false
+            penPanButton=true;penPanContact=true
+            scrollAnchorX=event.x/density;scrollAnchorY=event.y/density
+            perform("stylus_pan") {
+                if(penPanContact) {
+                    penPanning=true;scrollBase=model.view;scrollAxis.reset()
+                    engine.dispatch(CanvasCommand.RememberView)
+                    editing.tool=NativeTool.HAND;editing.visibility=View.VISIBLE;editing.invalidate()
+                }
+            }
+        }
+        if(!penPanContact)return false
+        when(event.actionMasked) {
+            MotionEvent.ACTION_MOVE -> if(penPanning && held) {
+                val movement=scrollAxis.movement(event.x/density-scrollAnchorX,event.y/density-scrollAnchorY)
+                engine.dispatch(CanvasCommand.SetView(scrollBase.copy(x=scrollBase.x+movement.x,y=scrollBase.y+movement.y)))
+                editing.postInvalidateOnAnimation()
+            }
+            MotionEvent.ACTION_UP,MotionEvent.ACTION_CANCEL -> {
+                if(penPanning && event.actionMasked==MotionEvent.ACTION_CANCEL)engine.dispatch(CanvasCommand.SetView(scrollBase))
+                val moved=penPanning
+                penPanContact=false;penPanning=false;penPanButton=held
+                if(moved){checkpointSafely();showTool()}else resumeInk()
+            }
+        }
+        return true
     }
     /** Finger navigation never changes the active pen tool or interprets a stylus as a finger. */
     private fun tabletScroll(event:MotionEvent):Boolean {
@@ -427,7 +468,9 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
             twoFingerScroll=false;scrollTracking=false;palmGuard.fingersUp()
             checkpointSafely();showTool()
         }
-        if(tabletScroll(event)) return true
+        // Temporarily disabled for palm-lag comparison; keep the implementation above.
+        // if(tabletScroll(event)) return true
+        if(stylusPan(event)) return true
         if(!overlayTouch) {
             stylusButtons(event)
 
@@ -478,6 +521,7 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         diagnostics.event("navigation.request",mapOf("dx" to dx,"dy" to dy,"jump" to jump,"busy" to busy,"rendering" to rendering))
         diagnosticNavigationAt=System.nanoTime()
         if(!ready || closing)return
+        flag(false)
         navigation.add(dx,dy,jump);scheduleNavigation()
     }
     private fun scheduleNavigation() {
@@ -550,12 +594,13 @@ class CanvasEditorScreen(private val activity: Activity, private val components:
         try {
         if(::boardControls.isInitialized)boardControls.cancelPress()
         overlayTouch=false
-        if(twoFingerScroll && ::engine.isInitialized) {
+        if((twoFingerScroll || penPanning) && ::engine.isInitialized) {
             engine.dispatch(CanvasCommand.SetView(scrollBase))
             editing.visibility=View.GONE
         }
         twoFingerScroll=false;scrollTracking=false;palmGuard.fingersUp()
         palmGuard.stylusUp()
+        penPanButton=false;penPanContact=false;penPanning=false
         resumed=false
         if(::engine.isInitialized)runCatching {
             flag(false)

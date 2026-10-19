@@ -35,7 +35,7 @@ class _JournalCalendarState extends ConsumerState<JournalCalendar> {
   Future<void> _refresh() async {
     final workspace = ref.read(documentWorkspaceProvider);
     try {
-      await workspace?.refreshCatalog(const CatalogQuery.all());
+      await ref.read(journalServiceProvider)?.refresh(force: true);
       if (mounted &&
           identical(workspace, ref.read(documentWorkspaceProvider))) {
         setState(() => _refreshFailed = false);
@@ -278,15 +278,11 @@ class _JournalCalendarState extends ConsumerState<JournalCalendar> {
             message: hasEntry ? 'Open journal entry' : 'Create journal entry',
             child: Material(
               color: selected
-                  ? colors.primaryContainer
+                  ? colors.onSurface
                   : hasEntry
                   ? colors.secondaryContainer
                   : Colors.transparent,
-              shape: CircleBorder(
-                side: today
-                    ? BorderSide(color: colors.primary)
-                    : BorderSide.none,
-              ),
+              shape: const CircleBorder(),
               child: InkWell(
                 key: ValueKey('journal-day-${journalDateKey(date)}'),
                 customBorder: const CircleBorder(),
@@ -298,6 +294,7 @@ class _JournalCalendarState extends ConsumerState<JournalCalendar> {
                       '$day',
                       style: TextStyle(
                         fontSize: 12,
+                        color: selected ? colors.surface : colors.onSurface,
                         fontWeight: hasEntry
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -305,8 +302,24 @@ class _JournalCalendarState extends ConsumerState<JournalCalendar> {
                     ),
                     SizedBox(
                       height: 5,
-                      child: hasEntry
-                          ? Icon(Icons.circle, size: 4, color: colors.primary)
+                      child: today
+                          ? Center(
+                              child: Container(
+                                width: 14,
+                                height: 2,
+                                color: selected
+                                    ? colors.surface
+                                    : colors.onSurface,
+                              ),
+                            )
+                          : hasEntry
+                          ? Icon(
+                              Icons.circle,
+                              size: 4,
+                              color: selected
+                                  ? colors.surface
+                                  : colors.onSurface,
+                            )
                           : null,
                     ),
                   ],

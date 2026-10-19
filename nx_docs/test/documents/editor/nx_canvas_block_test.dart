@@ -6,6 +6,108 @@ import 'package:nx_canvas_core/drawing.dart';
 import 'package:nx_docs/documents/editor/nx_appflowy_blocks.dart';
 
 void main() {
+  testWidgets('canvas delete shares the action row and retains Undo', (
+    tester,
+  ) async {
+    final node = nxCanvasNode();
+    final editor = EditorState(
+      document: Document(
+        root: Node(type: 'page', children: [node, paragraphNode()]),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AppFlowyEditor(
+            editorState: editor,
+            blockWrapper: (context, {required node, required child}) =>
+                NxBlockDeleteControl(
+                  node: node,
+                  editorState: editor,
+                  enabled: true,
+                  child: child,
+                ),
+            blockComponentBuilders: nxBlockComponentBuilders(
+              canvasDocumentId: '1',
+              persistCanvasDocument: () async {},
+              convertCanvas: (_, __) async => throw UnimplementedError(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Delete block'), findsOneWidget);
+    final delete = tester.getCenter(find.byTooltip('Delete block'));
+    final convert = tester.getCenter(find.byTooltip('Convert to text'));
+    expect(delete.dy, convert.dy);
+    expect(delete.dx, greaterThan(convert.dx));
+    await tester.tap(find.byTooltip('Delete block'));
+    await tester.pumpAndSettle();
+    expect(
+      editor.document.root.children.where((n) => n.type == nxCanvasBlockType),
+      isEmpty,
+    );
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(editor.document.root.children.first.type, nxCanvasBlockType);
+    await tester.pumpWidget(const SizedBox());
+    editor.dispose();
+  });
+
+  testWidgets(
+    'canvas page preview cycles and wraps without opening the editor',
+    (tester) async {
+      final node = nxCanvasNode();
+      node.updateAttributes({
+        'drawing': Drawing(
+          boards: {'width': 100, 'height': 100},
+          strokes: [
+            for (final x in [10.0, 110.0])
+              InkStroke(
+                id: '$x',
+                points: [Dot(x, 10)],
+                color: 0xff000000,
+                width: 2,
+              ),
+          ],
+        ).toJson(),
+      });
+      final editor = EditorState(
+        document: Document(
+          root: Node(type: 'page', children: [node]),
+        ),
+      )..editable = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AppFlowyEditor(
+              editable: false,
+              editorState: editor,
+              blockComponentBuilders: nxBlockComponentBuilders(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('One page at a time'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 2'), findsOneWidget);
+      await tester.tap(find.byTooltip('Next canvas page'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 / 2'), findsOneWidget);
+      await tester.tap(find.byTooltip('Next canvas page'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 2'), findsOneWidget);
+      await tester.tap(find.byTooltip('Whole canvas'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 2'), findsNothing);
+      expect(find.byType(InteractiveViewer), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      editor.dispose();
+    },
+  );
+
   testWidgets(
     'end picker appends after a canvas without replacing it',
     (tester) async {

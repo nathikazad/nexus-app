@@ -39,7 +39,26 @@ class DriftLocalNotesStore implements LocalNotesStore, QueuedDocumentReader {
     return row.copyWith(documentJson: Value(reference));
   }
 
-  Future<LocalDocument> _fromDocumentRow(LocalDocumentRow row) async {
+  // The initial read, live subscription and foreground refresh often request
+  // the same immutable file together. Reuse one decoded body, scoped to this
+  // account/store; any row change invalidates it, including pending edits.
+  LocalDocumentRow? _decodedRow;
+  Future<LocalDocument>? _decodedBody;
+  Future<LocalDocument> _fromDocumentRow(LocalDocumentRow row) {
+    if (_decodedRow == row && _decodedBody != null) return _decodedBody!;
+    _decodedRow = row;
+    final body = _decodeDocumentRow(row);
+    _decodedBody = body;
+    return body.catchError((Object error, StackTrace stack) {
+      if (identical(_decodedBody, body)) {
+        _decodedRow = null;
+        _decodedBody = null;
+      }
+      Error.throwWithStackTrace(error, stack);
+    });
+  }
+
+  Future<LocalDocument> _decodeDocumentRow(LocalDocumentRow row) async {
     final storage = files;
     if (storage == null) return mapper.fromDocumentRow(row);
     final json = await storage.read(row.documentJson);

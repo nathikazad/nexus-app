@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:nx_docs/documents/document_session.dart';
 import 'package:nx_docs/sync/native/background_uploader.dart';
@@ -56,7 +57,11 @@ final class NativeDocumentSession implements DocumentSession {
   Stream<DocumentSessionState> get states => _states.stream;
 
   Future<void> _start() async {
+    final timer = Stopwatch()..start();
     final cached = await _localStore.getDocumentByRemoteId(documentId);
+    debugPrint(
+      '[NX Docs open] id=$documentId local=${cached != null} full=${cached?.document.hasFullDocument ?? false} read_ms=${timer.elapsedMilliseconds}',
+    );
     if (_closed) return;
     _applyLocal(cached);
     _localSubscription = _localStore

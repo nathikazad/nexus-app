@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:nx_docs/library/models/catalog_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_docs/documents/document_models.dart';
@@ -15,10 +16,31 @@ final journalServiceProvider = Provider<JournalService?>((ref) {
 });
 
 class JournalService {
-  JournalService(this.workspace);
+  JournalService(this.workspace) {
+    // Keep one catalog subscription alive across date taps.
+    _catalogSubscription = workspace
+        .watchCatalog(const CatalogQuery.all())
+        .listen((_) {}, onError: (Object _) {});
+  }
+  late final StreamSubscription<CatalogState> _catalogSubscription;
+  Future<void>? _refresh;
+  Future<void> refresh({bool force = false}) {
+    if (force) _refresh = null;
+    return _refresh ??= workspace
+        .refreshCatalog(const CatalogQuery.all())
+        .catchError((Object error) {
+          _refresh = null;
+          throw error;
+        });
+  }
+
   final DocumentWorkspace workspace;
   bool _disposed = false;
-  void dispose() => _disposed = true;
+  void dispose() {
+    _disposed = true;
+    unawaited(_catalogSubscription.cancel());
+  }
+
   final Map<String, Future<NxDocument>> _pending = {};
 
   Future<NxDocument> openDate(DateTime date, {required String title}) {
@@ -33,6 +55,11 @@ class JournalService {
   }
 
   Future<NxDocument> _open(DateTime day, String title) async {
+    final timer = Stopwatch()..start();
+    void mark(String stage) => debugPrint(
+      '[NX Journal open] date=${journalDateKey(day)} stage=$stage elapsed_ms=${timer.elapsedMilliseconds}',
+    );
+    mark('start');
     const query = CatalogQuery.all();
     Future<List<DocumentSummary>> matches() async {
       final ready = Completer<CatalogState>();
@@ -77,16 +104,26 @@ class JournalService {
 
     // Existing cached entries remain available offline.
     final cached = await matches();
-    if (cached.isNotEmpty) return cached.first.toDocument();
-    // Never create from an incomplete/offline catalog: another device may
-    // already have created this date. Uniqueness remains a UI convention.
-    await workspace.refreshCatalog(query);
+    mark('catalog_lookup');
+    if (cached.isNotEmpty) {
+      mark('existing');
+      return cached.first.toDocument();
+    }
+    // Reuse the calendar's completed refresh instead of downloading the entire
+    // catalog on every empty-date tap. Failed refreshes still prevent creation;
+    // per-date uniqueness remains a UI convention across devices.
+    mark('refresh_start');
+    await refresh();
+    mark('refresh_end');
     final refreshed = await matches();
     if (refreshed.isNotEmpty) return refreshed.first.toDocument();
-    return workspace.createDocument(
+    mark('create_start');
+    final created = await workspace.createDocument(
       title: title,
       kind: DocumentKind.journalEntry,
       journalDate: day,
     );
+    mark('create_end');
+    return created;
   }
 }

@@ -82,6 +82,20 @@ void main() {
       remote.error = StateError('offline');
       expect((await service.openDate(day, title: 'same date')).id, created.id);
       expect(remote.documents, hasLength(1));
+      final session = workspace.openDocument(created.id);
+      final ready = await session.states.firstWhere(
+        (state) => state.phase == DocumentPhase.ready,
+      );
+      expect(ready.document!.isJournalEntry, isTrue);
+      expect(ready.document!.hasFullDocument, isTrue);
+      await session.close();
+      final reopened = workspace.openDocument(created.id);
+      final readyAgain = await reopened.states.firstWhere(
+        (state) => state.phase == DocumentPhase.ready,
+      );
+      expect(readyAgain.document!.journalDate, day);
+      expect(remote.liveBatchCount, 0);
+      service.dispose();
     },
   );
 

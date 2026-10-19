@@ -80,6 +80,18 @@ void main() {
         lessThan(2000),
       );
       expect((await store.getDocumentByRemoteId(1))!.document.document, body);
+      final decodedReads = files.reads;
+      expect((await store.getDocumentByRemoteId(1))!.document.document, body);
+      expect(files.reads, decodedReads);
+      await store.saveDraftAndEnqueue(
+        offlineLocalDocument(body: 'Changed body'),
+        operation: offlinePendingOperation(),
+      );
+      expect(
+        (await store.getDocumentByRemoteId(1))!.document.document,
+        'Changed body',
+      );
+      expect(files.reads, greaterThan(decodedReads));
     },
   );
 

@@ -26,17 +26,29 @@ final libraryRefreshProvider = Provider<LibraryRefresh>((ref) {
 
 final offlineAllDocumentsProvider =
     StreamProvider.autoDispose<List<NxDocument>>((ref) {
-      return _watchDocuments(ref, const CatalogQuery.all());
+      return _watchDocuments(
+        ref,
+        const CatalogQuery.all(),
+        excludeJournals: true,
+      );
     });
 
 final offlineRecentDocumentsProvider =
     StreamProvider.autoDispose<List<NxDocument>>((ref) {
-      return _watchDocuments(ref, const CatalogQuery.recent());
+      return _watchDocuments(
+        ref,
+        const CatalogQuery.recent(),
+        excludeJournals: true,
+      );
     });
 
 final offlinePinnedDocumentsProvider =
     StreamProvider.autoDispose<List<NxDocument>>((ref) {
-      return _watchDocuments(ref, const CatalogQuery.pinned());
+      return _watchDocuments(
+        ref,
+        const CatalogQuery.pinned(),
+        excludeJournals: true,
+      );
     });
 
 final offlineBooksProvider = StreamProvider.autoDispose<List<NxDocument>>((
@@ -50,7 +62,11 @@ final offlineDocumentSearchProvider = StreamProvider.autoDispose
       if (searchText.trim().isEmpty) {
         return Stream<List<NxDocument>>.value(const <NxDocument>[]);
       }
-      return _watchDocuments(ref, CatalogQuery.search(searchText));
+      return _watchDocuments(
+        ref,
+        CatalogQuery.search(searchText),
+        excludeJournals: true,
+      );
     });
 
 final offlineTagSystemsProvider = StreamProvider.autoDispose<List<TagSystem>>((
@@ -62,7 +78,11 @@ final offlineTagSystemsProvider = StreamProvider.autoDispose<List<TagSystem>>((
   ).map(tagSystemsFromDocuments);
 });
 
-Stream<List<NxDocument>> _watchDocuments(Ref ref, CatalogQuery query) {
+Stream<List<NxDocument>> _watchDocuments(
+  Ref ref,
+  CatalogQuery query, {
+  bool excludeJournals = false,
+}) {
   final workspace = ref.watch(documentWorkspaceProvider);
   if (workspace == null) {
     return Stream<List<NxDocument>>.value(const <NxDocument>[]);
@@ -71,6 +91,7 @@ Stream<List<NxDocument>> _watchDocuments(Ref ref, CatalogQuery query) {
       .watchCatalog(query)
       .map(
         (state) => state.items
+            .where((summary) => !excludeJournals || !summary.isJournalEntry)
             .map((summary) => summary.toDocument())
             .toList(growable: false),
       );

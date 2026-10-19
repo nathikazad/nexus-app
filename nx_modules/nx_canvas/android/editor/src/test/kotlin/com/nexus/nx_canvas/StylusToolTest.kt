@@ -10,7 +10,9 @@ class StylusToolTest {
         assertEquals(NativeTool.RUB, stylusToolOverride(MotionEvent.TOOL_TYPE_ERASER, MotionEvent.BUTTON_STYLUS_PRIMARY))
     }
     @Test fun sideButtonUsesRegionAndPenTipRestoresSelection() {
-        assertEquals(NativeTool.REGION, stylusToolOverride(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.BUTTON_STYLUS_PRIMARY))
+        assertNull(stylusToolOverride(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.BUTTON_STYLUS_PRIMARY))
+        org.junit.Assert.assertTrue(stylusPanButton(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.BUTTON_STYLUS_PRIMARY))
+        org.junit.Assert.assertFalse(stylusPanButton(MotionEvent.TOOL_TYPE_ERASER, MotionEvent.BUTTON_STYLUS_PRIMARY))
         assertNull(stylusToolOverride(MotionEvent.TOOL_TYPE_STYLUS, 0))
         assertNull(stylusToolOverride(MotionEvent.TOOL_TYPE_FINGER, 0))
     }

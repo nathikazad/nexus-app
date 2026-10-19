@@ -12,12 +12,13 @@ import java.util.LinkedList
  */
 class RecordingNoteView(context: Context, private val diagnostics: DiagnosticSink = CanvasDiagnostics) : NoteView(context) {
     private val progress = InkInputProgress()
+    private val contactGate = InkContactGate()
     fun admitNewStrokes(enabled: Boolean) = progress.admitNewStrokes(enabled)
     fun isDrained() = progress.isDrained()
     override fun onInputTouch(action: Int, x: Int, y: Int, pressure: Int, tool: Int): Int {
         // Direct firmware path: no queue, scheduler, packet copies or synthetic edges.
         // A transition can refuse a new stroke, but must never swallow the real up.
-        if (!progress.acceptsInput()) return 0
+        if (!contactGate.accept(action, progress.admitsNewContact())) return 0
         return super.onInputTouch(action, x, y, pressure, tool)
     }
     @Volatile var onStrokeBoundary:((Boolean,Long)->Unit)?=null
