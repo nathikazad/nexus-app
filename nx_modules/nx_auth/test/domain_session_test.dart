@@ -8,6 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('every domain member can edit content, including legacy viewers', () {
+    const membership = DomainMembership(id: 9, name: 'Shared', role: 'viewer');
+    expect(membership.writable, isTrue);
+  });
   const personal = DomainMembership(id: 1, name: 'Personal', role: 'owner');
   const shared = DomainMembership(id: 2, name: 'Home', role: 'member');
   Future<ProviderContainer> restore(
