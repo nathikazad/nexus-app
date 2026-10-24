@@ -10,6 +10,7 @@ import 'auth_telemetry.dart';
 import 'oidc_config.dart';
 import 'user.dart';
 import 'session_availability.dart';
+import 'diagnostic_oidc_manager.dart';
 import 'flows/auth_flow.dart';
 
 class NexusIdentity {
@@ -45,7 +46,7 @@ class NexusOidcService {
     _telemetryUserId = userId;
   }
 
-  OidcUserManager? _manager;
+  DiagnosticOidcUserManager? _manager;
   BackendPreset? _preset;
   String? _clientAppId;
   BackendPreset? _restorePreset;
@@ -77,7 +78,7 @@ class NexusOidcService {
       return;
     }
     final config = await fetchNexusOidcConfig(preset, clientAppId: clientAppId);
-    final manager = OidcUserManager.lazy(
+    final manager = DiagnosticOidcUserManager.lazy(
       id: 'nexus-${preset.key}-$clientAppId',
       discoveryDocumentUri: OidcUtils.getOpenIdConfigWellKnownUri(
         config.issuer,
@@ -152,12 +153,20 @@ class NexusOidcService {
     _restorePreset = preset;
     _restoreClientAppId = clientAppId;
     await _ensureInitialized();
+    // Null also denotes rejected token claims in this library, not just cancel.
+    final manager = _manager!;
+    manager.validationReasons.clear();
     final user = await authorizeForPlatform(
       currentAuthFlowPlatform,
-      _manager!,
+      manager,
       profile?.loginHint,
     );
-    if (user == null) throw Exception('Sign-in was cancelled');
+    if (user == null) {
+      if (manager.validationReasons.isNotEmpty) {
+        throw AuthSignInValidationFailed(manager.validationReasons.toList());
+      }
+      throw const AuthSignInCancelled();
+    }
     final identity = await _loadIdentity(preset);
     if (profile != null && identity.userId != profile.userId) {
       await _manager!.forgetUser();

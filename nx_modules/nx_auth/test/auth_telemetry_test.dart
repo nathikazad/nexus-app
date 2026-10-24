@@ -12,6 +12,84 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  test(
+    'failed sign-ins survive restart without leaking error contents or crossing accounts',
+    () async {
+      final recorder = AuthTelemetryRecorder();
+      await recorder.signInFailed(
+        app: 'nx_books',
+        userId: null,
+        phase: 'authentication',
+        elapsedMilliseconds: 42,
+        error: Exception(
+          'https://callback?code=secret-code&token=secret-token',
+        ),
+      );
+      await recorder.signInFailed(
+        app: 'nx_books',
+        userId: '8',
+        phase: 'domain_selection',
+        elapsedMilliseconds: 80,
+        error: Exception('private account details'),
+      );
+      var status = 401;
+      final requests = <http.Request>[];
+      final restarted = AuthTelemetryRecorder(
+        client: MockClient((request) async {
+          requests.add(request);
+          return http.Response('', status);
+        }),
+      );
+      Future<void> flush(String user) => restarted.flush(
+        preset: BackendPreset.hosted,
+        app: 'nx_books',
+        userId: user,
+        accessToken: 'credential',
+      );
+      await flush('7');
+      status = 200;
+      await flush('7');
+      await flush('7');
+      expect(requests, hasLength(2));
+      expect(requests[0].body, requests[1].body);
+      final row =
+          (jsonDecode(requests.last.body)['rows'] as List).single as Map;
+      expect(row['event_name'], 'auth.sign_in_failed');
+      expect(row['severity'], 'warning');
+      expect(row['payload']['user_id'], '7');
+      expect(row['payload']['phase'], 'authentication');
+      expect(row['payload']['elapsed_ms'], 42);
+      expect(requests.last.body, isNot(contains('secret-')));
+      expect(requests.last.body, isNot(contains('private account')));
+      await flush('8');
+      expect(requests, hasLength(3));
+      expect(requests.last.body, contains('domain_selection'));
+    },
+  );
+
+  test(
+    'token rejection is distinguished from cancellation without claim values',
+    () async {
+      final recorder = AuthTelemetryRecorder();
+      final reason = authValidationReason(
+        'id token contains untrusted audience(s) [private-client]',
+      );
+      expect(reason, 'audience');
+      await recorder.signInFailed(
+        app: 'nx_books',
+        userId: '7',
+        phase: 'authentication',
+        elapsedMilliseconds: 10,
+        error: AuthSignInValidationFailed([reason]),
+      );
+      final prefs = await SharedPreferences.getInstance();
+      final queued = prefs.getString('nexus.auth.telemetry.queue.nx_books.7')!;
+      expect(queued, contains('token_validation'));
+      expect(queued, contains('audience'));
+      expect(queued, isNot(contains('private-client')));
+    },
+  );
+
   test('uploads auth lifecycle metadata without credentials', () async {
     late http.Request request;
     final recorder = AuthTelemetryRecorder(

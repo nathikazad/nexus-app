@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend_presets.dart';
+import 'auth_telemetry.dart';
 import 'oidc_service.dart';
 import 'user.dart';
 import 'session_availability.dart';
@@ -254,6 +255,10 @@ class AuthController extends AsyncNotifier<User?> {
     AuthLoginProfile? profile,
   }) async {
     final generation = ++_generation;
+    final attempt = Stopwatch()..start();
+    final app = ref.read(nexusClientAppIdProvider);
+    var telemetryUserId = profile?.userId ?? userId;
+    var phase = 'authentication';
     print('[AuthController] login() - user: $userId preset: ${preset.key}');
     state = const AsyncValue.loading();
 
@@ -272,6 +277,8 @@ class AuthController extends AsyncNotifier<User?> {
         resolvedUserId = identity.userId;
       }
 
+      telemetryUserId = resolvedUserId;
+      phase = 'persist_session';
       if (generation != _generation || !ref.mounted) return 'Sign-in cancelled';
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(PrefsKeys.userId, resolvedUserId);
@@ -279,6 +286,7 @@ class AuthController extends AsyncNotifier<User?> {
       await prefs.setString(PrefsKeys.backendPreset, preset.key);
       await prefs.setString(PrefsKeys.sockWsUrl, urls.sockWs);
 
+      phase = 'domain_selection';
       final user = await _restoreDomain(
         User(userId: resolvedUserId, preset: preset),
       );
@@ -289,6 +297,15 @@ class AuthController extends AsyncNotifier<User?> {
       print('[AuthController] Login successful');
       return null;
     } catch (e, stackTrace) {
+      if (preset.requiresOidc) {
+        await authTelemetryRecorder.signInFailed(
+          app: app,
+          userId: telemetryUserId.isEmpty ? null : telemetryUserId,
+          phase: phase,
+          elapsedMilliseconds: attempt.elapsedMilliseconds,
+          error: e,
+        );
+      }
       final errorMessage = e.toString().replaceFirst('Exception: ', '');
       print('[AuthController] Login error: $errorMessage');
       if (generation == _generation && ref.mounted)

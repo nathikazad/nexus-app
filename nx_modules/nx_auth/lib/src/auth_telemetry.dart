@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend_presets.dart';
+import 'session_availability.dart';
 
 /// Durable, best-effort authentication lifecycle diagnostics.
 ///
@@ -22,6 +23,46 @@ final class AuthTelemetryRecorder {
   Future<void> _writes = Future.value();
   Future<void> _flushes = Future.value();
   final Set<String> _restoredThisProcess = {};
+
+  // Unidentified attempts contain only diagnostic metadata. They are uploaded
+  // under the next authenticated account; known-account queues stay isolated.
+  static const _pendingSignIn = 'pending_sign_in';
+
+  Future<void> signInFailed({
+    required String app,
+    required String? userId,
+    required String phase,
+    required int elapsedMilliseconds,
+    required Object error,
+  }) async {
+    final fields = <String, Object?>{
+      'phase': phase,
+      'elapsed_ms': elapsedMilliseconds,
+      'error_type': error.runtimeType.toString(),
+      if (error is AuthSignInValidationFailed)
+        'validation_reasons': error.reasons,
+      'failure_kind': switch (error) {
+        AuthSignInCancelled() => 'cancelled',
+        AuthSignInValidationFailed() => 'token_validation',
+        AuthSessionRejected() => 'session_rejected',
+        AuthServiceUnavailable() => 'service_unavailable',
+        _ => 'other',
+      },
+    };
+    // Never include exception messages: OIDC exceptions can contain URLs,
+    // authorization codes, tokens, or account details.
+    debugPrint('[AuthTelemetry] sign_in_failed ${jsonEncode(fields)}');
+    try {
+      await enqueue(
+        app: app,
+        userId: userId ?? _pendingSignIn,
+        event: 'sign_in_failed',
+        fields: fields,
+      );
+    } catch (_) {
+      // Preserve the original sign-in error if local diagnostic storage fails.
+    }
+  }
 
   Future<void> beginSession({
     required String app,
@@ -134,10 +175,28 @@ final class AuthTelemetryRecorder {
     required String userId,
     required String accessToken,
   }) async {
+    for (final queueUserId in [_pendingSignIn, userId]) {
+      await _flushQueue(
+        preset: preset,
+        app: app,
+        userId: userId,
+        accessToken: accessToken,
+        queueUserId: queueUserId,
+      );
+    }
+  }
+
+  Future<void> _flushQueue({
+    required BackendPreset preset,
+    required String app,
+    required String userId,
+    required String accessToken,
+    required String queueUserId,
+  }) async {
     await _writes;
     if (!preset.requiresOidc || accessToken.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
-    final rows = _readQueue(prefs, app, userId);
+    final rows = _readQueue(prefs, app, queueUserId);
     if (rows.isEmpty) return;
     final client = _client ?? http.Client();
     final ownsClient = _client == null;
@@ -149,7 +208,18 @@ final class AuthTelemetryRecorder {
               'authorization': 'Bearer $accessToken',
               'content-type': 'application/json',
             },
-            body: jsonEncode({'rows': rows}),
+            body: jsonEncode({
+              'rows': [
+                for (final row in rows)
+                  {
+                    ...row,
+                    'payload': {
+                      ...Map<String, dynamic>.from(row['payload'] as Map),
+                      'user_id': userId,
+                    },
+                  },
+              ],
+            }),
           )
           .timeout(const Duration(seconds: 5));
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -157,7 +227,7 @@ final class AuthTelemetryRecorder {
           '[AuthTelemetry] Uploaded ${rows.length} authentication event(s)',
         );
         final cleanup = _writes.then((_) async {
-          final current = _readQueue(prefs, app, userId);
+          final current = _readQueue(prefs, app, queueUserId);
           if (current.length < rows.length ||
               jsonEncode(current.take(rows.length).toList()) !=
                   jsonEncode(rows)) {
@@ -165,9 +235,12 @@ final class AuthTelemetryRecorder {
           }
           current.removeRange(0, rows.length);
           if (current.isEmpty) {
-            await prefs.remove(_queueKey(app, userId));
+            await prefs.remove(_queueKey(app, queueUserId));
           } else {
-            await prefs.setString(_queueKey(app, userId), jsonEncode(current));
+            await prefs.setString(
+              _queueKey(app, queueUserId),
+              jsonEncode(current),
+            );
           }
         });
         _writes = cleanup.catchError((_) {});

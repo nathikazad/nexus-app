@@ -10,8 +10,9 @@ import com.bdayadev.oidc.OidcPlugin
  *
  * The browser bundled with some e-ink tablets leaves its custom tab in front
  * after a transparent redirect activity finishes. Returning to MainActivity
- * with CLEAR_TOP preserves the waiting Flutter activity while closing that
- * browser activity.
+ * with NEW_TASK routes back to its existing singleTask activity even when
+ * Chrome delivers the redirect in a different task. This preserves the
+ * Flutter engine waiting for the authorization result.
  */
 class BooksOidcRedirectActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,7 +31,8 @@ class BooksOidcRedirectActivity : Activity() {
         if (handled) {
             startActivity(
                 Intent(this, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 },
             )
         }
