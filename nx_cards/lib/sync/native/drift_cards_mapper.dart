@@ -64,6 +64,7 @@ final class DriftCardsMapper {
       suspended: card.suspended,
       sourceBookId: Value(card.sourceBookId),
       sourceBookName: Value(card.sourceBookName),
+      addedToCurrentAt: Value(card.addedToCurrentAt),
       updatedAt: Value(card.updatedAt),
       syncState: syncState.name,
       deletedLocally: Value(deletedLocally),
@@ -109,6 +110,7 @@ final class DriftCardsMapper {
       sourceBookId: row.sourceBookId,
       sourceBookName: row.sourceBookName,
       linkedWordIds: _intSet(row.linkedWordIdsJson),
+      addedToCurrentAt: row.addedToCurrentAt,
       updatedAt: row.updatedAt?.toUtc(),
     );
   }

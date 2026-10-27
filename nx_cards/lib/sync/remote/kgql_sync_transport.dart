@@ -46,6 +46,11 @@ final class KgqlCardsSyncTransport
               key: attrLanguageDetails,
               value: languageDetailsJson(languageContent),
             ),
+          if (card.addedToCurrentAt != null)
+            SetModelAttribute(
+              key: attrAddedToCurrentAt,
+              value: card.addedToCurrentAt,
+            ),
           SetModelAttribute(
             key: attrLearningState,
             value: card.learningStatus.storageValue,

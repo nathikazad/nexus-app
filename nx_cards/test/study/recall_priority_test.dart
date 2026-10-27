@@ -5,28 +5,59 @@ import 'package:nx_cards/study/recall_priority.dart';
 import 'study_setup_page_test.dart' show sample;
 
 void main() {
-  test('a run selects each card once using its weakest eligible direction', () {
-    final card = sample(1, 5).copyWith(
-      reviewHistory: {
-        ...sample(1, 5).reviewHistory,
-        StudyCue.soundToMeaning: [],
-      },
-    );
+  test(
+    'the first pass selects each card using its weakest eligible direction',
+    () {
+      final card = sample(1, 5).copyWith(
+        reviewHistory: {
+          ...sample(1, 5).reviewHistory,
+          StudyCue.soundToMeaning: [],
+        },
+      );
+      final prompts = [
+        StudyPrompt(card: card, cue: StudyCue.meaningToSound),
+        StudyPrompt(card: card, cue: StudyCue.soundToMeaning),
+        StudyPrompt(card: sample(2, 3), cue: StudyCue.scriptToSound),
+      ];
+      prioritizeRecallPrompts(prompts, DateTime.now(), random: Random(1));
+      final chosen = shuffledRecallSelection(prompts, 2, random: Random(2));
+      expect(chosen, hasLength(2));
+      expect(
+        chosen.singleWhere((p) => p.cardId == 1).cue,
+        StudyCue.soundToMeaning,
+      );
+      expect(prompts, hasLength(3));
+      expect(card.reviewHistoryFor(StudyCue.meaningToSound), hasLength(5));
+      expect(shuffledRecallSelection(prompts, 0), isEmpty);
+    },
+  );
+
+  test('15 cards and 20 directions cover cards before taking extras', () {
     final prompts = [
-      StudyPrompt(card: card, cue: StudyCue.meaningToSound),
-      StudyPrompt(card: card, cue: StudyCue.soundToMeaning),
-      StudyPrompt(card: sample(2, 3), cue: StudyCue.scriptToSound),
+      for (var id = 1; id <= 15; id++)
+        StudyPrompt(
+          card: sample(id, id <= 10 ? 0 : 2),
+          cue: StudyCue.meaningToScript,
+        ),
+      for (var id = 1; id <= 5; id++)
+        StudyPrompt(card: sample(id, 1), cue: StudyCue.scriptToMeaning),
     ];
-    prioritizeRecallPrompts(prompts, DateTime.now(), random: Random(1));
-    final chosen = shuffledRecallSelection(prompts, 30, random: Random(2));
-    expect(chosen, hasLength(2));
+    prioritizeRecallPrompts(prompts, DateTime.utc(2026), random: Random(1));
+    final ten = shuffledRecallSelection(prompts, 10, random: Random(2));
     expect(
-      chosen.singleWhere((p) => p.cardId == 1).cue,
-      StudyCue.soundToMeaning,
+      ten.map((p) => p.cardId),
+      unorderedEquals(List.generate(10, (i) => i + 1)),
     );
-    expect(prompts, hasLength(3));
-    expect(card.reviewHistoryFor(StudyCue.meaningToSound), hasLength(5));
-    expect(shuffledRecallSelection(prompts, 0), isEmpty);
+    expect(ten.every((p) => p.cue == StudyCue.meaningToScript), isTrue);
+    final fifteen = shuffledRecallSelection(prompts, 15);
+    expect(fifteen.map((p) => p.cardId).toSet(), hasLength(15));
+    final seventeen = shuffledRecallSelection(prompts, 17);
+    expect(seventeen, hasLength(17));
+    expect(seventeen.map((p) => p.cardId).toSet(), hasLength(15));
+    final twenty = shuffledRecallSelection(prompts, 20, random: Random(3));
+    expect(twenty, unorderedEquals(prompts));
+    expect(twenty, isNot(orderedEquals(prompts)));
+    expect(shuffledRecallSelection(prompts, 50), hasLength(20));
   });
 
   test('repeated fronts preserve every item and maximize the gap', () {

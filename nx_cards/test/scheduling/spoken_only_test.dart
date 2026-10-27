@@ -97,6 +97,7 @@ void main() {
       final updated = (await store.getCard(1))!;
       expect(updated.spokenOnly, isTrue);
       expect(updated.learningStatus, LearningStatus.recall);
+      expect(updated.addedToCurrentAt, calendarDate(DateTime.now()));
       expect(reviewHistoryJson(updated), reviewHistoryJson(original));
       expect(scheduleJson(updated), scheduleJson(original));
       final queued = (await store.pendingMutations()).single;

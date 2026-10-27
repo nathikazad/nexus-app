@@ -252,6 +252,17 @@ class $LocalStudyCardsTable extends LocalStudyCards
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _addedToCurrentAtMeta = const VerificationMeta(
+    'addedToCurrentAt',
+  );
+  @override
+  late final GeneratedColumn<String> addedToCurrentAt = GeneratedColumn<String>(
+    'added_to_current_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -313,6 +324,7 @@ class $LocalStudyCardsTable extends LocalStudyCards
     suspended,
     sourceBookId,
     sourceBookName,
+    addedToCurrentAt,
     updatedAt,
     syncState,
     deletedLocally,
@@ -509,6 +521,15 @@ class $LocalStudyCardsTable extends LocalStudyCards
         ),
       );
     }
+    if (data.containsKey('added_to_current_at')) {
+      context.handle(
+        _addedToCurrentAtMeta,
+        addedToCurrentAt.isAcceptableOrUnknown(
+          data['added_to_current_at']!,
+          _addedToCurrentAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -629,6 +650,10 @@ class $LocalStudyCardsTable extends LocalStudyCards
         DriftSqlType.string,
         data['${effectivePrefix}source_book_name'],
       ),
+      addedToCurrentAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}added_to_current_at'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -674,6 +699,7 @@ class LocalStudyCardRow extends DataClass
   final bool suspended;
   final int? sourceBookId;
   final String? sourceBookName;
+  final String? addedToCurrentAt;
   final DateTime? updatedAt;
   final String syncState;
   final bool deletedLocally;
@@ -700,6 +726,7 @@ class LocalStudyCardRow extends DataClass
     required this.suspended,
     this.sourceBookId,
     this.sourceBookName,
+    this.addedToCurrentAt,
     this.updatedAt,
     required this.syncState,
     required this.deletedLocally,
@@ -746,6 +773,9 @@ class LocalStudyCardRow extends DataClass
     }
     if (!nullToAbsent || sourceBookName != null) {
       map['source_book_name'] = Variable<String>(sourceBookName);
+    }
+    if (!nullToAbsent || addedToCurrentAt != null) {
+      map['added_to_current_at'] = Variable<String>(addedToCurrentAt);
     }
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -797,6 +827,9 @@ class LocalStudyCardRow extends DataClass
       sourceBookName: sourceBookName == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceBookName),
+      addedToCurrentAt: addedToCurrentAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(addedToCurrentAt),
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
@@ -835,6 +868,7 @@ class LocalStudyCardRow extends DataClass
       suspended: serializer.fromJson<bool>(json['suspended']),
       sourceBookId: serializer.fromJson<int?>(json['sourceBookId']),
       sourceBookName: serializer.fromJson<String?>(json['sourceBookName']),
+      addedToCurrentAt: serializer.fromJson<String?>(json['addedToCurrentAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       syncState: serializer.fromJson<String>(json['syncState']),
       deletedLocally: serializer.fromJson<bool>(json['deletedLocally']),
@@ -866,6 +900,7 @@ class LocalStudyCardRow extends DataClass
       'suspended': serializer.toJson<bool>(suspended),
       'sourceBookId': serializer.toJson<int?>(sourceBookId),
       'sourceBookName': serializer.toJson<String?>(sourceBookName),
+      'addedToCurrentAt': serializer.toJson<String?>(addedToCurrentAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'syncState': serializer.toJson<String>(syncState),
       'deletedLocally': serializer.toJson<bool>(deletedLocally),
@@ -895,6 +930,7 @@ class LocalStudyCardRow extends DataClass
     bool? suspended,
     Value<int?> sourceBookId = const Value.absent(),
     Value<String?> sourceBookName = const Value.absent(),
+    Value<String?> addedToCurrentAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
     String? syncState,
     bool? deletedLocally,
@@ -925,6 +961,9 @@ class LocalStudyCardRow extends DataClass
     sourceBookName: sourceBookName.present
         ? sourceBookName.value
         : this.sourceBookName,
+    addedToCurrentAt: addedToCurrentAt.present
+        ? addedToCurrentAt.value
+        : this.addedToCurrentAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     syncState: syncState ?? this.syncState,
     deletedLocally: deletedLocally ?? this.deletedLocally,
@@ -979,6 +1018,9 @@ class LocalStudyCardRow extends DataClass
       sourceBookName: data.sourceBookName.present
           ? data.sourceBookName.value
           : this.sourceBookName,
+      addedToCurrentAt: data.addedToCurrentAt.present
+          ? data.addedToCurrentAt.value
+          : this.addedToCurrentAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       syncState: data.syncState.present ? data.syncState.value : this.syncState,
       deletedLocally: data.deletedLocally.present
@@ -1012,6 +1054,7 @@ class LocalStudyCardRow extends DataClass
           ..write('suspended: $suspended, ')
           ..write('sourceBookId: $sourceBookId, ')
           ..write('sourceBookName: $sourceBookName, ')
+          ..write('addedToCurrentAt: $addedToCurrentAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('syncState: $syncState, ')
           ..write('deletedLocally: $deletedLocally')
@@ -1043,6 +1086,7 @@ class LocalStudyCardRow extends DataClass
     suspended,
     sourceBookId,
     sourceBookName,
+    addedToCurrentAt,
     updatedAt,
     syncState,
     deletedLocally,
@@ -1073,6 +1117,7 @@ class LocalStudyCardRow extends DataClass
           other.suspended == this.suspended &&
           other.sourceBookId == this.sourceBookId &&
           other.sourceBookName == this.sourceBookName &&
+          other.addedToCurrentAt == this.addedToCurrentAt &&
           other.updatedAt == this.updatedAt &&
           other.syncState == this.syncState &&
           other.deletedLocally == this.deletedLocally);
@@ -1101,6 +1146,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
   final Value<bool> suspended;
   final Value<int?> sourceBookId;
   final Value<String?> sourceBookName;
+  final Value<String?> addedToCurrentAt;
   final Value<DateTime?> updatedAt;
   final Value<String> syncState;
   final Value<bool> deletedLocally;
@@ -1128,6 +1174,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     this.suspended = const Value.absent(),
     this.sourceBookId = const Value.absent(),
     this.sourceBookName = const Value.absent(),
+    this.addedToCurrentAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.syncState = const Value.absent(),
     this.deletedLocally = const Value.absent(),
@@ -1156,6 +1203,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     required bool suspended,
     this.sourceBookId = const Value.absent(),
     this.sourceBookName = const Value.absent(),
+    this.addedToCurrentAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     required String syncState,
     this.deletedLocally = const Value.absent(),
@@ -1193,6 +1241,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Expression<bool>? suspended,
     Expression<int>? sourceBookId,
     Expression<String>? sourceBookName,
+    Expression<String>? addedToCurrentAt,
     Expression<DateTime>? updatedAt,
     Expression<String>? syncState,
     Expression<bool>? deletedLocally,
@@ -1222,6 +1271,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       if (suspended != null) 'suspended': suspended,
       if (sourceBookId != null) 'source_book_id': sourceBookId,
       if (sourceBookName != null) 'source_book_name': sourceBookName,
+      if (addedToCurrentAt != null) 'added_to_current_at': addedToCurrentAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (syncState != null) 'sync_state': syncState,
       if (deletedLocally != null) 'deleted_locally': deletedLocally,
@@ -1252,6 +1302,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     Value<bool>? suspended,
     Value<int?>? sourceBookId,
     Value<String?>? sourceBookName,
+    Value<String?>? addedToCurrentAt,
     Value<DateTime?>? updatedAt,
     Value<String>? syncState,
     Value<bool>? deletedLocally,
@@ -1281,6 +1332,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
       suspended: suspended ?? this.suspended,
       sourceBookId: sourceBookId ?? this.sourceBookId,
       sourceBookName: sourceBookName ?? this.sourceBookName,
+      addedToCurrentAt: addedToCurrentAt ?? this.addedToCurrentAt,
       updatedAt: updatedAt ?? this.updatedAt,
       syncState: syncState ?? this.syncState,
       deletedLocally: deletedLocally ?? this.deletedLocally,
@@ -1359,6 +1411,9 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
     if (sourceBookName.present) {
       map['source_book_name'] = Variable<String>(sourceBookName.value);
     }
+    if (addedToCurrentAt.present) {
+      map['added_to_current_at'] = Variable<String>(addedToCurrentAt.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -1399,6 +1454,7 @@ class LocalStudyCardsCompanion extends UpdateCompanion<LocalStudyCardRow> {
           ..write('suspended: $suspended, ')
           ..write('sourceBookId: $sourceBookId, ')
           ..write('sourceBookName: $sourceBookName, ')
+          ..write('addedToCurrentAt: $addedToCurrentAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('syncState: $syncState, ')
           ..write('deletedLocally: $deletedLocally, ')
@@ -1445,6 +1501,7 @@ typedef $$LocalStudyCardsTableCreateCompanionBuilder =
       required bool suspended,
       Value<int?> sourceBookId,
       Value<String?> sourceBookName,
+      Value<String?> addedToCurrentAt,
       Value<DateTime?> updatedAt,
       required String syncState,
       Value<bool> deletedLocally,
@@ -1474,6 +1531,7 @@ typedef $$LocalStudyCardsTableUpdateCompanionBuilder =
       Value<bool> suspended,
       Value<int?> sourceBookId,
       Value<String?> sourceBookName,
+      Value<String?> addedToCurrentAt,
       Value<DateTime?> updatedAt,
       Value<String> syncState,
       Value<bool> deletedLocally,
@@ -1596,6 +1654,11 @@ class $$LocalStudyCardsTableFilterComposer
 
   ColumnFilters<String> get sourceBookName => $composableBuilder(
     column: $table.sourceBookName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get addedToCurrentAt => $composableBuilder(
+    column: $table.addedToCurrentAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1734,6 +1797,11 @@ class $$LocalStudyCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get addedToCurrentAt => $composableBuilder(
+    column: $table.addedToCurrentAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -1851,6 +1919,11 @@ class $$LocalStudyCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get addedToCurrentAt => $composableBuilder(
+    column: $table.addedToCurrentAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -1922,6 +1995,7 @@ class $$LocalStudyCardsTableTableManager
                 Value<bool> suspended = const Value.absent(),
                 Value<int?> sourceBookId = const Value.absent(),
                 Value<String?> sourceBookName = const Value.absent(),
+                Value<String?> addedToCurrentAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<String> syncState = const Value.absent(),
                 Value<bool> deletedLocally = const Value.absent(),
@@ -1949,6 +2023,7 @@ class $$LocalStudyCardsTableTableManager
                 suspended: suspended,
                 sourceBookId: sourceBookId,
                 sourceBookName: sourceBookName,
+                addedToCurrentAt: addedToCurrentAt,
                 updatedAt: updatedAt,
                 syncState: syncState,
                 deletedLocally: deletedLocally,
@@ -1978,6 +2053,7 @@ class $$LocalStudyCardsTableTableManager
                 required bool suspended,
                 Value<int?> sourceBookId = const Value.absent(),
                 Value<String?> sourceBookName = const Value.absent(),
+                Value<String?> addedToCurrentAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 required String syncState,
                 Value<bool> deletedLocally = const Value.absent(),
@@ -2005,6 +2081,7 @@ class $$LocalStudyCardsTableTableManager
                 suspended: suspended,
                 sourceBookId: sourceBookId,
                 sourceBookName: sourceBookName,
+                addedToCurrentAt: addedToCurrentAt,
                 updatedAt: updatedAt,
                 syncState: syncState,
                 deletedLocally: deletedLocally,

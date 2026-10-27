@@ -65,6 +65,7 @@ final class DriftLocalCardsStore
       'linked': row.linkedWordIdsJson.value,
       'suspended': row.suspended.value,
       'learning_status': row.learningStatus.value,
+      'added_to_current_at': row.addedToCurrentAt.value,
       'updated_at': row.updatedAt.value?.toUtc().toIso8601String(),
       'model_type': row.modelType.value,
       'transliteration': row.transliteration.value,
@@ -148,6 +149,7 @@ final class DriftLocalCardsStore
         suspended: json['suspended'] as bool? ?? row.suspended,
         learningStatus:
             json['learning_status'] as String? ?? row.learningStatus,
+        addedToCurrentAt: Value(json['added_to_current_at'] as String?),
         updatedAt: Value(
           json.containsKey('updated_at')
               ? DateTime.tryParse(json['updated_at']?.toString() ?? '')

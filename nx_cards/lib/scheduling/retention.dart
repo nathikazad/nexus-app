@@ -1,6 +1,15 @@
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 
+/// A card is new only before its first review in any direction, including
+/// directions that are currently disabled or outside the selected skills.
+bool isUnreviewedCard(StudyCard card) =>
+    card.reviewHistory.values.every((reviews) => reviews.isEmpty) &&
+    card.schedules.values.every(
+      (schedule) =>
+          schedule.reviewCount == 0 && schedule.lastReviewedAt == null,
+    );
+
 /// Overall card gauge averages the selected Meaning/Sound/Script scores.
 double averageRetention(StudyCard card, Iterable<RecallComponent> directions) =>
     combinedRecallScore(card, directions).fraction;
@@ -11,7 +20,9 @@ bool matchesRecallRange(
   double minimum = 0,
   double maximum = 1,
   bool weakOnly = false,
+  bool newOnly = false,
 }) {
+  if (newOnly) return isUnreviewedCard(card);
   final score = recallScore(card, cue).fraction;
   return score + 1e-9 >= minimum &&
       score <= maximum + 1e-9 &&
@@ -24,13 +35,16 @@ List<StudyCard> retentionCards(
   double minimum = 0,
   double maximum = 1,
   bool weakOnly = false,
+  bool newOnly = false,
 }) {
   final result = cards.where((card) {
     final score = averageRetention(card, directions);
     return card.learningStatus == LearningStatus.recall &&
-        score + 1e-9 >= minimum &&
-        score <= maximum + 1e-9 &&
-        (!weakOnly || score < .8 - 1e-9);
+        (newOnly
+            ? isUnreviewedCard(card)
+            : score + 1e-9 >= minimum &&
+                  score <= maximum + 1e-9 &&
+                  (!weakOnly || score < .8 - 1e-9));
   }).toList();
   result.sort((a, b) {
     final score = averageRetention(
@@ -50,6 +64,7 @@ List<StudyPrompt> retentionPrompts(
   double minimum = 0,
   double maximum = 1,
   bool weakOnly = false,
+  bool newOnly = false,
 }) {
   final result = <StudyPrompt>[
     for (final card in cards)
@@ -69,6 +84,7 @@ List<StudyPrompt> retentionPrompts(
                 minimum: minimum,
                 maximum: maximum,
                 weakOnly: weakOnly,
+                newOnly: newOnly,
               ))
             StudyPrompt(card: card, cue: cue),
   ];

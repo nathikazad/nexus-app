@@ -31,6 +31,53 @@ StudyCard scored(int id, List<int> correct) => sample(id, 0).copyWith(
 );
 void main() {
   final all = RecallComponent.values.toSet();
+  test('New excludes reviews in every direction, including disabled ones', () {
+    final fresh = scored(90, [0, 0, 0, 0, 0, 0]).copyWith(
+      reviewHistory: {},
+      schedules: {
+        for (final cue in StudyCue.languageDirections)
+          cue: CardSchedule.initial(enabled: true),
+      },
+    );
+    final failed = fresh.copyWith(
+      reviewHistory: {
+        StudyCue.scriptToSound: [
+          CardReview(
+            id: 'failed',
+            reviewedAt: DateTime.utc(2026),
+            rating: 1,
+            elapsedSeconds: 0,
+            scheduledSeconds: 0,
+          ),
+        ],
+      },
+    );
+    final counted = fresh.copyWith(
+      schedules: {
+        ...fresh.schedules,
+        StudyCue.scriptToSound: CardSchedule.initial(
+          enabled: false,
+        ).copyWith(reviewCount: 1),
+      },
+    );
+    expect(isUnreviewedCard(fresh), isTrue);
+    expect(isUnreviewedCard(failed), isFalse);
+    expect(isUnreviewedCard(counted), isFalse);
+    expect(retentionCards([fresh, failed, counted], all, newOnly: true), [
+      fresh,
+    ]);
+    expect(retentionPrompts([fresh], all, newOnly: true), hasLength(6));
+    expect(
+      retentionPrompts(
+        [failed, counted],
+        {RecallComponent.meaning},
+        newOnly: true,
+      ),
+      isEmpty,
+    );
+    expect(retentionPrompts([failed], all, maximum: 0), isNotEmpty);
+  });
+
   test(
     'Sound off excludes both sound directions; writing remains independent',
     () {

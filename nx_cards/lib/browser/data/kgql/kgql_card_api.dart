@@ -13,6 +13,7 @@ const baseCardStruct = <String, dynamic>{
   'updated_at': true,
   attrDueAt: true,
   attrLearningState: true,
+  attrAddedToCurrentAt: true,
   attrSuspended: true,
   attrSchedule: true,
   attrReviewHistory: true,
@@ -271,6 +272,11 @@ class KgqlCardApi implements CardLibrary {
         attributes: [
           if (card.isLanguageCard && spokenOnly != null)
             SetModelAttribute(key: attrSpokenOnly, value: spokenOnly),
+          if (status == LearningStatus.recall && card.learningStatus != status)
+            SetModelAttribute(
+              key: attrAddedToCurrentAt,
+              value: card.currentDateForStatus(status, DateTime.now()),
+            ),
           SetModelAttribute(key: attrLearningState, value: status.storageValue),
         ],
       ),

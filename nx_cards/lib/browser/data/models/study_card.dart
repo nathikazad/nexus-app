@@ -18,6 +18,7 @@ class StudyCard {
     this.sourceBookName,
     Set<int> linkedWordIds = const <int>{},
     this.updatedAt,
+    this.addedToCurrentAt,
     this.isSummary = false,
   }) : modelTypeName =
            const {'Word', 'Verb', 'Phrase', 'Script'}.contains(modelTypeName)
@@ -95,6 +96,14 @@ class StudyCard {
   /// conflict handling.
   final DateTime? updatedAt;
 
+  /// Local calendar date (YYYY-MM-DD), never converted between time zones.
+  final String? addedToCurrentAt;
+
+  String? currentDateForStatus(LearningStatus status, DateTime now) =>
+      status == LearningStatus.recall && learningStatus != LearningStatus.recall
+      ? calendarDate(now.toLocal())
+      : addedToCurrentAt;
+
   CardSchedule scheduleFor(StudyCue cue) =>
       schedules[cue] ?? CardSchedule.initial(enabled: false);
 
@@ -150,6 +159,7 @@ class StudyCard {
     LearningStatus? learningStatus,
     Set<int>? linkedWordIds,
     DateTime? updatedAt,
+    String? addedToCurrentAt,
     bool? isSummary,
   }) {
     return StudyCard(
@@ -168,6 +178,7 @@ class StudyCard {
       sourceBookName: sourceBookName,
       linkedWordIds: linkedWordIds ?? this.linkedWordIds,
       updatedAt: updatedAt ?? this.updatedAt,
+      addedToCurrentAt: addedToCurrentAt ?? this.addedToCurrentAt,
     );
   }
 }
@@ -222,3 +233,6 @@ List<List<String>> legacyCategoryPaths(Iterable<String> categories) => [
     else
       [name],
 ];
+
+String calendarDate(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

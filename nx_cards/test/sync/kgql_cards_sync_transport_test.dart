@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:nx_db/src/core/client/graphql_client.dart'
     show bindTestClientDomain;
 import '../../../nx_modules/nx_db/test/support/app_sync_fixture.dart';
@@ -32,6 +33,7 @@ void main() {
                     'model_type': {'id': 3, 'name': 'Word'},
                     'attributes': {
                       'spoken_only': true,
+                      'added_to_current_at': '2026-10-27',
                       'card_details': {'front': 'day', 'back': '日'},
                       'language_details': {'transliteration': 'rì'},
                     },
@@ -70,6 +72,32 @@ void main() {
           return appSyncFixture(request.variables, [
             for (final card in content['cards'] as List)
               {'id': card['id'], 'hash': card['hash'], 'payload': card['card']},
+            {
+              'id': 12,
+              'hash': 'neighbor:12',
+              'payload': {
+                'id': 12,
+                'name': 'birthday',
+                'model_type': {'id': 3, 'name': 'Word'},
+                'attributes': {
+                  'card_details': {'front': 'birthday', 'back': '生日'},
+                  'language_details': {
+                    'transliteration': 'shēngrì',
+                    'audio_url': '/birthday.mp3',
+                  },
+                },
+              },
+            },
+            {
+              'id': 50,
+              'hash': 'neighbor:50',
+              'payload': {
+                'id': 50,
+                'name': 'Chinese',
+                'model_type': {'id': 4, 'name': 'Book'},
+                'attributes': {},
+              },
+            },
           ]);
         }),
       );
@@ -78,9 +106,10 @@ void main() {
         printNode(captured!.operation.document),
         contains('appSyncSnapshot'),
       );
-      expect(captured!.variables['itemIds'], [11]);
+      expect(captured!.variables['itemIds'], contains('model:11'));
       final card = bundle.cards.single.card;
       expect(card.spokenOnly, isTrue);
+      expect(card.addedToCurrentAt, '2026-10-27');
       expect(card.sourceBookId, 50);
       expect(card.tags['Category'], ['Noun']);
       final example = (card.content as LanguageCardContent).examples.single;
@@ -117,6 +146,7 @@ void main() {
 
     final result = await transport.mutateCard(
       _card().copyWith(
+        addedToCurrentAt: '2026-10-27',
         content: (_card().content as LanguageCardContent).copyWith(
           spokenOnly: true,
         ),
@@ -133,6 +163,10 @@ void main() {
     expect(
       attributes.singleWhere((a) => a['key'] == 'spoken_only')['value'],
       isTrue,
+    );
+    expect(
+      attributes.singleWhere((a) => a['key'] == 'added_to_current_at')['value'],
+      '2026-10-27',
     );
     final schedule = attributes.cast<Map<String, dynamic>>().singleWhere(
       (value) => value['key'] == 'schedule',
@@ -171,7 +205,7 @@ GraphQLClient _client(Map<String, Object?> Function(Request) respond) {
     return Stream<Response>.value(
       Response(
         response: const <String, Object?>{},
-        data: respond(request),
+        data: jsonDecode(jsonEncode(respond(request))) as Map<String, dynamic>,
         context: request.context,
       ),
     );

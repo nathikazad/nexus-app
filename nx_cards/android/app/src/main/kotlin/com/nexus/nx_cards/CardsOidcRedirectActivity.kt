@@ -10,7 +10,7 @@ import com.bdayadev.oidc.OidcPlugin
  *
  * The browser bundled with some e-ink tablets leaves its custom tab in front
  * after a transparent redirect activity finishes. Returning to MainActivity
- * with NEW_TASK routes back to its existing singleTask activity even when
+ * with NEW_TASK, CLEAR_TOP and SINGLE_TOP reuses its existing activity even when
  * Chrome delivers the redirect in a different task. This preserves the
  * Flutter engine waiting for the authorization result.
  */

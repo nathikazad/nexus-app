@@ -64,6 +64,7 @@ StudyCard? studyCardFromModel(
     sourceBookId: book?.id,
     sourceBookName: book?.name,
     linkedWordIds: _linkedWordIds(model),
+    addedToCurrentAt: model.attributes?[attrAddedToCurrentAt] as String?,
     updatedAt: DateTime.tryParse(model.updatedAt ?? '')?.toUtc(),
   );
 }

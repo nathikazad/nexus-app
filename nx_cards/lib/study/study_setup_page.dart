@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/current_date_groups.dart';
 import 'package:nx_cards/study/language/similar_sounds.dart';
 import 'package:nx_cards/study/language/grouped_recall_page.dart';
 import 'package:nx_cards/scheduling/retention.dart';
@@ -45,7 +46,7 @@ enum RecallPresentation { standard, fast, similar }
 
 enum RecallCardState { learning, relearning, retained, newCard }
 
-enum RecallTiming { allMatching, dueNow }
+enum RecallTiming { allMatching, dueNow, byDate }
 
 class StudySetupPage extends ConsumerStatefulWidget {
   const StudySetupPage({
@@ -111,9 +112,42 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _mode == StudyMode.recall &&
       !_usesSimilar &&
       _timing == RecallTiming.dueNow;
+  bool get _byDate =>
+      _mode == StudyMode.recall &&
+      !_usesSimilar &&
+      _timing == RecallTiming.byDate;
+  Set<String> _selectedDates = {};
+  List<StudyCard>? _dateGroupCards;
+  Map<String, int> _cachedDateGroups = {};
+  Map<String, int> get _dateGroups {
+    final cards = _studyCards;
+    if (!identical(cards, _dateGroupCards)) {
+      _dateGroupCards = cards;
+      _cachedDateGroups = recentCurrentDateGroups(cards);
+    }
+    return _cachedDateGroups;
+  }
+
+  List<String> get _dateRange {
+    final dates = _dateGroups.keys.toList()..sort();
+    final selected = dates.where(_selectedDates.contains).toList();
+    if (dates.isEmpty) return const [];
+    if (selected.isEmpty) return [dates.last];
+    return dates
+        .where(
+          (date) =>
+              date.compareTo(selected.first) >= 0 &&
+              date.compareTo(selected.last) <= 0,
+        )
+        .toList();
+  }
+
+  bool _matchesDate(StudyCard card) =>
+      !_byDate || _dateRange.contains(card.addedToCurrentAt);
   int _dueMinPercentage = 0;
   int _retainedMinPercentage = 0;
   bool _weakOnly = false;
+  bool _newOnly = false;
   int _retainedMaxPercentage = 100;
   StudyOrder _order = StudyOrder.normal;
   int _count = 10;
@@ -236,12 +270,16 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           100,
         );
         _weakOnly = saved['weakOnly'] == true;
+        _newOnly = saved['newOnly'] == true;
         if (_weakOnly) {
           _retainedMinPercentage = 0;
           _retainedMaxPercentage = 60;
         }
         _writing = saved['writing'] != false;
         _sound = saved['sound'] != false;
+        _selectedDates = (saved['selectedDates'] as List? ?? [])
+            .whereType<String>()
+            .toSet();
         _timing =
             _enumByName(RecallTiming.values, saved['timing']) ??
             RecallTiming.allMatching;
@@ -286,9 +324,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'retainedMinPercentage': _retainedMinPercentage,
         'dueMinPercentage': _dueMinPercentage,
         'weakOnly': _weakOnly,
+        'newOnly': _newOnly,
         'writing': _writing,
         'sound': _sound,
         'timing': _timing.name,
+        'selectedDates': _selectedDates.toList()..sort(),
         'similarType': _similarType.name,
         'writtenDirections': _writtenDirections.map((cue) => cue.name).toList(),
         'groupCount': _groupCount,
@@ -317,14 +357,17 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     final now = DateTime.now();
     return combineRecallPrompts(
       retentionPrompts(
-        _studyCards,
+        _studyCards.where(_matchesDate),
         _directions,
 
         writing: _writing,
         sound: _sessionSound,
-        minimum: (dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
-        maximum: dueOnly ? 1 : _retainedMaxPercentage / 100,
-        weakOnly: !dueOnly && _weakOnly,
+        minimum: _byDate
+            ? 0
+            : (dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
+        maximum: dueOnly || _byDate ? 1 : _retainedMaxPercentage / 100,
+        weakOnly: !dueOnly && !_byDate && _weakOnly,
+        newOnly: !dueOnly && !_byDate && _newOnly,
       ).where(
         (prompt) =>
             (!dueOnly || prompt.schedule.isDueAt(now)) &&
@@ -336,15 +379,18 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   bool _matchesRecallBaseFilters(StudyCard card, [StudyCue? cue]) {
     if (_mode == StudyMode.study) return true;
     return card.active &&
+        _matchesDate(card) &&
         card.learningStatus == LearningStatus.recall &&
         (cue == null ? selectedCues(card, _directions) : [cue]).any(
           (direction) => matchesRecallRange(
             card,
             direction,
-            minimum:
-                (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
-            maximum: _dueOnly ? 1 : _retainedMaxPercentage / 100,
-            weakOnly: !_dueOnly && _weakOnly,
+            minimum: _byDate
+                ? 0
+                : (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
+            maximum: _dueOnly || _byDate ? 1 : _retainedMaxPercentage / 100,
+            weakOnly: !_dueOnly && !_byDate && _weakOnly,
+            newOnly: !_dueOnly && !_byDate && _newOnly,
           ),
         );
   }
@@ -355,12 +401,23 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         for (final cue in selectedCues(card, _directions))
           if (card.supportsCue(cue)) StudyPrompt(card: card, cue: cue),
   ];
-  int get _availableCount =>
-      _usesSimilar ? _similarSessions(_studyCards).length : _availableCardCount;
+  int get _availableCount => _usesSimilar
+      ? _similarSessions(_studyCards).length
+      : _usesRecallFilters
+      ? _availableDirectionCount
+      : _availableCardCount;
 
   int get _availableCardCount =>
       (_mode == StudyMode.study ? _practiceCandidates : _candidates)
           .map((prompt) => prompt.card.id)
+          .toSet()
+          .length;
+
+  int get _availableDirectionCount =>
+      (_mode == StudyMode.study ? _practiceCandidates : _candidates)
+          .expand(
+            (prompt) => prompt.testedCues.map((cue) => (prompt.cardId, cue)),
+          )
           .toSet()
           .length;
 
@@ -382,6 +439,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _retainedMaxPercentage = range.end.round();
       _retainedMinPercentage = range.start.round();
       _weakOnly = false;
+      _newOnly = false;
       _clampCount();
     });
     _rememberPreferences();
@@ -936,35 +994,35 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       final cardsById = <int, StudyCard>{
         for (final card in dashboard.cards) card.id: card,
       };
-      final selected = combineRecallPrompts(
-        <StudyPrompt>[
-              for (final combined in _candidates)
-                for (final cue in combined.testedCues)
-                  if (cardsById[combined.cardId] case final latestCard?
-                      when !latestCard.suspended &&
-                          latestCard.supportsCue(cue) &&
-                          (_writing || cue.target != RecallComponent.script) &&
-                          (_sessionSound ||
-                              (cue.source != RecallComponent.sound &&
-                                  cue.target != RecallComponent.sound)) &&
-                          (!_usesRecallFilters ||
-                              _matchesRecallBaseFilters(latestCard, cue)) &&
-                          latestCard.scheduleFor(cue).enabled &&
-                          (!_dueOnly ||
-                              latestCard
-                                  .scheduleFor(cue)
-                                  .isDueAt(DateTime.now())))
-                    StudyPrompt(card: latestCard, cue: cue),
-            ]
-            .where(
-              (prompt) =>
-                  _isBookStudy ||
-                  _usesRecallFilters ||
-                  prompt.isNew ||
-                  prompt.isDueAt(DateTime.now().toUtc()),
-            )
-            .toList(),
-      );
+      final selected =
+          <StudyPrompt>[
+                for (final combined in _candidates)
+                  for (final cue in combined.testedCues)
+                    if (cardsById[combined.cardId] case final latestCard?
+                        when !latestCard.suspended &&
+                            latestCard.supportsCue(cue) &&
+                            (_writing ||
+                                cue.target != RecallComponent.script) &&
+                            (_sessionSound ||
+                                (cue.source != RecallComponent.sound &&
+                                    cue.target != RecallComponent.sound)) &&
+                            (!_usesRecallFilters ||
+                                _matchesRecallBaseFilters(latestCard, cue)) &&
+                            latestCard.scheduleFor(cue).enabled &&
+                            (!_dueOnly ||
+                                latestCard
+                                    .scheduleFor(cue)
+                                    .isDueAt(DateTime.now())))
+                      StudyPrompt(card: latestCard, cue: cue),
+              ]
+              .where(
+                (prompt) =>
+                    _isBookStudy ||
+                    _usesRecallFilters ||
+                    prompt.isNew ||
+                    prompt.isDueAt(DateTime.now().toUtc()),
+              )
+              .toList();
 
       if (selected.isEmpty) {
         if (mounted) {
@@ -1414,18 +1472,29 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                   value: RecallTiming.dueNow,
                                   label: Text('Due'),
                                 ),
+                                ButtonSegment(
+                                  value: RecallTiming.byDate,
+                                  label: Text('By date'),
+                                ),
                               ],
                               selected: {_timing},
                               onSelectionChanged: (value) {
                                 setState(() {
                                   _timing = value.single;
+                                  if (_byDate &&
+                                      _selectedDates.isEmpty &&
+                                      _dateGroups.isNotEmpty) {
+                                    _selectedDates = {_dateGroups.keys.first};
+                                  }
                                   _clampCount();
                                 });
                                 _rememberPreferences();
                               },
                             ),
                             const SizedBox(height: 16),
-                            if (_dueOnly)
+                            if (_byDate)
+                              _dateFilterChoices()
+                            else if (_dueOnly)
                               _dueFilterChoices()
                             else
                               _recallFilterChoices(),
@@ -1436,7 +1505,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                       _SetupCard(
                         title: _usesSimilar
                             ? 'How many recall groups?'
-                            : 'How many cards?',
+                            : 'How many directions?',
                         child: _countControl(maxCount),
                       ),
                     ],
@@ -1473,7 +1542,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                     _SetupCard(
                       title: _usesSimilar
                           ? 'How many recall groups?'
-                          : 'How many cards?',
+                          : 'How many directions?',
                       child: _countControl(maxCount),
                     ),
                     const SizedBox(height: 22),
@@ -1614,17 +1683,74 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     );
   }
 
+  Widget _dateFilterChoices() {
+    final dates = _dateGroups.keys.toList()..sort();
+    if (dates.isEmpty) {
+      return const Text(
+        'No dated cards yet. Cards moved into Current from now on will appear here.',
+      );
+    }
+    final selected = _dateRange;
+    final start = dates.indexOf(selected.first);
+    final end = dates.indexOf(selected.last);
+    String label(String date) => MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(DateTime.parse(date));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          start == end
+              ? label(dates[start])
+              : '${label(dates[start])} – ${label(dates[end])}',
+        ),
+        RangeSlider(
+          key: const ValueKey('recall-date-range'),
+          min: 0,
+          max: max(1, dates.length - 1).toDouble(),
+          divisions: max(1, dates.length - 1),
+          values: RangeValues(start.toDouble(), end.toDouble()),
+          labels: RangeLabels(label(dates[start]), label(dates[end])),
+          onChanged: dates.length == 1
+              ? null
+              : (range) {
+                  setState(() {
+                    _selectedDates = dates
+                        .sublist(range.start.round(), range.end.round() + 1)
+                        .toSet();
+                    _clampCount();
+                  });
+                  _rememberPreferences();
+                },
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: Text(label(dates.first))),
+            if (dates.length > 1)
+              Expanded(
+                child: Text(label(dates.last), textAlign: TextAlign.end),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _recallFilterChoices() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(
-        _weakOnly
+        _newOnly
+            ? 'New'
+            : _weakOnly
             ? '0–60%'
             : '$_retainedMinPercentage–$_retainedMaxPercentage%',
       ),
-      Row(
+      Column(
         children: [
-          Expanded(
+          SizedBox(
+            width: double.infinity,
             child: RangeSlider(
               key: const ValueKey('recall-retention'),
               values: RangeValues(
@@ -1641,25 +1767,42 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
               onChanged: _selectRetainedRange,
             ),
           ),
-          TextButton(
-            onPressed: () => setState(() {
-              _retainedMinPercentage = 0;
-              _retainedMaxPercentage = 60;
-              _weakOnly = true;
-              _clampCount();
-              _rememberPreferences();
-            }),
-            child: const Text('Weak'),
-          ),
-          TextButton(
-            onPressed: () => setState(() {
-              _retainedMinPercentage = 80;
-              _retainedMaxPercentage = 100;
-              _weakOnly = false;
-              _clampCount();
-              _rememberPreferences();
-            }),
-            child: const Text('Strong'),
+          Wrap(
+            children: [
+              TextButton(
+                onPressed: () => setState(() {
+                  _retainedMinPercentage = 0;
+                  _retainedMaxPercentage = 60;
+                  _weakOnly = true;
+                  _newOnly = false;
+                  _clampCount();
+                  _rememberPreferences();
+                }),
+                child: const Text('Weak'),
+              ),
+              TextButton(
+                onPressed: () => setState(() {
+                  _retainedMinPercentage = 80;
+                  _retainedMaxPercentage = 100;
+                  _weakOnly = false;
+                  _newOnly = false;
+                  _clampCount();
+                  _rememberPreferences();
+                }),
+                child: const Text('Strong'),
+              ),
+              TextButton(
+                onPressed: () => setState(() {
+                  _newOnly = true;
+                  _weakOnly = false;
+                  _retainedMinPercentage = 0;
+                  _retainedMaxPercentage = 100;
+                  _clampCount();
+                  _rememberPreferences();
+                }),
+                child: const Text('New'),
+              ),
+            ],
           ),
         ],
       ),
@@ -1673,6 +1816,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         : available == 1
         ? 'card'
         : 'cards';
+    final directionCount = _availableDirectionCount;
+    final directions = !_usesSimilar && _usesRecallFilters && !_dueOnly
+        ? ', $directionCount ${directionCount == 1 ? 'direction' : 'directions'}'
+        : '';
     return maxCount == 0
         ? Text(
             _dueOnly ? '0 cards due' : 'No cards match these filters',
@@ -1692,7 +1839,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      '$available $noun ${_dueOnly ? 'due' : 'available'}',
+                      '$available $noun$directions ${_dueOnly ? 'due' : 'available'}',
                       style: const TextStyle(color: RecallColors.muted),
                       textAlign: TextAlign.end,
                     ),

@@ -31,6 +31,7 @@ const attrLanguageDetails = 'language_details';
 const attrSpokenOnly = 'spoken_only';
 const attrSimilarWordGroups = 'similar_word_groups';
 const attrLearningState = 'learning_state';
+const attrAddedToCurrentAt = 'added_to_current_at';
 
 const cardDetailsJsonSchema = <String, dynamic>{
   'type': 'object',

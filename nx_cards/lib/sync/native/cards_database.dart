@@ -30,6 +30,7 @@ class LocalStudyCards extends Table {
   BoolColumn get suspended => boolean()();
   IntColumn get sourceBookId => integer().nullable()();
   TextColumn get sourceBookName => text().nullable()();
+  TextColumn get addedToCurrentAt => text().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
   TextColumn get syncState => text()();
   BoolColumn get deletedLocally =>
@@ -44,7 +45,7 @@ class CardsDatabase extends _$CardsDatabase {
   CardsDatabase(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   Future<void> createHashSchema() => customStatement('''
     CREATE TABLE IF NOT EXISTS card_sync_hashes (
@@ -62,6 +63,14 @@ class CardsDatabase extends _$CardsDatabase {
       await DriftOutboxPersistence.createSchema(this);
     },
     onUpgrade: (migrator, from, to) async {
+      if (from >= 17) {
+        await migrator.addColumn(
+          localStudyCards,
+          localStudyCards.addedToCurrentAt,
+        );
+        return;
+      }
+
       // Hard v4 cutover. Retain rejected writes for diagnosis, never replay them.
       await customStatement(
         "CREATE TABLE rejected_card_outbox_v3 AS SELECT * FROM offline_outbox WHERE collection = 'cards'",

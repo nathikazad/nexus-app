@@ -25,6 +25,7 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
   double maximum = .6;
   double minimum = 0;
   bool weakOnly = true;
+  bool newOnly = false;
   bool expanded = false;
   bool changed = false;
   String get preferenceKey =>
@@ -52,6 +53,7 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
         maximum = maxValue;
         minimum = minValue;
         weakOnly = saved['weakOnly'] == true;
+        newOnly = saved['newOnly'] == true;
         if (weakOnly) {
           minimum = 0;
           maximum = .6;
@@ -71,6 +73,7 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
       'maximum': maximum,
       'minimum': minimum,
       'weakOnly': weakOnly,
+      'newOnly': newOnly,
     });
     unawaited(
       SharedPreferences.getInstance().then(
@@ -89,11 +92,19 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
       minimum: minimum,
       maximum: maximum,
       weakOnly: weakOnly,
+      newOnly: newOnly,
     );
-    final range = weakOnly
+    final range = newOnly
+        ? "New"
+        : weakOnly
         ? '0–60%'
         : '${(minimum * 100).round()}–${(maximum * 100).round()}%';
-    final summary = '${weakOnly ? 'Weak' : range} (${cards.length})';
+    final summary =
+        '${newOnly
+            ? 'New'
+            : weakOnly
+            ? 'Weak'
+            : range} (${cards.length})';
     return Column(
       children: [
         Padding(
@@ -146,9 +157,10 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
                           'Retention · $range (${cards.length})',
                           style: Theme.of(context).textTheme.labelMedium,
                         ),
-                        Row(
+                        Column(
                           children: [
-                            Expanded(
+                            SizedBox(
+                              width: double.infinity,
                               child: RangeSlider(
                                 key: const ValueKey('current-retention'),
                                 values: RangeValues(minimum, maximum),
@@ -161,24 +173,40 @@ class _CurrentCardsTabState extends ConsumerState<CurrentCardsTab> {
                                   maximum = value.end;
                                   minimum = value.start;
                                   weakOnly = false;
+                                  newOnly = false;
                                 }),
                               ),
                             ),
-                            TextButton(
-                              onPressed: () => _change(() {
-                                minimum = 0;
-                                maximum = .6;
-                                weakOnly = true;
-                              }),
-                              child: const Text('Weak'),
-                            ),
-                            TextButton(
-                              onPressed: () => _change(() {
-                                minimum = .8;
-                                maximum = 1;
-                                weakOnly = false;
-                              }),
-                              child: const Text('Strong'),
+                            Wrap(
+                              children: [
+                                TextButton(
+                                  onPressed: () => _change(() {
+                                    minimum = 0;
+                                    maximum = .6;
+                                    weakOnly = true;
+                                    newOnly = false;
+                                  }),
+                                  child: const Text('Weak'),
+                                ),
+                                TextButton(
+                                  onPressed: () => _change(() {
+                                    minimum = .8;
+                                    maximum = 1;
+                                    weakOnly = false;
+                                    newOnly = false;
+                                  }),
+                                  child: const Text('Strong'),
+                                ),
+                                TextButton(
+                                  onPressed: () => _change(() {
+                                    newOnly = true;
+                                    weakOnly = false;
+                                    minimum = 0;
+                                    maximum = 1;
+                                  }),
+                                  child: const Text('New'),
+                                ),
+                              ],
                             ),
                           ],
                         ),

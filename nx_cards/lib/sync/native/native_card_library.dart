@@ -126,6 +126,7 @@ final class NativeCardLibrary implements CardWorkspace {
     await _enqueue(
       existing.copyWith(
         learningStatus: status,
+        addedToCurrentAt: existing.currentDateForStatus(status, _clock.now()),
         content: existing.content is LanguageCardContent && spokenOnly != null
             ? (existing.content as LanguageCardContent).copyWith(
                 spokenOnly: spokenOnly,
