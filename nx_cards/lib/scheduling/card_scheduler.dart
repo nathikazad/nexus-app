@@ -33,6 +33,7 @@ class FsrsCardScheduler implements CardScheduler {
         throw StateError('This review direction is not enabled for this card.');
       }
     }
+    prompt = prompt.forRecall();
     final reviewedAt = now.toUtc();
     return {
       for (final rating in CardRating.values)

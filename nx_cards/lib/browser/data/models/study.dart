@@ -105,10 +105,12 @@ class StudyPrompt {
     required this.cue,
     this.showEnglishAndTransliteration = false,
     this.additionalCues = const {},
+    this.testScript = true,
   });
   final StudyCard card;
   final StudyCue cue;
   final Set<StudyCue> additionalCues;
+  final bool testScript;
   Set<StudyCue> get testedCues => {cue, ...additionalCues};
   final bool showEnglishAndTransliteration;
   bool get isListening => cue.isListening;
@@ -140,10 +142,37 @@ class StudyPrompt {
   List<CardReview> get reviewHistory => card.reviewHistoryFor(cue);
   bool get isNew => schedule.isNew;
   bool isDueAt(DateTime now) => schedule.isDueAt(now);
+
+  /// The shown source determines the answers, independently of setup filters.
+  StudyPrompt forRecall({bool? writing}) {
+    if (!card.isLanguageCard || cue.source == null) return this;
+    final script = writing ?? testScript;
+    final cues = StudyCue.languageDirections
+        .where(
+          (direction) =>
+              direction.source == cue.source &&
+              card.studiesCue(direction) &&
+              card.scheduleFor(direction).enabled &&
+              (script || direction.target != RecallComponent.script),
+        )
+        .toList();
+    if (cues.isEmpty) {
+      throw StateError('No enabled answers for this recall cue.');
+    }
+    return StudyPrompt(
+      card: card,
+      cue: cues.first,
+      additionalCues: cues.skip(1).toSet(),
+      testScript: script,
+      showEnglishAndTransliteration: showEnglishAndTransliteration,
+    );
+  }
+
   StudyPrompt withCard(StudyCard value) => StudyPrompt(
     card: value,
     cue: cue,
     additionalCues: additionalCues,
+    testScript: testScript,
     showEnglishAndTransliteration: showEnglishAndTransliteration,
   );
 }
@@ -160,6 +189,7 @@ List<StudyPrompt> combineRecallPrompts(Iterable<StudyPrompt> prompts) {
       card: first.card,
       cue: first.cue,
       additionalCues: Set.unmodifiable(cues..remove(first.cue)),
+      testScript: first.testScript,
       showEnglishAndTransliteration: first.showEnglishAndTransliteration,
     );
   }

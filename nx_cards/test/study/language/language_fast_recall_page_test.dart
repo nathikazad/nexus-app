@@ -47,7 +47,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      for (final cue in StudyCue.languageDirections) {
+      for (final cue in [
+        StudyCue.meaningToSound,
+        StudyCue.soundToMeaning,
+        StudyCue.scriptToMeaning,
+      ]) {
         final row = find.byKey(ValueKey('fast-row-1-${cue.storageKey}'));
         final reveal = find.descendant(
           of: row,
@@ -64,7 +68,7 @@ void main() {
         await tester.tap(yes);
         await tester.pumpAndSettle();
       }
-      expect(repository.saved, hasLength(6));
+      expect(repository.saved, hasLength(3));
       expect(
         repository.saved.last.reviewHistoryFor(StudyCue.meaningToScript),
         hasLength(2),
@@ -77,7 +81,7 @@ void main() {
         repository.saved.last.reviewHistoryFor(StudyCue.scriptToMeaning),
         hasLength(1),
       );
-      expect(find.text('6 of 6 cards reviewed'), findsOneWidget);
+      expect(find.text('3 of 3 cards reviewed'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -244,7 +248,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     final row = find.byKey(
-      const ValueKey<String>('fast-row-1-meaning_to_script'),
+      const ValueKey<String>('fast-row-1-meaning_to_sound'),
     );
     await tester.tap(find.byKey(const ValueKey<String>('fast-hidden-1')));
     await tester.pumpAndSettle();
@@ -290,7 +294,7 @@ void main() {
 
     final firstGesture = await tester.startGesture(
       tester.getCenter(
-        find.byKey(const ValueKey<String>('fast-row-1-meaning_to_script')),
+        find.byKey(const ValueKey<String>('fast-row-1-meaning_to_sound')),
       ),
     );
     await firstGesture.moveBy(const Offset(40, 0));
@@ -311,7 +315,7 @@ void main() {
 
     final secondGesture = await tester.startGesture(
       tester.getCenter(
-        find.byKey(const ValueKey<String>('fast-row-2-meaning_to_script')),
+        find.byKey(const ValueKey<String>('fast-row-2-meaning_to_sound')),
       ),
     );
     await secondGesture.moveBy(const Offset(-40, 0));
@@ -363,7 +367,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final row = find.byKey(
-      const ValueKey<String>('fast-row-1-meaning_to_script'),
+      const ValueKey<String>('fast-row-1-meaning_to_sound'),
     );
     final gesture = await tester.startGesture(tester.getCenter(row));
     await gesture.moveBy(const Offset(40, 0));

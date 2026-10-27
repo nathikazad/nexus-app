@@ -28,7 +28,7 @@ StudyCard fresh({bool language = true}) => StudyCard(
 );
 void main() {
   test(
-    'all six outcomes update exactly one history and schedule and serialize v4',
+    'each cue updates its outgoing histories and schedules and serializes v4',
     () {
       var card = fresh();
       final scheduler = FsrsCardScheduler(
@@ -42,9 +42,17 @@ void main() {
               DateTime.utc(2026, 10),
             )[CardRating.good]!
             .card;
-        expect(card.reviewHistoryFor(cue), hasLength(1));
-        expect(card.scheduleFor(cue).reviewCount, 1);
-        for (final other in card.directions.where((d) => d != cue)) {
+        expect(
+          card.reviewHistoryFor(cue),
+          hasLength(before.reviewHistoryFor(cue).length + 1),
+        );
+        expect(
+          card.scheduleFor(cue).reviewCount,
+          before.scheduleFor(cue).reviewCount + 1,
+        );
+        for (final other in card.directions.where(
+          (d) => d.source != cue.source,
+        )) {
           expect(card.scheduleFor(other), same(before.scheduleFor(other)));
           expect(card.reviewHistoryFor(other), before.reviewHistoryFor(other));
         }
@@ -56,7 +64,7 @@ void main() {
         (schedule['cues'] as Map).keys.toSet(),
         StudyCue.languageDirections.map((c) => c.storageKey).toSet(),
       );
-      expect((history['items'] as List).length, 6);
+      expect((history['items'] as List).length, 12);
       final roundTrip = studyCardFromModel(
         Model(
           id: 1,

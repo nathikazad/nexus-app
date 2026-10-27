@@ -214,13 +214,13 @@ void main() {
       final prompt = StudyPrompt(card: card, cue: cue);
       await _pumpRecall(tester, card, cue);
       expect(find.text(prompt.prompt), findsOneWidget);
-      expect(find.text(prompt.instruction), findsOneWidget);
+      expect(find.text(prompt.forRecall().instruction), findsOneWidget);
       expect(find.text(prompt.answer), findsNothing);
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
       expect(find.text(prompt.answer), findsOneWidget);
       expect(find.text(cue.label), findsNothing);
-      expect(find.text(prompt.instruction), findsNothing);
+      expect(find.text(prompt.forRecall().instruction), findsNothing);
       expect(find.text('ക'), findsOneWidget);
       expect(find.text('ka'), findsOneWidget);
       expect(find.text('Letter ka'), findsOneWidget);

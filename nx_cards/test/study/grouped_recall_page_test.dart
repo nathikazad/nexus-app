@@ -67,7 +67,7 @@ Future<void> answerWord(WidgetTester tester, {bool correct = true}) async {
 
 void main() {
   testWidgets(
-    'mixed writing group skips the spoken card canvas and grades only its oral cue',
+    'mixed writing group allows a spoken scratchpad but grades only its oral cue',
     (tester) async {
       final original = soundCard(1, 'a');
       final spoken = original.copyWith(
@@ -93,7 +93,10 @@ void main() {
           (v) => v != GroupedRecallFormat.fast,
         ),
       );
-      expect(find.byKey(const ValueKey('script-drawing-canvas')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('script-drawing-canvas')),
+        findsOneWidget,
+      );
       await answerWord(tester);
       expect(library.saved.single.spokenOnly, isTrue);
       expect(

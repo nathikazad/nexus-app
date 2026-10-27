@@ -311,7 +311,9 @@ Keep spoken responses short unless the learner asks for more detail.
 
     final rating = cardRatingForTutorResult(arguments['rating']?.toString());
     final reviewedAt = _now().toUtc();
-    final updated = _scheduler.preview(prompt, reviewedAt)[rating]!.card;
+    final updated = _scheduler
+        .preview(prompt.forRecall(writing: false), reviewedAt)[rating]!
+        .card;
     await _repository.saveSchedule(updated);
     _session.trace?.log('assessment_saved', {
       'card_id': prompt.card.id,

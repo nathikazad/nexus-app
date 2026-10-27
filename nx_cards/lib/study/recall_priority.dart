@@ -68,19 +68,20 @@ List<StudyPrompt> takeRecallCards(List<StudyPrompt> prompts, int count) {
 
 /// Cover cards before repeating them: each card's weakest direction first,
 /// then remaining directions in priority order. Shuffle only after selection.
-/// Input contains individual directions sorted by prioritizeRecallPrompts.
+/// Input contains source questions sorted by prioritizeRecallPrompts.
 List<StudyPrompt> shuffledRecallSelection(
   List<StudyPrompt> prioritized,
   int count, {
   Random? random,
 }) {
   final seenCards = <int>{};
-  final seenDirections = <(int, StudyCue)>{};
+  final seenDirections = <(int, Object)>{};
   final first = <StudyPrompt>[];
   final remaining = <StudyPrompt>[];
   for (final prompt in prioritized) {
-    assert(prompt.testedCues.length == 1);
-    if (!seenDirections.add((prompt.cardId, prompt.cue))) continue;
+    if (!seenDirections.add((prompt.cardId, prompt.cue.source ?? prompt.cue))) {
+      continue;
+    }
     (seenCards.add(prompt.cardId) ? first : remaining).add(prompt);
   }
   return [...first, ...remaining].take(max(0, count)).toList()..shuffle(random);

@@ -54,8 +54,9 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
   bool get _sameSession =>
       mounted && identical(_library, ref.read(cardLibraryProvider));
   String get _answerKey => '$_groupIndex:$_wordIndex';
-  StudyPrompt get _prompt =>
-      _questions[_wordIndex].withCard(_latest[_questions[_wordIndex].cardId]!);
+  StudyPrompt get _prompt => _questions[_wordIndex]
+      .forRecall(writing: widget.writing)
+      .withCard(_latest[_questions[_wordIndex].cardId]!);
 
   @override
   void initState() {
@@ -65,7 +66,11 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       for (final g in widget.groups)
         for (final c in g.comparisonCards) c.id: c,
     };
-    _questions = widget.groups.isEmpty ? [] : List.of(_group.prompts);
+    _questions = widget.groups.isEmpty
+        ? []
+        : combineRecallPrompts(
+            _group.prompts,
+          ).map((p) => p.forRecall(writing: widget.writing)).toList();
     _summary = widget.groups.isEmpty;
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _startNativeIfAvailable(),
@@ -142,7 +147,9 @@ class _GroupedRecallPageState extends ConsumerState<GroupedRecallPage> {
       _tested.clear();
       _batch = null;
       _error = null;
-      _questions = List.of(_group.prompts);
+      _questions = combineRecallPrompts(
+        _group.prompts,
+      ).map((p) => p.forRecall(writing: widget.writing)).toList();
     });
     if (openNative) {
       WidgetsBinding.instance.addPostFrameCallback(

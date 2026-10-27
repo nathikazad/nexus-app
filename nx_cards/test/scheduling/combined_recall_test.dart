@@ -33,7 +33,7 @@ void main() {
             RecallComponent.values.toSet(),
             writing: writing,
           ),
-        );
+        ).map((prompt) => prompt.forRecall(writing: writing)).toList();
         expect(questions.length, spokenOnly ? 2 : 3);
         final expected = {
           RecallComponent.meaning: {

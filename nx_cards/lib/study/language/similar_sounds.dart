@@ -69,9 +69,7 @@ Set<SimilarGroupType> availableSimilarGroupTypes(
         card.supportsCue(cue) &&
         card.scheduleFor(cue).enabled &&
         (writing || cue.target != RecallComponent.script) &&
-        (soundEnabled ||
-            (cue.source != RecallComponent.sound &&
-                cue.target != RecallComponent.sound));
+        (soundEnabled || cue.source != RecallComponent.sound);
     if (!result.contains(SimilarGroupType.sound) &&
         groups.any((id) => id.endsWith('-sound')) &&
         StudyCue.languageDirections.any(
@@ -149,9 +147,7 @@ List<SimilarRecallGroup> manualRecallSession(
             if (card.supportsCue(cue) &&
                 card.scheduleFor(cue).enabled &&
                 (writing || cue.target != RecallComponent.script) &&
-                (soundEnabled ||
-                    (cue.source != RecallComponent.sound &&
-                        cue.target != RecallComponent.sound)))
+                (soundEnabled || cue.source != RecallComponent.sound))
               StudyPrompt(card: card, cue: cue),
       ]);
       if (prompts.isEmpty) continue;

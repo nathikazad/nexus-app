@@ -74,7 +74,9 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
   @override
   void initState() {
     super.initState();
-    _prompts = List.of(widget.prompts);
+    _prompts = combineRecallPrompts(
+      widget.prompts,
+    ).map((p) => p.forRecall()).toList();
     _latestCards = <int, StudyCard>{
       for (final prompt in _prompts) prompt.cardId: prompt.card,
     };

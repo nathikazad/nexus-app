@@ -55,7 +55,9 @@ class _LanguageFastRecallPageState
   @override
   void initState() {
     super.initState();
-    _prompts = List.of(widget.prompts);
+    _prompts = combineRecallPrompts(
+      widget.prompts,
+    ).map((p) => p.forRecall()).toList();
     for (final prompt in _prompts) {
       _latestCards[prompt.cardId] = prompt.card;
     }
