@@ -14,8 +14,8 @@ Study delegates review timing to `scheduling/` and voice delivery to `tutor/`.
 
 A language card has six independent directed histories and FSRS schedules:
 Meaning → Sound, Meaning → Script, Sound → Meaning, Sound → Script,
-Script → Meaning and Script → Sound. Setup chooses the shown source: Meaning,
-Sound, or Script. Eligible directions are grouped by card and source into one
+Script → Meaning and Script → Sound. Setup offers six directions in two columns. Selected directions determine
+which source questions are eligible. Eligible directions are grouped by card and source into one
 question. Either outgoing direction can admit that question through Due or
 Retention; the review itself tests all enabled answers for that source.
 
@@ -31,10 +31,11 @@ default off: it disables all playback and excludes sound-source questions,
 without excluding sound targets. Meaning and Script cues can still test mental
 pronunciation. AI retains its oral-only policy.
 
-Setup shows cards, questions, and tested directions. The count slider selects
-questions. Selection covers each card's weakest eligible question first, then
+Setup shows selected cards (recalls) on the left and the fixed available total
+as “X cards (Y recalls)” on the right. The count slider selects recalls;
+multiple answers sharing a source cue count as one recall. Selection covers each card's weakest eligible question first, then
 remaining questions; the selected queue is shuffled. All/Clear share the cue
-heading row and selected cue buttons use the format controls' filled style.
+heading row and selected direction buttons use the format controls' filled style.
 
 `learning_stage.dart` derives Practice/Weak/Strong from activation and recall
 history. Each direction uses successes among its latest five recalls divided by
@@ -49,9 +50,9 @@ Do not persist Weak/Strong or activate replacement cards after recall. Cards
 store Future, Practice or Recall; Weak/Strong are calculated. Recall setup can
 filter by retention or due schedules. New selects Recall cards with no review
 history, review count, or last-review timestamp in any direction, including
-disabled directions. The available-card count at the bottom of recall setup shows distinct cards
-and individual directions. The slider selects the number of questions; practice
-continues to select cards and similar-sound recall selects groups. AI sessions exclude script questions.
+disabled directions. The available count at the bottom of recall setup shows distinct cards
+and grouped recalls. The slider selects the number of recalls; practice
+continues to select cards. Recall formats are Standard and Fast. AI sessions exclude script questions.
 
 The server's schedule/history contract is version 4. Clients write directed cue
 keys and reject legacy envelopes. SQLite schema 17 invalidates the old card

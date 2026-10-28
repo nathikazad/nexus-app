@@ -136,7 +136,7 @@ void main() {
     messenger.setMockMethodCallHandler(NativeDrawingSession.channel, null);
   });
   test(
-    'grouped writing opts into completion-only controls; ordinary payload stays unchanged',
+    'native recall uses ordinary grading without grouped-mode controls',
     () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       final opened = <Map<Object?, Object?>>[];
@@ -149,7 +149,7 @@ void main() {
         }
         return null;
       });
-      for (final grouped in [false, true]) {
+      {
         await NativeDrawingSession.open(
           title: 'Test',
           cards: [
@@ -158,12 +158,11 @@ void main() {
             ),
           ],
           recall: true,
-          grouped: grouped,
           onAction: (_) async => null,
         );
       }
       expect(opened.first.containsKey('grouped'), isFalse);
-      expect(opened.last['grouped'], isTrue);
+      expect(opened, hasLength(1));
       expect(opened.last['recall'], isTrue);
     },
   );

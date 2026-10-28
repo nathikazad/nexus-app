@@ -242,7 +242,6 @@ class NativeDrawingSession {
     required String title,
     required List<Map<String, Object?>> cards,
     required bool recall,
-    bool grouped = false,
     int initialIndex = 0,
     required Future<Object?> Function(MethodCall) onAction,
   }) async {
@@ -259,7 +258,6 @@ class NativeDrawingSession {
         'title': title,
         'initialIndex': initialIndex,
         'recall': recall,
-        if (grouped) 'grouped': true,
         'cards': cards,
       });
       return true;

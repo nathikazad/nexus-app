@@ -12,22 +12,36 @@ class RecallDirectionChoices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        for (final source in RecallComponent.values) ...[
-          if (source != RecallComponent.values.first) const SizedBox(width: 6),
-          Expanded(child: _button(context, source)),
-        ],
+        for (var row = 0; row < 3; row++)
+          Padding(
+            padding: EdgeInsets.only(bottom: row < 2 ? 6 : 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _button(context, StudyCue.languageDirections[row * 2]),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _button(
+                    context,
+                    StudyCue.languageDirections[row * 2 + 1],
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
 
-  Widget _button(BuildContext context, RecallComponent source) {
-    final active = selected.any((cue) => cue.source == source);
+  Widget _button(BuildContext context, StudyCue cue) {
+    final active = selected.contains(cue);
     final states = active ? {WidgetState.selected} : <WidgetState>{};
     final selectionStyle = Theme.of(context).segmentedButtonTheme.style;
     return OutlinedButton(
-      key: ValueKey('recall-source-${source.name}'),
+      key: ValueKey('recall-cue-${cue.storageKey}'),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
         backgroundColor:
@@ -49,11 +63,9 @@ class RecallDirectionChoices extends StatelessWidget {
       onPressed: () {
         final next = {...selected};
         if (active) {
-          next.removeWhere((cue) => cue.source == source);
+          next.remove(cue);
         } else {
-          next.addAll(
-            StudyCue.languageDirections.where((cue) => cue.source == source),
-          );
+          next.add(cue);
         }
         onChanged(next);
       },
@@ -61,7 +73,7 @@ class RecallDirectionChoices extends StatelessWidget {
         selected: active,
         child: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(source.label, maxLines: 1),
+          child: Text(cue.label, maxLines: 1),
         ),
       ),
     );

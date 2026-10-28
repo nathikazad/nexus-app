@@ -1,9 +1,5 @@
 import 'package:nx_cards/scheduling/retention.dart';
-import 'dart:math';
 import 'package:nx_cards/browser/browser.dart';
-import 'package:nx_cards/scheduling/learning_stage.dart';
-
-enum SimilarGroupType { written, sound, meaning }
 
 class SimilarSoundGroup {
   const SimilarSoundGroup(this.cards, {required this.label});
@@ -11,17 +7,6 @@ class SimilarSoundGroup {
   final String label;
   String get title => similarGroupTitle(label);
   SimilarGroupKind get kind => similarGroupKind(label);
-}
-
-class SimilarRecallGroup {
-  const SimilarRecallGroup({
-    required this.prompts,
-    required this.comparisonCards,
-    this.label = 'Similar words',
-  });
-  final List<StudyPrompt> prompts;
-  final List<StudyCard> comparisonCards;
-  final String label;
 }
 
 /// Explicit membership only; pronunciation does not affect manual groups.
@@ -48,149 +33,6 @@ List<SimilarSoundGroup> manualSimilarSoundGroups(
     final size = b.cards.length.compareTo(a.cards.length);
     return size == 0 ? a.label.compareTo(b.label) : size;
   });
-}
-
-/// Availability needs only one eligible member, never full sessions or sorting.
-Set<SimilarGroupType> availableSimilarGroupTypes(
-  Iterable<StudyCard> cards, {
-  required Set<RecallComponent> directions,
-  required bool writing,
-  bool soundEnabled = true,
-}) {
-  final result = <SimilarGroupType>{};
-  for (final card in cards) {
-    if (!card.active || card.learningStatus != LearningStatus.recall) continue;
-    final content = card.content;
-    if (content is! LanguageCardContent) continue;
-    final groups = content.similarWordGroups.where(
-      (id) => id.isNotEmpty && id.trim() == id,
-    );
-    bool eligible(StudyCue cue) =>
-        card.supportsCue(cue) &&
-        card.scheduleFor(cue).enabled &&
-        (writing || cue.target != RecallComponent.script) &&
-        (soundEnabled || cue.source != RecallComponent.sound);
-    if (!result.contains(SimilarGroupType.sound) &&
-        groups.any((id) => id.endsWith('-sound')) &&
-        StudyCue.languageDirections.any(
-          (cue) => cue.isListening && eligible(cue),
-        )) {
-      result.add(SimilarGroupType.sound);
-    }
-    if (!result.contains(SimilarGroupType.written) &&
-        groups.any((id) => id.endsWith('-write')) &&
-        StudyCue.languageDirections.any(
-          (cue) =>
-              (directions.contains(cue.source) ||
-                  directions.contains(cue.target)) &&
-              eligible(cue),
-        )) {
-      result.add(SimilarGroupType.written);
-    }
-    if (groups.any((id) => id.endsWith('-meaning')) &&
-        StudyCue.languageDirections.any(
-          (cue) =>
-              (cue.source == RecallComponent.meaning ||
-                  cue.target == RecallComponent.meaning) &&
-              eligible(cue),
-        )) {
-      result.add(SimilarGroupType.meaning);
-    }
-    if (result.length == SimilarGroupType.values.length) break;
-  }
-  return result;
-}
-
-/// Select complete rounds, each with one front type and its own average score.
-/// Retention orders groups but never filters membership or truncates a group.
-List<SimilarRecallGroup> manualRecallSession(
-  Iterable<StudyCard> cards, {
-  required bool sound,
-  bool meaning = false,
-  required Set<RecallComponent> directions,
-  required int groupLimit,
-  bool writing = true,
-  bool soundEnabled = true,
-  Random? random,
-}) {
-  if (groupLimit < 1) return [];
-  final cues = StudyCue.languageDirections
-      .where(
-        (cue) => meaning
-            ? cue.source == RecallComponent.meaning ||
-                  cue.target == RecallComponent.meaning
-            : sound
-            ? cue.isListening
-            : directions.contains(cue.source) ||
-                  directions.contains(cue.target),
-      )
-      .toSet();
-  if (cues.isEmpty) return [];
-  final groups = manualSimilarSoundGroups(cards.where((c) => c.active));
-  final sessions = <SimilarRecallGroup>[];
-  for (final group in groups) {
-    if (!group.label.endsWith(
-      meaning
-          ? '-meaning'
-          : sound
-          ? '-sound'
-          : '-write',
-    )) {
-      continue;
-    }
-    for (final source in RecallComponent.values) {
-      final prompts = combineRecallPrompts([
-        for (final cue in StudyCue.languageDirections.where(
-          (cue) => cues.contains(cue) && cue.source == source,
-        ))
-          for (final card in group.cards)
-            if (card.supportsCue(cue) &&
-                card.scheduleFor(cue).enabled &&
-                (writing || cue.target != RecallComponent.script) &&
-                (soundEnabled || cue.source != RecallComponent.sound))
-              StudyPrompt(card: card, cue: cue),
-      ]);
-      if (prompts.isEmpty) continue;
-      prompts.shuffle(random);
-      sessions.add(
-        SimilarRecallGroup(
-          prompts: prompts,
-          comparisonCards: group.cards,
-          label: group.label,
-        ),
-      );
-    }
-  }
-
-  double score(SimilarRecallGroup g) =>
-      g.prompts.fold<double>(
-        0,
-        (sum, p) =>
-            sum +
-            p.testedCues
-                .map((cue) => recallScore(p.card, cue).fraction)
-                .reduce(min),
-      ) /
-      g.prompts.length;
-  sessions.shuffle(random);
-  final tieOrder = {for (var i = 0; i < sessions.length; i++) sessions[i]: i};
-  sessions.sort((a, b) {
-    final order = score(a).compareTo(score(b));
-    return order == 0 ? tieOrder[a]!.compareTo(tieOrder[b]!) : order;
-  });
-  final selected = sessions.take(groupLimit).toList()..shuffle(random);
-  for (var i = 1; i < selected.length; i++) {
-    if (selected[i].label != selected[i - 1].label) continue;
-    final next = selected.indexWhere(
-      (g) => g.label != selected[i - 1].label,
-      i + 1,
-    );
-    if (next < 0) continue;
-    final swap = selected[i];
-    selected[i] = selected[next];
-    selected[next] = swap;
-  }
-  return selected;
 }
 
 enum SimilarGroupKind { sound, written, meaning, other }

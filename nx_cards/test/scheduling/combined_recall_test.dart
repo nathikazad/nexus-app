@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/card_scheduler.dart';
 import 'package:nx_cards/scheduling/retention.dart';
-import 'package:nx_cards/study/language/group_grade_batch.dart';
 
 StudyCard word(bool spokenOnly) => StudyCard(
   id: 10,
@@ -105,37 +104,4 @@ void main() {
       StudyCue.scriptToSound,
     });
   });
-  test(
-    'a failed save retries the same complete aggregate without duplicate reviews',
-    () async {
-      final card = word(false);
-      final prompt = combineRecallPrompts([
-        StudyPrompt(card: card, cue: StudyCue.meaningToSound),
-        StudyPrompt(card: card, cue: StudyCue.meaningToScript),
-      ]).single;
-      final latest = {card.id: card};
-      final batch = GroupGradeBatch(
-        prompts: [prompt],
-        latest: latest,
-        scheduler: FsrsCardScheduler(),
-        now: DateTime.utc(2026, 10, 3),
-        rating: CardRating.good,
-      );
-      StudyCard? attempted;
-      await expectLater(
-        batch.save((updated) async {
-          attempted = updated;
-          throw StateError('offline');
-        }, latest),
-        throwsStateError,
-      );
-      await batch.save((updated) async {
-        expect(updated, same(attempted));
-      }, latest);
-      expect(batch.complete, isTrue);
-      for (final cue in prompt.testedCues) {
-        expect(latest[card.id]!.reviewHistoryFor(cue), hasLength(1));
-      }
-    },
-  );
 }
