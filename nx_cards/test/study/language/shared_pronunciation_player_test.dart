@@ -12,6 +12,41 @@ class _Audio implements CardAudioRepository {
 
 void main() {
   test(
+    'slow replay applies speed before playback and normal replay resets it',
+    () async {
+      final events = <String>[];
+      final player = SharedPronunciationPlayer(
+        stop: () async {},
+        close: () async {},
+        setRate: (rate) async {
+          events.add('rate $rate');
+        },
+        play: (_) async {
+          events.add('play');
+        },
+      );
+      final audio = _Audio();
+      for (final rate in [0.25, 0.5, 1.0]) {
+        final request = rate == 1
+            ? player.start('test', 'audio', audio)
+            : player.start('test', 'audio', audio, rate: rate);
+        await Future<void>.delayed(Duration.zero);
+        audio.requests['audio']!.complete(Uint8List.fromList([1]));
+        await request;
+      }
+      expect(events, [
+        'rate 0.25',
+        'play',
+        'rate 0.5',
+        'play',
+        'rate 1.0',
+        'play',
+      ]);
+      player.dispose();
+    },
+  );
+
+  test(
     'latest tap wins even when the earlier download finishes last',
     () async {
       final events = <String>[];

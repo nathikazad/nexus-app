@@ -53,11 +53,15 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('ക'), findsNothing);
+      expect(find.text('0.25×'), findsNothing);
+      expect(find.text('0.5×'), findsNothing);
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
       expect(find.text('ക'), findsOneWidget);
       expect(find.text(StudyPrompt(card: card, cue: cue).answer), findsWidgets);
       expect(find.text('Yes'), findsOneWidget);
+      expect(find.text('0.25×'), findsOneWidget);
+      expect(find.text('0.5×'), findsOneWidget);
     });
   }
 
@@ -266,7 +270,9 @@ Future<void> _pumpRecall(
       overrides: [
         cardWorkspaceProvider.overrideWithValue(null),
         cardAudioRepositoryProvider.overrideWithValue(
-          cue == StudyCue.meaningToScript || cue == StudyCue.soundToMeaning
+          card.spokenOnly ||
+                  cue == StudyCue.meaningToScript ||
+                  cue == StudyCue.soundToMeaning
               ? _FakeAudioRepository()
               : null,
         ),

@@ -1,3 +1,4 @@
+import 'package:nx_cards/study/language/shared_pronunciation_player.dart';
 import 'package:nx_cards/study/session/confirm_end_recall.dart';
 import 'package:nx_cards/study/language/card_study_info.dart';
 import 'package:nx_cards/study/language/language_examples_page.dart';
@@ -199,6 +200,40 @@ class _StudySessionPageState extends ConsumerState<StudySessionPage> {
                           onEnd: _endReview,
                           spokenOnly: _card.spokenOnly,
                           onOpen: _openCardDetails,
+                          onSlowPlayback:
+                              _revealed &&
+                                  _card.spokenOnly &&
+                                  audioRepository != null &&
+                                  (_card.content as LanguageCardContent)
+                                          .audioUrl
+                                          ?.isNotEmpty ==
+                                      true
+                              ? (rate) async {
+                                  try {
+                                    await ref
+                                        .read(sharedPronunciationPlayerProvider)
+                                        .start(
+                                          this,
+                                          (_card.content as LanguageCardContent)
+                                              .audioUrl!,
+                                          audioRepository,
+                                          rate: rate,
+                                        );
+                                  } catch (_) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Could not play audio. Try again.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              : null,
                         ),
                         const SizedBox(height: 14),
                         LinearProgressIndicator(
@@ -483,11 +518,13 @@ class _StudyHeader extends StatelessWidget {
     required this.onEnd,
     required this.spokenOnly,
     required this.onOpen,
+    this.onSlowPlayback,
   });
   final String title;
   final int current, total;
   final bool spokenOnly;
   final VoidCallback onEnd, onOpen;
+  final ValueChanged<double>? onSlowPlayback;
   @override
   Widget build(BuildContext context) => Column(
     children: [
@@ -512,7 +549,11 @@ class _StudyHeader extends StatelessWidget {
       Row(
         children: [
           Expanded(child: Text('$current of $total', style: monoLabel)),
-          CardStudyInfo(spokenOnly: spokenOnly, onOpen: onOpen),
+          CardStudyInfo(
+            spokenOnly: spokenOnly,
+            onOpen: onOpen,
+            onSlowPlayback: onSlowPlayback,
+          ),
         ],
       ),
     ],

@@ -11,6 +11,7 @@ final sharedPronunciationPlayerProvider = Provider<SharedPronunciationPlayer>((
   // Changing account/audio repository also stops the previous account's audio.
   ref.watch(cardAudioRepositoryProvider);
   AudioPlayer? player;
+  double playbackRate = 1;
   StreamSubscription<void>? completion;
   late final SharedPronunciationPlayer shared;
   shared = SharedPronunciationPlayer(
@@ -22,7 +23,11 @@ final sharedPronunciationPlayerProvider = Provider<SharedPronunciationPlayer>((
         player = AudioPlayer();
         completion = player!.onPlayerComplete.listen((_) => shared.completed());
       }
+      await player!.setPlaybackRate(playbackRate);
       await player!.play(BytesSource(bytes, mimeType: 'audio/mpeg'));
+    },
+    setRate: (rate) async {
+      playbackRate = rate;
     },
     close: () async {
       await completion?.cancel();
@@ -39,10 +44,12 @@ class SharedPronunciationPlayer extends ChangeNotifier {
     required this.stop,
     required this.play,
     required this.close,
+    this.setRate,
   });
   final Future<void> Function() stop;
   final Future<void> Function(Uint8List) play;
   final Future<void> Function() close;
+  final Future<void> Function(double)? setRate;
   Object? owner;
   bool loading = false;
   bool playing = false;
@@ -59,8 +66,9 @@ class SharedPronunciationPlayer extends ChangeNotifier {
   Future<void> start(
     Object sender,
     String url,
-    CardAudioRepository repository,
-  ) async {
+    CardAudioRepository repository, {
+    double rate = 1,
+  }) async {
     if (_closed) return;
     final request = ++_request;
     owner = sender;
@@ -73,6 +81,7 @@ class SharedPronunciationPlayer extends ChangeNotifier {
       final bytes = await repository.fetch(url);
       await _enqueue(() async {
         if (_closed || request != _request) return;
+        await setRate?.call(rate);
         await play(bytes);
         if (_closed || request != _request) return;
         loading = false;

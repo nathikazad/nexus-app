@@ -26,6 +26,7 @@ class NativeDrawingActivity : Activity() {
     private lateinit var prompt: TextView
     private lateinit var subtitle: TextView
     private lateinit var audioOnlyBadge: TextView
+    private lateinit var slowAudio: LinearLayout
     private lateinit var cardInfo: ImageButton
     private lateinit var hint: TextView
     private lateinit var referenceScroll: ScrollView
@@ -137,6 +138,19 @@ class NativeDrawingActivity : Activity() {
                     setStroke(dp(1), Color.LTGRAY)
                 }
             }
+            slowAudio = LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                for (rate in listOf(0.25f, 0.5f)) {
+                    addView(button("${rate}×") { if (!busy && revealed) play(speed = rate) }.apply {
+                        textSize = 12f
+                        minWidth = 0
+                        minimumWidth = 0
+                        setPadding(dp(4), 0, dp(4), 0)
+                        contentDescription = "Play pronunciation at ${rate} speed"
+                    }, LinearLayout.LayoutParams(dp(56), dp(48)))
+                }
+            }
+            cardHeading.addView(slowAudio, LinearLayout.LayoutParams(-2, -2))
             cardHeading.addView(audioOnlyBadge, LinearLayout.LayoutParams(-2, -2))
             cardInfo = ImageButton(this).apply {
                 contentDescription = "Card details"; tooltipText = "Card details"
@@ -226,6 +240,7 @@ class NativeDrawingActivity : Activity() {
     }
     private fun updateCard(): Unit = RecallDiagnostics.measure("card_bind") {
         progress.text = "${index + 1} of ${cards.size}"
+        slowAudio.visibility = if (recall && revealed && card["spokenOnly"] == true && card["audio"] == true && soundEnabled) View.VISIBLE else View.GONE
         audioOnlyBadge.visibility = if (card["spokenOnly"] == true) View.VISIBLE else View.GONE
         cardInfo.visibility = View.VISIBLE
         if ((recall && !revealed || !recall && card["practiceDirection"] == true) && card["listening"] == true && listeningIndex != index) {
@@ -822,7 +837,7 @@ class NativeDrawingActivity : Activity() {
             override fun notImplemented() = error("missing", null, null)
         })
     }
-    private fun play(exampleIndex: Int? = null, characterIndex: Int? = null, derivedIndex: Int? = null, similarCardId: Int? = null) {
+    private fun play(exampleIndex: Int? = null, characterIndex: Int? = null, derivedIndex: Int? = null, similarCardId: Int? = null, speed: Float = 1f) {
         stopAudio()
         if (!soundEnabled) return
         val generation = audioGeneration
@@ -838,7 +853,7 @@ class NativeDrawingActivity : Activity() {
                     val file = File.createTempFile("cards-audio-", ".audio", cacheDir); audioFile = file; file.writeBytes(bytes)
                     player = MediaPlayer().apply {
                         setDataSource(file.absolutePath)
-                        setOnPreparedListener { if (generation == audioGeneration) { it.start(); hint.text = "Playing pronunciation" } }
+                        setOnPreparedListener { if (generation == audioGeneration) { it.playbackParams = android.media.PlaybackParams().setPitch(1f).setSpeed(speed); it.start(); hint.text = "Playing pronunciation" } }
                         setOnCompletionListener { stopAudio(); hint.text = if (recall) "Compare your drawing with the answer" else "Practice only" }
                         setOnErrorListener { _, _, _ -> stopAudio(); report("Could not play audio"); true }
                         prepareAsync()

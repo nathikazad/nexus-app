@@ -6,14 +6,26 @@ class CardStudyInfo extends StatelessWidget {
     super.key,
     required this.spokenOnly,
     required this.onOpen,
+    this.onSlowPlayback,
   });
   final bool spokenOnly;
   final VoidCallback onOpen;
+  final ValueChanged<double>? onSlowPlayback;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
+      if (spokenOnly && onSlowPlayback != null)
+        for (final rate in [0.25, 0.5])
+          TextButton(
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            onPressed: () => onSlowPlayback!(rate),
+            child: Text('$rate×'),
+          ),
       if (spokenOnly)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
