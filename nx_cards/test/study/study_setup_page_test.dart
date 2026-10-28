@@ -910,7 +910,7 @@ void main() {
         },
       );
       await showSetup(tester, studyCards: [fresh, sample(101, 1)]);
-      await tester.tap(find.widgetWithText(TextButton, 'New'));
+      await tester.tap(find.text('New'));
       await tester.pumpAndSettle();
       expect(
         find.textContaining(
@@ -922,10 +922,13 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(
         prefs.getKeys().any(
-          (key) => prefs.get(key).toString().contains('"newOnly":true'),
+          (key) => prefs.get(key).toString().contains('"timing":"newCards"'),
         ),
         isTrue,
       );
+      expect(find.byKey(const ValueKey('recall-retention')), findsNothing);
+      await tester.tap(find.text('Retention'));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, 'Weak'));
       await tester.pumpAndSettle();
       expect(
@@ -936,6 +939,78 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'Due optionally includes new cards independently of its score floor',
+    (tester) async {
+      final fresh = sample(100, 0).copyWith(
+        schedules: {
+          for (final cue in StudyCue.languageDirections)
+            cue: CardSchedule.initial(enabled: true),
+        },
+      );
+      await showSetup(
+        tester,
+        studyCards: [fresh, sample(101, 5), sample(102, 5, due: false)],
+      );
+      final timing = tester.widget<SegmentedButton<RecallTiming>>(
+        find.byKey(const ValueKey('recall-timing')),
+      );
+      expect(timing.segments.map((s) => s.value), [
+        RecallTiming.newCards,
+        RecallTiming.allMatching,
+        RecallTiming.dueNow,
+        RecallTiming.byDate,
+      ]);
+      await tester.tap(find.text('Due'));
+      await tester.pumpAndSettle();
+      final toggle = find.byKey(const ValueKey('include-new'));
+      expect(tester.widget<Switch>(toggle).value, isFalse);
+      tester
+          .widget<Slider>(find.byKey(const ValueKey('due-retention')))
+          .onChanged!(80);
+      await tester.pumpAndSettle();
+      expect(find.text('1 card (2 recalls)'), findsOneWidget);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.text('2 cards (4 recalls)'), findsOneWidget);
+      expect(tester.widget<Switch>(toggle).value, isTrue);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.text('1 card (2 recalls)'), findsOneWidget);
+      await tester.binding.setSurfaceSize(const Size(390, 1200));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('New controls disappear when no eligible untouched cards exist', (
+    tester,
+  ) async {
+    final backlog = sample(100, 0, active: false).copyWith(
+      schedules: {
+        for (final cue in StudyCue.languageDirections)
+          cue: CardSchedule.initial(enabled: true),
+      },
+    );
+    await showSetup(
+      tester,
+      studyCards: [backlog, sample(101, 1)],
+      preferences: {'study_setup.v4.recall.Chinese': '{"timing":"newCards"}'},
+    );
+    expect(find.text('New'), findsNothing);
+    expect(
+      tester
+          .widget<SegmentedButton<RecallTiming>>(
+            find.byKey(const ValueKey('recall-timing')),
+          )
+          .selected,
+      {RecallTiming.allMatching},
+    );
+    await tester.tap(find.text('Due'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('include-new')), findsNothing);
+  });
 
   testWidgets('retention shortcuts replace due and stage filters', (
     tester,

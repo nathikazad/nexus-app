@@ -46,7 +46,7 @@ enum RecallPresentation { standard, fast }
 
 enum RecallCardState { learning, relearning, retained, newCard }
 
-enum RecallTiming { allMatching, dueNow, byDate }
+enum RecallTiming { newCards, allMatching, dueNow, byDate }
 
 class StudySetupPage extends ConsumerStatefulWidget {
   const StudySetupPage({
@@ -154,7 +154,19 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   int _dueMinPercentage = 0;
   int _retainedMinPercentage = 0;
   bool _weakOnly = false;
-  bool _newOnly = false;
+  bool _includeNew = false;
+  bool get _hasNewCards => retentionPrompts(
+    _studyCards,
+    _explicitDirections ? RecallComponent.values.toSet() : _directions,
+    writing: _allowsWriting,
+    newOnly: true,
+  ).any((p) => _matchesSelectedCue(p.cue) && (_sessionSound || !p.isListening));
+  RecallTiming get _effectiveTiming =>
+      _timing == RecallTiming.newCards && !_hasNewCards
+      ? RecallTiming.allMatching
+      : _timing;
+  bool get _newTiming =>
+      _mode == StudyMode.recall && _effectiveTiming == RecallTiming.newCards;
   int _retainedMaxPercentage = 100;
   StudyOrder _order = StudyOrder.normal;
   int _count = 10;
@@ -232,7 +244,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           100,
         );
         _weakOnly = saved['weakOnly'] == true;
-        _newOnly = saved['newOnly'] == true;
+        _includeNew = saved['includeNew'] == true;
         if (_weakOnly) {
           _retainedMinPercentage = 0;
           _retainedMaxPercentage = 60;
@@ -251,6 +263,9 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         _timing =
             _enumByName(RecallTiming.values, saved['timing']) ??
             RecallTiming.allMatching;
+        if (saved['newOnly'] == true && _timing == RecallTiming.allMatching) {
+          _timing = RecallTiming.newCards;
+        }
         final savedCount = saved['count'];
         _count = savedCount is int ? max(1, savedCount) : 10;
         _normalizeAiDirections();
@@ -280,7 +295,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         'retainedMinPercentage': _retainedMinPercentage,
         'dueMinPercentage': _dueMinPercentage,
         'weakOnly': _weakOnly,
-        'newOnly': _newOnly,
+        'includeNew': _includeNew,
         'writing': _writing,
         'sound': _sound,
         'silent': _silent,
@@ -308,8 +323,8 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
   }
 
   List<StudyPrompt> get _recallBaseCandidates {
-    final dueOnly = _dueOnly;
     final now = DateTime.now();
+    final newOnly = _newTiming;
     return combineRecallPrompts(
           retentionPrompts(
             _studyCards.where(_matchesDate),
@@ -317,17 +332,11 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
 
             writing: _mode == StudyMode.ai ? false : _allowsWriting,
             sound: true,
-            minimum: _byDate
-                ? 0
-                : (dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
-            maximum: dueOnly || _byDate ? 1 : _retainedMaxPercentage / 100,
-            weakOnly: !dueOnly && !_byDate && _weakOnly,
-            newOnly: !dueOnly && !_byDate && _newOnly,
           ).where(
             (prompt) =>
                 _matchesSelectedCue(prompt.cue) &&
                 (_sessionSound || !prompt.isListening) &&
-                (!dueOnly || prompt.schedule.isDueAt(now)) &&
+                _matchesRecallSelection(prompt, now, newOnly: newOnly) &&
                 (_mode != StudyMode.ai || !prompt.cue.involvesScript),
           ),
         )
@@ -339,21 +348,41 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
         .toList();
   }
 
+  bool _matchesRecallSelection(
+    StudyPrompt prompt,
+    DateTime now, {
+    bool? newOnly,
+  }) {
+    final fresh = isUnreviewedCard(prompt.card);
+    if (newOnly ?? _newTiming) return fresh;
+    if (_dueOnly) {
+      if (fresh) return _includeNew;
+      return prompt.schedule.isDueAt(now) &&
+          matchesRecallRange(
+            prompt.card,
+            prompt.cue,
+            minimum: _dueMinPercentage / 100,
+          );
+    }
+    if (_byDate) return true;
+    return matchesRecallRange(
+      prompt.card,
+      prompt.cue,
+      minimum: _retainedMinPercentage / 100,
+      maximum: _retainedMaxPercentage / 100,
+      weakOnly: _weakOnly,
+    );
+  }
+
   bool _matchesRecallBaseFilters(StudyCard card, [StudyCue? cue]) {
     if (_mode == StudyMode.study) return true;
     return card.active &&
         _matchesDate(card) &&
         card.learningStatus == LearningStatus.recall &&
         (cue == null ? selectedCues(card, _directions) : [cue]).any(
-          (direction) => matchesRecallRange(
-            card,
-            direction,
-            minimum: _byDate
-                ? 0
-                : (_dueOnly ? _dueMinPercentage : _retainedMinPercentage) / 100,
-            maximum: _dueOnly || _byDate ? 1 : _retainedMaxPercentage / 100,
-            weakOnly: !_dueOnly && !_byDate && _weakOnly,
-            newOnly: !_dueOnly && !_byDate && _newOnly,
+          (direction) => _matchesRecallSelection(
+            StudyPrompt(card: card, cue: direction),
+            DateTime.now(),
           ),
         );
   }
@@ -391,7 +420,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
       _retainedMaxPercentage = range.end.round();
       _retainedMinPercentage = range.start.round();
       _weakOnly = false;
-      _newOnly = false;
       _clampCount();
     });
     _rememberPreferences();
@@ -1299,7 +1327,12 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                 final timing = SegmentedButton<RecallTiming>(
                                   key: const ValueKey('recall-timing'),
                                   showSelectedIcon: false,
-                                  segments: const [
+                                  segments: [
+                                    if (_hasNewCards)
+                                      const ButtonSegment(
+                                        value: RecallTiming.newCards,
+                                        label: Text('New'),
+                                      ),
                                     ButtonSegment(
                                       value: RecallTiming.allMatching,
                                       label: Text('Retention'),
@@ -1313,7 +1346,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                       label: Text('Date'),
                                     ),
                                   ],
-                                  selected: {_timing},
+                                  selected: {_effectiveTiming},
                                   onSelectionChanged: (value) {
                                     setState(() {
                                       _timing = value.single;
@@ -1329,7 +1362,14 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                     _rememberPreferences();
                                   },
                                 );
-                                if (_byDate || _dueOnly) return timing;
+                                if (_byDate ||
+                                    _newTiming ||
+                                    (_dueOnly && !_hasNewCards)) {
+                                  return timing;
+                                }
+                                final trailing = _dueOnly
+                                    ? _includeNewControl()
+                                    : _retentionShortcuts();
                                 if (constraints.maxWidth >= 560) {
                                   return Row(
                                     children: [
@@ -1340,7 +1380,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      _retentionShortcuts(),
+                                      trailing,
                                     ],
                                   );
                                 }
@@ -1350,7 +1390,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                                     timing,
                                     Align(
                                       alignment: Alignment.centerRight,
-                                      child: _retentionShortcuts(),
+                                      child: trailing,
                                     ),
                                   ],
                                 );
@@ -1361,7 +1401,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
                               _dateFilterChoices()
                             else if (_dueOnly)
                               _dueFilterChoices()
-                            else
+                            else if (!_newTiming)
                               _recallFilterChoices(),
                           ],
                         ),
@@ -1639,6 +1679,25 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     );
   }
 
+  Widget _includeNewControl() => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const Text('Include new'),
+      const SizedBox(width: 8),
+      Switch.adaptive(
+        key: const ValueKey('include-new'),
+        value: _includeNew,
+        onChanged: (value) {
+          setState(() {
+            _includeNew = value;
+            _clampCount();
+          });
+          _rememberPreferences();
+        },
+      ),
+    ],
+  );
+
   Widget _retentionShortcuts() => Wrap(
     children: [
       TextButton(
@@ -1646,7 +1705,6 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _retainedMinPercentage = 0;
           _retainedMaxPercentage = 60;
           _weakOnly = true;
-          _newOnly = false;
           _clampCount();
           _rememberPreferences();
         }),
@@ -1657,22 +1715,10 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
           _retainedMinPercentage = 80;
           _retainedMaxPercentage = 100;
           _weakOnly = false;
-          _newOnly = false;
           _clampCount();
           _rememberPreferences();
         }),
         child: const Text('Strong'),
-      ),
-      TextButton(
-        onPressed: () => setState(() {
-          _newOnly = true;
-          _weakOnly = false;
-          _retainedMinPercentage = 0;
-          _retainedMaxPercentage = 100;
-          _clampCount();
-          _rememberPreferences();
-        }),
-        child: const Text('New'),
       ),
     ],
   );
@@ -1681,9 +1727,7 @@ class _StudySetupPageState extends ConsumerState<StudySetupPage> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(
-        _newOnly
-            ? 'New'
-            : _weakOnly
+        _weakOnly
             ? '0–60%'
             : '$_retainedMinPercentage–$_retainedMaxPercentage%',
       ),
