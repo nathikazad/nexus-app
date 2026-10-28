@@ -90,6 +90,7 @@ void main() {
           );
         }
         expect(tester.takeException(), isNull);
+        expect(find.byKey(const ValueKey('daily-study-time')), findsOneWidget);
         await tester.pumpWidget(const SizedBox());
       }
     },
@@ -245,6 +246,7 @@ void main() {
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('daily-study-time')), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     }
   });

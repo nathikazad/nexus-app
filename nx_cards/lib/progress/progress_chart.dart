@@ -1,8 +1,17 @@
+import 'package:nx_cards/progress/study_time.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:nx_cards/progress/progress_analysis.dart';
 
 String progressDate(DateTime date) => '${date.month}/${date.day}/${date.year}';
+
+enum ProgressMetric { learning, recalls, minutes }
+
+double _value(ProgressBucket bucket, ProgressMetric metric) => switch (metric) {
+  ProgressMetric.learning => bucket.atTarget.toDouble(),
+  ProgressMetric.recalls => bucket.recalls.toDouble(),
+  ProgressMetric.minutes => bucket.studyTime.inMilliseconds / 60000,
+};
 
 class ProgressChart extends StatelessWidget {
   const ProgressChart({
@@ -11,13 +20,13 @@ class ProgressChart extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     required this.bucketLabel,
-    this.activity = false,
+    this.metric = ProgressMetric.learning,
   });
   final List<ProgressBucket> days;
   final int selected;
   final ValueChanged<int> onSelected;
   final String Function(ProgressBucket) bucketLabel;
-  final bool activity;
+  final ProgressMetric metric;
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +36,13 @@ class ProgressChart extends StatelessWidget {
     final scale = MediaQuery.textScalerOf(context);
     final textScale = scale.scale(12) / 12;
     String description(ProgressBucket bucket) {
-      final date =
-          '${bucketLabel(bucket)}${bucket.partial ? ' · Partial' : ''}';
-      final detail = activity
-          ? '${bucket.recalls} recalls'
-          : '${bucket.atTarget} cards · ${bucket.change > 0 ? '+' : ''}${bucket.change} net';
+      final date = bucketLabel(bucket);
+      final detail = switch (metric) {
+        ProgressMetric.recalls => '${bucket.recalls} recalls',
+        ProgressMetric.minutes => '≈ ${formatStudyTime(bucket.studyTime)}',
+        ProgressMetric.learning =>
+          '${bucket.atTarget} cards · ${bucket.change > 0 ? '+' : ''}${bucket.change} net',
+      };
       return '$date\n$detail';
     }
 
@@ -60,15 +71,15 @@ class ProgressChart extends StatelessWidget {
           width - 20,
           tooltipHeight + 196,
         );
-        final peak = days.fold<int>(
+        final peak = days.fold<double>(
           0,
-          (v, d) => math.max(v, activity ? d.recalls : d.atTarget),
+          (v, d) => math.max(v, _value(d, metric)),
         );
         final maxY = math.max(4.0, (peak / 4).ceilToDouble() * 4);
         double x(int i) => days.length == 1
             ? plot.center.dx
             : plot.left + 14 + (plot.width - 28) * i / (days.length - 1);
-        final value = activity ? day.recalls : day.atTarget;
+        final value = _value(day, metric);
         final barTop = plot.bottom - value / maxY * plot.height;
         void select(double dx) => onSelected(
           days.length == 1
@@ -78,7 +89,11 @@ class ProgressChart extends StatelessWidget {
                     .clamp(0, days.length - 1),
         );
         return Semantics(
-          label: activity ? 'Recall history' : 'Learning progress history',
+          label: switch (metric) {
+            ProgressMetric.learning => 'Learning progress history',
+            ProgressMetric.recalls => 'Recall history',
+            ProgressMetric.minutes => 'Estimated study minutes history',
+          },
           value: tooltip,
           increasedValue: selected < days.length - 1
               ? description(days[selected + 1])
@@ -98,13 +113,15 @@ class ProgressChart extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: CustomPaint(
-                      key: ValueKey(
-                        activity ? 'activity-chart' : 'learning-chart',
-                      ),
+                      key: ValueKey(switch (metric) {
+                        ProgressMetric.learning => 'learning-chart',
+                        ProgressMetric.recalls => 'activity-chart',
+                        ProgressMetric.minutes => 'minutes-chart',
+                      }),
                       painter: _ChartPainter(
                         days: days,
                         selected: selected,
-                        activity: activity,
+                        metric: metric,
                         plot: plot,
                         maxY: maxY,
                         scheme: scheme,
@@ -124,19 +141,25 @@ class ProgressChart extends StatelessWidget {
                       child: Semantics(
                         liveRegion: true,
                         child: Container(
-                          key: ValueKey(
-                            activity ? 'recall-tooltip' : 'learning-tooltip',
-                          ),
+                          key: ValueKey(switch (metric) {
+                            ProgressMetric.learning => 'learning-tooltip',
+                            ProgressMetric.recalls => 'recall-tooltip',
+                            ProgressMetric.minutes => 'minutes-tooltip',
+                          }),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color: scheme.surfaceContainerHighest.withValues(
-                              alpha: .72,
+                              alpha: .40,
                             ),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: scheme.outlineVariant),
+                            border: Border.all(
+                              color: scheme.outlineVariant.withValues(
+                                alpha: .5,
+                              ),
+                            ),
                           ),
                           child: Text(
                             tooltip,
@@ -161,7 +184,7 @@ class _ChartPainter extends CustomPainter {
   _ChartPainter({
     required this.days,
     required this.selected,
-    required this.activity,
+    required this.metric,
     required this.plot,
     required this.maxY,
     required this.scheme,
@@ -170,7 +193,7 @@ class _ChartPainter extends CustomPainter {
   });
   final List<ProgressBucket> days;
   final int selected;
-  final bool activity;
+  final ProgressMetric metric;
   final Rect plot;
   final double maxY, textScale;
   final ColorScheme scheme;
@@ -181,7 +204,7 @@ class _ChartPainter extends CustomPainter {
     double x(int i) => days.length == 1
         ? plot.center.dx
         : plot.left + 14 + (plot.width - 28) * i / (days.length - 1);
-    double y(int v) => plot.bottom - v / maxY * plot.height;
+    double y(double v) => plot.bottom - v / maxY * plot.height;
     void label(String text, Offset position, {bool right = false}) {
       final painter = TextPainter(
         text: TextSpan(
@@ -218,7 +241,7 @@ class _ChartPainter extends CustomPainter {
     }
     final width = math.min(24.0, plot.width / days.length * .65);
     for (var i = 0; i < days.length; i++) {
-      final top = y(activity ? days[i].recalls : days[i].atTarget);
+      final top = y(_value(days[i], metric));
       canvas.drawRect(
         Rect.fromLTRB(
           x(i) - width / 2,

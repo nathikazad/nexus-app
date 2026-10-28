@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:nx_cards/progress/study_time.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -174,6 +175,7 @@ class _ProgressViewState extends State<ProgressView> {
   bool changed = false;
   int? selected;
   int? selectedRecalls;
+  int? selectedMinutes;
   Future<void> _writes = Future.value();
   List<StudyCard>? _cachedCards;
   String? _cachedQuery;
@@ -229,6 +231,7 @@ class _ProgressViewState extends State<ProgressView> {
       update();
       selected = null;
       selectedRecalls = null;
+      selectedMinutes = null;
     });
     final raw = jsonEncode({
       'target': target,
@@ -615,7 +618,6 @@ class _ProgressViewState extends State<ProgressView> {
 
   String signedChange(int value) => value > 0 ? '+$value' : '$value';
   String bucketLabel(ProgressBucket bucket) {
-    if (interval == ProgressInterval.day) return progressDate(bucket.date);
     const months = [
       'Jan',
       'Feb',
@@ -630,6 +632,10 @@ class _ProgressViewState extends State<ProgressView> {
       'Nov',
       'Dec',
     ];
+    if (interval == ProgressInterval.day) {
+      const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return '${months[bucket.date.month - 1]} ${bucket.date.day}, ${weekdays[bucket.date.weekday - 1]}';
+    }
     if (interval == ProgressInterval.month) {
       return '${months[bucket.start.month - 1]} ${bucket.start.year}';
     }
@@ -658,6 +664,7 @@ class _ProgressViewState extends State<ProgressView> {
           1: FlexColumnWidth(),
           2: FlexColumnWidth(),
           3: FlexColumnWidth(),
+          4: FlexColumnWidth(1.4),
         },
         border: TableBorder(
           horizontalInside: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -669,6 +676,7 @@ class _ProgressViewState extends State<ProgressView> {
               cell('Cards', numeric: true, heading: true),
               cell('Net change', numeric: true, heading: true),
               cell('Recalls', numeric: true, heading: true),
+              cell('Est. time', numeric: true, heading: true),
             ],
           ),
           for (final bucket in buckets.reversed)
@@ -680,6 +688,7 @@ class _ProgressViewState extends State<ProgressView> {
                 cell('${bucket.atTarget}', numeric: true),
                 cell(signedChange(bucket.change), numeric: true),
                 cell('${bucket.recalls}', numeric: true),
+                cell(formatStudyTime(bucket.studyTime), numeric: true),
               ],
             ),
         ],
@@ -694,6 +703,10 @@ class _ProgressViewState extends State<ProgressView> {
     final buckets = groupProgress(report, interval, now);
     final index = (selected ?? buckets.length - 1).clamp(0, buckets.length - 1);
     final recallIndex = (selectedRecalls ?? buckets.length - 1).clamp(
+      0,
+      buckets.length - 1,
+    );
+    final minuteIndex = (selectedMinutes ?? buckets.length - 1).clamp(
       0,
       buckets.length - 1,
     );
@@ -817,7 +830,7 @@ class _ProgressViewState extends State<ProgressView> {
                           style: theme.textTheme.titleMedium,
                         ),
                         Text(
-                          '${report.recalls} in this period',
+                          '${report.recalls} recalls in this period',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: muted,
                           ),
@@ -828,12 +841,53 @@ class _ProgressViewState extends State<ProgressView> {
                     ProgressChart(
                       days: buckets,
                       selected: recallIndex,
-                      activity: true,
+                      metric: ProgressMetric.recalls,
                       bucketLabel: bucketLabel,
                       onSelected: (value) =>
                           setState(() => selectedRecalls = value),
                     ),
-                    if (interval != ProgressInterval.day) _breakdown(buckets),
+                    const SizedBox(height: 32),
+                    Divider(color: theme.colorScheme.outlineVariant),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        Text(
+                          '${switch (interval) {
+                            ProgressInterval.day => 'Daily',
+                            ProgressInterval.week => 'Weekly',
+                            ProgressInterval.month => 'Monthly',
+                          }} study minutes',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        Text(
+                          '≈ ${formatStudyTime(report.studyTime)} in this period',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ProgressChart(
+                      days: buckets,
+                      selected: minuteIndex,
+                      metric: ProgressMetric.minutes,
+                      bucketLabel: bucketLabel,
+                      onSelected: (value) =>
+                          setState(() => selectedMinutes = value),
+                    ),
+                    _breakdown(buckets),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Estimated time uses recall timestamps, excludes breaks over 5 minutes, and caps gaps at 90 seconds. Unrecorded practice is not included.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.only(top: 8, bottom: 12),
                       child: Text(

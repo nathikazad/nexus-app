@@ -1,3 +1,4 @@
+import 'package:nx_cards/progress/study_time.dart';
 import 'package:nx_cards/browser/browser.dart';
 import 'package:nx_cards/scheduling/learning_stage.dart';
 
@@ -10,11 +11,18 @@ DateTime nextProgressDay(DateTime day) =>
     DateTime(day.year, day.month, day.day + 1);
 
 class ProgressDay {
-  const ProgressDay(this.date, this.atTarget, this.everReached, this.recalls);
+  const ProgressDay(
+    this.date,
+    this.atTarget,
+    this.everReached,
+    this.recalls, {
+    this.studyTime = Duration.zero,
+  });
   final DateTime date;
   final int atTarget;
   final int everReached;
   final int recalls;
+  final Duration studyTime;
 }
 
 class ProgressMilestone {
@@ -45,6 +53,8 @@ class ProgressAnalysis {
   final DateTime? firstReview;
   final DateTime? firstAudioReview;
   final int openingCount;
+  Duration get studyTime =>
+      days.fold(Duration.zero, (sum, day) => sum + day.studyTime);
   int get recalls => days.fold(0, (sum, day) => sum + day.recalls);
   double get cardsPerDay => milestones.length / days.length;
   double? get medianDays {
@@ -104,6 +114,7 @@ ProgressAnalysis analyzeProgress({
   final first = events.firstOrNull?.review.reviewedAt;
   final requestedStart = progressDay(start ?? first ?? lastDay);
   final firstDay = requestedStart.isAfter(lastDay) ? lastDay : requestedStart;
+  final studyTimes = estimatedStudyTime(cards, now: now);
   final history = <(int, StudyCue), List<CardReview>>{};
   final started = <int, DateTime>{};
   final reached = <int, ProgressMilestone>{};
@@ -148,7 +159,13 @@ ProgressAnalysis analyzeProgress({
       }
     }
     days.add(
-      ProgressDay(day, atTarget.length, reached.length, counts[day] ?? 0),
+      ProgressDay(
+        day,
+        atTarget.length,
+        reached.length,
+        counts[day] ?? 0,
+        studyTime: studyTimes[day] ?? Duration.zero,
+      ),
     );
   }
   final milestones =
@@ -175,7 +192,8 @@ class ProgressBucket extends ProgressDay {
     required int recalls,
     required this.change,
     required this.partial,
-  }) : super(end, atTarget, 0, recalls);
+    Duration studyTime = Duration.zero,
+  }) : super(end, atTarget, 0, recalls, studyTime: studyTime);
   final DateTime start;
   final int change;
   final bool partial;
@@ -226,6 +244,7 @@ List<ProgressBucket> groupProgress(
           end: days.last.date,
           atTarget: days.last.atTarget,
           recalls: days.fold(0, (sum, d) => sum + d.recalls),
+          studyTime: days.fold(Duration.zero, (sum, d) => sum + d.studyTime),
           change: change,
           partial:
               days.first.date != entry.key ||

@@ -1,3 +1,4 @@
+import 'package:nx_cards/progress/study_time.dart';
 import 'package:nx_cards/browser/language/language_groups.dart';
 import 'package:nx_cards/goals/goal_day_clock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -98,6 +99,11 @@ class DailyGoalBar extends ConsumerWidget {
     final count = counts == null
         ? null
         : counts[DateTime(now.year, now.month, now.day)] ?? 0;
+    final today = DateTime(now.year, now.month, now.day);
+    final studyTime = cards.value == null
+        ? null
+        : estimatedStudyTime(cards.value!, now: now, start: today)[today] ??
+              Duration.zero;
     final streak = counts == null ? 0 : dailyGoalStreak(counts, goal, now);
     final theme = Theme.of(context);
     final subtitle = cards.hasError && !cards.hasValue
@@ -140,15 +146,34 @@ class DailyGoalBar extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              Text(
-                !settings.hasValue && settings.isLoading
-                    ? 'Loading goal…'
-                    : goal == 0
-                    ? 'No goal set'
-                    : '${count ?? '—'} / $goal recalls',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    !settings.hasValue && settings.isLoading
+                        ? 'Loading goal…'
+                        : goal == 0
+                        ? 'No goal set'
+                        : '${count ?? '—'} / $goal recalls',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (studyTime != null)
+                    Tooltip(
+                      message:
+                          'Estimated from recall timestamps; excludes long breaks and unrecorded practice.',
+                      child: Text(
+                        '≈ ${formatStudyTime(studyTime)}',
+                        key: const ValueKey('daily-study-time'),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 10),
               LinearProgressIndicator(

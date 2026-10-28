@@ -184,6 +184,9 @@ void main() {
   ) async {
     await showProgress(tester);
     expect(find.text('Recall type'), findsNothing);
+    expect(find.text('Sep 29, Tue'), findsOneWidget);
+    expect(find.text('Daily study minutes'), findsOneWidget);
+    expect(find.text('Est. time'), findsOneWidget);
     expect(find.byKey(const ValueKey('progress-direction')), findsNothing);
     expect(find.text('Percent'), findsNothing);
     expect(find.textContaining('First reached target'), findsNothing);
@@ -191,11 +194,15 @@ void main() {
     await tester.tap(find.text('Week'));
     await tester.pumpAndSettle();
     expect(find.text('Weekly recalls'), findsOneWidget);
+    expect(find.text('Weekly study minutes'), findsOneWidget);
+    expect(find.text('Est. time'), findsOneWidget);
     expect(find.text('Net change'), findsOneWidget);
     await tester.ensureVisible(find.text('Month'));
     await tester.tap(find.text('Month'));
     await tester.pumpAndSettle();
     expect(find.text('Monthly recalls'), findsOneWidget);
+    expect(find.text('Monthly study minutes'), findsOneWidget);
+    expect(find.text('Est. time'), findsOneWidget);
     expect(find.text('Daily recalls'), findsNothing);
     await tester.ensureVisible(find.text('Monthly recalls'));
     await tester.pumpAndSettle();
@@ -245,6 +252,31 @@ void main() {
     expect(tooltip('recall-tooltip'), contains('Sep 1 – Sep 6'));
     expect(tooltip('recall-tooltip'), contains('recalls'));
     expect(tooltip('recall-tooltip'), isNot(contains('net')));
+    expect(tooltip('recall-tooltip'), isNot(contains('estimated')));
+    final recallSelection = tooltip('recall-tooltip');
+    final minutesChart = find.byKey(const ValueKey('minutes-chart'));
+    await tester.ensureVisible(minutesChart);
+    await tester.pumpAndSettle();
+    final minutesBounds = tester.getRect(minutesChart);
+    await tester.tapAt(
+      Offset(minutesBounds.left + 90, minutesBounds.bottom - 50),
+    );
+    await tester.pumpAndSettle();
+    expect(tooltip('minutes-tooltip'), contains('Sep 1 – Sep 6'));
+    expect(tooltip('minutes-tooltip'), isNot(contains('estimated')));
+    expect(tooltip('minutes-tooltip'), isNot(contains('Partial')));
+    expect(tooltip('learning-tooltip'), isNot(contains('Partial')));
+    expect(tooltip('recall-tooltip'), isNot(contains('Partial')));
+    expect(tooltip('minutes-tooltip'), isNot(contains('recalls')));
+    expect(tooltip('recall-tooltip'), recallSelection);
+    final decoration =
+        tester
+                .widget<Container>(
+                  find.byKey(const ValueKey('minutes-tooltip')),
+                )
+                .decoration!
+            as BoxDecoration;
+    expect(decoration.color!.a, closeTo(.4, .01));
     expect(tooltip('learning-tooltip'), selectedLearning);
     expect(find.byTooltip('Previous day'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -366,6 +398,7 @@ void main() {
       expect(find.text('Script › Basics'), findsOneWidget);
       expect(find.text('At least 90%'), findsOneWidget);
       expect(find.text('Recall type'), findsNothing);
+      expect(find.text('Est. time'), findsOneWidget);
       expect(find.text('Last 7 days'), findsOneWidget);
 
       expect(tester.takeException(), isNull);
