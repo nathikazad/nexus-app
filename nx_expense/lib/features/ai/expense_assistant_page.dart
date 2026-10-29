@@ -142,69 +142,313 @@ class _ExpenseAssistantPageState extends ConsumerState<ExpenseAssistantPage> {
   Widget build(BuildContext context) {
     final domain =
         ref.watch(authProvider).value?.domainName ?? 'selected domain';
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: () => navBack(context)),
-        title: const Text('Tell AI'),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Text(
-                'Daily Log · $domain',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Tell me what you spent, where, and what you bought. I’ll keep your words as a log.',
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _input,
-                enabled: !_busy,
-                minLines: 4,
-                maxLines: 10,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: r'Spent $30 at the grocery store on eggs, milk…',
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+    return ExpenseCaptureView(
+      domain: domain,
+      controller: _input,
+      busy: _busy,
+      recording: _recording,
+      reply: _reply,
+      error: _error,
+      onBack: () => navBack(context),
+      onSend: _send,
+      onVoice: _voice,
+    );
+  }
+}
+
+/// Owns a complete light/dark palette instead of mixing the app's fixed-light
+/// input and button defaults with platform appearance.
+class ExpenseCaptureView extends StatelessWidget {
+  const ExpenseCaptureView({
+    super.key,
+    required this.domain,
+    required this.controller,
+    required this.onBack,
+    required this.onSend,
+    required this.onVoice,
+    this.busy = false,
+    this.recording = false,
+    this.reply = '',
+    this.error,
+  });
+
+  final String domain;
+  final TextEditingController controller;
+  final VoidCallback onBack, onSend, onVoice;
+  final bool busy, recording;
+  final String reply;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final scheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF0F766E),
+      brightness: dark ? Brightness.dark : Brightness.light,
+      surface: dark ? const Color(0xFF142321) : Colors.white,
+    );
+    final background = dark ? const Color(0xFF0B1716) : const Color(0xFFF5F8F7);
+    final theme = ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: background,
+      fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+    );
+    final text = theme.textTheme;
+    return Theme(
+      data: theme,
+      child: Scaffold(
+        backgroundColor: background,
+        appBar: AppBar(
+          backgroundColor: background,
+          foregroundColor: scheme.onSurface,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Back',
+          ),
+          title: Text(
+            'Tell AI',
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        body: SafeArea(
+          top: false,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 children: [
-                  FilledButton.icon(
-                    onPressed: _busy ? null : _send,
-                    icon: const Icon(Icons.send_outlined),
-                    label: const Text('Send'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bookmark_outline,
+                            size: 16,
+                            color: scheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Daily Log · $domain',
+                              style: text.labelMedium?.copyWith(
+                                color: scheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'What did you spend?',
+                    style: text.headlineMedium?.copyWith(
+                      fontSize: 30,
+                      height: 1.15,
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'A place, an amount, a few details. Just tell it in your own words.',
+                    style: text.bodyLarge?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: scheme.outlineVariant),
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'YOUR NOTE',
+                          style: text.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: controller,
+                          enabled: !busy,
+                          minLines: 5,
+                          maxLines: 10,
+                          cursorColor: scheme.primary,
+                          style: text.bodyLarge?.copyWith(
+                            color: scheme.onSurface,
+                            height: 1.6,
+                          ),
+                          decoration: InputDecoration(
+                            hintText:
+                                '“Spent \$30 at the grocery store on eggs, milk and coffee.”',
+                            hintStyle: text.bodyLarge?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              height: 1.6,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            isDense: true,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: controller,
+                            builder: (context, value, _) => FilledButton.icon(
+                              onPressed: busy || value.text.trim().isEmpty
+                                  ? null
+                                  : onSend,
+                              icon: const Icon(Icons.arrow_upward, size: 18),
+                              label: const Text('Send note'),
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(120, 48),
+                                backgroundColor: scheme.primary,
+                                foregroundColor: scheme.onPrimary,
+                                disabledBackgroundColor:
+                                    scheme.surfaceContainerHighest,
+                                disabledForegroundColor:
+                                    scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   OutlinedButton.icon(
-                    onPressed: _busy && !_recording ? null : _voice,
-                    icon: Icon(_recording ? Icons.stop : Icons.mic_none),
-                    label: Text(_recording ? 'Done speaking' : 'Speak'),
+                    onPressed: busy && !recording ? null : onVoice,
+                    icon: Icon(
+                      recording
+                          ? Icons.stop_circle_outlined
+                          : Icons.mic_none_rounded,
+                      size: 24,
+                    ),
+                    label: Text(recording ? 'Done speaking' : 'Speak instead'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: scheme.primary,
+                      backgroundColor: recording
+                          ? scheme.primaryContainer
+                          : scheme.surface,
+                      side: BorderSide(color: scheme.outlineVariant),
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      textStyle: text.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Your words, saved as a Daily Log.',
+                    textAlign: TextAlign.center,
+                    style: text.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (busy) ...[
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        if (recording)
+                          Icon(Icons.graphic_eq, color: scheme.primary)
+                        else
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: scheme.primary,
+                            ),
+                          ),
+                        const SizedBox(width: 12),
+                        Text(
+                          recording ? 'Listening…' : 'Saving your note…',
+                          style: text.bodyMedium?.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (reply.isNotEmpty || error != null) ...[
+                    const SizedBox(height: 24),
+                    Semantics(
+                      liveRegion: true,
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: error != null
+                              ? scheme.errorContainer
+                              : scheme.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: error != null
+                                ? scheme.error
+                                : scheme.outlineVariant,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              error != null
+                                  ? 'Couldn’t confirm the save'
+                                  : 'NX Expense',
+                              style: text.labelLarge?.copyWith(
+                                color: error != null
+                                    ? scheme.onErrorContainer
+                                    : scheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SelectableText(
+                              error ?? reply,
+                              style: text.bodyLarge?.copyWith(
+                                color: error != null
+                                    ? scheme.onErrorContainer
+                                    : scheme.onSurface,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              if (_busy) ...[
-                const SizedBox(height: 20),
-                Text(_recording ? 'Listening…' : 'Working…'),
-              ],
-              if (_reply.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                SelectableText(_reply),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 20),
-                Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
