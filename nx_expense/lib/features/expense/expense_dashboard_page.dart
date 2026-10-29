@@ -532,7 +532,7 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
 
     final node = _findNode(sliceName);
     if (node == null) return;
-    if (_hasChildren(sliceName)) {
+    if (widget.tagSystem.isHierarchical && _hasChildren(sliceName)) {
       setState(() => _breadcrumbs.add(sliceName));
       return;
     }
@@ -566,14 +566,10 @@ class _TagPieChartState extends ConsumerState<_TagPieChart> {
         return _PieChartCard(
           title: title,
           entries: entries,
-          onSliceTap: isHierarchical
-              ? (sliceName) => _handleSliceTap(sliceName)
-              : null,
-          sliceIsActionable: isHierarchical
-              ? (sliceName) =>
-                    sliceName == _uncategorizedTagNode ||
-                    _findNode(sliceName) != null
-              : null,
+          onSliceTap: _handleSliceTap,
+          sliceIsActionable: (sliceName) =>
+              sliceName == _uncategorizedTagNode ||
+              _findNode(sliceName) != null,
           headerTrailing: isHierarchical && _breadcrumbs.isNotEmpty
               ? GestureDetector(
                   onTap: () => setState(() => _breadcrumbs.removeLast()),

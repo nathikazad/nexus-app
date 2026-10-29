@@ -1,3 +1,4 @@
+import 'package:nx_expense/domain/expense/expense_filter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -195,6 +196,39 @@ Future<GoRouter> _mount(
 }
 
 void main() {
+  testWidgets(
+    'sort sheet is above the shell plus button and closes after selection',
+    (tester) async {
+      await _mount(
+        tester,
+        size: const Size(390, 844),
+        initial: '/expenses',
+        realLists: true,
+      );
+      await tester.tap(find.byIcon(Icons.sort));
+      await tester.pumpAndSettle();
+      expect(find.text('Sort by'), findsOneWidget);
+      expect(
+        find.byTooltip('Add expense or upload receipt').hitTestable(),
+        findsNothing,
+      );
+      await tester.tap(find.text('Asc').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Sort by'), findsNothing);
+      expect(
+        find.byTooltip('Add expense or upload receipt').hitTestable(),
+        findsOneWidget,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(DesktopShell)),
+      );
+      expect(
+        container.read(expenseListSortProvider),
+        ExpenseSortMode.amountAsc,
+      );
+    },
+  );
+
   testWidgets('real three-panel list layout fits the desktop breakpoint', (
     tester,
   ) async {

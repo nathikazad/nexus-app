@@ -26,6 +26,49 @@ void main() {
     ],
   };
   test(
+    'uncategorized selects absent or empty category within the date range',
+    () {
+      final filter = <String, dynamic>{
+        'filters': [
+          {'key': 'date', 'op': '>=', 'value': '2026-09-01'},
+          {'key': 'date', 'op': '<=', 'value': '2026-09-30'},
+        ],
+        'tag_filters': [
+          {
+            'system': 'Category',
+            'node': 'Uncategorized',
+            'include_descendants': true,
+          },
+        ],
+      };
+      expect(matchesExpenseSyncFilter(row, filter, null), false);
+      for (final tags in [
+        {},
+        {'Category': []},
+        {
+          'Other': ['Work'],
+        },
+      ]) {
+        expect(
+          matchesExpenseSyncFilter({...row, 'tags': tags}, filter, null),
+          true,
+        );
+      }
+      expect(
+        matchesExpenseSyncFilter(
+          {
+            ...row,
+            'tags': {},
+            'attributes': {'date': '2026-10-01'},
+          },
+          filter,
+          null,
+        ),
+        false,
+      );
+    },
+  );
+  test(
     'snapshot preserves product image and line-item relation attributes',
     () {
       final model = expenseSyncModel(row);

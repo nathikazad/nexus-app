@@ -831,15 +831,16 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => SortSheet(
+      builder: (sheetContext) => SortSheet(
         current: currentSort,
         onPick: (mode) {
           ref.read(expenseListSortProvider.notifier).setSort(mode);
-          Navigator.pop(context);
+          Navigator.pop(sheetContext);
         },
       ),
     );

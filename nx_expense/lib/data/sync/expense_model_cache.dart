@@ -144,6 +144,12 @@ bool matchesExpenseSyncFilter(
     }
   }
   for (final f in filter['tag_filters'] as List? ?? []) {
+    final assigned = row['tags']?[f['system']] as List? ?? [];
+    // Match KGQL's synthetic bucket: no assignment in this tag system.
+    if (f['node'] == 'Uncategorized') {
+      if (assigned.isNotEmpty) return false;
+      continue;
+    }
     final names = <String>{f['node'] as String};
     if (f['include_descendants'] == true) {
       final systems = references?['tag_systems'] as List? ?? [];
@@ -164,7 +170,7 @@ bool matchesExpenseSyncFilter(
         }
       } while (changed);
     }
-    if (!(row['tags']?[f['system']] as List? ?? []).any(names.contains)) {
+    if (!assigned.any(names.contains)) {
       return false;
     }
   }
