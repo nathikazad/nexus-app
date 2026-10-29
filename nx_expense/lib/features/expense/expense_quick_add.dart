@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/motion/expense_motion.dart';
 import '../images/upload_expense_receipt.dart';
 import 'expense_form_page.dart';
-import '../desktop/desktop_nav.dart';
+import '../ai/expense_assistant_page.dart';
 
 /// A compact fan-out: two taps from the expense list to either entry flow.
 class ExpenseQuickAdd extends ConsumerStatefulWidget {
@@ -65,9 +65,9 @@ class _ExpenseQuickAddState extends ConsumerState<ExpenseQuickAdd> {
                             heroTag: 'quick-tell-ai',
                             onPressed: () {
                               setState(() => _open = false);
-                              navPush(context, '/tell-ai');
+                              showExpenseAssistant(context);
                             },
-                            icon: const Icon(Icons.chat_bubble_outline),
+                            icon: const Icon(Icons.mic_none_rounded),
                             label: const Text('Tell AI'),
                           ),
                           const SizedBox(height: 12),

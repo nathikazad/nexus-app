@@ -95,7 +95,10 @@ mutation is performed by this screen. The feature requires connectivity.
 ## Quick capture
 
 The expense plus menu offers Expense, Upload receipt, and Tell AI. Tell AI opens
-`/tell-ai` with text entry and microphone input through the shared NX Voice socket.
+a recording overlay through the shared NX Voice socket. Recording starts on open,
+transcript previews appear while speaking, and Stop sends the complete recording.
+The AI reply stays visible for five seconds before the overlay closes. Closing
+while recording cancels without sending. Errors remain visible until dismissed.
 It sends `X-Client-Id: nx_expense` and the selected `X-Domain-Id`. The backend capture
 agent saves the original message as a Daily Log with source `nx_expense`; it does
 not create structured expense records. The current destination domain appears on
