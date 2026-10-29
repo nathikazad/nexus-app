@@ -399,7 +399,7 @@ List<SchemaModelFilterOperator> _operatorsForValueType(String valueType) {
       SchemaModelFilterOperator.lessThanOrEqual,
     ];
   }
-  if (lower == 'boolean') {
+  if (lower == 'boolean' || lower == 'enum') {
     return const [SchemaModelFilterOperator.equals];
   }
   return const [

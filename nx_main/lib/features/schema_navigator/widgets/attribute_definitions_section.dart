@@ -21,6 +21,9 @@ class AttributeDefinitionsSection extends StatelessWidget {
     int? index,
   }) {
     final keyController = TextEditingController(text: attribute?.key ?? '');
+    final choicesController = TextEditingController(
+      text: ((attribute?.constraints?['enum'] as List?) ?? []).join('\n'),
+    );
     String valueType = attribute?.valueType ?? 'string';
     bool required = attribute?.required ?? false;
     final isEditing = attribute != null;
@@ -46,13 +49,14 @@ class AttributeDefinitionsSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: valueType,
+                  initialValue: valueType,
                   decoration: const InputDecoration(
                     labelText: 'Value Type',
                     border: OutlineInputBorder(),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'string', child: Text('String')),
+                    DropdownMenuItem(value: 'enum', child: Text('Enum')),
                     DropdownMenuItem(value: 'number', child: Text('Number')),
                     DropdownMenuItem(value: 'boolean', child: Text('Boolean')),
                     DropdownMenuItem(
@@ -68,6 +72,18 @@ class AttributeDefinitionsSection extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 16),
+                if (valueType == 'enum') ...[
+                  TextFormField(
+                    controller: choicesController,
+                    minLines: 2,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      labelText: 'Allowed values (one per line)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 CheckboxListTile(
                   title: const Text('Required'),
                   value: required,
@@ -87,12 +103,29 @@ class AttributeDefinitionsSection extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
+                final choices = choicesController.text
+                    .split('\n')
+                    .map((s) => s.trim())
+                    .where((s) => s.isNotEmpty)
+                    .toSet()
+                    .toList();
+                if (valueType == 'enum' && choices.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Enter at least one allowed value')),
+                  );
+                  return;
+                }
                 if (keyController.text.isNotEmpty) {
                   final newAttribute = AttributeDefinitionDraft(
                     id: attribute?.id,
                     key: keyController.text,
                     valueType: valueType,
                     required: required,
+                    constraints: {
+                      ...?attribute?.constraints,
+                      if (valueType == 'enum') 'enum': choices,
+                    },
                   );
                   if (isEditing && index != null) {
                     onUpdate(index, newAttribute);

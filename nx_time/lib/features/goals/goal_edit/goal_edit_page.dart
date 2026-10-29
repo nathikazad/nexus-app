@@ -119,6 +119,9 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       count: countI,
       timeOfDay: _timeOfDay,
       dueDays: _dueDays,
+      filter: widget.initial?.actionModelTypeName == _actionName
+          ? widget.initial?.filter
+          : null,
     );
   }
 

@@ -71,6 +71,7 @@ class GoalEditViewModel {
     required int count,
     required TimeOfDay timeOfDay,
     required Set<int> dueDays,
+    Map<String, dynamic>? filter,
   }) {
     final timeMinutes = timeOfDay.hour * 60 + timeOfDay.minute;
     num value;
@@ -90,7 +91,7 @@ class GoalEditViewModel {
       selectedAttribute: selectedAttribute,
       op: op,
       thresholdValue: value,
-      filter: null,
+      filter: filter,
       dueDays: dueDays.isEmpty ? <int>[] : (dueDays.toList()..sort()),
     );
   }

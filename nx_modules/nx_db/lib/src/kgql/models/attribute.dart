@@ -8,7 +8,7 @@ class AttributeDefinition {
   /// Attribute key (required for create/update)
   final String? key;
 
-  /// Value type: 'string', 'number', 'datetime', 'boolean', or 'vector' (required for create)
+  /// Value type: 'string', 'enum', 'number', 'datetime', 'boolean', or 'vector' (required for create)
   final String? valueType;
 
   /// Whether the attribute is required (defaults to false)
