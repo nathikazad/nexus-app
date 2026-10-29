@@ -91,3 +91,12 @@ the new image is visible. Bill attachment changes refresh image-link status too.
 and opens a full-screen viewer. Expense/Order attachments navigate to their detail
 pages. Dates label upload time, not the purchase date. No OCR or reconciliation
 mutation is performed by this screen. The feature requires connectivity.
+
+## Quick capture
+
+The expense plus menu offers Expense, Upload receipt, and Tell AI. Tell AI opens
+`/tell-ai` with text entry and microphone input through the shared NX Voice socket.
+It sends `X-Client-Id: nx_expense` and the selected `X-Domain-Id`. The backend capture
+agent saves the original message as a Daily Log with source `nx_expense`; it does
+not create structured expense records. The current destination domain appears on
+the screen. Reconciliation can retrieve these notes with search kind `daily_logs`.

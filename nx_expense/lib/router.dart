@@ -1,3 +1,4 @@
+import 'features/ai/expense_assistant_page.dart';
 import 'package:nx_expense/features/images/expense_images_page.dart';
 import 'package:nx_expense/core/motion/expense_motion.dart';
 import 'package:flutter/material.dart';
@@ -100,6 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             '/dashboard',
             '/budget',
             '/teller',
+            '/tell-ai',
             '/images',
             '/images/:id',
             '/orders',
@@ -153,6 +155,8 @@ Widget buildExpenseDestination(BuildContext context, Uri uri, {Object? extra}) {
   final q = uri.queryParameters;
   try {
     switch (uri.pathSegments) {
+      case ['tell-ai']:
+        return const ExpenseAssistantPage();
       case ['expenses']:
         return const ExpenseListScreen();
       case ['dashboard']:

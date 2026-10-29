@@ -67,11 +67,12 @@ void main() {
     await ProviderScope.containerOf(
       tester.element(find.byType(ExpenseQuickAdd)),
     ).read(authProvider.future);
-    expect(find.text('Photo'), findsNothing);
-    await tester.tap(find.byTooltip('Add expense or photo'));
+    expect(find.text('Upload receipt'), findsNothing);
+    await tester.tap(find.byTooltip('Add expense or upload receipt'));
     await tester.pumpAndSettle();
     expect(find.text('Expense'), findsOneWidget);
-    await tester.tap(find.text('Photo'));
+    expect(find.text('Tell AI'), findsOneWidget);
+    await tester.tap(find.text('Upload receipt'));
     await tester.pumpAndSettle();
     expect(find.text('Take photo'), findsOneWidget);
     expect(find.text('Choose PDF'), findsOneWidget);
@@ -85,7 +86,7 @@ void main() {
       () => picker.pickImage(source: ImageSource.gallery, imageQuality: 85),
     ).called(1);
     expect(find.text('Choose image'), findsNothing);
-    expect(find.text('Photo'), findsNothing);
+    expect(find.text('Upload receipt'), findsNothing);
     expect(tester.takeException(), isNull);
     debugDefaultTargetPlatformOverride = null;
   });
@@ -117,7 +118,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(ChoiceChip), findsNWidgets(3));
-      expect(find.text('Add receipt'), findsOneWidget);
+      expect(find.text('Upload receipt'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
@@ -243,7 +244,7 @@ void main() {
       await ProviderScope.containerOf(
         tester.element(find.byType(ExpenseImagesScreen)),
       ).read(authProvider.future);
-      await tester.tap(find.text('Add receipt'));
+      await tester.tap(find.text('Upload receipt'));
       await tester.pumpAndSettle();
       expect(find.text('Choose PDF'), findsOneWidget);
       await tester.tap(find.text('Choose image'));

@@ -72,7 +72,7 @@ class _ExpenseImagesScreenState extends ConsumerState<ExpenseImagesScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.add_photo_alternate_outlined),
-        label: Text(_uploading ? 'Uploading…' : 'Add receipt'),
+        label: Text(_uploading ? 'Uploading…' : 'Upload receipt'),
       ),
       body: Column(
         children: [

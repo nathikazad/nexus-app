@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/motion/expense_motion.dart';
 import '../images/upload_expense_receipt.dart';
 import 'expense_form_page.dart';
+import '../desktop/desktop_nav.dart';
 
 /// A compact fan-out: two taps from the expense list to either entry flow.
 class ExpenseQuickAdd extends ConsumerStatefulWidget {
@@ -61,12 +62,22 @@ class _ExpenseQuickAddState extends ConsumerState<ExpenseQuickAdd> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           FloatingActionButton.extended(
+                            heroTag: 'quick-tell-ai',
+                            onPressed: () {
+                              setState(() => _open = false);
+                              navPush(context, '/tell-ai');
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline),
+                            label: const Text('Tell AI'),
+                          ),
+                          const SizedBox(height: 12),
+                          FloatingActionButton.extended(
                             heroTag: 'quick-add-photo',
                             onPressed: _photo,
                             icon: const Icon(
                               Icons.add_photo_alternate_outlined,
                             ),
-                            label: const Text('Photo'),
+                            label: const Text('Upload receipt'),
                           ),
                           const SizedBox(height: 12),
                           FloatingActionButton.extended(
@@ -88,10 +99,10 @@ class _ExpenseQuickAddState extends ConsumerState<ExpenseQuickAdd> {
             FloatingActionButton(
               heroTag: 'quick-add',
               tooltip: _uploading
-                  ? 'Uploading photo'
+                  ? 'Uploading receipt'
                   : _open
                   ? 'Close add menu'
-                  : 'Add expense or photo',
+                  : 'Add expense or upload receipt',
               onPressed: _uploading
                   ? null
                   : () => setState(() => _open = !_open),

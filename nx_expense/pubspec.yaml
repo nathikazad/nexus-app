@@ -35,6 +35,8 @@ dependencies:
   intl: ^0.20.2
   fl_chart: ^1.2.0
   google_fonts: ^6.2.1
+  nx_voice:
+    path: ../nx_modules/nx_voice
   nx_db:
     path: ../nx_modules/nx_db
   nx_sync:
