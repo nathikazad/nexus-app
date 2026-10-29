@@ -142,7 +142,11 @@ class _ExpenseLoginScreenState extends ConsumerState<ExpenseLoginScreen>
                   hint: const Text('Select person'),
                   isExpanded: true,
                   initialValue: selectedLoginProfile,
-                  style: GoogleFonts.inter(fontSize: 14),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.slate900,
+                  ),
+                  dropdownColor: Colors.white,
                   decoration: fieldDeco(
                     'Select person',
                     prefix: const Padding(
