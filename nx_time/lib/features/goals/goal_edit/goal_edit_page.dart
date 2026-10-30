@@ -33,6 +33,9 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
   late final TextEditingController _name;
   bool _saving = false;
   bool _active = true;
+  String? _startDate;
+  String? _endDate;
+  List<Map<String, dynamic>> _scheduleEntries = [];
   GoalCadence _cadence = GoalCadence.daily;
   String _actionName = 'Sleep';
   GoalSelectedAttribute _attr = GoalSelectedAttribute.duration;
@@ -64,6 +67,11 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
   void _applyGoal(Goal g) {
     _name.text = g.label;
     _active = g.active;
+    _startDate = g.startDate;
+    _endDate = g.endDate;
+    _scheduleEntries = g.scheduleEntries
+        .map((e) => {...e, 'days': List<String>.from(e['days'] as List)})
+        .toList();
     _actionName = g.actionModelTypeName;
     _cadence = g.cadence;
     _attr = g.selectedAttribute;
@@ -119,6 +127,10 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       count: countI,
       timeOfDay: _timeOfDay,
       dueDays: _dueDays,
+      startDate: _startDate,
+      endDate: _endDate,
+      scheduleId: widget.initial?.scheduleId,
+      scheduleEntries: _scheduleEntries,
       filter: widget.initial?.actionModelTypeName == _actionName
           ? widget.initial?.filter
           : null,
@@ -140,6 +152,17 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     if (err != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      return;
+    }
+    final scheduleError = GoalEditViewModel.scheduleError(
+      _scheduleEntries,
+      _startDate,
+      _endDate,
+    );
+    if (scheduleError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scheduleError)));
       return;
     }
     final built = _buildGoal(active: _active);
@@ -164,28 +187,6 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  Future<void> _togglePause() async {
-    if (widget.initial?.id == null) return;
-    setState(() {
-      _active = !_active;
-    });
-    final built = _buildGoal(active: _active);
-    setState(() => _saving = true);
-    try {
-      await ref.read(goalRepositoryProvider).update(built);
-      if (!mounted) return;
-      invalidateActionsAfterMutation(ref);
-      Navigator.of(context).pop();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not pause: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -291,6 +292,8 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
                   _section('Action type'),
                   const SizedBox(height: 8),
                   _actionTypeField(optionsAsync),
+                  const SizedBox(height: 16),
+                  _dateBoundsSection(),
                   const SizedBox(height: 16),
                   _section('Cadence'),
                   const SizedBox(height: 8),
@@ -814,72 +817,125 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     );
   }
 
-  Widget _dueDaysSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _section('Due days'),
-        const SizedBox(height: 6),
-        const Text(
-          'Only these days count toward this daily goal.',
-          style: TextStyle(fontSize: 11, color: AppColors.slate500),
+  static const _dayNames = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+
+  Widget _dateBoundsSection() => Column(
+    children: [
+      TextFormField(
+        initialValue: _startDate,
+        decoration: const InputDecoration(
+          labelText: 'Start date (YYYY-MM-DD, optional)',
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: List.generate(7, (i) {
-            final on = _dueDays.contains(i);
-            return Padding(
-              padding: EdgeInsets.only(right: i == 6 ? 0 : 6),
-              child: GestureDetector(
-                onTap: _saving
-                    ? null
-                    : () {
-                        setState(() {
+        onChanged: (v) => _startDate = v.trim().isEmpty ? null : v.trim(),
+      ),
+      TextFormField(
+        initialValue: _endDate,
+        decoration: const InputDecoration(
+          labelText: 'End date (YYYY-MM-DD, optional)',
+        ),
+        onChanged: (v) => _endDate = v.trim().isEmpty ? null : v.trim(),
+      ),
+    ],
+  );
+
+  Widget _dueDaysSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _section('Schedule'),
+      const Text(
+        'Days determine when this goal is due. Times describe the plan.',
+      ),
+      if (_scheduleEntries.isEmpty)
+        const Text('No schedule: every day counts.'),
+      ..._scheduleEntries.asMap().entries.map((row) {
+        final entry = row.value;
+        final days = entry['days'] as List;
+        return Column(
+          key: ObjectKey(entry),
+          children: [
+            Wrap(
+              children: List.generate(
+                7,
+                (i) => FilterChip(
+                  label: Text(_dowL[i]),
+                  selected: days.contains(_dayNames[i]),
+                  onSelected: _saving
+                      ? null
+                      : (on) => setState(() {
                           if (on) {
-                            _dueDays.remove(i);
+                            days.add(_dayNames[i]);
                           } else {
-                            _dueDays.add(i);
+                            days.remove(_dayNames[i]);
                           }
-                        });
-                      },
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: on ? AppColors.accent : Colors.white,
-                    border: Border.all(
-                      color: on ? AppColors.accent : AppColors.slate200,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    _dowL[i],
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: on ? Colors.white : AppColors.slate400,
-                    ),
-                  ),
+                        }),
                 ),
               ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: entry['start_time'] as String,
+                    decoration: const InputDecoration(
+                      labelText: 'Start (HH:mm)',
+                    ),
+                    onChanged: (v) => entry['start_time'] = v,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: entry['end_time'] as String,
+                    decoration: const InputDecoration(labelText: 'End (HH:mm)'),
+                    onChanged: (v) => entry['end_time'] = v,
+                  ),
+                ),
+              ],
+            ),
+            SwitchListTile(
+              title: const Text('Ends the next day'),
+              value: (entry['end_day_offset'] ?? 0) == 1,
+              onChanged: _saving
+                  ? null
+                  : (v) => setState(() => entry['end_day_offset'] = v ? 1 : 0),
+            ),
+            if (_scheduleEntries.length > 1 ||
+                widget.initial?.scheduleId == null)
+              TextButton(
+                onPressed: _saving
+                    ? null
+                    : () => setState(() => _scheduleEntries.removeAt(row.key)),
+                child: const Text('Remove window'),
+              ),
+          ],
+        );
+      }),
+      TextButton(
+        onPressed: _saving
+            ? null
+            : () => setState(
+                () => _scheduleEntries.add({
+                  'days': List<String>.from(_dayNames),
+                  'start_time': '08:00',
+                  'end_time': '09:00',
+                }),
+              ),
+        child: const Text('Add time window'),
+      ),
+    ],
+  );
 
   Widget _bottomEditActions() {
     return Column(
       children: [
-        _outlinedActionButton(
-          icon: SolarLinearIcons.pause,
-          label: _active ? 'Pause goal' : 'Resume goal',
-          onTap: _saving ? null : _togglePause,
-        ),
-        const SizedBox(height: 10),
         _outlinedActionButton(
           icon: SolarLinearIcons.trashBinMinimalistic,
           label: 'Delete goal',

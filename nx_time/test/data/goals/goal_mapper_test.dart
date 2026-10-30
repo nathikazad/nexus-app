@@ -24,6 +24,54 @@ const _trendFull = r'''
 ''';
 
 void main() {
+  test('linked grouped schedule survives goal editing', () {
+    final m = Model(
+      id: 42,
+      name: 'Exercise',
+      modelTypeId: 1,
+      attributes: {
+        'cadence': 'daily',
+        'model_type': 'Exercise',
+        'aggregation': 'count',
+        'threshold_value': 1,
+        'active': false,
+        'end_date': '2026-07-31',
+      },
+      relations: {
+        'Schedule': [
+          Model(
+            id: 100,
+            name: 'Morning',
+            modelTypeId: 2,
+            attributes: {
+              'entries': [
+                {
+                  'days': ['monday', 'saturday'],
+                  'start_time': '08:45',
+                  'end_time': '09:15',
+                },
+              ],
+            },
+          ),
+        ],
+      },
+    );
+    final g = goalFromModel(m);
+    expect(g.scheduleId, 100);
+    expect(g.dueDays, [0, 5]);
+    expect(g.active, isFalse);
+    final req = setModelRequestForUpdateGoal(g);
+    expect(req.relations!.single.create[0]['id'], 100);
+    expect(
+      req.attributes!.firstWhere((a) => a.key == 'end_date').value,
+      '2026-07-31',
+    );
+    expect(
+      req.attributes!.any((a) => a.key == 'active' || a.key == 'meta'),
+      isFalse,
+    );
+  });
+
   test('action week maps', () {
     const raw = r'''
     {
@@ -155,7 +203,7 @@ void main() {
     expect(d.items.first.target.op, GoalThresholdOp.lte);
   });
 
-  test('setModelRequestForCreateGoal: daily sets due days meta', () {
+  test('setModelRequestForCreateGoal: daily writes schedule relation', () {
     final g = Goal(
       label: 'G',
       cadence: GoalCadence.daily,
@@ -163,7 +211,13 @@ void main() {
       selectedAttribute: GoalSelectedAttribute.count,
       op: GoalThresholdOp.gte,
       thresholdValue: 1,
-      dueDays: const [0, 1, 2, 3, 4, 5],
+      scheduleEntries: const [
+        {
+          'days': ['monday', 'tuesday'],
+          'start_time': '07:30',
+          'end_time': '08:00',
+        },
+      ],
     );
     final req = setModelRequestForCreateGoal(g);
     expect(req.modelType, 'Goal');
@@ -171,8 +225,13 @@ void main() {
     expect(attrs, isNotNull);
     final map = {for (final a in attrs!) a.key: a.value};
     expect(map[kGoalAttrThresholdValue], 1);
-    final meta = map[kGoalAttrMeta] as Map<String, dynamic>?;
-    expect(meta!['due_days'], ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+    expect(map.containsKey(kGoalAttrMeta), isFalse);
+    expect(map.containsKey('active'), isFalse);
+    expect(req.relations!.single.relationName, 'goal_schedule');
+    expect(
+      req.relations!.single.create[0]['attributes'][0]['value'],
+      g.scheduleEntries,
+    );
   });
 
   test('goalFromModel round-trip for duration', () {

@@ -256,14 +256,14 @@ const List<String> goalDowNames = <String>[
 ];
 
 List<int> dueDayIndexes(ActionGoalWeekItem item) {
-  final due = item.meta?.dueDays;
+  final due = item.schedule?.days;
   if (due == null || due.isEmpty) {
     return List<int>.generate(7, (i) => i);
   }
   final out = <int>[];
   for (final raw in due) {
     final i = goalDowNames.indexWhere(
-      (d) => d.toLowerCase() == raw.toLowerCase(),
+      (d) => d.toLowerCase() == raw.toLowerCase().substring(0, 3),
     );
     if (i >= 0 && !out.contains(i)) {
       out.add(i);

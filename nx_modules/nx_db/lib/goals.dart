@@ -8,7 +8,7 @@ export 'src/goals/documents/get_action_goals_week.graphql.dart';
 export 'src/goals/documents/get_expense_goals_month.graphql.dart';
 export 'src/goals/goal_parsing.dart';
 export 'src/goals/goals_repository.dart';
-export 'src/goals/models/action_goal_meta.dart';
+export 'src/goals/models/action_goal_schedule.dart';
 export 'src/goals/models/action_goal_month.dart';
 export 'src/goals/models/action_goal_month_score.dart';
 export 'src/goals/models/action_goal_trend.dart';

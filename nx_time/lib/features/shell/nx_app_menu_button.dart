@@ -1,3 +1,4 @@
+import 'package:nx_time/features/schedule/schedule_page.dart';
 import 'package:nx_time/features/domains/domain_appearance_page.dart';
 import 'package:nx_time/features/domains/time_domain_gate.dart';
 import 'package:nx_time/features/calendar/history_page.dart';
@@ -38,10 +39,14 @@ class NxAppMenuButton extends ConsumerWidget {
           );
         } else if (value == 'domains') {
           await showTimeDomains(context, ref);
+        } else if (value == 'schedule') {
+          Navigator.of(
+            context,
+          ).push<void>(MaterialPageRoute(builder: (_) => const SchedulePage()));
         } else if (value == 'history') {
           Navigator.of(context).push<void>(
             MaterialPageRoute(
-              builder: (_) => Scaffold(body: const HistoryPage()),
+              builder: (_) => const Scaffold(body: HistoryPage()),
             ),
           );
         } else if (value == 'colors') {
@@ -88,6 +93,7 @@ class NxAppMenuButton extends ConsumerWidget {
           Icons.palette_outlined,
           'Domain appearance',
         ),
+        _menuItem('schedule', Icons.schedule, 'Schedule'),
         _menuItem('history', Icons.history, 'History'),
         _menuItem('tags', Icons.label_outline, 'Daily log tags'),
         _menuItem('colors', Icons.palette_outlined, 'Colors'),

@@ -1,3 +1,5 @@
+import 'package:nx_time/domain/goals/goal_evaluation.dart';
+
 enum GoalDayState { hit, miss, pending, notDue }
 
 GoalDayState goalDayStateFromKgql(String? raw) {
@@ -29,8 +31,19 @@ String goalDayStateToKgql(GoalDayState s) {
 }
 
 class GoalDailyState {
-  const GoalDailyState({required this.date, required this.state});
+  const GoalDailyState({
+    required this.date,
+    required this.state,
+    this.startMet,
+    this.endMet,
+    this.bothMet,
+    this.windows = const [],
+    this.sessions = const [],
+  });
 
   final DateTime date;
   final GoalDayState state;
+  final bool? startMet, endMet, bothMet;
+  final List<GoalWindowResult> windows;
+  final List<GoalSessionResult> sessions;
 }

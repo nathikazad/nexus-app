@@ -1,12 +1,13 @@
+import 'package:nx_time/domain/goals/goal_evaluation.dart';
 import 'package:nx_time/domain/goals/goal_cadence.dart';
 import 'package:nx_time/domain/goals/goal_day_state.dart';
 import 'package:nx_time/domain/goals/goal_streak.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
 
-class ActionGoalMeta {
-  const ActionGoalMeta({this.dueDays});
+class ActionGoalSchedule {
+  const ActionGoalSchedule({this.days});
 
-  final List<String>? dueDays;
+  final List<String>? days;
 }
 
 class ActionGoalWeekItem {
@@ -22,7 +23,9 @@ class ActionGoalWeekItem {
     required this.target,
     required this.dailyState,
     required this.streak,
-    this.meta,
+    this.schedule,
+    this.evaluation = GoalEvaluation.aggregate,
+    this.restrictions,
   });
 
   final int id;
@@ -36,7 +39,9 @@ class ActionGoalWeekItem {
   final GoalTarget target;
   final List<GoalDailyState> dailyState;
   final GoalStreakSummary streak;
-  final ActionGoalMeta? meta;
+  final ActionGoalSchedule? schedule;
+  final GoalEvaluation evaluation;
+  final Map<String, dynamic>? restrictions;
 }
 
 class ActionGoalsWeek {

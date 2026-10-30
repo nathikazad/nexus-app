@@ -29,7 +29,7 @@ ActionGoalWeekItem _dummyItem({
       current: GoalStreakWindow(streakCount: 0),
       max: GoalStreakWindow(streakCount: 0),
     ),
-    meta: null,
+    schedule: null,
   );
 }
 

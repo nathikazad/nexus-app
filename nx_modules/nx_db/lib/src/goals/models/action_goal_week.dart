@@ -1,5 +1,5 @@
 import '../goal_parsing.dart';
-import 'action_goal_meta.dart';
+import 'action_goal_schedule.dart';
 import 'goal_daily_state.dart';
 import 'goal_streak.dart';
 import 'goal_target.dart';
@@ -17,7 +17,9 @@ class ActionGoalWeekItem {
     required this.target,
     required this.dailyState,
     required this.streak,
-    this.meta,
+    this.schedule,
+    this.evaluation = 'aggregate',
+    this.restrictions,
   });
 
   final int id;
@@ -31,7 +33,9 @@ class ActionGoalWeekItem {
   final GoalTarget target;
   final List<GoalDailyState> dailyState;
   final GoalStreakSummary streak;
-  final ActionGoalMeta? meta;
+  final ActionGoalSchedule? schedule;
+  final String evaluation;
+  final Map<String, dynamic>? restrictions;
 
   static String? _metricFromJson(dynamic raw) {
     if (raw == null) return null;
@@ -46,7 +50,8 @@ class ActionGoalWeekItem {
       label: json['label'] as String? ?? '',
       cadence: json['cadence'] as String? ?? '',
       modelType: json['model_type'] as String? ?? '',
-      filter: (json['filter'] as Map?)?.cast<String, dynamic>() ??
+      filter:
+          (json['filter'] as Map?)?.cast<String, dynamic>() ??
           unwrapObjectField(json['filter']),
       selectedAttribute: json['selected_attribute'] as String? ?? '',
       aggregation: json['aggregation'] as String? ?? '',
@@ -69,38 +74,39 @@ class ActionGoalWeekItem {
       streak: GoalStreakSummary.fromJson(
         (json['streak'] as Map?)?.cast<String, dynamic>() ?? const {},
       ),
-      meta: _metaFromJson(json['meta']),
+      schedule: _scheduleFromJson(json['schedule']),
+      evaluation: json['evaluation'] as String? ?? 'aggregate',
+      restrictions: unwrapObjectField(json['restrictions']),
     );
   }
 
-  static ActionGoalMeta? _metaFromJson(dynamic raw) {
+  static ActionGoalSchedule? _scheduleFromJson(dynamic raw) {
     if (raw == null) return null;
     final m = unwrapObjectField(raw);
     if (m == null) return null;
-    return ActionGoalMeta.fromJson(m);
+    return ActionGoalSchedule.fromJson(m);
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'label': label,
-        'cadence': cadence,
-        'model_type': modelType,
-        if (filter != null) 'filter': filter,
-        'selected_attribute': selectedAttribute,
-        'aggregation': aggregation,
-        if (metric != null) 'metric': metric,
-        'target': target.toJson(),
-        'daily_state': dailyState.map((e) => e.toJson()).toList(),
-        'streak': streak.toJson(),
-        if (meta != null) 'meta': meta!.toJson(),
-      };
+    'id': id,
+    'label': label,
+    'cadence': cadence,
+    'evaluation': evaluation,
+    if (restrictions != null) 'restrictions': restrictions,
+    'model_type': modelType,
+    if (filter != null) 'filter': filter,
+    'selected_attribute': selectedAttribute,
+    'aggregation': aggregation,
+    if (metric != null) 'metric': metric,
+    'target': target.toJson(),
+    'daily_state': dailyState.map((e) => e.toJson()).toList(),
+    'streak': streak.toJson(),
+    if (schedule != null) 'schedule': schedule!.toJson(),
+  };
 }
 
 class ActionGoalWeekResponse {
-  const ActionGoalWeekResponse({
-    required this.weekStart,
-    required this.items,
-  });
+  const ActionGoalWeekResponse({required this.weekStart, required this.items});
 
   final DateTime weekStart;
   final List<ActionGoalWeekItem> items;
@@ -132,7 +138,7 @@ class ActionGoalWeekResponse {
   }
 
   Map<String, dynamic> toJson() => {
-        'week_start': weekStart.toIso8601String().split('T').first,
-        'items': items.map((e) => e.toJson()).toList(),
-      };
+    'week_start': weekStart.toIso8601String().split('T').first,
+    'items': items.map((e) => e.toJson()).toList(),
+  };
 }

@@ -43,7 +43,7 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
-        domainAppearancesProvider.overrideWith((ref) async=>{}),
+        domainAppearancesProvider.overrideWith((ref) async => {}),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
         ),
@@ -119,7 +119,7 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
-        domainAppearancesProvider.overrideWith((ref) async=>{}),
+        domainAppearancesProvider.overrideWith((ref) async => {}),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
         ),
@@ -148,7 +148,10 @@ void main() {
     expect(repo.requestedWeekStarts, contains(monday));
     await tester.tap(find.byTooltip('Next week'));
     await tester.pumpAndSettle();
-    expect(repo.requestedWeekStarts.last, monday.add(const Duration(days: 7)));
+    expect(
+      repo.requestedWeekStarts.last,
+      DateTime(monday.year, monday.month, monday.day + 7),
+    );
   });
 
   testWidgets('month date opens selected day actions page', (tester) async {
@@ -166,7 +169,7 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
-        domainAppearancesProvider.overrideWith((ref) async=>{}),
+        domainAppearancesProvider.overrideWith((ref) async => {}),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
         ),

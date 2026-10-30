@@ -7,6 +7,10 @@ import 'package:nx_time/domain/goals/goal_threshold.dart';
 class Goal {
   const Goal({
     this.id,
+    this.startDate,
+    this.endDate,
+    this.scheduleId,
+    this.scheduleEntries = const [],
     required this.label,
     this.active = true,
     required this.cadence,
@@ -20,6 +24,10 @@ class Goal {
 
   /// `null` on create, set after insert or when editing.
   final int? id;
+  final String? startDate;
+  final String? endDate;
+  final int? scheduleId;
+  final List<Map<String, dynamic>> scheduleEntries;
 
   /// Display / model name
   final String label;
@@ -62,6 +70,10 @@ class Goal {
 
   Goal copyWith({
     int? id,
+    String? startDate,
+    String? endDate,
+    int? scheduleId,
+    List<Map<String, dynamic>>? scheduleEntries,
     String? label,
     bool? active,
     GoalCadence? cadence,
@@ -75,6 +87,10 @@ class Goal {
   }) {
     return Goal(
       id: id ?? this.id,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      scheduleId: scheduleId ?? this.scheduleId,
+      scheduleEntries: scheduleEntries ?? this.scheduleEntries,
       label: label ?? this.label,
       active: active ?? this.active,
       cadence: cadence ?? this.cadence,

@@ -1,3 +1,5 @@
+import 'package:nx_time/domain/goals/goal_evaluation.dart';
+import 'package:nx_time/features/goals/goal_detail/goal_evaluation_results.dart';
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
@@ -42,7 +44,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
   @override
   void initState() {
     super.initState();
-    _visibleMonth = monthStartOf(DateTime.now());
+    _visibleMonth = monthStartOf(ref.read(currentWeekProvider));
     // ignore: discarded_futures
     _load();
   }
@@ -51,7 +53,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
   void didUpdateWidget(covariant GoalDetailPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.goalId != widget.goalId) {
-      _visibleMonth = monthStartOf(DateTime.now());
+      _visibleMonth = monthStartOf(ref.read(currentWeekProvider));
       // ignore: discarded_futures
       _load();
     }
@@ -194,38 +196,76 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       final item = _item!;
       final ws = _weekStart!;
       final eff = goalDetailVariantFor(item);
-      content = switch (eff) {
-        GoalDetailVariant.wake => _WakeBodyData(
-          item: item,
-          weekStart: ws,
-          visibleMonth: _visibleMonth,
-          month: _month,
-          monthLoading: _monthLoading,
-          monthError: _monthError,
-          onPreviousMonth: () => _changeMonth(-1),
-          onNextMonth: () => _changeMonth(1),
-        ),
-        GoalDetailVariant.sleep => _SleepBodyData(
-          item: item,
-          weekStart: ws,
-          visibleMonth: _visibleMonth,
-          month: _month,
-          monthLoading: _monthLoading,
-          monthError: _monthError,
-          onPreviousMonth: () => _changeMonth(-1),
-          onNextMonth: () => _changeMonth(1),
-        ),
-        GoalDetailVariant.gym => _GymBodyData(
-          item: item,
-          weekStart: ws,
-          visibleMonth: _visibleMonth,
-          month: _month,
-          monthLoading: _monthLoading,
-          monthError: _monthError,
-          onPreviousMonth: () => _changeMonth(-1),
-          onNextMonth: () => _changeMonth(1),
-        ),
-      };
+      content = item.evaluation != GoalEvaluation.aggregate
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  item.label,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                    color: AppColors.slate900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.evaluation == GoalEvaluation.schedule
+                      ? 'Scheduled goal · start and end within ±5 minutes'
+                      : 'Limits checked for each session',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.slate500,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _GoalMonthCalendarSection(
+                  visibleMonth: _visibleMonth,
+                  month: _month,
+                  monthLoading: _monthLoading,
+                  monthError: _monthError,
+                  onPreviousMonth: () => _changeMonth(-1),
+                  onNextMonth: () => _changeMonth(1),
+                ),
+                const SizedBox(height: 24),
+                const _Kicker('THIS WEEK'),
+                const SizedBox(height: 8),
+                GoalEvaluationResults(item: item),
+              ],
+            )
+          : switch (eff) {
+              GoalDetailVariant.wake => _WakeBodyData(
+                item: item,
+                weekStart: ws,
+                visibleMonth: _visibleMonth,
+                month: _month,
+                monthLoading: _monthLoading,
+                monthError: _monthError,
+                onPreviousMonth: () => _changeMonth(-1),
+                onNextMonth: () => _changeMonth(1),
+              ),
+              GoalDetailVariant.sleep => _SleepBodyData(
+                item: item,
+                weekStart: ws,
+                visibleMonth: _visibleMonth,
+                month: _month,
+                monthLoading: _monthLoading,
+                monthError: _monthError,
+                onPreviousMonth: () => _changeMonth(-1),
+                onNextMonth: () => _changeMonth(1),
+              ),
+              GoalDetailVariant.gym => _GymBodyData(
+                item: item,
+                weekStart: ws,
+                visibleMonth: _visibleMonth,
+                month: _month,
+                monthLoading: _monthLoading,
+                monthError: _monthError,
+                onPreviousMonth: () => _changeMonth(-1),
+                onNextMonth: () => _changeMonth(1),
+              ),
+            };
     } else {
       content = const SizedBox.shrink();
     }
@@ -239,7 +279,9 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
           children: [
             _DetailAppBar(
               onBack: () => Navigator.of(context).maybePop(),
-              onEdit: () => unawaited(_openEdit()),
+              onEdit: _item?.evaluation == GoalEvaluation.aggregate
+                  ? () => unawaited(_openEdit())
+                  : null,
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -258,7 +300,7 @@ class _DetailAppBar extends StatelessWidget {
   const _DetailAppBar({required this.onBack, required this.onEdit});
 
   final VoidCallback onBack;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {

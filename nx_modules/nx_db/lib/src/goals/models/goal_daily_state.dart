@@ -1,11 +1,6 @@
 import '../goal_parsing.dart';
 
-enum GoalDayState {
-  hit,
-  miss,
-  pending,
-  notDue,
-}
+enum GoalDayState { hit, miss, pending, notDue }
 
 GoalDayState goalDayStateFromString(String? s) {
   switch (s) {
@@ -39,10 +34,17 @@ class GoalDailyState {
   const GoalDailyState({
     required this.date,
     required this.state,
+    this.startMet,
+    this.endMet,
+    this.bothMet,
+    this.windows = const [],
+    this.sessions = const [],
   });
 
   final DateTime date;
   final GoalDayState state;
+  final bool? startMet, endMet, bothMet;
+  final List<Map<String, dynamic>> windows, sessions;
 
   factory GoalDailyState.fromJson(Map<String, dynamic> json) {
     final d = parseDateOnly(json['date']);
@@ -52,11 +54,25 @@ class GoalDailyState {
     return GoalDailyState(
       date: d,
       state: goalDayStateFromString(json['state'] as String?),
+      startMet: json['start_met'] as bool?,
+      endMet: json['end_met'] as bool?,
+      bothMet: json['both_met'] as bool?,
+      windows: (json['windows'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(),
+      sessions: (json['sessions'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'date': date.toIso8601String().split('T').first,
-        'state': goalDayStateToString(state),
-      };
+    'date': date.toIso8601String().split('T').first,
+    'state': goalDayStateToString(state),
+    if (startMet != null) 'start_met': startMet,
+    if (endMet != null) 'end_met': endMet,
+    if (bothMet != null) 'both_met': bothMet,
+    if (windows.isNotEmpty) 'windows': windows,
+    if (sessions.isNotEmpty) 'sessions': sessions,
+  };
 }

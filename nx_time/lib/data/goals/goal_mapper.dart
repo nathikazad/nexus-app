@@ -1,3 +1,4 @@
+import 'package:nx_time/domain/goals/goal_evaluation.dart';
 import 'package:nx_db/goals.dart' as nx;
 import 'package:nx_db/kgql.dart';
 import 'package:nx_time/core/time/wall_clock_time.dart';
@@ -49,11 +50,9 @@ GoalDayState _dayStateFromWire(nx.GoalDayState s) {
   }
 }
 
-ActionGoalMeta? _metaFromWire(nx.ActionGoalMeta? m) {
+ActionGoalSchedule? _scheduleFromWire(nx.ActionGoalSchedule? m) {
   if (m == null) return null;
-  return ActionGoalMeta(
-    dueDays: m.dueDays,
-  );
+  return ActionGoalSchedule(days: m.days);
 }
 
 ActionGoalWeekItem _weekItemFromWire(nx.ActionGoalWeekItem w) {
@@ -72,11 +71,18 @@ ActionGoalWeekItem _weekItemFromWire(nx.ActionGoalWeekItem w) {
           (d) => GoalDailyState(
             date: asStoredLocalWallClock(d.date),
             state: _dayStateFromWire(d.state),
+            startMet: d.startMet,
+            endMet: d.endMet,
+            bothMet: d.bothMet,
+            windows: d.windows.map(GoalWindowResult.fromJson).toList(),
+            sessions: d.sessions.map(GoalSessionResult.fromJson).toList(),
           ),
         )
         .toList(),
     streak: _streakFromWire(w.streak),
-    meta: _metaFromWire(w.meta),
+    schedule: _scheduleFromWire(w.schedule),
+    evaluation: goalEvaluationFromString(w.evaluation),
+    restrictions: w.restrictions,
   );
 }
 
@@ -184,18 +190,15 @@ const List<String> _kDowNames = <String>[
 
 int? _dowIndexFromName(String? s) {
   if (s == null) return null;
-  var i = _kDowNames.indexOf(s);
+  var i = _kDowNames.indexWhere(
+    (d) =>
+        d.toLowerCase() ==
+        s.toLowerCase().substring(0, s.length < 3 ? s.length : 3),
+  );
   if (i >= 0) return i;
   i = int.tryParse(s) ?? -1;
   if (i >= 0 && i <= 6) return i;
   return null;
-}
-
-String _dowNameFromIndex(int i) {
-  if (i < 0 || i > 6) {
-    return _kDowNames[0];
-  }
-  return _kDowNames[i % 7];
 }
 
 dynamic _attr(Model m, String key) {
@@ -310,16 +313,6 @@ _KBundle _encodeBundle(Goal g) {
   }
 }
 
-Map<String, dynamic>? _buildMeta(Goal g) {
-  if (g.cadence != GoalCadence.daily) {
-    return null;
-  }
-  final days = (g.dueDays.isEmpty ? List<int>.generate(7, (i) => i) : g.dueDays)
-      .map(_dowNameFromIndex)
-      .toList();
-  return {'due_days': days};
-}
-
 List<SetModelAttribute> _goalToAttributes(Goal g) {
   final b = _encodeBundle(g);
   final nFilter =
@@ -337,10 +330,10 @@ List<SetModelAttribute> _goalToAttributes(Goal g) {
   } else if (g.selectedAttribute == GoalSelectedAttribute.count) {
     thresholdNum = g.thresholdValue.round();
   }
-  final meta = _buildMeta(g);
   return [
     SetModelAttribute(key: kGoalAttrLabel, value: g.label),
-    SetModelAttribute(key: kGoalAttrActive, value: g.active),
+    SetModelAttribute(key: 'start_date', value: g.startDate),
+    SetModelAttribute(key: 'end_date', value: g.endDate),
     SetModelAttribute(
       key: kGoalAttrCadence,
       value: goalCadenceToKgql(g.cadence),
@@ -363,7 +356,6 @@ List<SetModelAttribute> _goalToAttributes(Goal g) {
       ),
     ),
     SetModelAttribute(key: kGoalAttrThresholdValue, value: thresholdNum),
-    if (meta != null) SetModelAttribute(key: kGoalAttrMeta, value: meta),
   ];
 }
 
@@ -402,13 +394,14 @@ Goal goalFromModel(Model m) {
     _attr(m, kGoalAttrThresholdOp) as String? ?? '>=',
   );
   final tVal = _readNum(_attr(m, kGoalAttrThresholdValue)) ?? 0;
-  final rawMeta = _attr(m, kGoalAttrMeta);
-  Map<String, dynamic>? meta;
-  if (rawMeta is Map<String, dynamic>) {
-    meta = rawMeta;
-  } else if (rawMeta is Map) {
-    meta = Map<String, dynamic>.from(rawMeta);
-  }
+  final schedules = m.relations?['Schedule'] ?? const <Model>[];
+  if (schedules.length > 1) throw StateError('Goal has multiple schedules');
+  final linked = schedules.isEmpty ? null : schedules.single;
+  final entries = linked == null
+      ? <Map<String, dynamic>>[]
+      : ((_attr(linked, 'entries') as List?) ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
 
   final firstF = _firstTimeFilterMap(filter);
   final hasTimeFilter =
@@ -441,23 +434,26 @@ Goal goalFromModel(Model m) {
     threshold = tVal;
   }
 
-  var dueDays = <int>[0, 1, 2, 3, 4, 5, 6];
-  if (meta != null) {
-    final rawDueDays = meta['due_days'] as List<dynamic>?;
-    if (rawDueDays != null && rawDueDays.isNotEmpty) {
-      dueDays = <int>[];
-      for (final d in rawDueDays) {
-        final i = _dowIndexFromName(d?.toString());
-        if (i != null && !dueDays.contains(i)) {
-          dueDays.add(i);
-        }
-      }
-      dueDays.sort();
-    }
-  }
+  final dueDays =
+      entries.isEmpty
+            ? <int>[0, 1, 2, 3, 4, 5, 6]
+            : entries
+                  .expand(
+                    (e) => (e['days'] as List).map(
+                      (d) => _dowIndexFromName(d.toString()),
+                    ),
+                  )
+                  .whereType<int>()
+                  .toSet()
+                  .toList()
+        ..sort();
 
   return Goal(
     id: m.id,
+    startDate: _attr(m, 'start_date') as String?,
+    endDate: _attr(m, 'end_date') as String?,
+    scheduleId: linked?.id,
+    scheduleEntries: entries,
     label: label,
     active: active,
     cadence: cadence,
@@ -479,11 +475,12 @@ Goal goalFromModel(Model m) {
 }
 
 SetModelRequest setModelRequestForCreateGoal(Goal g) {
-  return setKgqlCreate(
+  return SetModelRequest(
     modelType: kGoalModelTypeName,
     name: g.label,
     description: null,
     attributes: _goalToAttributes(g),
+    relations: _scheduleRelations(g),
   );
 }
 
@@ -491,13 +488,33 @@ SetModelRequest setModelRequestForUpdateGoal(Goal g) {
   if (g.id == null) {
     throw StateError('update requires id');
   }
-  return setKgqlUpdate(
+  return SetModelRequest(
     id: g.id!,
     modelType: kGoalModelTypeName,
     name: g.label,
     description: null,
     attributes: _goalToAttributes(g),
+    relations: _scheduleRelations(g),
   );
 }
 
 SetModelRequest setModelRequestForDeleteGoal(int id) => setKgqlDelete(id);
+
+List<ModelRelation>? _scheduleRelations(Goal g) {
+  if (g.scheduleEntries.isEmpty) return null;
+  return [
+    ModelRelation(
+      modelType: 'Schedule',
+      relationName: 'goal_schedule',
+      create: [
+        {
+          if (g.scheduleId != null) 'id': g.scheduleId,
+          if (g.scheduleId == null) 'name': '${g.label} schedule',
+          'attributes': [
+            {'key': 'entries', 'value': g.scheduleEntries},
+          ],
+        },
+      ],
+    ),
+  ];
+}

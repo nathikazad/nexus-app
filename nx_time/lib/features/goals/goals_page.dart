@@ -1,3 +1,5 @@
+import 'package:nx_time/domain/goals/goal_evaluation.dart';
+import 'package:nx_time/features/routine/routine_data.dart';
 import 'package:nx_time/data/domains/domain_appearance.dart';
 import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +21,10 @@ import 'package:nx_time/features/goals/goal_detail/goal_detail_page.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_page.dart';
 import 'package:nx_time/features/goals/goal_edit/goal_edit_view_model.dart';
 import 'package:nx_time/features/domains/domain_day_actions_page.dart';
+
+final goalsInitialMonthProvider = Provider<DateTime>(
+  (ref) => monthStartOf(DateTime.now()),
+);
 
 class GoalsPage extends ConsumerStatefulWidget {
   const GoalsPage({super.key});
@@ -47,7 +53,7 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
   @override
   void initState() {
     super.initState();
-    _visibleMonth = monthStartOf(DateTime.now());
+    _visibleMonth = ref.read(goalsInitialMonthProvider);
   }
 
   void _changeMonth(int delta) {
@@ -60,7 +66,7 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
     final m0 = DateTime(monday.year, monday.month, monday.day);
     ref
         .read(currentWeekProvider.notifier)
-        .setLocalWeekMonday(m0.add(Duration(days: 7 * delta)));
+        .setLocalWeekMonday(DateTime(m0.year, m0.month, m0.day + 7 * delta));
   }
 
   void _openDay(DateTime day) {
@@ -404,6 +410,30 @@ Widget _buildDailyRow(
   WeekActions? weekActions,
 ) {
   final dots = _dotsFor(item, weekStart);
+  if (item.evaluation != GoalEvaluation.aggregate) {
+    final date = isWeekCurrent(weekStart) ? DateTime.now() : weekStart;
+    final day = resultOn(item, date);
+    final status = item.evaluation == GoalEvaluation.schedule
+        ? day == null
+              ? 'Results unavailable'
+              : adherenceLabel(day.state, day.startMet, day.endMet)
+        : switch (day?.state) {
+            GoalDayState.hit => 'Met',
+            GoalDayState.miss => 'Not met',
+            GoalDayState.notDue => 'Not due',
+            _ => 'Pending',
+          };
+    return _GoalRow(
+      onTap: () => GoalsPage.openDetail(context, item.id),
+      title: item.label,
+      status: status,
+      statusColor: _colorForDayState(day),
+      dots: dots,
+      subline: item.evaluation == GoalEvaluation.schedule
+          ? 'Start & end · ±5 min'
+          : 'Limits checked per session',
+    );
+  }
   final ex = _goalRowExtrasFor(item, weekActions);
   return _GoalRow(
     onTap: () => GoalsPage.openDetail(context, item.id),
