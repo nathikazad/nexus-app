@@ -23,7 +23,12 @@ ModelTypeView modelTypeViewFromKgql(ModelType m) {
           RelationTypeView(
             id: rel.id,
             link: _linkName(rel.link)!,
-            multiplicity: rel.multiplicity,
+            endpoints: rel.endpoints.map(
+              (k, v) => MapEntry(k, {'type': v.type, 'count': v.count}),
+            ),
+            targetEndpointName: rel.targetEndpoint?.key,
+            targetCount: rel.targetEndpoint?.value.count,
+            relationName: rel.relationName,
             description: rel.description,
           ),
     ],

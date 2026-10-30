@@ -6,7 +6,12 @@ import 'relation_attribute_definition_draft.dart';
 class RelationDefinitionDraft {
   final int? id;
   final Object? link;
-  final String? multiplicity;
+  final Map<String, RelationEndpointDraft> endpoints;
+  final String? relationName;
+  final int? definingModelTypeId;
+  String get endpointSummary => endpoints.entries
+      .map((e) => '${e.key}: ${e.value.type} (${e.value.count})')
+      .join(' • ');
   final String? description;
   final List<RelationAttributeDefinitionDraft>? relationAttributeDefinitions;
   final bool delete;
@@ -14,9 +19,17 @@ class RelationDefinitionDraft {
   const RelationDefinitionDraft({
     this.id,
     this.link,
-    this.multiplicity,
+    this.endpoints = const {},
+    this.relationName,
+    this.definingModelTypeId,
     this.description,
     this.relationAttributeDefinitions,
     this.delete = false,
   });
+}
+
+class RelationEndpointDraft {
+  final Object type;
+  final String count;
+  const RelationEndpointDraft({required this.type, required this.count});
 }

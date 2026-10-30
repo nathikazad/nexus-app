@@ -237,7 +237,9 @@ class KgqlDocumentRepository implements DocumentRepository {
     required LinkableModelType modelType,
     required int modelId,
   }) async {
-    await document_api.mutateDocument(
+    final document = await getById(documentId);
+    if (document == null) throw StateError('Document $documentId not found');
+    final result = await document_api.mutateDocument(
       _client,
       SetModelRequest(
         id: documentId,
@@ -245,9 +247,14 @@ class KgqlDocumentRepository implements DocumentRepository {
           ModelRelation(modelType: modelType.kgqlName, link: [modelId]),
         ],
       ),
-      clientUpdatedAt: DateTime.now().toUtc(),
+      clientUpdatedAt: _nextMutationTime(document.updatedAt),
       auditSourceKind: 'nx_docs',
     );
+    if (result.status != document_api.DocumentMutationStatus.applied) {
+      throw StateError(
+        'Document changed while updating its links; refresh and retry',
+      );
+    }
   }
 
   @override
@@ -261,15 +268,22 @@ class KgqlDocumentRepository implements DocumentRepository {
 
   @override
   Future<void> detachProject(int documentId, int relationId) async {
-    await document_api.mutateDocument(
+    final document = await getById(documentId);
+    if (document == null) throw StateError('Document $documentId not found');
+    final result = await document_api.mutateDocument(
       _client,
       SetModelRequest(
         id: documentId,
         relations: [ModelRelation(id: relationId, delete: true)],
       ),
-      clientUpdatedAt: DateTime.now().toUtc(),
+      clientUpdatedAt: _nextMutationTime(document.updatedAt),
       auditSourceKind: 'nx_docs',
     );
+    if (result.status != document_api.DocumentMutationStatus.applied) {
+      throw StateError(
+        'Document changed while updating its links; refresh and retry',
+      );
+    }
   }
 
   @override

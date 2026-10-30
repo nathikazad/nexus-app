@@ -172,7 +172,7 @@ void main() {
         ],
       );
       final j = rt.toJson();
-      expect(j['relation_name'], 'work_for');
+      expect(j['name'], 'work_for');
       expect(j['relation_attribute_definitions'], isA<List>());
       expect((j['relation_attribute_definitions'] as List).length, 1);
     });

@@ -58,7 +58,10 @@ RelationDefinitionDraft relationDraftFromNx(nx.RelationshipType r) {
   return RelationDefinitionDraft(
     id: r.id,
     link: r.link,
-    multiplicity: r.multiplicity,
+    endpoints: r.endpoints.map((k, v) =>
+        MapEntry(k, RelationEndpointDraft(type: v.type, count: v.count))),
+    relationName: r.relationName,
+    definingModelTypeId: r.definingModelTypeId,
     description: r.description,
     relationAttributeDefinitions:
         r.relationAttributeDefinitions?.map(relationAttrDraftFromNx).toList(),
@@ -70,7 +73,10 @@ nx.RelationshipType relationDraftToNx(RelationDefinitionDraft d) {
   return nx.RelationshipType(
     id: d.id,
     link: d.link,
-    multiplicity: d.multiplicity,
+    endpoints: d.endpoints.map((k, v) =>
+        MapEntry(k, nx.RelationshipEndpoint(type: v.type, count: v.count))),
+    relationName: d.relationName,
+    definingModelTypeId: d.definingModelTypeId,
     description: d.description,
     relationAttributeDefinitions:
         d.relationAttributeDefinitions?.map(relationAttrDraftToNx).toList(),

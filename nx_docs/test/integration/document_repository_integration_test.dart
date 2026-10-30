@@ -135,8 +135,64 @@ void main() {
       expect(snapshot.document, updated.document);
       expect(snapshot.changeSummary, 'first checkpoint');
 
+      final secondSnapshot = await harness.repo.createSnapshot(
+        updated.id,
+        source: 'integration_test',
+        changeSummary: 'second checkpoint',
+      );
+      cleanupIds.add(secondSnapshot.id);
+      final thirdSnapshot = await harness.repo.createSnapshot(
+        updated.id,
+        source: 'integration_test',
+        changeSummary: 'third checkpoint',
+      );
+      cleanupIds.add(thirdSnapshot.id);
+      expect(secondSnapshot.versionNumber, snapshot.versionNumber + 1);
+      expect(thirdSnapshot.versionNumber, snapshot.versionNumber + 2);
       final snapshots = await harness.repo.listSnapshots(updated.id);
+      expect(
+        snapshots.map((snap) => snap.id),
+        containsAll([snapshot.id, secondSnapshot.id, thirdSnapshot.id]),
+      );
       expect(snapshots.map((snap) => snap.id), contains(snapshot.id));
+      final referenced = await harness.repo.create(
+        title: 'Referenced document $marker',
+      );
+      cleanupIds.add(referenced.id);
+      await harness.repo.attachLinkedModel(
+        documentId: updated.id,
+        modelType: LinkableModelType.document,
+        modelId: referenced.id,
+      );
+      final withReference = await harness.repo.getById(updated.id);
+      expect(
+        withReference!.links.map((link) => link.id),
+        contains(referenced.id),
+      );
+      await expectLater(
+        setKgqlModel(
+          harness.client,
+          SetModelRequest(
+            id: referenced.id,
+            relations: [
+              ModelRelation(
+                modelType: kDocumentSnapModelTypeName,
+                link: [snapshot.id],
+              ),
+            ],
+          ),
+        ),
+        throwsA(
+          predicate<Object>(
+            (error) => error.toString().contains('at most one'),
+          ),
+        ),
+      );
+      expect(
+        (await harness.repo.listSnapshots(updated.id)).map((s) => s.id),
+        containsAll([snapshot.id, secondSnapshot.id, thirdSnapshot.id]),
+      );
+      expect(await harness.repo.listSnapshots(referenced.id), isEmpty);
     },
     skip: runNotesIntegration ? null : kNotesIntegrationSkipReason,
     tags: ['integration'],
@@ -145,7 +201,7 @@ void main() {
 
 class _IntegrationHarness {
   _IntegrationHarness()
-    : client = createClient(_graphqlEndpoint, _userId, domainId: 1) {
+    : client = createClient(_graphqlEndpoint, _userId, domainId: _domainId) {
     repo = KgqlDocumentRepository(
       client: client,
       loadDocumentSchema: () =>
@@ -200,3 +256,6 @@ String get _graphqlEndpoint =>
 
 String get _userId =>
     Platform.environment['NX_DOCS_INTEGRATION_USER_ID'] ?? '1';
+
+int get _domainId =>
+    int.parse(Platform.environment['NX_DOCS_INTEGRATION_DOMAIN_ID'] ?? '1');

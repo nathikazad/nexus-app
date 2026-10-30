@@ -118,7 +118,7 @@ Future<ModelType?> fetchKgqlModelTypeById(
 ) async {
   final result = await client.query(
     QueryOptions(
-      document: gql(kgqlGetKgqlModelTypeQuery),
+      document: gql(kgqlGetModelTypeWithOwnersQuery),
       variables: {
         'input': {
           'model_types': [modelTypeId],
@@ -169,7 +169,10 @@ Future<ModelType?> fetchKgqlModelTypeById(
     return null;
   }
 
-  final modelTypeJson = jsonArray[0] as Map<String, dynamic>;
+  final modelTypeJson = _withRelationshipOwners(
+    jsonArray[0] as Map<String, dynamic>,
+    result.data,
+  );
   return ModelType.fromJson(modelTypeJson, recursive: true);
 }
 
@@ -251,4 +254,24 @@ String _setModelTypeSourceLabel(SetModelTypeRequest request) {
   final name = request.name.trim().isEmpty ? 'model type' : request.name;
   final id = request.id == null ? '' : ' #${request.id}';
   return '$action model type $name$id';
+}
+
+Map<String, dynamic> _withRelationshipOwners(
+  Map<String, dynamic> schema,
+  Map<String, dynamic>? data,
+) {
+  final rows = data?['allRelationshipTypes']?['nodes'] as List? ?? const [];
+  final owners = {for (final row in rows) row['id']: row['fromModelTypeId']};
+  return {
+    ...schema,
+    if (schema['relations'] is List)
+      'relations': [
+        for (final row in schema['relations'] as List)
+          {
+            ...Map<String, dynamic>.from(row as Map),
+            if (owners[row['id']] != null)
+              'defining_model_type_id': owners[row['id']],
+          },
+      ],
+  };
 }

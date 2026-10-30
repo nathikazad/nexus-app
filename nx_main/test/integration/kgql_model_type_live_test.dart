@@ -508,7 +508,7 @@ void main() {
         relationshipTypes: [
           RelationshipType.fromName(
             companyRequest.name,
-            multiplicity: 'many',
+            toEndpointCount: 'many',
             description: 'Person works for company',
           ),
         ],
@@ -523,7 +523,7 @@ void main() {
           allRelationshipTypes(condition: { fromModelTypeId: \$fromModelTypeId }) {
             nodes {
               id
-              multiplicity
+              toEndpointCount
               description
             }
           }
@@ -553,7 +553,7 @@ void main() {
         relationshipTypes: [
           RelationshipType(
             id: relTypeId,
-            multiplicity: 'one', // Changed from 'many'
+            toEndpointCount: 'one', // Changed from 'many'
             description: 'Updated description', // Changed description
             // Note: link field cannot be changed when editing
           ),
@@ -621,8 +621,10 @@ void main() {
         name: 'Person_${DateTime.now().millisecondsSinceEpoch}',
         typeKind: 'base',
         relationshipTypes: [
-          RelationshipType.fromName(companyRequest.name, multiplicity: 'many'),
-          RelationshipType.fromName(contactRequest.name, multiplicity: 'many'),
+          RelationshipType.fromName(companyRequest.name,
+              toEndpointCount: 'many'),
+          RelationshipType.fromName(contactRequest.name,
+              toEndpointCount: 'many'),
         ],
       );
 
@@ -735,8 +737,10 @@ void main() {
         name: 'Person_${DateTime.now().millisecondsSinceEpoch}',
         typeKind: 'base',
         relationshipTypes: [
-          RelationshipType.fromName(companyRequest.name, multiplicity: 'many'),
-          RelationshipType.fromName(contactRequest.name, multiplicity: 'many'),
+          RelationshipType.fromName(companyRequest.name,
+              toEndpointCount: 'many'),
+          RelationshipType.fromName(contactRequest.name,
+              toEndpointCount: 'many'),
         ],
       );
 
@@ -786,12 +790,12 @@ void main() {
         relationshipTypes: [
           RelationshipType(
             id: companyRelId,
-            multiplicity: 'one', // Edit: changed from 'many'
+            toEndpointCount: 'one', // Edit: changed from 'many'
           ),
           RelationshipType(id: contactRelId, delete: true), // Delete
           RelationshipType.fromName(
             addressRequest.name,
-            multiplicity: 'many',
+            toEndpointCount: 'many',
           ), // Create new
         ],
       );

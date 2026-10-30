@@ -3,6 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_cards/browser/data/kgql/kgql_card_schema.dart';
 
 void main() {
+  test('Card source-book bootstrap declares both endpoint limits', () {
+    final relation =
+        (buildCardSchemaRequest().toJson()['relationship_types'] as List).single
+            as Map;
+    expect(relation.containsKey('multiplicity'), isFalse);
+    expect(relation['name'], 'source_book');
+    expect(relation['endpoints'], {
+      'cards': {'type': cardModelType, 'count': 'many'},
+      'book': {'type': 'Book', 'count': 'one'},
+    });
+  });
   for (final invalid in [false, true]) {
     test(
       'schema accepts empty metadata but rejects incompatible constraints: $invalid',

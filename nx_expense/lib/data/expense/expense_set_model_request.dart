@@ -27,6 +27,15 @@ SetModelRequest buildExpenseSetModelRequest(ExpenseUpsert u) {
     final create = u.relationCreatesByType[type];
 
     if (create != null && create.isNotEmpty) {
+      if (isUpdate) {
+        for (final modelId in u.snapshotLinkIdsByType[type] ?? <int>{}) {
+          final edgeId = u.relationEdgeIdsByType[type]?[modelId];
+          if (edgeId == null) {
+            throw StateError('Reload the expense before replacing its links');
+          }
+          relPayload.add(ModelRelation(id: edgeId, delete: true));
+        }
+      }
       relPayload.add(ModelRelation(modelType: type, create: [create]));
       continue;
     }

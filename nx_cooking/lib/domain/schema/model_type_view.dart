@@ -47,7 +47,10 @@ class RelationTypeView {
   const RelationTypeView({
     this.id,
     required this.link,
-    this.multiplicity,
+    this.endpoints = const {},
+    this.targetEndpointName,
+    this.targetCount,
+    this.relationName,
     this.description,
   });
 
@@ -55,7 +58,10 @@ class RelationTypeView {
 
   /// Target model type name.
   final String link;
-  final String? multiplicity;
+  final Map<String, Map<String, Object>> endpoints;
+  final String? targetEndpointName;
+  final String? targetCount;
+  final String? relationName;
   final String? description;
 }
 

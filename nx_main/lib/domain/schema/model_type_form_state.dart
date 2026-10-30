@@ -38,7 +38,8 @@ class ModelTypeFormFields {
         data.attributes ?? const [],
       ),
       relationshipTypes: List<RelationDefinitionDraft>.from(
-        data.relations ?? const [],
+        (data.relations ?? const <RelationDefinitionDraft>[]).where((r) =>
+            r.definingModelTypeId == null || r.definingModelTypeId == data.id),
       ),
     );
   }

@@ -483,8 +483,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                                               pendingCreate:
                                                   _relationCreates[link],
                                               allowMultiple:
-                                                  (rt.multiplicity ?? 'many') !=
-                                                  'one',
+                                                  rt.targetCount == 'many',
                                               onPicked: (r) =>
                                                   _onRelationPicked(link, r),
                                             ),

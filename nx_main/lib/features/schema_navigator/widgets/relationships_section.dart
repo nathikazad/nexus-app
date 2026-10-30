@@ -6,6 +6,7 @@ import 'package:nexus_voice_assistant/domain/schema/schema_model_type.dart';
 import 'package:nexus_voice_assistant/features/schema_navigator/relationship_form_page.dart';
 
 class RelationshipsSection extends ConsumerWidget {
+  final String Function() modelTypeName;
   final List<RelationDefinitionDraft> relationshipTypes;
   final Function(RelationDefinitionDraft) onAdd;
   final Function(int, RelationDefinitionDraft) onUpdate;
@@ -13,6 +14,7 @@ class RelationshipsSection extends ConsumerWidget {
 
   const RelationshipsSection({
     super.key,
+    required this.modelTypeName,
     required this.relationshipTypes,
     required this.onAdd,
     required this.onUpdate,
@@ -48,9 +50,9 @@ class RelationshipsSection extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        title: Text('To: $targetName'),
+        title: Text('Related type: $targetName'),
         subtitle: Text(
-          'Multiplicity: ${rel.multiplicity ?? 'many'}${rel.description != null ? ' • ${rel.description}' : ''}',
+          '${rel.endpointSummary}${rel.description != null ? ' • ${rel.description}' : ''}',
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -62,6 +64,7 @@ class RelationshipsSection extends ConsumerWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => RelationshipFormPage(
+                      modelTypeName: modelTypeName(),
                       initialRelationship: rel,
                     ),
                   ),
@@ -143,9 +146,9 @@ class RelationshipsSection extends ConsumerWidget {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            title: Text('To: $targetName'),
+            title: Text('Related type: $targetName'),
             subtitle: Text(
-              'Multiplicity: ${rel.multiplicity ?? 'many'}${rel.description != null ? ' • ${rel.description}' : ''}',
+              '${rel.endpointSummary}${rel.description != null ? ' • ${rel.description}' : ''}',
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -186,7 +189,8 @@ class RelationshipsSection extends ConsumerWidget {
                 final result = await Navigator.push<RelationDefinitionDraft>(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const RelationshipFormPage(),
+                    builder: (context) =>
+                        RelationshipFormPage(modelTypeName: modelTypeName()),
                   ),
                 );
                 if (result != null) {

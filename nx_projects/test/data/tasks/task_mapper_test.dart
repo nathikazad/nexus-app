@@ -1,8 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_projects/data/tasks/task_mapper.dart';
+import 'package:nx_projects/domain/task/task.dart';
 
 void main() {
+  test('planned date writes due_at with the entered local calendar day', () {
+    final attributes =
+        setModelRequestForCreateTask(
+              const Task(id: 0, title: 'Plan', plannedFor: '2026-10-29'),
+            ).toJson()['attributes']
+            as List;
+    expect(attributes.any((a) => a['key'] == 'date'), isFalse);
+    expect(
+      attributes.singleWhere((a) => a['key'] == 'due_at')['value'],
+      '2026-10-29T12:00:00.000',
+    );
+  });
   test('taskFromModel maps Work links with relation attributes', () {
     final task = taskFromModel(
       Model.fromJson({

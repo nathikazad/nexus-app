@@ -8,7 +8,7 @@ const String kBugModelTypeName = 'Bug';
 const String kTaskAttrPriority = 'priority';
 const String kTaskAttrStatus = 'status';
 const String kTaskAttrEstimateHours = 'estimate_hours';
-const String kTaskAttrDate = 'date';
+const String kTaskAttrDate = 'due_at';
 const String kTaskAttrSeverity = 'severity';
 
 /// [Feature] only; see `ideation_status` in PG.

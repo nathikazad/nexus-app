@@ -524,7 +524,10 @@ SetModelTypeRequest buildCardSchemaRequest() {
     relationshipTypes: [
       RelationshipType.fromName(
         bookModelType,
-        multiplicity: 'one',
+        endpoints: const {
+          'cards': RelationshipEndpoint(type: cardModelType, count: 'many'),
+          'book': RelationshipEndpoint(type: bookModelType, count: 'one'),
+        },
         relationName: 'source_book',
       ),
     ],

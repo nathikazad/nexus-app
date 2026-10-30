@@ -34,7 +34,10 @@ void main() {
       final nxRel = nx.RelationshipType(
         id: 2,
         link: 'Company',
-        multiplicity: 'many',
+        endpoints: const {
+          'source': nx.RelationshipEndpoint(type: 'Person', count: 'many'),
+          'target': nx.RelationshipEndpoint(type: 'Company', count: 'many')
+        },
         description: 'works at',
         relationAttributeDefinitions: [
           nx.RelationAttributeDefinition(

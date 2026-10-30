@@ -125,7 +125,7 @@ class ModelType {
       final relationsJson = json['relations'] as List<dynamic>;
       relations = relationsJson
           .map((relJson) {
-            final rel = relJson as Map<String, dynamic>;
+            final rel = Map<String, dynamic>.from(relJson as Map);
             final targetModelTypeName = rel['target_model_type'] as String?;
             if (targetModelTypeName == null) return null;
 
@@ -145,10 +145,16 @@ class ModelType {
             return RelationshipType(
               id: rel['id'] as int?,
               link: targetModelTypeName,
-              multiplicity:
-                  rel['multiplicity'] as String? ??
-                  rel['cardinality'] as String?,
-              relationName: rel['relation_name'] as String?,
+              endpoints: (rel['endpoints'] as Map? ?? {}).map(
+                (key, value) => MapEntry(
+                  key.toString(),
+                  RelationshipEndpoint.fromJson(
+                    Map<String, dynamic>.from(value as Map),
+                  ),
+                ),
+              ),
+              definingModelTypeId: rel['defining_model_type_id'] as int?,
+              relationName: (rel['name'] ?? rel['relation_name']) as String?,
               description: rel['description'] as String?,
               relationAttributeDefinitions: relationAttributeDefinitions,
             );
@@ -200,7 +206,22 @@ class ModelType {
       if (attributes != null)
         'attributes': attributes!.map((a) => a.toJson()).toList(),
       if (relations != null)
-        'relations': relations!.map((r) => r.toJson()).toList(),
+        'relations': relations!
+            .map(
+              (r) => <String, dynamic>{
+                'id': r.id,
+                'target_model_type': r.link,
+                'name': r.relationName,
+                'relation_name': r.relationName,
+                'description': r.description,
+                'endpoints': r.endpoints.map((k, v) => MapEntry(k, v.toJson())),
+                'defining_model_type_id': r.definingModelTypeId,
+                'attributes': r.relationAttributeDefinitions
+                    ?.map((a) => a.toJson())
+                    .toList(),
+              },
+            )
+            .toList(),
       if (tagSystems != null)
         'tag_systems': tagSystems!.map((t) => t.toJson()).toList(),
     };

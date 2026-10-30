@@ -502,7 +502,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    if (r.multiplicity != null)
+                    if (r.endpoints.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
@@ -511,7 +511,7 @@ class ModelTypeDetailPage extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          r.multiplicity!,
+                          r.endpointSummary,
                           style: GoogleFonts.inter(
                               fontSize: 11, color: AppColors.gray400),
                         ),

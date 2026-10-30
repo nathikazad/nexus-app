@@ -35,12 +35,14 @@ class Relation {
 
   factory Relation.fromJson(Map<String, dynamic> json) {
     return Relation(
-      relationId: json['relation_id'] as int? ??
+      relationId:
+          json['relation_id'] as int? ??
           json['relationId'] as int? ??
           json['id'] as int? ??
           0,
       modelId: json['model_id'] as int? ?? json['modelId'] as int? ?? 0,
-      modelType: json['model_type'] as String? ??
+      modelType:
+          json['model_type'] as String? ??
           json['modelType'] as String? ??
           'Unknown',
       name: parseOptionalStringField(json['name']),
@@ -60,7 +62,8 @@ class Relation {
   }
 
   static Map<String, dynamic>? _parseRelationAttributes(
-      Map<String, dynamic> json) {
+    Map<String, dynamic> json,
+  ) {
     final raw = json['relation_attributes'] ?? json['relationAttributes'];
     if (raw == null) {
       return null;
@@ -102,115 +105,130 @@ class Relation {
   }
 }
 
-/// Single relationship type (schema / `set_kgql_model_types`).
+/// A named role in a relationship. Count is the maximum per opposite record.
+class RelationshipEndpoint {
+  final Object type;
+  final String count;
+  const RelationshipEndpoint({required this.type, required this.count});
+
+  factory RelationshipEndpoint.fromJson(Map<String, dynamic> json) {
+    final endpoint = RelationshipEndpoint(
+      type: json['type'] as Object,
+      count: json['count'] as String,
+    );
+    endpoint.toJson();
+    return endpoint;
+  }
+  Map<String, dynamic> toJson() {
+    if ((type is! String && type is! int) ||
+        (type is String && (type as String).trim().isEmpty) ||
+        !const ['one', 'many'].contains(count)) {
+      throw ArgumentError(
+        'An endpoint needs a model type and a one/many count',
+      );
+    }
+    return {'type': type, 'count': count};
+  }
+}
+
+/// Definition metadata; distinct from individual [Relation] records.
 class RelationshipType {
-  /// Relationship type ID (required for update/delete, omitted for create)
   final int? id;
+  final dynamic link;
+  final Map<String, RelationshipEndpoint> endpoints;
 
-  /// Link to target model type: either an integer ID or a String name (required for create)
-  final dynamic link; // int or String
-
-  /// Multiplicity: defaults to 'many'
-  final String? multiplicity;
-
-  /// Semantic name for this relationship type, e.g. `work_for`.
+  /// Read metadata used to keep reverse/inherited definitions out of writes.
+  final int? definingModelTypeId;
   final String? relationName;
-
-  /// Optional description
   final String? description;
-
-  /// Relation attribute definitions array (optional)
   final List<RelationAttributeDefinition>? relationAttributeDefinitions;
-
-  /// Delete flag (true to delete this relationship type)
   final bool delete;
+
+  /// Flat count update supported by KGQL schema tooling.
+  final String? toEndpointCount;
 
   RelationshipType({
     this.id,
     this.link,
-    this.multiplicity,
+    this.endpoints = const {},
+    this.definingModelTypeId,
     this.relationName,
     this.description,
     this.relationAttributeDefinitions,
     this.delete = false,
+    this.toEndpointCount,
   });
+
+  /// Null for self-relations: callers must choose an explicit role.
+  MapEntry<String, RelationshipEndpoint>? get targetEndpoint {
+    final matches = endpoints.entries
+        .where((e) => e.value.type == link)
+        .toList();
+    return matches.length == 1 ? matches.single : null;
+  }
 
   Map<String, dynamic> toJson() {
     if (delete) {
-      if (id == null) {
-        throw Exception('id is required when delete is true');
-      }
-      return {
-        'id': id,
-        'delete': true,
-      };
+      if (id == null) throw ArgumentError('id is required when delete is true');
+      return {'id': id, 'delete': true};
     }
-
-    final json = <String, dynamic>{};
-
-    if (id != null) {
-      json['id'] = id;
+    if (endpoints.isNotEmpty &&
+        (endpoints.length != 2 ||
+            endpoints.keys.any(
+              (name) => !RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(name),
+            ))) {
+      throw ArgumentError('Exactly two distinct named endpoints are required');
     }
-
-    if (link != null) {
-      json['link'] = link;
+    if (toEndpointCount != null &&
+        !const ['one', 'many'].contains(toEndpointCount)) {
+      throw ArgumentError('Endpoint count must be one or many');
     }
-
-    if (multiplicity != null) {
-      json['multiplicity'] = multiplicity;
-    }
-
-    if (relationName != null) {
-      json['relation_name'] = relationName;
-    }
-
-    if (description != null) {
-      json['description'] = description;
-    }
-
-    if (relationAttributeDefinitions != null) {
-      json['relation_attribute_definitions'] =
-          relationAttributeDefinitions!.map((rad) => rad.toJson()).toList();
-    }
-
-    return json;
+    return {
+      if (id != null) 'id': id,
+      if (link != null) 'link': link,
+      if (endpoints.isNotEmpty)
+        'endpoints': endpoints.map((k, v) => MapEntry(k, v.toJson())),
+      if (toEndpointCount != null) 'to_endpoint_count': toEndpointCount,
+      if (relationName != null) 'name': relationName,
+      if (description != null) 'description': description,
+      if (relationAttributeDefinitions != null)
+        'relation_attribute_definitions': relationAttributeDefinitions!
+            .map((a) => a.toJson())
+            .toList(),
+    };
   }
 
-  /// Create with integer ID link
   factory RelationshipType.fromId(
     int targetModelTypeId, {
-    String? multiplicity,
+    Map<String, RelationshipEndpoint> endpoints = const {},
+    String? toEndpointCount,
     String? relationName,
     String? description,
     List<RelationAttributeDefinition>? relationAttributeDefinitions,
-  }) {
-    return RelationshipType(
-      link: targetModelTypeId,
-      multiplicity: multiplicity,
-      relationName: relationName,
-      description: description,
-      relationAttributeDefinitions: relationAttributeDefinitions,
-      delete: false,
-    );
-  }
+  }) => RelationshipType(
+    link: targetModelTypeId,
+    endpoints: endpoints,
+    toEndpointCount: toEndpointCount,
+    relationName: relationName,
+    description: description,
+    relationAttributeDefinitions: relationAttributeDefinitions,
+  );
 
-  /// Create with name link
   factory RelationshipType.fromName(
     String targetModelTypeName, {
-    String? multiplicity,
+    Map<String, RelationshipEndpoint> endpoints = const {},
+    String? toEndpointCount,
     String? relationName,
     String? description,
     List<RelationAttributeDefinition>? relationAttributeDefinitions,
-  }) {
-    return RelationshipType(
-      link: targetModelTypeName,
-      multiplicity: multiplicity,
-      relationName: relationName,
-      description: description,
-      relationAttributeDefinitions: relationAttributeDefinitions,
-      delete: false,
-    );
-  }
+  }) => RelationshipType(
+    link: targetModelTypeName,
+    endpoints: endpoints,
+    toEndpointCount: toEndpointCount,
+    relationName: relationName,
+    description: description,
+    relationAttributeDefinitions: relationAttributeDefinitions,
+  );
 }
 
 /// Single relation attribute definition

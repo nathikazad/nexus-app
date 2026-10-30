@@ -14,7 +14,6 @@ const kBookAttrWordCount = 'word_count';
 const kBookAttrDocument = 'document';
 const kBookAttrJsonDocument = 'json_document';
 const kBookAttrPinned = 'pinned';
-const kBookAttrShareToWeb = 'share_to_web';
 const kBookTopicTagSystem = 'Topic';
 
 class KgqlBookRepository implements BookRepository {
@@ -64,7 +63,6 @@ class KgqlBookRepository implements BookRepository {
             value: _blankDocumentJson(),
           ),
           SetModelAttribute(key: kBookAttrPinned, value: false),
-          SetModelAttribute(key: kBookAttrShareToWeb, value: false),
           SetModelAttribute(
             key: kBookAttrReadingState,
             value: BookReadingState.toRead.kgqlValue,

@@ -5,10 +5,12 @@ import 'package:nexus_voice_assistant/domain/schema/relation_attribute_definitio
 import 'package:nexus_voice_assistant/domain/schema/relation_definition_draft.dart';
 
 class RelationshipFormPage extends ConsumerStatefulWidget {
+  final String modelTypeName;
   final RelationDefinitionDraft? initialRelationship;
 
   const RelationshipFormPage({
     super.key,
+    required this.modelTypeName,
     this.initialRelationship,
   });
 
@@ -20,7 +22,15 @@ class RelationshipFormPage extends ConsumerStatefulWidget {
 class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
   int? _targetModelTypeId;
   String? _targetModelTypeName;
-  String _multiplicity = 'many';
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _firstRole = TextEditingController();
+  final _secondRole = TextEditingController();
+  String _firstCount = 'many';
+  String _secondCount = 'many';
+  Object? _firstType;
+  Object? _secondType;
+  bool get _editing => widget.initialRelationship?.id != null;
   final TextEditingController _descriptionController = TextEditingController();
   List<RelationAttributeDefinitionDraft> _relationAttributeDefinitions = [];
 
@@ -31,7 +41,16 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
       final rel = widget.initialRelationship!;
       _targetModelTypeId = rel.link is int ? rel.link as int : null;
       _targetModelTypeName = rel.link is String ? rel.link as String : null;
-      _multiplicity = rel.multiplicity ?? 'many';
+      _name.text = rel.relationName ?? '';
+      if (rel.endpoints.length == 2) {
+        final roles = rel.endpoints.entries.toList();
+        _firstRole.text = roles[0].key;
+        _firstType = roles[0].value.type;
+        _firstCount = roles[0].value.count;
+        _secondRole.text = roles[1].key;
+        _secondType = roles[1].value.type;
+        _secondCount = roles[1].value.count;
+      }
       if (rel.description != null) {
         _descriptionController.text = rel.description!;
       }
@@ -46,6 +65,9 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
 
   @override
   void dispose() {
+    _name.dispose();
+    _firstRole.dispose();
+    _secondRole.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -137,6 +159,12 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
   }
 
   void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    if (widget.modelTypeName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Name this model type before adding a relationship')));
+      return;
+    }
     if (_targetModelTypeId == null && _targetModelTypeName == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a target model type')),
@@ -148,7 +176,15 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
     final relationship = RelationDefinitionDraft(
       id: widget.initialRelationship?.id,
       link: link,
-      multiplicity: _multiplicity,
+      relationName: _name.text.trim(),
+      definingModelTypeId: widget.initialRelationship?.definingModelTypeId,
+      endpoints: {
+        _firstRole.text.trim(): RelationEndpointDraft(
+            type: _editing ? _firstType! : widget.modelTypeName,
+            count: _firstCount),
+        _secondRole.text.trim(): RelationEndpointDraft(
+            type: _editing ? _secondType! : link, count: _secondCount),
+      },
       description: _descriptionController.text.isEmpty
           ? null
           : _descriptionController.text,
@@ -159,6 +195,42 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
 
     Navigator.pop(context, relationship);
   }
+
+  String? _identifier(String? value) =>
+      RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(value?.trim() ?? '')
+          ? null
+          : 'Use a name with letters, numbers, and underscores';
+
+  Widget _endpointFields(TextEditingController role, Object? type, String count,
+          ValueChanged<String> onCountChanged) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('$type', style: const TextStyle(fontWeight: FontWeight.bold)),
+        TextFormField(
+            controller: role,
+            readOnly: _editing,
+            decoration: const InputDecoration(
+                labelText: 'Role name',
+                helperText: 'For example: parent or children'),
+            validator: (value) {
+              final invalid = _identifier(value);
+              if (invalid != null) return invalid;
+              if (_firstRole.text.trim() == _secondRole.text.trim()) {
+                return 'The two roles need different names';
+              }
+              return null;
+            }),
+        DropdownButtonFormField<String>(
+            initialValue: count,
+            decoration: const InputDecoration(
+                labelText: 'Maximum per record in the opposite role'),
+            items: const [
+              DropdownMenuItem(value: 'one', child: Text('Zero or one')),
+              DropdownMenuItem(value: 'many', child: Text('Many'))
+            ],
+            onChanged: (value) {
+              if (value != null) onCountChanged(value);
+            }),
+      ]);
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +247,7 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
         ],
       ),
       body: Form(
+        key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -187,7 +260,7 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
               child: Row(
                 children: [
                   const Text(
-                    'Target Model Type: ',
+                    'Related model type: ',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Expanded(
@@ -199,12 +272,14 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close),
-                                onPressed: () {
-                                  setState(() {
-                                    _targetModelTypeId = null;
-                                    _targetModelTypeName = null;
-                                  });
-                                },
+                                onPressed: _editing
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          _targetModelTypeId = null;
+                                          _targetModelTypeName = null;
+                                        });
+                                      },
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                               ),
@@ -212,18 +287,21 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
                           )
                         : IconButton(
                             icon: const Icon(Icons.add),
-                            onPressed: () async {
-                              final result =
-                                  await context.push('/model-type-selector');
-                              if (result != null &&
-                                  result is Map<String, dynamic>) {
-                                setState(() {
-                                  _targetModelTypeId = result['id'] as int;
-                                  _targetModelTypeName =
-                                      result['name'] as String;
-                                });
-                              }
-                            },
+                            onPressed: _editing
+                                ? null
+                                : () async {
+                                    final result = await context
+                                        .push('/model-type-selector');
+                                    if (result != null &&
+                                        result is Map<String, dynamic>) {
+                                      setState(() {
+                                        _targetModelTypeId =
+                                            result['id'] as int;
+                                        _targetModelTypeName =
+                                            result['name'] as String;
+                                      });
+                                    }
+                                  },
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -232,24 +310,29 @@ class _RelationshipFormPageState extends ConsumerState<RelationshipFormPage> {
               ),
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _multiplicity,
+            TextFormField(
+              controller: _name,
               decoration: const InputDecoration(
-                labelText: 'Multiplicity',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'one', child: Text('One')),
-                DropdownMenuItem(value: 'many', child: Text('Many')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _multiplicity = value;
-                  });
-                }
-              },
+                  labelText: 'Relationship name',
+                  helperText: 'For example: has_subtask'),
+              validator: _identifier,
             ),
+            const SizedBox(height: 16),
+            _endpointFields(
+                _firstRole,
+                _editing ? _firstType : widget.modelTypeName,
+                _firstCount,
+                (v) => setState(() => _firstCount = v)),
+            const SizedBox(height: 16),
+            _endpointFields(
+                _secondRole,
+                _editing
+                    ? _secondType
+                    : (_targetModelTypeName ??
+                        _targetModelTypeId ??
+                        'Selected model type'),
+                _secondCount,
+                (v) => setState(() => _secondCount = v)),
             const SizedBox(height: 16),
             TextFormField(
               controller: _descriptionController,

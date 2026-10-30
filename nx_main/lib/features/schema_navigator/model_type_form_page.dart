@@ -121,6 +121,7 @@ class _ModelTypeFormPageState extends ConsumerState<ModelTypeFormPage> {
             ),
             const SizedBox(height: 16),
             RelationshipsSection(
+              modelTypeName: () => controllerState.nameController.text.trim(),
               relationshipTypes: controllerState.relationshipTypes,
               onAdd: (relationship) {
                 controllerNotifier.addRelationship(relationship);
