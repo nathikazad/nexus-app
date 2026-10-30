@@ -57,6 +57,9 @@ dependencies:
   pdfrx: ^2.4.8
 
 dependency_overrides:
+  # Same desktop-build fix used by Docs and Books.
+  flutter_sound:
+    path: ../third_party/flutter_sound
   connectivity_plus: 6.1.4
 
 dev_dependencies:
