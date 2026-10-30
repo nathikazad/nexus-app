@@ -363,6 +363,13 @@ class TimeLocalLink extends Link {
       case 'getKgqlModels':
         if (v['domainId'] != null && v['domainId'] != session.domainId)
           throw StateError('Wrong domain');
+        // Schedule is not part of the published Time manifest yet. Keep it
+        // as a domain-scoped server view, cached like aggregate goal results.
+        // An absent local record must not be presented as an empty schedule.
+        if ((v['filter'] as Map?)?['model_type'] == 'Schedule') {
+          yield await session.cached(request);
+          return;
+        }
         result = (await session.graph()).query(
           v['filter'] as Map? ?? {},
           v['struct'] as Map? ?? {},

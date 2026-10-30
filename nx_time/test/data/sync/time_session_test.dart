@@ -12,6 +12,72 @@ import 'package:nx_time/data/sync/time_session.dart';
 
 void main() {
   test(
+    'schedules use the scoped server view even when absent from the manifest',
+    () async {
+      final directory = await Directory(
+        '${Platform.environment['NEXUS_TEST_TMP'] ?? Directory.systemTemp.path}/schedule-session',
+      ).create(recursive: true);
+      final store = TimeStore(
+        FileLibrary(
+          database: LibraryDatabase(NativeDatabase.memory()),
+          files: DirectoryContentFiles(directory),
+        ),
+        const AccountIdentity(
+          serverId: 'test',
+          userId: '1',
+          domainId: 1,
+          application: 'time',
+        ),
+      );
+      var calls = 0;
+      final remote = GraphQLClient(
+        cache: GraphQLCache(),
+        link: Link.function((request, [forward]) async* {
+          calls++;
+          expect(request.variables['domainId'], 1);
+          yield Response(
+            response: const {},
+            data: {
+              '__typename': 'Query',
+              'getKgqlModels': [
+                {
+                  'id': 9389,
+                  'name': 'Pilates',
+                  'entries': [
+                    {
+                      'days': ['thursday'],
+                      'start_time': '06:00',
+                      'end_time': '07:00',
+                    },
+                  ],
+                },
+              ],
+            },
+          );
+        }),
+      );
+      final session = TimeSession(
+        User(userId: '1', preset: BackendPreset.localhost, domainId: 1),
+        1,
+        remote,
+        storage: store,
+      );
+      await session.outbox.close();
+      for (var i = 0; i < 2; i++) {
+        final rows = await fetchKgqlModels(
+          session.client,
+          domainId: 1,
+          filter: {'model_type': 'Schedule'},
+          struct: {'id': true, 'name': true, 'entries': true},
+        );
+        expect(rows.single.name, 'Pilates');
+      }
+      expect(calls, 1);
+      await session.close();
+    },
+  );
+
+  test(
     'cached tasks read without network and edits queue through existing KGQL API',
     () async {
       final directory = await Directory(
