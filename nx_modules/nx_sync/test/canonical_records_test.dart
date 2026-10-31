@@ -101,6 +101,35 @@ class SerializationProbe {
 
 void main() {
   test(
+    'Time computed results keep string IDs and original hashes outside editable models',
+    () async {
+      final server = Server()
+        ..put(1, 'model-hash', model(1, 'Prayer', 'Prayer'));
+      const key = 'goal-result:week:2026-10-26:5';
+      server.bodies[key] = {
+        'kind': 'goal_result',
+        'view': 'week',
+        'period_start': '2026-10-26',
+        'goal_id': 5,
+        'result': {'id': 5, 'daily_state': []},
+      };
+      server.hashes[key] = 'result-hash';
+      final session = server.session('time');
+      final manifest = (await session.manifest())!;
+      expect(manifest.entries.map((e) => e['id']), [1]);
+      expect(session.computedRecords[key]?['hash'], 'result-hash');
+      server.downloaded.clear();
+      await session.manifest();
+      expect(server.downloaded, isEmpty);
+      server.bodies.remove(key);
+      server.hashes.remove(key);
+      server.revision++;
+      await session.manifest();
+      expect(session.computedRecords, isEmpty);
+    },
+  );
+
+  test(
     'projection runs in a worker and publishes back on the caller isolate',
     () async {
       final port = ReceivePort();

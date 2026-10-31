@@ -146,6 +146,9 @@ class DomainWorkspace {
     this.sessions = const {},
   });
   final Map<int, TimeSession> sessions;
+  Future<void> refreshGoalResults() => Future.wait(
+    sessions.values.map((session) => session.goals.refresh()),
+  ).then((_) {});
   final bool needsSelection;
   bool _disposed = false;
   Future<void> synchronize(SyncReason reason) => Future.wait(
@@ -285,3 +288,25 @@ int resolveSelectedTimeDomain({
       .toSet();
   return ids.length == 1 ? ids.single : personalId;
 }
+
+/// Published goal changes include clock-driven updates with no model mutation.
+final timeSyncHintsProvider = Provider<Stream<String>?>((ref) {
+  final workspace = ref.watch(timeDomainsProvider).asData?.value;
+  if (workspace == null || workspace.sessions.isEmpty) return null;
+  final session = workspace.sessions[workspace.selectedId]!;
+  return session.remote
+      .subscribe(
+        SubscriptionOptions(
+          document: gql(
+            r'subscription TimeSync($app: String!, $domainId: Int!) { appSyncChanged(app: $app, domainId: $domainId) }',
+          ),
+          variables: {'app': 'time', 'domainId': workspace.selectedId},
+          fetchPolicy: FetchPolicy.noCache,
+        ),
+      )
+      .where(
+        (result) =>
+            !result.hasException && result.data?['appSyncChanged'] != null,
+      )
+      .map((result) => jsonEncode(result.data!['appSyncChanged']));
+});

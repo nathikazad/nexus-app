@@ -11,6 +11,7 @@ import 'package:nx_db/app_sync.dart';
 import 'package:nx_offline/nx_offline.dart';
 import 'package:nx_offline/nx_offline_storage.dart';
 import 'package:nx_time/data/sync/time_store.dart';
+import 'package:nx_time/data/sync/time_goal_results.dart';
 import 'package:nx_time/data/sync/time_transport.dart';
 import 'package:nx_time/data/sync/time_synchronizer.dart';
 import 'package:nx_time/data/sync/time_graph.dart';
@@ -55,6 +56,25 @@ class TimeSession {
       },
       retryDelay: const Duration(seconds: 5),
     );
+    goals = TimeGoalResults(
+      store,
+      requestMonths: (months, now) async {
+        final response = await http
+            .post(
+              reads.origin.resolve('/nx_time/goal-results/sync'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'domain_id': domainId,
+                'local_now': now.toIso8601String(),
+                'months': months,
+              }),
+            )
+            .timeout(const Duration(seconds: 15));
+        if (response.statusCode != 202)
+          throw StateError('Could not request goal results');
+      },
+      pull: () => sync.requestFull(SyncReason.foregroundDemand),
+    );
     client = GraphQLClient(
       link: TimeLocalLink(this),
       cache: GraphQLCache(),
@@ -72,6 +92,7 @@ class TimeSession {
   late final OutboxProcessor outbox;
   late final SyncSupervisor<int> sync;
   late final GraphQLClient client;
+  late final TimeGoalResults goals;
   bool closed = false;
   final Map<String, Future<Response>> _fetching = {};
   final Map<String, DateTime> _lastFetch = {};
@@ -81,6 +102,7 @@ class TimeSession {
 
   Future<void> synchronize(SyncReason reason) async {
     if (closed) return;
+    await goals.refresh();
     await sync.requestFull(reason);
     // Refresh only previously requested aggregate/preferences views. Base records
     // come from the verified manifest, not from these non-authoritative views.
@@ -313,6 +335,7 @@ class TimeSession {
       });
   Future<void> close() async {
     closed = true;
+    await goals.close();
     await outbox.close();
     await sync.close();
     await Future.wait(
@@ -354,6 +377,29 @@ class TimeLocalLink extends Link {
     final v = request.variables;
     dynamic result;
     switch (name) {
+      case 'getActionGoalsWeek':
+      case 'getActionGoalsMonth':
+      case 'getActionGoalsMonthScore':
+        if (v['domainId'] != null && v['domainId'] != session.domainId) {
+          throw StateError('Wrong domain');
+        }
+        if (name == 'getActionGoalsMonthScore' && v['goalId'] != null) {
+          yield await session.cached(request);
+          return;
+        }
+        final view = name == 'getActionGoalsWeek'
+            ? 'week'
+            : name == 'getActionGoalsMonth'
+            ? 'month'
+            : 'month_score';
+        result = await session.goals.read(
+          view,
+          DateTime.parse(
+            v[view == 'week' ? 'weekStart' : 'monthStart'] as String,
+          ),
+          v['goalId'] as int?,
+        );
+        break;
       case 'setKgqlModels':
         final input = Map<String, dynamic>.from(v['input'] as Map);
         if (input['domainId'] != null && input['domainId'] != session.domainId)

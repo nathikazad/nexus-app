@@ -46,6 +46,12 @@ class TimeReconciler implements PullReconciler<int> {
     await store.applySnapshot(items, {
       for (final entry in manifest.entries) entry['id'] as int,
     });
+    final results = jsonEncode(session.computedRecords);
+    final oldResults = await store.library.read(
+      'time_goal_results',
+      'snapshot',
+    );
+    await store.library.saveRemote('time_goal_results', 'snapshot', results);
     await store.library.saveRemote(
       'time_state',
       'coverage',
@@ -55,7 +61,8 @@ class TimeReconciler implements PullReconciler<int> {
         'complete': true,
       }),
     );
-    if (wanted.isNotEmpty ||
+    if (oldResults != results ||
+        wanted.isNotEmpty ||
         hashes.keys.any(
           (id) => !manifest.entries.any((entry) => entry['id'] == id),
         )) {

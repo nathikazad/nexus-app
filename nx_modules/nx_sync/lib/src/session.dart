@@ -108,6 +108,13 @@ final class AppSyncSession {
     return result;
   }
 
+  /// Non-model results retain their namespaced identities and server hashes.
+  Map<String, Map<String, dynamic>> get computedRecords => {
+    for (final e in _records.entries)
+      if (e.key.startsWith('goal-result:') && app == 'time')
+        e.key: {'hash': _hashes[e.key], 'payload': e.value},
+  };
+
   Future<List<Map<String, dynamic>>> download(
     AppSyncManifest manifest,
     Set<int> ids,
@@ -144,6 +151,7 @@ _ProjectionResult _projectViews(_ProjectionInput input) {
   for (final entry in input.entries) {
     if (entry['role'] == 'support') continue;
     final key = entry['id'] as String;
+    if (input.app == 'time' && key.startsWith('goal-result:')) continue;
     final payload = graph.view(input.app, key);
     final id = payload['id'] as int;
     final hash =
@@ -165,6 +173,12 @@ Object? _ordered(Object? value) {
 }
 
 bool _validRecord(String key, Map<String, dynamic> body) {
+  if (key.startsWith('goal-result:')) {
+    return body['kind'] == 'goal_result' &&
+        body['result'] is Map &&
+        body['period_start'] is String &&
+        body['view'] is String;
+  }
   if (body['id'] is! int) return false;
   if (!key.startsWith('model:')) return true;
   return key == 'model:${body['id']}' &&

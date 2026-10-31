@@ -61,6 +61,12 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
   }
 
   Future<void> _refresh() async {
+    try {
+      await ref.read(timeDomainsProvider).asData?.value.refreshGoalResults();
+    } catch (_) {
+      // Offline: retain the last complete synced result set.
+    }
+    if (!mounted) return;
     final week = ref.read(currentWeekProvider);
     final monday = DateTime(week.year, week.month, week.day);
     invalidateActionsAfterMutation(ref);
