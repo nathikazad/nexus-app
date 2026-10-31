@@ -1,3 +1,4 @@
+import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -109,11 +110,16 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
 
   @override
   VoiceSocketState build() {
+    ref.watch(timeDomainsProvider);
     ref.onDispose(() {
       _textIdleTimer?.cancel();
       unawaited(_mic?.dispose());
       unawaited(_player?.dispose());
       unawaited(_socket?.disconnect());
+      _socket = null;
+      _mic = null;
+      _player = null;
+      _sessionKey = null;
     });
     return const VoiceSocketState.idle();
   }
@@ -487,7 +493,9 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
     required String socketUrl,
     required String userId,
   }) async {
-    final key = '$socketUrl|$userId';
+    final workspace = ref.read(timeDomainsProvider).requireValue;
+    final domainId = workspace.selectedId;
+    final key = '$socketUrl|$userId|$domainId';
     final httpBaseUrl =
         ref.read(imageBaseUrlProvider) ?? httpBaseFromSocketUrl(socketUrl);
     final existing = _socket;
@@ -645,6 +653,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
 
     final headers = <String, String>{
       'X-Client-Id': 'nx_time',
+      'X-Domain-Id': '$domainId',
     };
     debugPrint(
       '[nx_time voice] socket headers client_id=nx_time '
@@ -654,7 +663,7 @@ class VoiceSocketController extends Notifier<VoiceSocketState> {
       socketUrl,
       headers: headers,
       authHeaders: (forceRefresh) => nexusAuthHeaders(
-        ref.read(authProvider).value!.preset,
+        workspace.user.preset,
         userId,
         forceRefresh: forceRefresh,
       ),

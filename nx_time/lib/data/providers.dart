@@ -4,7 +4,7 @@ import 'package:nx_time/data/domains/multi_goal_repository.dart';
 import 'package:nx_time/data/domains/multi_project_repository.dart';
 import 'package:nx_time/data/domains/personal_action_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/person.dart';
+import 'package:nx_db/account.dart';
 import 'package:nx_db/riverpod.dart';
 
 import 'package:nx_time/domain/action/action_repository.dart';
@@ -16,22 +16,22 @@ import 'package:nx_time/data/action/action_schema_provider.dart';
 import 'package:nx_time/data/action/action_subtypes_provider.dart';
 import 'package:nx_time/data/log/kgql_log_repository.dart';
 import 'package:nx_time/data/log/log_schema_provider.dart';
-import 'package:nx_time/data/person/model_type_colors.dart';
+import 'package:nx_time/data/account/model_type_colors.dart';
 import 'package:nx_time/data/schema/kgql_action_schema_repository.dart';
 
-export 'package:nx_db/person.dart';
+export 'package:nx_db/account.dart';
 export 'package:nx_time/data/action/action_schema_provider.dart';
 export 'package:nx_time/data/action/action_subtypes_provider.dart';
 export 'package:nx_time/data/log/log_schema_provider.dart';
 export 'package:nx_time/data/projects/project_schema_provider.dart';
 export 'package:nx_time/data/tasks/task_schema_provider.dart';
 export 'package:nx_time/data/goals/goal_schema_provider.dart';
-export 'package:nx_time/data/person/model_type_colors.dart';
+export 'package:nx_time/data/account/model_type_colors.dart';
 
 /// Model-type bar colors from `users.preferences.model_type_colors`.
 final modelTypeColorsProvider = FutureProvider<ModelTypeColors>((ref) async {
-  final person = await ref.watch(mainPersonProvider.future);
-  final pref = person?.preference ?? <String, dynamic>{};
+  final account = await ref.watch(currentAccountProvider.future);
+  final pref = account?.preferences ?? <String, dynamic>{};
   await ref.watch(actionSubtypeModelTypesProvider.future);
   return ModelTypeColors.fromPreference(pref);
 });
@@ -56,11 +56,11 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   return MultiGoalRepository(ref.watch(timeDomainsProvider).requireValue);
 });
 
-/// KGQL-backed [LogRepository] for `Daily Log` rows in the personal domain.
+/// KGQL-backed [LogRepository] for `Daily Log` rows in the selected domain.
 final logRepositoryProvider = Provider<LogRepository>((ref) {
   return KgqlLogRepository(
     client: ref.watch(graphqlClientProvider),
-    domainId: ref.watch(timeDomainsProvider).requireValue.personalId,
+    domainId: ref.watch(timeDomainsProvider).requireValue.selectedId,
     loadLogSchema: () => ref.read(logSchemaProvider.future),
   );
 });

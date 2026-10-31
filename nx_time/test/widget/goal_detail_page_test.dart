@@ -40,6 +40,7 @@ void main() {
       tester,
       child: const GoalDetailPage(goalId: 1),
       overrides: [
+        modelTypeColorsProvider.overrideWith((ref) async => ModelTypeColors.fallback),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
         ),
@@ -92,6 +93,7 @@ void main() {
       tester,
       child: const GoalDetailPage(goalId: 1),
       overrides: [
+        modelTypeColorsProvider.overrideWith((ref) async => ModelTypeColors.fallback),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
         ),

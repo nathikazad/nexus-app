@@ -84,7 +84,7 @@ void main() {
   });
 
   test(
-    'workspace subscriptions include Home and personal, with matching domain arguments',
+    'workspace subscriptions only include the selected domain',
     () async {
       final clients = {1: MockGraphQLClient(), 3: MockGraphQLClient()};
       final requested = <int>[];
@@ -133,8 +133,8 @@ void main() {
       addTearDown(subscription.close);
       await container.read(workspaceChangesProvider.future);
       await container.pump();
-      expect(requested.toSet(), {1, 3});
-      expect(events.toSet(), {1, 3});
+      expect(requested.toSet(), {1});
+      expect(events.toSet(), {1});
     },
   );
 

@@ -26,7 +26,10 @@ import 'package:nx_time/features/today/log_view_model.dart';
 import 'package:nx_time/features/today/widgets/log_row.dart';
 
 class HistoryPage extends ConsumerStatefulWidget {
-  const HistoryPage({super.key});
+  const HistoryPage({super.key, this.embeddedMode});
+
+  /// When embedded in Actions, its shared toggle controls the content.
+  final TodayViewMode? embeddedMode;
 
   @override
   ConsumerState<HistoryPage> createState() => _HistoryPageState();
@@ -117,35 +120,41 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NxTabHeader(
-          title: 'History',
-          leading: const BackButton(),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () => setState(() => _weekOverview = !_weekOverview),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                tooltip: _weekOverview ? 'Week schedule' : 'Week overview',
-                icon: Icon(
-                  _weekOverview
-                      ? SolarLinearIcons.chartSquare
-                      : SolarLinearIcons.pieChart2,
-                  size: 22,
-                  color: AppColors.slate400,
+        if (widget.embeddedMode == null)
+          NxTabHeader(
+            title: 'History',
+            leading: const BackButton(),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: () =>
+                      setState(() => _weekOverview = !_weekOverview),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                  tooltip: _weekOverview ? 'Week schedule' : 'Week overview',
+                  icon: Icon(
+                    _weekOverview
+                        ? SolarLinearIcons.chartSquare
+                        : SolarLinearIcons.pieChart2,
+                    size: 22,
+                    color: AppColors.slate400,
+                  ),
                 ),
-              ),
-              const NxAppMenuButton(),
-            ],
+                const NxAppMenuButton(),
+              ],
+            ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           child: Row(
             children: [
               IconButton(
                 onPressed: _prevWeek,
+                tooltip: 'Previous week',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 icon: const Icon(
@@ -167,6 +176,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               ),
               IconButton(
                 onPressed: _nextWeek,
+                tooltip: 'Next week',
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 icon: const Icon(
@@ -232,7 +242,13 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                   Expanded(
                     child: _CalendarDayPanel(
                       dayData: selected,
-                      view: _view,
+                      view: switch (widget.embeddedMode) {
+                        TodayViewMode.actions => _CalendarView.actions,
+                        TodayViewMode.stats => _CalendarView.stats,
+                        TodayViewMode.tasks => _CalendarView.tasks,
+                        null => _view,
+                      },
+                      showViewToggle: widget.embeddedMode == null,
                       colors: colors,
                       onSelectView: (v) => setState(() => _view = v),
                       onRowTap: (row) =>
@@ -350,8 +366,10 @@ class _CalendarDayPanel extends StatelessWidget {
     required this.colors,
     required this.onSelectView,
     required this.onRowTap,
+    this.showViewToggle = true,
   });
 
+  final bool showViewToggle;
   final CalendarDayData dayData;
   final _CalendarView view;
   final ModelTypeColors colors;
@@ -383,30 +401,31 @@ class _CalendarDayPanel extends StatelessWidget {
                   ),
                 ),
               ),
-              Row(
-                children: [
-                  _CalViewIcon(
-                    icon: SolarLinearIcons.running,
-                    tooltip: 'Actions and logs',
-                    selected: view == _CalendarView.actions,
-                    onTap: () => onSelectView(_CalendarView.actions),
-                  ),
-                  const SizedBox(width: 4),
-                  _CalViewIcon(
-                    icon: SolarLinearIcons.checklistMinimalistic,
-                    tooltip: 'Tasks',
-                    selected: view == _CalendarView.tasks,
-                    onTap: () => onSelectView(_CalendarView.tasks),
-                  ),
-                  const SizedBox(width: 4),
-                  _CalViewIcon(
-                    icon: SolarLinearIcons.chartSquare,
-                    tooltip: 'Stats',
-                    selected: view == _CalendarView.stats,
-                    onTap: () => onSelectView(_CalendarView.stats),
-                  ),
-                ],
-              ),
+              if (showViewToggle)
+                Row(
+                  children: [
+                    _CalViewIcon(
+                      icon: SolarLinearIcons.running,
+                      tooltip: 'Actions and logs',
+                      selected: view == _CalendarView.actions,
+                      onTap: () => onSelectView(_CalendarView.actions),
+                    ),
+                    const SizedBox(width: 4),
+                    _CalViewIcon(
+                      icon: SolarLinearIcons.checklistMinimalistic,
+                      tooltip: 'Tasks',
+                      selected: view == _CalendarView.tasks,
+                      onTap: () => onSelectView(_CalendarView.tasks),
+                    ),
+                    const SizedBox(width: 4),
+                    _CalViewIcon(
+                      icon: SolarLinearIcons.chartSquare,
+                      tooltip: 'Stats',
+                      selected: view == _CalendarView.stats,
+                      onTap: () => onSelectView(_CalendarView.stats),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),

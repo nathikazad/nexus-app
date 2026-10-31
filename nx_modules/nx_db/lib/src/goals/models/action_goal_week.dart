@@ -7,6 +7,7 @@ import 'goal_target.dart';
 class ActionGoalWeekItem {
   const ActionGoalWeekItem({
     required this.id,
+    this.routineId,
     required this.label,
     required this.cadence,
     required this.modelType,
@@ -20,9 +21,11 @@ class ActionGoalWeekItem {
     this.schedule,
     this.evaluation = 'aggregate',
     this.restrictions,
+    this.monthSummary,
   });
 
   final int id;
+  final int? routineId;
   final String label;
   final String cadence;
   final String modelType;
@@ -36,6 +39,7 @@ class ActionGoalWeekItem {
   final ActionGoalSchedule? schedule;
   final String evaluation;
   final Map<String, dynamic>? restrictions;
+  final Map<String, dynamic>? monthSummary;
 
   static String? _metricFromJson(dynamic raw) {
     if (raw == null) return null;
@@ -47,6 +51,7 @@ class ActionGoalWeekItem {
     final ds = json['daily_state'] as List<dynamic>?;
     return ActionGoalWeekItem(
       id: (json['id'] as num).toInt(),
+      routineId: (json['routine_id'] as num?)?.toInt(),
       label: json['label'] as String? ?? '',
       cadence: json['cadence'] as String? ?? '',
       modelType: json['model_type'] as String? ?? '',
@@ -77,6 +82,7 @@ class ActionGoalWeekItem {
       schedule: _scheduleFromJson(json['schedule']),
       evaluation: json['evaluation'] as String? ?? 'aggregate',
       restrictions: unwrapObjectField(json['restrictions']),
+      monthSummary: unwrapObjectField(json['month_summary']),
     );
   }
 
@@ -89,10 +95,12 @@ class ActionGoalWeekItem {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    if (routineId != null) 'routine_id': routineId,
     'label': label,
     'cadence': cadence,
     'evaluation': evaluation,
     if (restrictions != null) 'restrictions': restrictions,
+    if (monthSummary != null) 'month_summary': monthSummary,
     'model_type': modelType,
     if (filter != null) 'filter': filter,
     'selected_attribute': selectedAttribute,

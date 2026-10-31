@@ -1,27 +1,18 @@
 import 'package:nx_time/features/schedule/schedule_page.dart';
-import 'package:nx_time/features/domains/domain_appearance_page.dart';
-import 'package:nx_time/features/domains/time_domain_gate.dart';
+import 'package:nx_time/features/settings/settings_page.dart';
 import 'package:nx_time/features/calendar/history_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nx_db/auth.dart';
 import 'package:nx_views/nx_views.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/features/images/images_page.dart';
 import 'package:nx_time/features/log_tags/log_tags_page.dart';
-import 'package:nx_time/features/settings/action_colors_page.dart';
 
 /// Hamburger menu; opens app-level tools.
 class NxAppMenuButton extends ConsumerWidget {
   const NxAppMenuButton({super.key});
-
-  static void _onColors(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute(builder: (_) => const ActionColorsPage()));
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,14 +22,10 @@ class NxAppMenuButton extends ConsumerWidget {
       offset: const Offset(0, 40),
       icon: const Icon(Icons.menu, color: AppColors.slate400, size: 22),
       onSelected: (value) async {
-        if (value == 'domain_appearance') {
-          await Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const DomainAppearancePage(),
-            ),
-          );
-        } else if (value == 'domains') {
-          await showTimeDomains(context, ref);
+        if (value == 'settings') {
+          Navigator.of(
+            context,
+          ).push<void>(MaterialPageRoute(builder: (_) => const SettingsPage()));
         } else if (value == 'schedule') {
           Navigator.of(
             context,
@@ -49,8 +36,6 @@ class NxAppMenuButton extends ConsumerWidget {
               builder: (_) => const Scaffold(body: HistoryPage()),
             ),
           );
-        } else if (value == 'colors') {
-          _onColors(context);
         } else if (value == 'tags') {
           Navigator.of(context).push<void>(
             MaterialPageRoute<void>(builder: (_) => const LogTagsPage()),
@@ -77,30 +62,16 @@ class NxAppMenuButton extends ConsumerWidget {
           Navigator.of(context).push<void>(
             MaterialPageRoute<void>(builder: (_) => const GpsPage()),
           );
-        } else if (value == 'logout') {
-          await ref.read(authProvider.notifier).logout();
-          if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Logged out')));
-          }
         }
       },
       itemBuilder: (context) => [
-        _menuItem('domains', Icons.layers_outlined, 'Domains'),
-        _menuItem(
-          'domain_appearance',
-          Icons.palette_outlined,
-          'Domain appearance',
-        ),
+        _menuItem('settings', Icons.settings_outlined, 'Settings'),
         _menuItem('schedule', Icons.schedule, 'Schedule'),
         _menuItem('history', Icons.history, 'History'),
         _menuItem('tags', Icons.label_outline, 'Daily log tags'),
-        _menuItem('colors', Icons.palette_outlined, 'Colors'),
         _menuItem('desktop', Icons.desktop_windows_outlined, 'Desktop'),
         _menuItem('necklace', Icons.camera_alt_outlined, 'Necklace'),
         _menuItem('gps', Icons.location_on_outlined, 'GPS'),
-        _menuItem('logout', Icons.logout, 'Logout'),
       ],
     );
   }

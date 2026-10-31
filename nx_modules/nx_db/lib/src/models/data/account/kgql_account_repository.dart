@@ -1,10 +1,9 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:nx_auth/nx_auth.dart' show User;
-import 'package:nx_db/kgql.dart' show fetchKgqlModelById;
+import 'dart:convert';
 
-import '../../domain/person/person.dart';
-import '../../domain/person/person_repository.dart';
-import 'person_mapper.dart';
+import '../../domain/account/account.dart';
+import '../../domain/account/account_repository.dart';
 
 const _currentUserQuery = r'''
 query CurrentUser($id: Int!) {
@@ -12,7 +11,7 @@ query CurrentUser($id: Int!) {
     nodes {
       id
       name
-      personModelId
+      description
       preferences
     }
   }
@@ -33,11 +32,9 @@ mutation UpdateUserPreferences($id: Int!, $preferences: JSON) {
 }
 ''';
 
-const _personStruct = {'id': true, 'name': true, 'description': true};
-
-/// KGQL [Person] fetch with account preferences stored on `users.preferences`.
-class KgqlPersonRepository implements PersonRepository {
-  KgqlPersonRepository({
+/// Account profile and preferences stored on users.
+class KgqlAccountRepository implements AccountRepository {
+  KgqlAccountRepository({
     required GraphQLClient client,
     required Future<User> Function() loadAuthenticatedUser,
   }) : _client = client,
@@ -47,27 +44,21 @@ class KgqlPersonRepository implements PersonRepository {
   final Future<User> Function() _loadAuthenticatedUser;
 
   @override
-  Future<Person?> getMain() async {
+  Future<AccountProfile?> getCurrent() async {
     final userRow = await _fetchCurrentUserRow();
-    final personModelId = _asInt(userRow['personModelId']);
-    if (personModelId == null) return null;
-
-    final model = await fetchKgqlModelById(
-      _client,
-      modelTypeName: 'Person',
-      id: personModelId,
-      struct: _personStruct,
-    );
-    if (model == null) return null;
-    return personFromModel(
-      model,
-      preference: _asStringKeyedMap(userRow['preferences']),
+    dynamic preferences = userRow['preferences'];
+    if (preferences is String) preferences = jsonDecode(preferences);
+    return AccountProfile(
+      id: _asInt(userRow['id'])!,
+      name: userRow['name'] as String,
+      description: userRow['description'] as String?,
+      preferences: _asStringKeyedMap(preferences),
     );
   }
 
   @override
-  Future<Person> updatePreference(
-    Person person,
+  Future<AccountProfile> updatePreference(
+    AccountProfile account,
     Map<String, dynamic> preference,
   ) async {
     final userId = await _currentUserId();
@@ -80,7 +71,7 @@ class KgqlPersonRepository implements PersonRepository {
     if (result.hasException) {
       throw result.exception!;
     }
-    return person.copyWith(preference: Map<String, dynamic>.from(preference));
+    return account.copyWith(preferences: Map<String, dynamic>.from(preference));
   }
 
   Future<Map<String, dynamic>> _fetchCurrentUserRow() async {

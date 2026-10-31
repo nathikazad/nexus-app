@@ -38,18 +38,32 @@ void main() {
         'end_date': '2026-07-31',
       },
       relations: {
-        'Schedule': [
+        'Routine': [
           Model(
-            id: 100,
-            name: 'Morning',
-            modelTypeId: 2,
+            id: 200,
+            name: 'Exercise routine',
+            modelTypeId: 3,
             attributes: {
-              'entries': [
-                {
-                  'days': ['monday', 'saturday'],
-                  'start_time': '08:45',
-                  'end_time': '09:15',
-                },
+              'model_type': 'Exercise',
+              'start_date': '2026-04-20',
+              'end_date': '2026-07-31',
+            },
+            relations: {
+              'Schedule': [
+                Model(
+                  id: 100,
+                  name: 'Morning',
+                  modelTypeId: 2,
+                  attributes: {
+                    'entries': [
+                      {
+                        'days': ['monday', 'saturday'],
+                        'start_time': '08:45',
+                        'end_time': '09:15',
+                      },
+                    ],
+                  },
+                ),
               ],
             },
           ),
@@ -61,9 +75,15 @@ void main() {
     expect(g.dueDays, [0, 5]);
     expect(g.active, isFalse);
     final req = setModelRequestForUpdateGoal(g);
-    expect(req.relations!.single.create[0]['id'], 100);
+    expect(req.relations!.single.create[0]['id'], 200);
     expect(
-      req.attributes!.firstWhere((a) => a.key == 'end_date').value,
+      req.relations!.single.create[0]['relations'][0]['create'][0]['id'],
+      100,
+    );
+    expect(
+      (req.relations!.single.create[0]['attributes'] as List).firstWhere(
+        (a) => a['key'] == 'end_date',
+      )['value'],
       '2026-07-31',
     );
     expect(
@@ -205,6 +225,7 @@ void main() {
 
   test('setModelRequestForCreateGoal: daily writes schedule relation', () {
     final g = Goal(
+      startDate: '2026-06-01',
       label: 'G',
       cadence: GoalCadence.daily,
       actionModelTypeName: 'Yoga',
@@ -227,15 +248,19 @@ void main() {
     expect(map[kGoalAttrThresholdValue], 1);
     expect(map.containsKey(kGoalAttrMeta), isFalse);
     expect(map.containsKey('active'), isFalse);
-    expect(req.relations!.single.relationName, 'goal_schedule');
+    expect(req.relations!.single.relationName, 'routine_goal');
     expect(
-      req.relations!.single.create[0]['attributes'][0]['value'],
+      req
+          .relations!
+          .single
+          .create[0]['relations'][0]['create'][0]['attributes'][0]['value'],
       g.scheduleEntries,
     );
   });
 
   test('goalFromModel round-trip for duration', () {
     final g = Goal(
+      startDate: '2026-06-01',
       label: 'Sleep more',
       cadence: GoalCadence.daily,
       actionModelTypeName: 'Sleep',
@@ -253,6 +278,19 @@ void main() {
       name: g.label,
       modelTypeId: 1,
       attributes: attrMap,
+      relations: {
+        'Routine': [
+          Model(
+            id: 200,
+            name: 'Sleep',
+            modelTypeId: 3,
+            attributes: {
+              for (final a in req.relations!.single.create[0]['attributes'])
+                a['key'] as String: a['value'],
+            },
+          ),
+        ],
+      },
     );
     final back = goalFromModel(m2);
     expect(back.selectedAttribute, GoalSelectedAttribute.duration);

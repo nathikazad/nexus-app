@@ -34,6 +34,7 @@ class GoalDailyState {
   const GoalDailyState({
     required this.date,
     required this.state,
+    this.value,
     this.startMet,
     this.endMet,
     this.bothMet,
@@ -41,6 +42,7 @@ class GoalDailyState {
     this.sessions = const [],
   });
 
+  final num? value;
   final DateTime date;
   final GoalDayState state;
   final bool? startMet, endMet, bothMet;

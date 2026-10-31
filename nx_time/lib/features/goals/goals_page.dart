@@ -1,3 +1,7 @@
+import 'package:nx_time/data/account/goal_order.dart';
+import 'package:nx_time/features/goals/goal_presentation.dart';
+import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/features/goals/goal_detail/consumption_goal_results.dart';
 import 'package:nx_time/domain/goals/goal_evaluation.dart';
 import 'package:nx_time/features/routine/routine_data.dart';
 import 'package:nx_time/data/domains/domain_appearance.dart';
@@ -56,6 +60,20 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
     _visibleMonth = ref.read(goalsInitialMonthProvider);
   }
 
+  Future<void> _refresh() async {
+    final week = ref.read(currentWeekProvider);
+    final monday = DateTime(week.year, week.month, week.day);
+    invalidateActionsAfterMutation(ref);
+    ref.invalidate(currentAccountProvider);
+    ref.invalidate(goalOrderProvider);
+    await Future.wait([
+      ref.read(goalOrderProvider.future),
+      ref.read(actionGoalsWeekProvider(monday).future),
+      ref.read(actionGoalsMonthProvider(_visibleMonth).future),
+      ref.read(actionGoalsMonthScoreProvider(_visibleMonth).future),
+    ]);
+  }
+
   void _changeMonth(int delta) {
     setState(() {
       _visibleMonth = addCalendarMonths(_visibleMonth, delta);
@@ -77,76 +95,96 @@ class _GoalsPageState extends ConsumerState<GoalsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final goalOrder = ref.watch(goalOrderProvider).asData?.value;
     final m = ref.watch(currentWeekProvider);
     final monday = DateTime(m.year, m.month, m.day);
     final weekAsync = ref.watch(actionGoalsWeekProvider(monday));
-    final monthScore = ref.watch(actionGoalsMonthScoreProvider(_visibleMonth));
+    final monthGoals = ref.watch(actionGoalsMonthProvider(_visibleMonth));
+    final monthScore = ref
+        .watch(actionGoalsMonthScoreProvider(_visibleMonth))
+        .whenData((score) => monthScoreForLocalDate(score, DateTime.now()));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const NxTabHeader(title: 'Goals'),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
-            children: [
-              _GoalsMonthHeatmap(
-                visibleMonth: _visibleMonth,
-                score: monthScore,
-                onPreviousMonth: () => _changeMonth(-1),
-                onNextMonth: () => _changeMonth(1),
-                onDayTap: _openDay,
-              ),
-              const SizedBox(height: 22),
-              _GoalsWeekNavigator(
-                weekStart: monday,
-                onPreviousWeek: () => _changeWeek(monday, -1),
-                onNextWeek: () => _changeWeek(monday, 1),
-              ),
-              const SizedBox(height: 12),
-              ...weekAsync.when<List<Widget>>(
-                data: (week) {
-                  final ws = asStoredLocalWallClock(week.weekStart);
-                  final daily = week.items
-                      .where((e) => e.cadence == GoalCadence.daily)
-                      .toList();
-                  final weekly = week.items
-                      .where((e) => e.cadence == GoalCadence.weekly)
-                      .toList();
-                  return [
-                    const _SectionLabel(text: 'Daily goals'),
-                    ...daily.map(
-                      (item) => _domainGoalRow(item, ws, daily: true),
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
+              children: [
+                _GoalsMonthHeatmap(
+                  visibleMonth: _visibleMonth,
+                  score: monthScore,
+                  onPreviousMonth: () => _changeMonth(-1),
+                  onNextMonth: () => _changeMonth(1),
+                  onDayTap: _openDay,
+                ),
+                ...monthGoals.when<List<Widget>>(
+                  data: (month) {
+                    final items = month.items
+                        .where((g) => g.cadence == GoalCadence.monthly)
+                        .toList();
+                    if (items.isEmpty) return [];
+                    return [
+                      const SizedBox(height: 16),
+                      const _SectionLabel(text: 'Monthly goals'),
+                      ...sortGoalsByPreference(
+                        items,
+                        goalOrder,
+                      ).map((goal) => _goalCard(goal, _visibleMonth)),
+                    ];
+                  },
+                  loading: () => const [],
+                  error: (_, _) => const [
+                    Text(
+                      'Could not load monthly goals',
+                      style: TextStyle(color: AppColors.slate500),
                     ),
-                    const SizedBox(height: 14),
-                    const _SectionLabel(text: 'Weekly goals'),
-                    ...weekly.map(
-                      (item) => _domainGoalRow(item, ws, daily: false),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                _GoalsWeekNavigator(
+                  weekStart: monday,
+                  onPreviousWeek: () => _changeWeek(monday, -1),
+                  onNextWeek: () => _changeWeek(monday, 1),
+                ),
+                const SizedBox(height: 12),
+                ...weekAsync.when<List<Widget>>(
+                  data: (week) {
+                    final ws = asStoredLocalWallClock(week.weekStart);
+                    return [
+                      ...sortGoalsByPreference(
+                        week.items,
+                        goalOrder,
+                      ).map((goal) => _goalCard(goal, ws)),
+                      _AddGoalRow(onTap: () => GoalsPage.openCreate(context)),
+                    ];
+                  },
+                  loading: () => const [
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 36),
+                      child: Center(child: CircularProgressIndicator()),
                     ),
-                    _AddGoalRow(onTap: () => GoalsPage.openCreate(context)),
-                  ];
-                },
-                loading: () => const [
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 36),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ],
-                error: (e, _) => [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Text(
-                      'Could not load goals: $e',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.slate500,
-                        fontSize: 13,
+                  ],
+                  error: (e, _) => [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        'Could not load goals: $e',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.slate500,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -169,14 +207,17 @@ String _rightStatusText(
   WeekActions? wa,
 ) {
   final today = _todayInWeek(item, weekStart);
+  if (item.modelType == 'Consumption') {
+    return today?.value == null
+        ? '—'
+        : '${goalCountText(today!.value!)} of ${goalCountText(item.target.value)}';
+  }
   if (today?.state == GoalDayState.notDue) {
     return 'not due';
   }
   if (item.cadence == GoalCadence.weekly) {
     if (item.aggregation == 'count') {
-      final days = normalizeDailyStates(item.dailyState, weekStart);
-      final hits = countHits(days);
-      return '$hits of ${item.target.value}';
+      return '${goalCountText(weeklyGoalCount(item))} of ${goalCountText(item.target.value)}';
     }
     if (item.aggregation == 'sum' && item.metric == 'duration' && wa != null) {
       final list = actionsForGoal(wa, item);
@@ -189,6 +230,11 @@ String _rightStatusText(
     return '—';
   }
 
+  if (item.cadence == GoalCadence.daily &&
+      today?.value != null &&
+      item.metric == 'duration') {
+    return '${formatDurationShort(Duration(seconds: today!.value!.round()), useDashForZero: false)} today';
+  }
   if (wa != null && isWeekCurrent(wa.weekStart)) {
     if (item.cadence == GoalCadence.daily &&
         item.aggregation == 'sum' &&
@@ -217,18 +263,7 @@ String _rightStatusText(
     if (item.cadence == GoalCadence.daily &&
         item.aggregation == 'count' &&
         item.modelType != 'Sleep') {
-      final list = actionsForGoal(wa, item);
-      final idx = todayDowIndex0Mon();
-      final dur = sumDurationForDay(
-        wa,
-        list,
-        idx,
-        capAtNow: true,
-        selectedAttribute: item.selectedAttribute,
-      );
-      if (dur > Duration.zero) {
-        return '${formatDurationShort(dur, useDashForZero: false)} today';
-      }
+      return '${goalCountText(today?.value ?? 0)} of ${goalCountText(item.target.value)}';
     }
   }
 
@@ -256,45 +291,18 @@ Color _rightStatusColor(
     if (daysLeftInMonSunWeek() == 0 && !item.streak.currentPeriodHit) {
       return AppColors.goalMissed;
     }
-    return AppColors.goalAtRisk;
+    return AppColors.goalMissed;
   }
 
-  if (wa != null && isWeekCurrent(wa.weekStart)) {
-    if (item.cadence == GoalCadence.daily &&
-        item.aggregation == 'sum' &&
-        item.metric == 'duration') {
-      final d = todaySoFarDuration(wa, item);
-      if (d != null) {
-        if (d.inSeconds >= item.target.value) {
-          return AppColors.goalOnTrack;
-        }
-        return _colorForDayState(_todayInWeek(item, weekStart));
-      }
-    }
-    if (item.cadence == GoalCadence.daily &&
-        item.aggregation == 'count' &&
-        item.modelType == 'Sleep') {
-      var t = todayAttributedTime(wa, item);
-      if (t == null) {
-        final idx = todayDowIndex0Mon();
-        if (item.selectedAttribute.toLowerCase().contains('start') && idx > 0) {
-          t = attributedTimeOnDay(wa, item, idx - 1);
-        }
-      }
-      if (t != null) {
-        return wakeIsOnTrack(item, t)
-            ? AppColors.goalOnTrack
-            : AppColors.goalMissed;
-      }
-    }
-    if (item.cadence == GoalCadence.daily &&
-        item.aggregation == 'count' &&
-        item.modelType != 'Sleep') {
-      return _colorForDayState(_todayInWeek(item, weekStart));
-    }
+  final day = _todayInWeek(item, weekStart);
+  if (day != null &&
+      const {
+        GoalDayMarker.planned,
+        GoalDayMarker.pending,
+      }.contains(goalDayMarker(item, day, DateTime.now()))) {
+    return AppColors.slate500;
   }
-
-  return _colorForDayState(_todayInWeek(item, weekStart));
+  return _colorForDayState(day);
 }
 
 Color _colorForDayState(GoalDailyState? day) {
@@ -304,25 +312,23 @@ Color _colorForDayState(GoalDailyState? day) {
   return switch (day.state) {
     GoalDayState.hit => AppColors.goalOnTrack,
     GoalDayState.miss => AppColors.goalMissed,
-    GoalDayState.pending => AppColors.goalAtRisk,
+    GoalDayState.pending => AppColors.goalMissed,
     GoalDayState.notDue => AppColors.slate400,
   };
 }
 
 List<_Dot> _dotsFor(ActionGoalWeekItem item, DateTime weekStart) {
+  final now = DateTime.now();
   final days = normalizeDailyStates(item.dailyState, weekStart);
   return days.map((d) {
     final isToday = isSameCalendarDate(d.date, todayDate);
-    if (d.state == GoalDayState.hit) {
-      return isToday ? _Dot.todayOk : _Dot.ok;
-    }
-    if (d.state == GoalDayState.miss) {
-      return isToday ? _Dot.todayMiss : _Dot.miss;
-    }
-    if (d.state == GoalDayState.notDue) {
-      return isToday ? _Dot.todayOff : _Dot.off;
-    }
-    return isToday ? _Dot.todayProg : _Dot.pend;
+    return switch (goalDayMarker(item, d, now)) {
+      GoalDayMarker.met => isToday ? _Dot.todayOk : _Dot.ok,
+      GoalDayMarker.missed => isToday ? _Dot.todayMiss : _Dot.miss,
+      GoalDayMarker.planned => _Dot.planned,
+      GoalDayMarker.pending => _Dot.pend,
+      GoalDayMarker.off => isToday ? _Dot.todayOff : _Dot.off,
+    };
   }).toList();
 }
 
@@ -354,7 +360,10 @@ _LabelExtras2? _goalRowExtrasFor(
   if (item.cadence == GoalCadence.daily &&
       item.aggregation == 'sum' &&
       item.metric == 'duration') {
-    final t = todaySoFarDuration(weekActions, item);
+    final day = _todayInWeek(item, weekActions.weekStart);
+    final t = day?.value == null
+        ? todaySoFarDuration(weekActions, item)
+        : Duration(seconds: day!.value!.round());
     if (t == null) {
       return null;
     }
@@ -363,11 +372,11 @@ _LabelExtras2? _goalRowExtrasFor(
     final prog = targetSec > 0
         ? (t.inSeconds / targetSec).clamp(0, 1).toDouble()
         : 0.0;
-    final isReading = item.modelType == 'Reading';
+
     return _LabelExtras2(
       subline: 'Today: ${formatDurationShort(t, useDashForZero: false)} of $tv',
       progress: prog,
-      progressColor: isReading ? AppColors.dotTodayProg : AppColors.dotMiss,
+      progressColor: _colorForDayState(day),
     );
   }
   if (item.cadence == GoalCadence.weekly &&
@@ -942,7 +951,17 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-enum _Dot { ok, miss, pend, off, todayOk, todayMiss, todayProg, todayOff }
+enum _Dot {
+  ok,
+  miss,
+  planned,
+  pend,
+  off,
+  todayOk,
+  todayMiss,
+  todayProg,
+  todayOff,
+}
 
 class _GoalRow extends StatelessWidget {
   const _GoalRow({
@@ -1012,7 +1031,11 @@ class _GoalRow extends StatelessWidget {
               children: List.generate(7, (i) {
                 return Padding(
                   padding: EdgeInsets.only(right: i < 6 ? 4 : 0),
-                  child: _GoalDot(kind: dots[i]),
+                  child: SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: Center(child: _GoalDot(kind: dots[i])),
+                  ),
                 );
               }),
             ),
@@ -1095,6 +1118,11 @@ class _GoalDot extends StatelessWidget {
   Widget build(BuildContext context) {
     const size = 12.0;
     switch (kind) {
+      case _Dot.planned:
+        return const Tooltip(
+          message: 'Planned',
+          child: Icon(Icons.schedule, size: size, color: AppColors.slate500),
+        );
       case _Dot.ok:
         return Container(
           width: size,
@@ -1306,15 +1334,11 @@ class _GymCheck extends StatelessWidget {
   }
 }
 
-Widget _domainGoalRow(
-  ActionGoalWeekItem item,
-  DateTime weekStart, {
-  required bool daily,
-}) => Consumer(
+Widget _goalCard(ActionGoalWeekItem item, DateTime weekStart) => Consumer(
   builder: (context, ref, _) {
-    final actions = ref
-        .watch(goalWeekActionsProvider((item.id, weekStart)))
-        .value;
+    final activityColor = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    ).forActivity(item.modelType, filter: item.filter);
     final appearance = domainAppearance(
       ref,
       ref.watch(timeDomainsProvider).asData?.value.origins[item.id],
@@ -1327,13 +1351,8 @@ Widget _domainGoalRow(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.only(left: 10, right: 6, top: 6),
       decoration: BoxDecoration(
-        color: appearance.secondary.withValues(alpha: 0.045),
-        border: Border(
-          left: BorderSide(
-            color: appearance.accent.withValues(alpha: 0.65),
-            width: 2,
-          ),
-        ),
+        color: activityColor.withValues(alpha: 0.045),
+        border: Border(left: BorderSide(color: activityColor, width: 2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1343,9 +1362,25 @@ Widget _domainGoalRow(
               name,
               style: TextStyle(fontSize: 11, color: appearance.accent),
             ),
-          daily
-              ? _buildDailyRow(context, item, weekStart, actions)
-              : _buildWeeklyRow(context, item, weekStart, actions),
+          item.cadence == GoalCadence.monthly
+              ? MonthlyGoalProgress(item: item, activityColor: activityColor)
+              : item.cadence == GoalCadence.daily
+              ? _buildDailyRow(
+                  context,
+                  item,
+                  weekStart,
+                  ref
+                      .watch(goalWeekActionsProvider((item.id, weekStart)))
+                      .value,
+                )
+              : _buildWeeklyRow(
+                  context,
+                  item,
+                  weekStart,
+                  ref
+                      .watch(goalWeekActionsProvider((item.id, weekStart)))
+                      .value,
+                ),
         ],
       ),
     );

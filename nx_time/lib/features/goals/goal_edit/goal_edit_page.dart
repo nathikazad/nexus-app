@@ -55,6 +55,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
       _applyGoal(widget.initial!);
     } else {
       final d = Goal.draft();
+      _startDate = DateTime.now().toIso8601String().split('T').first;
       _name.text = d.label;
       _actionName = d.actionModelTypeName;
       _cadence = d.cadence;
@@ -117,6 +118,7 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
     final countI = int.tryParse(_countCtl.text) ?? 0;
     return GoalEditViewModel.buildGoal(
       id: widget.initial?.id,
+      original: widget.initial,
       label: _name.text,
       active: active,
       cadence: _cadence,
@@ -829,17 +831,24 @@ class _GoalEditPageState extends ConsumerState<GoalEditPage> {
 
   Widget _dateBoundsSection() => Column(
     children: [
+      if ((widget.initial?.routineGoalCount ?? 1) > 1)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text(
+            'Activity, dates, and schedule are shared by all goals in this routine.',
+          ),
+        ),
       TextFormField(
         initialValue: _startDate,
         decoration: const InputDecoration(
-          labelText: 'Start date (YYYY-MM-DD, optional)',
+          labelText: 'Routine start date (YYYY-MM-DD)',
         ),
         onChanged: (v) => _startDate = v.trim().isEmpty ? null : v.trim(),
       ),
       TextFormField(
         initialValue: _endDate,
         decoration: const InputDecoration(
-          labelText: 'End date (YYYY-MM-DD, optional)',
+          labelText: 'Routine end date (YYYY-MM-DD, optional)',
         ),
         onChanged: (v) => _endDate = v.trim().isEmpty ? null : v.trim(),
       ),

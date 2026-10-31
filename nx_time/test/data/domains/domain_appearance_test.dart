@@ -30,7 +30,7 @@ class _Domains extends TimeDomains {
             ),
           ],
           personalId: 3,
-          selectedIds: {1, 3},
+          selectedIds: {1},
           clients: {},
         )
         ..remember(3, [30])
@@ -133,7 +133,7 @@ void main() {
     expect(find.text('My life'), findsNothing);
     expect(find.text('My tasks'), findsNothing);
     expect(find.text('Other shared tasks'), findsNothing);
-    expect(find.text('Our home'), findsOneWidget);
+    expect(find.text('Our home'), findsNothing);
     expect(find.text('Unassigned'), findsNothing);
     expect(find.text('Other Tasks (1)'), findsOneWidget);
     expect(find.text('Not responsible'), findsNothing);

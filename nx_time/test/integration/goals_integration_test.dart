@@ -131,7 +131,7 @@ void main() {
         expect(one.items.length, 1);
         final g = one.items.first;
         expect(g.label, 'Exercise 3x/week');
-        expect(g.meta, isNull);
+        expect(g.schedule, isNull);
       },
       tags: ['integration'],
       skip: runTimeIntegration ? null : kTimeIntegrationSkipReason,

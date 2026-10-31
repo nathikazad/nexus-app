@@ -37,13 +37,11 @@ export 'src/kgql/providers/models_providers.dart';
 export 'src/kgql/providers/model_types_providers.dart';
 export 'src/kgql/providers/relation_picker_providers.dart';
 
-// Person (current user's linked Person row + account preferences)
-export 'src/models/domain/person/person.dart';
-export 'src/models/domain/person/person_repository.dart';
-export 'src/models/data/person/person_attr_keys.dart';
-export 'src/models/data/person/person_mapper.dart';
-export 'src/models/data/person/kgql_person_repository.dart';
-export 'src/models/data/person/person_providers.dart';
+// Account profile and preferences from users
+export 'src/models/domain/account/account.dart';
+export 'src/models/domain/account/account_repository.dart';
+export 'src/models/data/account/kgql_account_repository.dart';
+export 'src/models/data/account/account_providers.dart';
 
 // Images (MCP snapshot HTTP browser — shared by nx_main / nx_time)
 export 'src/models/domain/image/image_entry.dart';

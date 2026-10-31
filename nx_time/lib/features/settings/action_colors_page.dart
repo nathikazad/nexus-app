@@ -51,10 +51,10 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
     if (!mounted || _seedAttempted) return;
     try {
       final subtypes = await ref.read(actionSubtypeOptionsProvider.future);
-      final person = await ref.read(mainPersonProvider.future);
+      final account = await ref.read(currentAccountProvider.future);
       if (!mounted) return;
-      if (person == null) return;
-      final map = readModelTypeColorHexByName(person.preference);
+      if (account == null) return;
+      final map = readModelTypeColorHexByName(account.preferences);
       var allPresent = true;
       for (final t in subtypes) {
         if (!map.containsKey(t.name)) {
@@ -64,14 +64,14 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
       }
       if (allPresent) return;
       _seedAttempted = true;
-      final repo = ref.read(personRepositoryProvider);
+      final repo = ref.read(accountRepositoryProvider);
       await seedMissingModelTypeColors(
         repo: repo,
-        person: person,
+        account: account,
         subtypes: subtypes,
       );
       if (mounted) {
-        ref.invalidate(mainPersonProvider);
+        ref.invalidate(currentAccountProvider);
       }
     } catch (e) {
       debugPrint('[ActionColorsPage] seed: $e');
@@ -79,7 +79,7 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
   }
 
   Future<void> _pickColor({
-    required Person person,
+    required AccountProfile account,
     required String modelTypeName,
     required Color current,
   }) async {
@@ -147,17 +147,17 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
     );
 
     if (selected == null || !mounted) return;
-    final repo = ref.read(personRepositoryProvider);
+    final repo = ref.read(accountRepositoryProvider);
     final hex = hexFromColor(selected);
     try {
       await setModelTypeColor(
         repo: repo,
-        person: person,
+        account: account,
         modelTypeName: modelTypeName,
         hex: hex,
       );
       if (mounted) {
-        ref.invalidate(mainPersonProvider);
+        ref.invalidate(currentAccountProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -172,10 +172,10 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
   Widget build(BuildContext context) {
     final subtypes = ref.watch(actionSubtypeOptionsProvider);
     final colorsAsync = ref.watch(modelTypeColorsProvider);
-    final personAsync = ref.watch(mainPersonProvider);
+    final accountAsync = ref.watch(currentAccountProvider);
 
     final colorsLast = colorsAsync.asData?.value;
-    final personLast = personAsync.asData?.value;
+    final accountLast = accountAsync.asData?.value;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -221,8 +221,8 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
               child: _buildBody(
                 subtypes: subtypes,
                 colorsLast: colorsLast,
-                personAsync: personAsync,
-                personLast: personLast,
+                accountAsync: accountAsync,
+                accountLast: accountLast,
               ),
             ),
           ],
@@ -234,8 +234,8 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
   Widget _buildBody({
     required AsyncValue<List<ActionSubtypeOption>> subtypes,
     required ModelTypeColors? colorsLast,
-    required AsyncValue<Person?> personAsync,
-    required Person? personLast,
+    required AsyncValue<AccountProfile?> accountAsync,
+    required AccountProfile? accountLast,
   }) {
     final types = subtypes.asData?.value;
     if (types == null) {
@@ -245,20 +245,20 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
     if (colorsLast == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (personLast == null) {
-      if (personAsync.hasError) return _error(personAsync.error!);
-      if (personAsync.isLoading) {
+    if (accountLast == null) {
+      if (accountAsync.hasError) return _error(accountAsync.error!);
+      if (accountAsync.isLoading) {
         return const Center(child: CircularProgressIndicator());
       }
       return const Center(
         child: Text(
-          'No linked Person profile found for this user.',
+          'No linked AccountProfile profile found for this user.',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.slate500),
         ),
       );
     }
-    return _buildList(types, colorsLast, person: personLast);
+    return _buildList(types, colorsLast, account: accountLast);
   }
 
   Widget _error(Object e) {
@@ -273,7 +273,7 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
   Widget _buildList(
     List<ActionSubtypeOption> types,
     ModelTypeColors c, {
-    required Person person,
+    required AccountProfile account,
   }) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -301,7 +301,7 @@ class _ActionColorsPageState extends ConsumerState<ActionColorsPage> {
               ),
               InkWell(
                 onTap: () => _pickColor(
-                  person: person,
+                  account: account,
                   modelTypeName: name,
                   current: color,
                 ),

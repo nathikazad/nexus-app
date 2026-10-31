@@ -34,6 +34,7 @@ class GoalDailyState {
   const GoalDailyState({
     required this.date,
     required this.state,
+    this.value,
     this.startMet,
     this.endMet,
     this.bothMet,
@@ -41,6 +42,7 @@ class GoalDailyState {
     this.sessions = const [],
   });
 
+  final num? value;
   final DateTime date;
   final GoalDayState state;
   final bool? startMet, endMet, bothMet;
@@ -53,6 +55,7 @@ class GoalDailyState {
     }
     return GoalDailyState(
       date: d,
+      value: json['value'] as num?,
       state: goalDayStateFromString(json['state'] as String?),
       startMet: json['start_met'] as bool?,
       endMet: json['end_met'] as bool?,
@@ -69,6 +72,7 @@ class GoalDailyState {
   Map<String, dynamic> toJson() => {
     'date': date.toIso8601String().split('T').first,
     'state': goalDayStateToString(state),
+    if (value != null) 'value': value,
     if (startMet != null) 'start_met': startMet,
     if (endMet != null) 'end_met': endMet,
     if (bothMet != null) 'both_met': bothMet,

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -11,6 +12,49 @@ import 'package:nx_time/data/sync/time_store.dart';
 import 'package:nx_time/data/sync/time_session.dart';
 
 void main() {
+  test('a local request can finish after the default GraphQL timeout', () async {
+    final directory = await Directory(
+      '${Platform.environment['NEXUS_TEST_TMP'] ?? Directory.systemTemp.path}/slow-time-session',
+    ).create(recursive: true);
+    final store = TimeStore(
+      FileLibrary(
+        database: LibraryDatabase(NativeDatabase.memory()),
+        files: DirectoryContentFiles(directory),
+      ),
+      const AccountIdentity(
+        serverId: 'test',
+        userId: '1',
+        domainId: 1,
+        application: 'time',
+      ),
+    );
+    final remote = GraphQLClient(
+      cache: GraphQLCache(),
+      link: Link.function((request, [forward]) async* {
+        await Future<void>.delayed(const Duration(seconds: 6));
+        yield const Response(
+          response: {},
+          data: {'__typename': 'Query', 'slowView': 'ready'},
+        );
+      }),
+    );
+    final session = TimeSession(
+      User(userId: '1', preset: BackendPreset.localhost, domainId: 1),
+      1,
+      remote,
+      storage: store,
+    );
+    addTearDown(session.close);
+    final result = await session.client.query(
+      QueryOptions(
+        document: gql('query { slowView }'),
+        fetchPolicy: FetchPolicy.noCache,
+      ),
+    );
+    expect(result.hasException, isFalse);
+    expect(result.data?['slowView'], 'ready');
+  });
+
   test(
     'schedules use the scoped server view even when absent from the manifest',
     () async {
@@ -74,6 +118,104 @@ void main() {
       }
       expect(calls, 1);
       await session.close();
+    },
+  );
+
+  test(
+    'nested Routine goal write stays atomic and refreshes cached schedules',
+    () async {
+      final directory = await Directory(
+        '${Directory.systemTemp.path}/routine-atomic-session',
+      ).create(recursive: true);
+      final store = TimeStore(
+        FileLibrary(
+          database: LibraryDatabase(NativeDatabase.memory()),
+          files: DirectoryContentFiles(directory),
+        ),
+        const AccountIdentity(
+          serverId: 'test',
+          userId: '1',
+          domainId: 1,
+          application: 'time',
+        ),
+      );
+      var updated = false;
+      var writes = 0;
+      final remote = GraphQLClient(
+        cache: GraphQLCache(),
+        link: Link.function((request, [forward]) async* {
+          if (request.isMutation) {
+            writes++;
+            final data = (request.variables['input'] as Map)['data'];
+            expect(data['relations'][0]['relation_name'], 'routine_goal');
+            expect(data['relations'][0]['create'][0]['id'], 90);
+            updated = true;
+            yield const Response(
+              response: {},
+              data: {
+                '__typename': 'Mutation',
+                'setKgqlModels': {
+                  '__typename': 'SetKgqlModelsPayload',
+                  'json': {'id': 1},
+                },
+              },
+            );
+          } else {
+            yield Response(
+              response: {},
+              data: {
+                '__typename': 'Query',
+                'getKgqlModels': [
+                  {
+                    'id': 91,
+                    'name': updated ? 'Updated schedule' : 'Old schedule',
+                  },
+                ],
+              },
+            );
+          }
+        }),
+      );
+      final session = TimeSession(
+        User(userId: '1', preset: BackendPreset.localhost, domainId: 1),
+        1,
+        remote,
+        storage: store,
+      );
+      addTearDown(session.close);
+      Future<List<Model>> plans() => fetchKgqlModels(
+        session.client,
+        domainId: 1,
+        filter: {'model_type': 'Schedule'},
+        struct: {'id': true, 'name': true},
+      );
+      expect((await plans()).single.name, 'Old schedule');
+      final id = await setKgqlModel(
+        session.client,
+        SetModelRequest(
+          id: 1,
+          modelType: 'Goal',
+          relations: [
+            ModelRelation(
+              modelType: 'Routine',
+              relationName: 'routine_goal',
+              create: [
+                {
+                  'id': 90,
+                  'attributes': [
+                    {'key': 'start_date', 'value': '2026-10-01'},
+                  ],
+                },
+              ],
+            ),
+          ],
+        ),
+        domainId: 1,
+      );
+      expect(id, 1);
+      expect(writes, 1);
+      expect((await plans()).single.name, 'Updated schedule');
+      expect(await store.pendingMutations(), isEmpty);
     },
   );
 

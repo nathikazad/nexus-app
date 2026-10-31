@@ -55,7 +55,13 @@ class TimeSession {
       },
       retryDelay: const Duration(seconds: 5),
     );
-    client = GraphQLClient(link: TimeLocalLink(this), cache: GraphQLCache());
+    client = GraphQLClient(
+      link: TimeLocalLink(this),
+      cache: GraphQLCache(),
+      // Local reads may await initial synchronization. Remote operations own
+      // their timeouts; a second five-second timer here rejects valid results.
+      queryRequestTimeout: null,
+    );
   }
   final User user;
   final int domainId;
@@ -352,6 +358,34 @@ class TimeLocalLink extends Link {
         final input = Map<String, dynamic>.from(v['input'] as Map);
         if (input['domainId'] != null && input['domainId'] != session.domainId)
           throw StateError('Wrong domain');
+        final command = Map<String, dynamic>.from(input['data'] as Map);
+        // Ownership is validated at transaction end. Nested Routine/Goal/Schedule
+        // edits must reach KGQL as one transaction; the flat offline outbox cannot
+        // represent their optimistic graph yet. Require connectivity for these.
+        if (command['model_type'] == 'Goal' &&
+            (command['relations'] as List? ?? []).any(
+              (r) => r['create'] != null,
+            )) {
+          await session.outbox.process();
+          if ((await session.store.pendingMutations()).isNotEmpty) {
+            throw StateError('Sync pending edits before changing a routine');
+          }
+          final response = await session.remote.link.request(request).first;
+          if (response.errors?.isNotEmpty != true && response.data != null) {
+            // Refresh cached views before announcing completion. A refresh failure
+            // must not turn an acknowledged create into a retry/duplicate.
+            await Future.wait(
+              session._queries.entries.toList().map((e) async {
+                try {
+                  await session._fetch(e.key, e.value);
+                } catch (_) {}
+              }),
+            );
+            session.store.changed();
+          }
+          yield response;
+          return;
+        }
         result = {
           '__typename': 'SetKgqlModelsPayload',
           'json': {
@@ -363,10 +397,13 @@ class TimeLocalLink extends Link {
       case 'getKgqlModels':
         if (v['domainId'] != null && v['domainId'] != session.domainId)
           throw StateError('Wrong domain');
-        // Schedule is not part of the published Time manifest yet. Keep it
-        // as a domain-scoped server view, cached like aggregate goal results.
-        // An absent local record must not be presented as an empty schedule.
-        if ((v['filter'] as Map?)?['model_type'] == 'Schedule') {
+        // Shared Routine edits are atomic server writes. Cache these graph views
+        // together so an edit does not wait for asynchronous manifest publication.
+        if (const {
+          'Goal',
+          'Schedule',
+          'Routine',
+        }.contains((v['filter'] as Map?)?['model_type'])) {
           yield await session.cached(request);
           return;
         }

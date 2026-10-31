@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/kgql.dart';
 import 'package:nx_db/riverpod.dart';
-import 'package:nx_db/person.dart';
+import 'package:nx_db/account.dart';
 import 'package:nx_db/auth.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/data/domains/domain_workspace.dart';

@@ -30,7 +30,7 @@ import 'package:nx_time/router.dart';
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, this.initialTabIndex = 0});
 
-  /// Initial bottom-nav index (0-3). Used by screenshot integration tests.
+  /// Initial page index: Actions, Tasks, Calendar, Goals (0–3).
   final int initialTabIndex;
 
   @override
@@ -108,7 +108,7 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   Widget build(BuildContext context) {
-    final snapshotAsync = _visitedTabs.contains(3)
+    final snapshotAsync = _visitedTabs.contains(0)
         ? ref.watch(todaySnapshotProvider)
         : const AsyncValue<TodaySnapshot>.loading();
     final colors = modelTypeColorsOrFallback(
@@ -116,7 +116,7 @@ class _AppShellState extends ConsumerState<AppShell>
     );
     final voiceState = ref.watch(voiceSocketControllerProvider);
 
-    if (_visitedTabs.contains(3)) {
+    if (_visitedTabs.contains(0)) {
       ref.listen<AsyncValue<TodaySnapshot>>(todaySnapshotProvider, (
         prev,
         next,
@@ -162,14 +162,7 @@ class _AppShellState extends ConsumerState<AppShell>
           IndexedStack(
             index: _index,
             children: [
-              const TasksPage(),
-              _visitedTabs.contains(1)
-                  ? const CalendarPage()
-                  : const SizedBox.shrink(),
-              _visitedTabs.contains(2)
-                  ? const GoalsPage()
-                  : const SizedBox.shrink(),
-              !_visitedTabs.contains(3)
+              !_visitedTabs.contains(0)
                   ? const SizedBox.shrink()
                   : snapshotAsync.when(
                       data: (snapshot) => TodayPage(
@@ -259,6 +252,15 @@ class _AppShellState extends ConsumerState<AppShell>
                         ),
                       ),
                     ),
+              _visitedTabs.contains(1)
+                  ? const TasksPage()
+                  : const SizedBox.shrink(),
+              _visitedTabs.contains(2)
+                  ? const CalendarPage()
+                  : const SizedBox.shrink(),
+              _visitedTabs.contains(3)
+                  ? const GoalsPage()
+                  : const SizedBox.shrink(),
             ],
           ),
           if (voiceState.overlayVisible) const VoiceListeningOverlay(),
@@ -333,16 +335,16 @@ class _BottomNav extends StatelessWidget {
               children: [
                 Expanded(
                   child: _NavItem(
-                    label: 'Tasks',
-                    icon: SolarLinearIcons.checklistMinimalistic,
+                    label: 'Actions',
+                    icon: SolarLinearIcons.running,
                     selected: currentIndex == 0,
                     onTap: () => onChanged(0),
                   ),
                 ),
                 Expanded(
                   child: _NavItem(
-                    label: 'Calendar',
-                    icon: SolarLinearIcons.calendarMark,
+                    label: 'Tasks',
+                    icon: SolarLinearIcons.checklistMinimalistic,
                     selected: currentIndex == 1,
                     onTap: () => onChanged(1),
                   ),
@@ -357,16 +359,16 @@ class _BottomNav extends StatelessWidget {
                 ),
                 Expanded(
                   child: _NavItem(
-                    label: 'Goals',
-                    icon: SolarLinearIcons.target,
+                    label: 'Calendar',
+                    icon: SolarLinearIcons.calendarMark,
                     selected: currentIndex == 2,
                     onTap: () => onChanged(2),
                   ),
                 ),
                 Expanded(
                   child: _NavItem(
-                    label: 'Today',
-                    icon: SolarLinearIcons.running,
+                    label: 'Goals',
+                    icon: SolarLinearIcons.target,
                     selected: currentIndex == 3,
                     onTap: () => onChanged(3),
                   ),
@@ -515,6 +517,18 @@ class _AiSlot extends StatelessWidget {
                     size: 28,
                   ),
                 ),
+              ),
+            ),
+          ),
+          const Positioned(
+            bottom: -4,
+            child: Text(
+              'Record AI',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.2,
+                color: AppColors.accent,
               ),
             ),
           ),

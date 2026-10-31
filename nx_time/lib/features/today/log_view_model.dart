@@ -4,7 +4,7 @@ import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/log/daily_log.dart';
 
 /// Today tab view mode — toggles between the activity timeline and stats list.
-enum TodayViewMode { actions, stats }
+enum TodayViewMode { actions, stats, tasks }
 
 class TodayViewModeNotifier extends Notifier<TodayViewMode> {
   @override
@@ -16,6 +16,20 @@ class TodayViewModeNotifier extends Notifier<TodayViewMode> {
 final todayViewModeProvider =
     NotifierProvider<TodayViewModeNotifier, TodayViewMode>(
       TodayViewModeNotifier.new,
+    );
+
+enum ActionsPeriod { today, history }
+
+class ActionsPeriodNotifier extends Notifier<ActionsPeriod> {
+  @override
+  ActionsPeriod build() => ActionsPeriod.today;
+
+  void set(ActionsPeriod period) => state = period;
+}
+
+final actionsPeriodProvider =
+    NotifierProvider<ActionsPeriodNotifier, ActionsPeriod>(
+      ActionsPeriodNotifier.new,
     );
 
 /// Daily Log rows whose `logged_at` falls in today's local calendar day.

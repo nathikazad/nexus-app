@@ -5,7 +5,9 @@ import 'package:nx_time/domain/goals/goal_streak.dart';
 import 'package:nx_time/domain/goals/goal_threshold.dart';
 
 class ActionGoalSchedule {
-  const ActionGoalSchedule({this.days});
+  const ActionGoalSchedule({this.days, this.entries = const []});
+
+  final List<Map<String, dynamic>> entries;
 
   final List<String>? days;
 }
@@ -13,6 +15,7 @@ class ActionGoalSchedule {
 class ActionGoalWeekItem {
   const ActionGoalWeekItem({
     required this.id,
+    this.routineId,
     required this.label,
     required this.cadence,
     required this.modelType,
@@ -26,9 +29,11 @@ class ActionGoalWeekItem {
     this.schedule,
     this.evaluation = GoalEvaluation.aggregate,
     this.restrictions,
+    this.monthSummary,
   });
 
   final int id;
+  final int? routineId;
   final String label;
   final GoalCadence cadence;
   final String modelType;
@@ -42,6 +47,7 @@ class ActionGoalWeekItem {
   final ActionGoalSchedule? schedule;
   final GoalEvaluation evaluation;
   final Map<String, dynamic>? restrictions;
+  final Map<String, dynamic>? monthSummary;
 }
 
 class ActionGoalsWeek {

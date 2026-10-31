@@ -115,6 +115,12 @@ class Model {
       }
     }
 
+    // A scalar model_type is an attribute, e.g. Goal's activity type.
+    // Object-valued model_type remains embedded schema metadata.
+    if (modelTypeJson is String) {
+      attributes = {...?attributes, 'model_type': modelTypeJson};
+    }
+
     Map<String, List<Model>>? relations;
     List<Relation>? relationsList;
 

@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-    'lib/features may only import package:nx_db/auth.dart, person.dart, transcript.dart (no kgql/riverpod/nx_db)',
+    'lib/features may only import package:nx_db/auth.dart, account.dart, transcript.dart (no kgql/riverpod/nx_db)',
     () {
       final allowed = {
         "package:nx_db/auth.dart'",
-        "package:nx_db/person.dart'",
+        "package:nx_db/account.dart'",
         "package:nx_db/transcript.dart'",
       };
       final dir = Directory('lib/features');

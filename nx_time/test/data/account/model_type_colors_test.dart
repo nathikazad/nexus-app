@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:nx_db/person.dart' show Person, PersonRepository;
+import 'package:nx_db/account.dart' show AccountProfile, AccountRepository;
 import 'package:nx_time/core/theme/action_color_palette.dart';
-import 'package:nx_time/data/person/model_type_colors.dart';
+import 'package:nx_time/data/account/model_type_colors.dart';
 import 'package:nx_time/domain/action/action_subtype_option.dart';
 
-class _MockPersonRepository extends Mock implements PersonRepository {}
+class _MockAccountRepository extends Mock implements AccountRepository {}
 
 void main() {
   setUpAll(() {
     registerFallbackValue(
-      const Person(id: 0, name: 'fallback', preference: {}),
+      const AccountProfile(id: 0, name: 'fallback', preferences: {}),
     );
     registerFallbackValue(<String, dynamic>{});
   });
@@ -26,24 +26,24 @@ void main() {
   });
 
   test('setModelTypeColor calls updatePreference with merged map', () async {
-    final repo = _MockPersonRepository();
-    const person = Person(
+    final repo = _MockAccountRepository();
+    const account = AccountProfile(
       id: 1,
       name: 'U',
-      preference: <String, dynamic>{
+      preferences: <String, dynamic>{
         'x': 1,
         kPrefModelTypeColors: {'A': '#AAAAAA'},
       },
     );
     when(() => repo.updatePreference(any(), any())).thenAnswer(
-      (i) async => (i.positionalArguments[0] as Person).copyWith(
-        preference: i.positionalArguments[1] as Map<String, dynamic>,
+      (i) async => (i.positionalArguments[0] as AccountProfile).copyWith(
+        preferences: i.positionalArguments[1] as Map<String, dynamic>,
       ),
     );
 
     final out = await setModelTypeColor(
       repo: repo,
-      person: person,
+      account: account,
       modelTypeName: 'B',
       hex: '#BBBBBB',
     );
@@ -56,27 +56,31 @@ void main() {
             as Map<String, dynamic>?;
     expect(argPref!['A'], '#AAAAAA');
     expect(argPref['B'], '#BBBBBB');
-    expect(out.preference[kPrefModelTypeColors], isNotNull);
+    expect(out.preferences[kPrefModelTypeColors], isNotNull);
   });
 
   test(
     'seedMissingModelTypeColors adds defaults for missing subtypes',
     () async {
-      final repo = _MockPersonRepository();
-      const person = Person(id: 1, name: 'U', preference: <String, dynamic>{});
+      final repo = _MockAccountRepository();
+      const account = AccountProfile(
+        id: 1,
+        name: 'U',
+        preferences: <String, dynamic>{},
+      );
       when(() => repo.updatePreference(any(), any())).thenAnswer(
-        (i) async => (i.positionalArguments[0] as Person).copyWith(
-          preference: i.positionalArguments[1] as Map<String, dynamic>,
+        (i) async => (i.positionalArguments[0] as AccountProfile).copyWith(
+          preferences: i.positionalArguments[1] as Map<String, dynamic>,
         ),
       );
       final sub = [const ActionSubtypeOption(id: 3, name: 'Alpha')];
       final out = await seedMissingModelTypeColors(
         repo: repo,
-        person: person,
+        account: account,
         subtypes: sub,
       );
       verify(() => repo.updatePreference(any(), any())).called(1);
-      final hex = readModelTypeColorHexByName(out.preference)['Alpha'];
+      final hex = readModelTypeColorHexByName(out.preferences)['Alpha'];
       expect(hex, isNotNull);
       expect(colorFromHex(hex!), barColorForModelTypeId(3));
     },
@@ -91,4 +95,37 @@ void main() {
     final yoga = c.forId(11, name: 'Yoga');
     expect(yoga, barColorForModelTypeId(11));
   });
+  test(
+    'seeding Exercise copies Gym and preserves unrelated preferences',
+    () async {
+      final repo = _MockAccountRepository();
+      const account = AccountProfile(
+        id: 1,
+        name: 'U',
+        preferences: {
+          'other': 'kept',
+          kPrefModelTypeColors: {'Gym': '#123456', 'Yoga': '#654321'},
+        },
+      );
+      when(() => repo.updatePreference(any(), any())).thenAnswer(
+        (i) async => (i.positionalArguments[0] as AccountProfile).copyWith(
+          preferences: i.positionalArguments[1] as Map<String, dynamic>,
+        ),
+      );
+      final result = await seedMissingModelTypeColors(
+        repo: repo,
+        account: account,
+        subtypes: [
+          const ActionSubtypeOption(id: 22, name: 'Exercise'),
+          const ActionSubtypeOption(id: 63, name: 'LanguageStudy'),
+        ],
+      );
+      final saved = readModelTypeColorHexByName(result.preferences);
+      expect(saved['Exercise'], '#123456');
+      expect(saved['Gym'], '#123456');
+      expect(saved['Yoga'], '#654321');
+      expect(saved['LanguageStudy'], '#3B81BA');
+      expect(result.preferences['other'], 'kept');
+    },
+  );
 }

@@ -1,4 +1,5 @@
 import 'package:nx_time/domain/goals/goal_evaluation.dart';
+import 'package:nx_time/domain/routines/routine.dart';
 import 'package:nx_db/goals.dart' as nx;
 import 'package:nx_db/kgql.dart';
 import 'package:nx_time/core/time/wall_clock_time.dart';
@@ -52,12 +53,13 @@ GoalDayState _dayStateFromWire(nx.GoalDayState s) {
 
 ActionGoalSchedule? _scheduleFromWire(nx.ActionGoalSchedule? m) {
   if (m == null) return null;
-  return ActionGoalSchedule(days: m.days);
+  return ActionGoalSchedule(days: m.days, entries: m.entries);
 }
 
 ActionGoalWeekItem _weekItemFromWire(nx.ActionGoalWeekItem w) {
   return ActionGoalWeekItem(
     id: w.id,
+    routineId: w.routineId,
     label: w.label,
     cadence: goalCadenceFromKgql(w.cadence),
     modelType: w.modelType,
@@ -71,6 +73,7 @@ ActionGoalWeekItem _weekItemFromWire(nx.ActionGoalWeekItem w) {
           (d) => GoalDailyState(
             date: asStoredLocalWallClock(d.date),
             state: _dayStateFromWire(d.state),
+            value: d.value,
             startMet: d.startMet,
             endMet: d.endMet,
             bothMet: d.bothMet,
@@ -83,6 +86,7 @@ ActionGoalWeekItem _weekItemFromWire(nx.ActionGoalWeekItem w) {
     schedule: _scheduleFromWire(w.schedule),
     evaluation: goalEvaluationFromString(w.evaluation),
     restrictions: w.restrictions,
+    monthSummary: w.monthSummary,
   );
 }
 
@@ -316,7 +320,7 @@ _KBundle _encodeBundle(Goal g) {
 List<SetModelAttribute> _goalToAttributes(Goal g) {
   final b = _encodeBundle(g);
   final nFilter =
-      g.filter ??
+      g.conditionFilter ??
       (g.selectedAttribute == GoalSelectedAttribute.startTime ||
               g.selectedAttribute == GoalSelectedAttribute.endTime
           ? _timeFilter(g.selectedAttribute, g.op, g.thresholdValue.round())
@@ -332,14 +336,13 @@ List<SetModelAttribute> _goalToAttributes(Goal g) {
   }
   return [
     SetModelAttribute(key: kGoalAttrLabel, value: g.label),
-    SetModelAttribute(key: 'start_date', value: g.startDate),
-    SetModelAttribute(key: 'end_date', value: g.endDate),
+    SetModelAttribute(key: 'evaluation', value: g.evaluation),
+    SetModelAttribute(key: 'restrictions', value: g.restrictions),
     SetModelAttribute(
       key: kGoalAttrCadence,
       value: goalCadenceToKgql(g.cadence),
     ),
-    SetModelAttribute(key: kGoalAttrModelType, value: g.actionModelTypeName),
-    SetModelAttribute(key: kGoalAttrFilter, value: nFilter),
+    SetModelAttribute(key: 'condition_filter', value: nFilter),
     SetModelAttribute(key: kGoalAttrSelectedAttribute, value: b.selectedK),
     SetModelAttribute(
       key: kGoalAttrAggregation,
@@ -370,6 +373,7 @@ Map<String, dynamic>? _firstTimeFilterMap(Map<String, dynamic>? filter) {
 
 /// Reads a stored `Goal` model into the editable [Goal] for the form.
 Goal goalFromModel(Model m) {
+  final routine = Routine.linkedTo(m);
   var label = m.name.trim().isNotEmpty
       ? m.name
       : (_attr(m, kGoalAttrLabel) as String? ?? '');
@@ -382,8 +386,8 @@ Goal goalFromModel(Model m) {
       : (activeRaw ?? true) as bool? ?? true;
   final cadenceRaw = _attr(m, kGoalAttrCadence) as String? ?? 'daily';
   final cadence = goalCadenceFromKgql(cadenceRaw);
-  final modelType = _attr(m, kGoalAttrModelType) as String? ?? 'Sleep';
-  final rawFilter = _attr(m, kGoalAttrFilter);
+  final modelType = routine.modelType;
+  final rawFilter = _attr(m, 'condition_filter');
   Map<String, dynamic>? filter;
   if (rawFilter is Map) {
     filter = Map<String, dynamic>.from(rawFilter);
@@ -394,9 +398,7 @@ Goal goalFromModel(Model m) {
     _attr(m, kGoalAttrThresholdOp) as String? ?? '>=',
   );
   final tVal = _readNum(_attr(m, kGoalAttrThresholdValue)) ?? 0;
-  final schedules = m.relations?['Schedule'] ?? const <Model>[];
-  if (schedules.length > 1) throw StateError('Goal has multiple schedules');
-  final linked = schedules.isEmpty ? null : schedules.single;
+  final linked = routine.schedule;
   final entries = linked == null
       ? <Map<String, dynamic>>[]
       : ((_attr(linked, 'entries') as List?) ?? [])
@@ -450,8 +452,16 @@ Goal goalFromModel(Model m) {
 
   return Goal(
     id: m.id,
-    startDate: _attr(m, 'start_date') as String?,
-    endDate: _attr(m, 'end_date') as String?,
+    routineId: routine.id,
+    routineName: routine.name,
+    routineGoalCount: routine.goals.length,
+    evaluation: _attr(m, 'evaluation') as String? ?? 'aggregate',
+    restrictions: (_attr(m, 'restrictions') as Map?)?.cast<String, dynamic>(),
+    conditionFilter: hasTimeFilter && (filter?['filters'] as List).length == 1
+        ? null
+        : filter,
+    startDate: routine.startDate,
+    endDate: routine.endDate,
     scheduleId: linked?.id,
     scheduleEntries: entries,
     label: label,
@@ -465,11 +475,7 @@ Goal goalFromModel(Model m) {
         ? domainOp
         : tOp,
     thresholdValue: threshold,
-    filter:
-        (sel == GoalSelectedAttribute.startTime ||
-            sel == GoalSelectedAttribute.endTime)
-        ? null
-        : filter,
+    filter: routine.filter,
     dueDays: dueDays,
   );
 }
@@ -480,7 +486,7 @@ SetModelRequest setModelRequestForCreateGoal(Goal g) {
     name: g.label,
     description: null,
     attributes: _goalToAttributes(g),
-    relations: _scheduleRelations(g),
+    relations: _routineRelations(g),
   );
 }
 
@@ -494,25 +500,47 @@ SetModelRequest setModelRequestForUpdateGoal(Goal g) {
     name: g.label,
     description: null,
     attributes: _goalToAttributes(g),
-    relations: _scheduleRelations(g),
+    relations: _routineRelations(g),
   );
 }
 
 SetModelRequest setModelRequestForDeleteGoal(int id) => setKgqlDelete(id);
 
-List<ModelRelation>? _scheduleRelations(Goal g) {
-  if (g.scheduleEntries.isEmpty) return null;
+List<ModelRelation> _routineRelations(Goal g) {
+  if (g.startDate == null || g.actionModelTypeName.trim().isEmpty) {
+    throw StateError('Routine requires an activity type and start date');
+  }
   return [
     ModelRelation(
-      modelType: 'Schedule',
-      relationName: 'goal_schedule',
+      modelType: 'Routine',
+      relationName: 'routine_goal',
       create: [
         {
-          if (g.scheduleId != null) 'id': g.scheduleId,
-          if (g.scheduleId == null) 'name': '${g.label} schedule',
+          if (g.routineId != null) 'id': g.routineId,
+          if (g.routineId == null) 'name': g.routineName ?? g.label,
           'attributes': [
-            {'key': 'entries', 'value': g.scheduleEntries},
+            {'key': 'model_type', 'value': g.actionModelTypeName},
+            {'key': 'filter', 'value': g.filter},
+            {'key': 'start_date', 'value': g.startDate},
+            {'key': 'end_date', 'value': g.endDate},
           ],
+          if (g.scheduleEntries.isNotEmpty)
+            'relations': [
+              {
+                'model_type': 'Schedule',
+                'relation_name': 'routine_schedule',
+                'create': [
+                  {
+                    if (g.scheduleId != null) 'id': g.scheduleId,
+                    if (g.scheduleId == null)
+                      'name': '${g.routineName ?? g.label} schedule',
+                    'attributes': [
+                      {'key': 'entries', 'value': g.scheduleEntries},
+                    ],
+                  },
+                ],
+              },
+            ],
         },
       ],
     ),

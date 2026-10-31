@@ -11,7 +11,7 @@ import 'package:nx_time/router.dart';
 class NexusTimeApp extends ConsumerWidget {
   const NexusTimeApp({super.key, this.initialTabIndex = 0});
 
-  /// Initial bottom-nav index (0–3). Used by screenshot driver tests (`?tab=`).
+  /// Initial page index: Actions, Tasks, Calendar, Goals (0–3). Used by screenshot driver tests (`?tab=`).
   final int initialTabIndex;
 
   @override

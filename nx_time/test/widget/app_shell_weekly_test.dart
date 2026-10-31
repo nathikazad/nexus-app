@@ -1,6 +1,7 @@
 @Tags(['widget'])
 library;
 
+import 'package:nx_time/features/schedule/schedule_page.dart';
 import 'package:nx_time/data/subscriptions/kgql_model_subscription.dart';
 import 'package:nx_time/features/calendar/calendar_page.dart';
 import 'package:nx_time/domain/calendar/calendar_entry.dart';
@@ -40,6 +41,7 @@ void main() {
       tester,
       child: const AppShell(),
       overrides: [
+        schedulePlansProvider.overrideWith((ref) async => []),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
         ),
@@ -78,8 +80,15 @@ void main() {
 
     expect(find.text('Calendar'), findsAtLeastNWidgets(1));
     expect(find.text('Weekly'), findsNothing);
+    final labels = ['Actions', 'Tasks', 'Record AI', 'Calendar', 'Goals'];
+    for (var i = 1; i < labels.length; i++) {
+      expect(
+        tester.getCenter(find.text(labels[i - 1]).last).dx,
+        lessThan(tester.getCenter(find.text(labels[i]).last).dx),
+      );
+    }
     expect(calendarLoads, 0);
-    expect(todayLoads, 0);
+    expect(todayLoads, 1);
     await tester.tap(find.text('Calendar').last);
     await tester.pumpAndSettle();
     expect(calendarLoads, 1);
@@ -88,6 +97,6 @@ void main() {
     await tester.tap(find.text('Calendar').last);
     await tester.pumpAndSettle();
     expect(calendarLoads, 1);
-    expect(todayLoads, 0);
+    expect(todayLoads, 1);
   });
 }

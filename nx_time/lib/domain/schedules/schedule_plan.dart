@@ -1,4 +1,5 @@
 import 'package:nx_db/kgql.dart';
+import 'package:nx_time/domain/routines/routine.dart';
 import 'package:nx_time/domain/goals/goal_evaluation.dart';
 
 class SchedulePlan {
@@ -7,31 +8,40 @@ class SchedulePlan {
     required this.name,
     required this.entries,
     this.goalId,
+    this.routineId,
+    this.goalIds = const [],
     this.startDate,
     this.endDate,
     this.domainName,
+    this.modelType,
+    this.goalFilter,
   });
   final int id;
   final String name;
   final List<Map<String, dynamic>> entries;
   final int? goalId;
+  final int? routineId;
+  final List<int> goalIds;
   final DateTime? startDate, endDate;
   final String? domainName;
+  final String? modelType;
+  final Map<String, dynamic>? goalFilter;
   factory SchedulePlan.fromModel(Model m, {String? domainName}) {
-    final goals = m.relations?['Goal'] ?? <Model>[];
-    if (goals.length > 1) throw StateError('Schedule has multiple goals');
-    final goal = goals.isEmpty ? null : goals.single;
-    final dates = goal == null ? m.attributes : goal.attributes;
+    final routine = Routine.linkedTo(m);
     return SchedulePlan(
       id: m.id,
       name: m.name,
-      goalId: goal?.id,
+      routineId: routine.id,
+      goalIds: routine.goals.map((g) => g.id).toList(),
+      goalId: routine.goals.length == 1 ? routine.goals.single.id : null,
+      modelType: routine.modelType,
+      goalFilter: routine.filter,
       domainName: domainName,
       entries: ((m.attributes?['entries'] as List?) ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList(),
-      startDate: goalWallClock(dates?['start_date']),
-      endDate: goalWallClock(dates?['end_date']),
+      startDate: goalWallClock(routine.startDate),
+      endDate: goalWallClock(routine.endDate),
     );
   }
   List<PlanWindow> onDay(DateTime date) {

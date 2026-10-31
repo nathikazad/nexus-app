@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:nx_time/data/domains/domain_workspace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:nx_db/person.dart';
+import 'package:nx_db/account.dart';
 import 'package:nx_db/riverpod.dart';
 
 const String _subscribeKgqlModelsSubscription = '''
@@ -74,7 +74,7 @@ final kgqlModelChangesProvider = StreamProvider.autoDispose
       }
     });
 
-/// Merge selected workspaces plus personal activity; each subscription retains
+/// Subscribe only to the selected domain; each subscription retains
 /// the same explicit domain as its transport client.
 final workspaceChangesProvider = StreamProvider.autoDispose<KgqlModelChange>((
   ref,
@@ -88,7 +88,7 @@ final workspaceChangesProvider = StreamProvider.autoDispose<KgqlModelChange>((
     }
     controller.close();
   });
-  for (final id in {...workspace.selectedIds, workspace.personalId}) {
+  for (final id in workspace.selectedIds) {
     subscriptions.add(
       workspace.clients[id]!
           .subscribe(

@@ -1,3 +1,4 @@
+import 'package:nx_time/data/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -22,9 +23,15 @@ final schedulePlansProvider = FutureProvider.autoDispose<List<SchedulePlan>>((
           'id': true,
           'name': true,
           'entries': true,
-          'start_date': true,
-          'end_date': true,
-          'Goal': {'id': true, 'start_date': true, 'end_date': true},
+          'Routine': {
+            'name': true,
+            'Goal': {'id': true},
+            'id': true,
+            'start_date': true,
+            'end_date': true,
+            'model_type': true,
+            'filter': true,
+          },
         },
       );
       return rows
@@ -62,6 +69,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   @override
   Widget build(BuildContext context) {
     final plans = ref.watch(schedulePlansProvider);
+    final colors = modelTypeColorsOrFallback(
+      ref.watch(modelTypeColorsProvider),
+    );
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -152,7 +162,15 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                           ),
                         ),
                       for (final window in windows)
-                        ScheduleWindowRow(window: window),
+                        ScheduleWindowRow(
+                          window: window,
+                          activityColor: window.plan.modelType == null
+                              ? null
+                              : colors.forActivity(
+                                  window.plan.modelType,
+                                  filter: window.plan.goalFilter,
+                                ),
+                        ),
                     ],
                   ),
                 );
@@ -166,23 +184,33 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 }
 
 class ScheduleWindowRow extends StatelessWidget {
-  const ScheduleWindowRow({super.key, required this.window});
+  const ScheduleWindowRow({
+    super.key,
+    required this.window,
+    this.activityColor,
+    this.title,
+  });
+  final Color? activityColor;
+  final String? title;
   final PlanWindow window;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    decoration: const BoxDecoration(
-      border: Border(bottom: BorderSide(color: AppColors.slate100)),
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: const BorderSide(color: AppColors.slate100),
+        left: BorderSide(color: activityColor ?? Colors.transparent, width: 2),
+      ),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          window.plan.name,
-          style: const TextStyle(
+          title ?? window.plan.name,
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppColors.slate900,
+            color: activityColor ?? AppColors.slate900,
           ),
         ),
         const SizedBox(height: 6),

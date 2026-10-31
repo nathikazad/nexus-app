@@ -37,6 +37,12 @@ class TodayViewToggle extends StatelessWidget {
             selected: mode == TodayViewMode.stats,
             onTap: () => onChanged(TodayViewMode.stats),
           ),
+          _ToggleButton(
+            icon: SolarLinearIcons.checklistMinimalistic,
+            tooltip: 'Tasks',
+            selected: mode == TodayViewMode.tasks,
+            onTap: () => onChanged(TodayViewMode.tasks),
+          ),
         ],
       ),
     );
@@ -81,4 +87,61 @@ class _ToggleButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Uses the same pill treatment as the content toggle.
+class ActionsPeriodToggle extends StatelessWidget {
+  const ActionsPeriodToggle({
+    super.key,
+    required this.period,
+    required this.onChanged,
+  });
+
+  final ActionsPeriod period;
+  final ValueChanged<ActionsPeriod> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(2),
+    decoration: BoxDecoration(
+      color: AppColors.slate100,
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final value in ActionsPeriod.values)
+          Semantics(
+            selected: period == value,
+            button: true,
+            child: Material(
+              color: period == value ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+              elevation: period == value ? 1 : 0,
+              shadowColor: AppColors.slate200,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => onChanged(value),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    value == ActionsPeriod.today ? 'Today' : 'History',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: period == value
+                          ? AppColors.accent
+                          : AppColors.slate500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 }

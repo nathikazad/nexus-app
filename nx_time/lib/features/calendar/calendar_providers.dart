@@ -61,6 +61,14 @@ final actionGoalsWeekProvider = FutureProvider.autoDispose
       return repo.getActionGoalsWeek(weekStart: m0);
     });
 
+final actionGoalsMonthProvider = FutureProvider.autoDispose
+    .family<ActionGoalsMonth, DateTime>((ref, monthStart) async {
+      final repo = ref.watch(goalRepositoryProvider);
+      return repo.getActionGoalsMonth(
+        monthStart: DateTime(monthStart.year, monthStart.month),
+      );
+    });
+
 /// Daily hit/total heatmap scores for the visible month on the Goals tab.
 final actionGoalsMonthScoreProvider = FutureProvider.autoDispose
     .family<ActionGoalsMonthScore, DateTime>((ref, monthStart) async {
@@ -80,6 +88,7 @@ void invalidateActionsAfterMutation(WidgetRef ref) {
   ref.invalidate(goalWeekActionsProvider);
   ref.invalidate(actionGoalsWeekProvider);
   ref.invalidate(actionGoalsMonthScoreProvider);
+  ref.invalidate(actionGoalsMonthProvider);
 }
 
 /// Goal calculations use actions from the goal's own domain.

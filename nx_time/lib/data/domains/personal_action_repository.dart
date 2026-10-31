@@ -7,15 +7,15 @@ class PersonalActionRepository implements ActionRepository {
   final DomainWorkspace w;
   @override
   Future<List<Action>> listForCalendarDay(DateTime dayLocal) async {
-    final rows = await w.actions(w.personalId).listForCalendarDay(dayLocal);
-    w.remember(w.personalId, rows.map((r) => r.id));
+    final rows = await w.actions(w.selectedId).listForCalendarDay(dayLocal);
+    w.remember(w.selectedId, rows.map((r) => r.id));
     return rows;
   }
 
   @override
   Future<List<Action>> listForWeek(DateTime mondayLocal) async {
-    final rows = await w.actions(w.personalId).listForWeek(mondayLocal);
-    w.remember(w.personalId, rows.map((r) => r.id));
+    final rows = await w.actions(w.selectedId).listForWeek(mondayLocal);
+    w.remember(w.selectedId, rows.map((r) => r.id));
     return rows;
   }
 

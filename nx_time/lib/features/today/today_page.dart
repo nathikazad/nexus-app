@@ -1,7 +1,8 @@
-import 'package:dotted_border/dotted_border.dart';
+import 'package:nx_time/features/calendar/history_page.dart';
+import 'package:nx_time/features/tasks/tasks_page.dart';
+import 'package:nx_time/features/today/widgets/upcoming_schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:solar_icon_pack/solar_icon_pack.dart';
 
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/data/providers.dart';
@@ -39,6 +40,7 @@ class TodayPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final topInset = MediaQuery.paddingOf(context).top;
     final mode = ref.watch(todayViewModeProvider);
+    final period = ref.watch(actionsPeriodProvider);
     final colors = modelTypeColorsOrFallback(
       ref.watch(modelTypeColorsProvider),
     );
@@ -52,13 +54,26 @@ class TodayPage extends ConsumerWidget {
             topInset: topInset,
             snapshot: snapshot,
             mode: mode,
+            period: period,
+            onPeriodChanged: (p) =>
+                ref.read(actionsPeriodProvider.notifier).set(p),
             onModeChanged: (m) =>
                 ref.read(todayViewModeProvider.notifier).set(m),
           ),
         ),
-        if (mode == TodayViewMode.actions)
-          _buildTimelineSliver(context, ref)
-        else
+        if (period == ActionsPeriod.history)
+          SliverFillRemaining(child: HistoryPage(embeddedMode: mode))
+        else if (mode == TodayViewMode.tasks)
+          const SliverFillRemaining(child: TasksPage(showHeader: false))
+        else if (mode == TodayViewMode.actions) ...[
+          _buildTimelineSliver(context, ref),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 120),
+              child: UpcomingSchedule(),
+            ),
+          ),
+        ] else
           _buildStatsSliver(colors),
       ],
     );
@@ -68,7 +83,7 @@ class TodayPage extends ConsumerWidget {
     final logsAsync = ref.watch(todayLogsProvider);
 
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       sliver: logsAsync.when(
         data: (logs) {
           final entries = _buildTimelineEntries(snapshot, logs);
@@ -85,11 +100,6 @@ class TodayPage extends ConsumerWidget {
                 const SizedBox(height: 16),
               ] else
                 for (final entry in entries) ..._widgetsForTimelineEntry(entry),
-              const SizedBox(height: 12),
-              _TimelineAddActions(
-                onAddManualTap: onAddManualTap,
-                onAddLogTap: onAddLogTap,
-              ),
             ]),
           );
         },
@@ -329,100 +339,32 @@ class _TodayStatRow extends StatelessWidget {
   }
 }
 
-class _TimelineAddActions extends StatelessWidget {
-  const _TimelineAddActions({
-    required this.onAddManualTap,
-    required this.onAddLogTap,
-  });
-
-  final VoidCallback? onAddManualTap;
-  final VoidCallback? onAddLogTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _DashedAddButton(
-          label: 'Add time block manually',
-          onTap: onAddManualTap,
-        ),
-        const SizedBox(height: 8),
-        _DashedAddButton(label: 'Add log', onTap: onAddLogTap),
-      ],
-    );
-  }
-}
-
-class _DashedAddButton extends StatelessWidget {
-  const _DashedAddButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return DottedBorder(
-      options: const RoundedRectDottedBorderOptions(
-        radius: Radius.circular(12),
-        color: AppColors.slate200,
-        dashPattern: [4, 4],
-        strokeWidth: 1,
-        padding: EdgeInsets.zero,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  SolarLinearIcons.addCircle,
-                  size: 20,
-                  color: AppColors.slate500,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                    color: AppColors.slate500,
-                    fontFamily: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.fontFamily,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TodayPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   _TodayPinnedHeaderDelegate({
     required this.topInset,
     required this.snapshot,
     required this.mode,
     required this.onModeChanged,
+    required this.period,
+    required this.onPeriodChanged,
   });
 
+  final ActionsPeriod period;
+  final ValueChanged<ActionsPeriod> onPeriodChanged;
   final double topInset;
   final TodaySnapshot snapshot;
   final TodayViewMode mode;
   final ValueChanged<TodayViewMode> onModeChanged;
 
   @override
-  double get minExtent => topInset + _kTodayPinnedBelowStatusBar;
+  double get minExtent =>
+      topInset +
+      (period == ActionsPeriod.history ? 108 : _kTodayPinnedBelowStatusBar);
 
   @override
-  double get maxExtent => topInset + _kTodayPinnedBelowStatusBar;
+  double get maxExtent =>
+      topInset +
+      (period == ActionsPeriod.history ? 108 : _kTodayPinnedBelowStatusBar);
 
   @override
   Widget build(
@@ -449,7 +391,9 @@ class _TodayPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
                   children: [
                     Center(
                       child: Text(
-                        snapshot.titleLine,
+                        period == ActionsPeriod.history
+                            ? 'History'
+                            : snapshot.titleLine,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 16,
@@ -467,22 +411,28 @@ class _TodayPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-              child: TimeMapBar(
-                segments: snapshot.timeMapSegments,
-                currentMarkerFraction: snapshot.currentMarkerFraction,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  ActionsPeriodToggle(
+                    period: period,
+                    onChanged: onPeriodChanged,
+                  ),
                   TodayViewToggle(mode: mode, onChanged: onModeChanged),
                 ],
               ),
             ),
+            if (period == ActionsPeriod.today) ...[
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TimeMapBar(
+                  segments: snapshot.timeMapSegments,
+                  currentMarkerFraction: snapshot.currentMarkerFraction,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -493,6 +443,7 @@ class _TodayPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _TodayPinnedHeaderDelegate oldDelegate) {
     return oldDelegate.topInset != topInset ||
         oldDelegate.snapshot != snapshot ||
-        oldDelegate.mode != mode;
+        oldDelegate.mode != mode ||
+        oldDelegate.period != period;
   }
 }

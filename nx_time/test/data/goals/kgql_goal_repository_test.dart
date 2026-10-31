@@ -42,7 +42,7 @@ void main() {
       overrides: [
         authProvider.overrideWith(_AuthLoggedIn.new),
         graphqlClientProvider.overrideWithValue(mock),
-        timeDomainsProvider.overrideWith(()=>TestDomains(mock)),
+        timeDomainsProvider.overrideWith(() => TestDomains(mock)),
       ],
     );
     addTearDown(container.dispose);
@@ -120,6 +120,14 @@ void main() {
       (_) async => okQueryResult({
         'getKgqlModels': [
           {
+            'Routine': [
+              {
+                'id': 200,
+                'name': 'Sleep',
+                'model_type': 'Sleep',
+                'start_date': '2026-06-01',
+              },
+            ],
             'id': 7,
             'name': 'Rest',
             'model_type_id': 1,
@@ -172,6 +180,7 @@ void main() {
     );
     final id = await repo.create(
       Goal(
+        startDate: '2026-06-01',
         label: 'Gym goal',
         cadence: GoalCadence.daily,
         actionModelTypeName: 'Workout',
@@ -207,6 +216,7 @@ void main() {
     );
     final id = await repo.update(
       Goal(
+        startDate: '2026-06-01',
         id: 2,
         label: 'Updated',
         cadence: GoalCadence.daily,

@@ -45,8 +45,8 @@ void main() {
       );
       expect(container.read(goalRepositoryProvider), isA<MultiGoalRepository>());
       expect(
-        container.read(personRepositoryProvider),
-        isA<KgqlPersonRepository>(),
+        container.read(accountRepositoryProvider),
+        isA<KgqlAccountRepository>(),
       );
     },
   );

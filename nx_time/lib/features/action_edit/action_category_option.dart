@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' hide Action;
 
-import 'package:nx_time/data/person/model_type_colors.dart';
+import 'package:nx_time/data/account/model_type_colors.dart';
 import 'package:nx_time/domain/action/action.dart';
 
 /// One row in the add/edit category picker — matches a KGQL model type (Action subtype).

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nx_db/kgql.dart';
-import 'package:nx_db/person.dart';
+import 'package:nx_db/account.dart';
 import 'package:nx_db/riverpod.dart';
 import 'package:nx_cooking/core/dates/week_calendar.dart';
 import 'package:nx_cooking/data/cooking_plan/cooking_schema_provider.dart';

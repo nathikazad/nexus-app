@@ -73,31 +73,11 @@ Map<String, dynamic> mergeDomainAppearance(
 }
 
 DomainAppearance domainAppearance(WidgetRef ref, int? id) {
-  final w = ref.watch(timeDomainsProvider).asData?.value;
-  final ordered = w?.memberships.toList() ?? [];
-  ordered.sort(
-    (a, b) => a.id == w?.personalId
-        ? -1
-        : b.id == w?.personalId
-        ? 1
-        : a.id.compareTo(b.id),
-  );
-  final index = ordered.indexWhere((d) => d.id == id);
-  return ref.watch(domainAppearancesProvider).asData?.value[id] ??
-      DomainAppearance.defaults(
-        index < 0 ? 'Domain' : ordered[index].name,
-        index < 0 ? 0 : index,
-      );
+  // A single-domain view needs no per-domain color treatment.
+  return DomainAppearance.defaults('', 0);
 }
 
-/// Personal items need no domain badge; only shared origins are labelled.
-String? sharedDomainLabel(WidgetRef ref, int? id) {
-  final workspace = ref.watch(timeDomainsProvider).asData?.value;
-  if (workspace == null || id == null || id == workspace.personalId) {
-    return null;
-  }
-  return domainAppearance(ref, id).label;
-}
+String? sharedDomainLabel(WidgetRef ref, int? id) => null;
 
 Future<Map<String, dynamic>> readDomainPreferenceRoot(
   GraphQLClient client,
@@ -205,5 +185,5 @@ Future<void> saveDomainAppearances(
   }
   await writeDomainPreferenceRoot(client, userId, root);
   ref.invalidate(domainPreferenceRootProvider);
-  ref.invalidate(mainPersonProvider);
+  ref.invalidate(currentAccountProvider);
 }

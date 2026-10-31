@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:nx_time/core/formatting/time_format.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/theme/action_color_palette.dart';
-import 'package:nx_time/data/person/model_type_colors.dart';
+import 'package:nx_time/data/account/model_type_colors.dart';
 import 'package:nx_time/domain/action/action.dart';
 import 'package:nx_time/domain/tasks/task.dart';
 import 'package:nx_time/domain/tasks/task_status.dart';

@@ -5,15 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nx_db/auth.dart';
-import 'package:nx_db/person.dart';
+import 'package:nx_db/account.dart';
 import 'package:test/test.dart' show Tags;
 
 import '../../../_support/mock_graphql_client.dart';
 
-Future<User> _user() async => User(
-      userId: '1',
-      preset: BackendPreset.localhost,
-    );
+Future<User> _user() async =>
+    User(userId: '1', preset: BackendPreset.localhost);
 
 void main() {
   setUpAll(registerGraphqlFallbacks);
@@ -39,15 +37,15 @@ void main() {
       );
     });
 
-    final repo = KgqlPersonRepository(
+    final repo = KgqlAccountRepository(
       client: mock,
       loadAuthenticatedUser: _user,
     );
     await repo.updatePreference(
-      const Person(
+      const AccountProfile(
         id: 5,
         name: 'Nathik',
-        preference: <String, dynamic>{},
+        preferences: <String, dynamic>{},
       ),
       <String, dynamic>{
         'other': 1,
@@ -67,47 +65,40 @@ void main() {
     expect(mtc['Sleep'], '#AABBCC');
   });
 
-  test('getMain reads linked Person plus users.preferences', () async {
-    final mock = MockGraphQLClient();
-    var queryCount = 0;
-    when(() => mock.query(any())).thenAnswer((_) async {
-      queryCount += 1;
-      if (queryCount == 1) {
+  test(
+    'getCurrent reads users directly without any Person model query',
+    () async {
+      final mock = MockGraphQLClient();
+      QueryOptions? captured;
+      when(() => mock.query(any())).thenAnswer((inv) async {
+        captured = inv.positionalArguments[0] as QueryOptions;
         return okQueryResult({
           'allUsers': {
             'nodes': [
               {
                 'id': 1,
                 'name': 'Nathik',
-                'personModelId': 5,
+                'description': 'Account biography',
                 'preferences': {
+                  'goal_order': [7, 3],
                   'model_type_colors': {'Yoga': '#00FF00'},
                 },
               },
             ],
           },
         });
-      }
-      return okQueryResult({
-        'getKgqlModels': [
-          {
-            'id': 5,
-            'name': 'Nathik',
-            'description': 'Main user',
-            'model_type_id': 4,
-          },
-        ],
       });
-    });
-
-    final repo = KgqlPersonRepository(
-      client: mock,
-      loadAuthenticatedUser: _user,
-    );
-
-    final person = await repo.getMain();
-    expect(person?.id, 5);
-    expect(person?.name, 'Nathik');
-    expect(person?.preference['model_type_colors'], {'Yoga': '#00FF00'});
-  });
+      final repo = KgqlAccountRepository(
+        client: mock,
+        loadAuthenticatedUser: _user,
+      );
+      final account = await repo.getCurrent();
+      expect(account?.id, 1);
+      expect(account?.description, 'Account biography');
+      expect(account?.preferences['goal_order'], [7, 3]);
+      verify(() => mock.query(any())).called(1);
+      expect(captured!.fetchPolicy, FetchPolicy.networkOnly);
+      expect(captured!.document.toString(), isNot(contains('personModelId')));
+    },
+  );
 }

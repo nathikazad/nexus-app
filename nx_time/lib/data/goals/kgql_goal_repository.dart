@@ -23,7 +23,16 @@ class KgqlGoalRepository implements GoalRepository {
   Map<String, dynamic> _goalFetchStruct(ModelType schema) {
     return {
       ...buildKgqlStructFromSchema(schema),
-      'Schedule': {'id': true, 'name': true, 'entries': true},
+      'Routine': {
+        'id': true,
+        'name': true,
+        'model_type': true,
+        'filter': true,
+        'start_date': true,
+        'end_date': true,
+        'Goal': {'id': true},
+        'Schedule': {'id': true, 'name': true, 'entries': true},
+      },
     };
   }
 

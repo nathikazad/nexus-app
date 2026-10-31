@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nx_db/person.dart' show Person, PersonRepository;
+import 'package:nx_db/account.dart' show AccountProfile, AccountRepository;
 
 import 'package:nx_time/core/theme/action_color_palette.dart';
 import 'package:nx_time/domain/action/action_subtype_option.dart';
@@ -27,38 +27,40 @@ Map<String, String> readModelTypeColorHexByName(
 }
 
 /// Merges one [kPrefModelTypeColors] entry; preserves unrelated `preference` keys.
-Future<Person> setModelTypeColor({
-  required PersonRepository repo,
-  required Person person,
+Future<AccountProfile> setModelTypeColor({
+  required AccountRepository repo,
+  required AccountProfile account,
   required String modelTypeName,
   required String hex,
 }) async {
-  final merged = Map<String, dynamic>.from(person.preference);
+  final merged = Map<String, dynamic>.from(account.preferences);
   final existing = readModelTypeColorHexByName(merged);
   final next = Map<String, String>.from(existing)..[modelTypeName] = hex;
   merged[kPrefModelTypeColors] = next;
-  return repo.updatePreference(person, merged);
+  return repo.updatePreference(account, merged);
 }
 
 /// Seeds any missing action subtype names with default palette colors.
-Future<Person> seedMissingModelTypeColors({
-  required PersonRepository repo,
-  required Person person,
+Future<AccountProfile> seedMissingModelTypeColors({
+  required AccountRepository repo,
+  required AccountProfile account,
   required List<ActionSubtypeOption> subtypes,
 }) async {
-  if (subtypes.isEmpty) return person;
-  final merged = Map<String, dynamic>.from(person.preference);
+  if (subtypes.isEmpty) return account;
+  final merged = Map<String, dynamic>.from(account.preferences);
   final map = Map<String, String>.from(readModelTypeColorHexByName(merged));
   var changed = false;
   for (final t in subtypes) {
     if (!map.containsKey(t.name)) {
-      map[t.name] = hexFromColor(barColorForModelTypeId(t.id));
+      map[t.name] =
+          (t.name == 'Exercise' ? map['Gym'] : null) ??
+          hexFromColor(barColorForModelTypeId(t.id));
       changed = true;
     }
   }
-  if (!changed) return person;
+  if (!changed) return account;
   merged[kPrefModelTypeColors] = map;
-  return repo.updatePreference(person, merged);
+  return repo.updatePreference(account, merged);
 }
 
 /// Resolved colors for Action model types: account preference overrides when
@@ -84,17 +86,34 @@ class ModelTypeColors {
     if (name == null || name.isEmpty) {
       return barColorForModelTypeId(0);
     }
-    final h = _hexByName[name];
+    final h =
+        _hexByName[name] ?? (name == 'Exercise' ? _hexByName['Gym'] : null);
     if (h != null && h.isNotEmpty) {
       return colorFromHex(h);
     }
     return barColorForModelTypeId(0);
   }
 
+  /// Exercise subtypes retain their existing saved colors after consolidation.
+  /// Only an explicit equality filter identifies a single subtype.
+  Color forActivity(String? modelType, {Map<String, dynamic>? filter}) {
+    final filters = filter?['filters'];
+    if (modelType == 'Exercise' && filters is List) {
+      for (final clause in filters) {
+        if (clause is Map && clause['key'] == 'type' && clause['op'] == '=') {
+          final saved = _hexByName[clause['value']];
+          if (saved != null) return colorFromHex(saved);
+        }
+      }
+    }
+    return forName(modelType);
+  }
+
   /// Prefer [name] (KGQL `model_type.name`) for lookup; falls back to [barColorForModelTypeId].
   Color forId(int modelTypeId, {String? name}) {
     if (name != null && name.isNotEmpty) {
-      final h = _hexByName[name];
+      final h =
+          _hexByName[name] ?? (name == 'Exercise' ? _hexByName['Gym'] : null);
       if (h != null && h.isNotEmpty) {
         return colorFromHex(h);
       }

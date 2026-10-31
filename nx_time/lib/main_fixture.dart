@@ -1,5 +1,5 @@
 import 'package:nx_time/features/schedule/schedule_page.dart';
-import 'package:nx_db/person.dart';
+import 'package:nx_db/account.dart';
 // Development-only launcher: real app and live local fixture database.
 // flutter run -t lib/main_fixture.dart -d <simulator>
 import 'package:flutter/foundation.dart';
@@ -73,7 +73,7 @@ void main() {
         goalsInitialMonthProvider.overrideWithValue(DateTime(2026, 6)),
         graphqlClientProvider.overrideWith((ref) {
           final w = ref.watch(timeDomainsProvider).requireValue;
-          return w.clients[w.personalId]!;
+          return w.clients[w.selectedId]!;
         }),
         authenticatedUserProvider.overrideWith(
           (ref) async => (await ref.watch(timeDomainsProvider.future)).user,
@@ -81,7 +81,7 @@ void main() {
         dbAuditSourceKindProvider.overrideWithValue('nx_time_fixture'),
         nexusClientAppIdProvider.overrideWithValue('nx_time'),
       ],
-      child: const NexusTimeApp(initialTabIndex: 2),
+      child: const NexusTimeApp(initialTabIndex: 3),
     ),
   );
 }

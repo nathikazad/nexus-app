@@ -30,6 +30,12 @@ final timeDomainClientFactoryProvider =
             auditSourceKind: 'nx_time',
           ),
     );
+final timeSessionFactoryProvider =
+    Provider<TimeSession? Function(User, int, GraphQLClient)>(
+      (ref) =>
+          (user, id, client) => kIsWeb ? null : TimeSession(user, id, client),
+    );
+
 final timeDomainsProvider = AsyncNotifierProvider<TimeDomains, DomainWorkspace>(
   TimeDomains.new,
 );
@@ -65,19 +71,19 @@ class TimeDomains extends AsyncNotifier<DomainWorkspace> {
     }
     final key = 'nx_time.domains.${user.preset.serverId}.${user.userId}';
     final saved = prefs.getStringList(key);
-    final ids =
-        saved
-            ?.map(int.parse)
-            .where((id) => memberships.any((d) => d.id == id))
-            .toSet() ??
-        {personal.single.id};
-    if (ids.isEmpty) ids.add(personal.single.id);
+    final selectedId = resolveSelectedTimeDomain(
+      memberships: memberships,
+      personalId: personal.single.id,
+      saved: saved,
+    );
+    final ids = {selectedId};
     final factory = ref.watch(timeDomainClientFactoryProvider);
-    final clients = {for (final d in memberships) d.id: factory(user, d.id)};
+    final clients = {for (final id in ids) id: factory(user, id)};
+    final sessionFactory = ref.watch(timeSessionFactoryProvider);
     final sessions = <int, TimeSession>{
-      if (!kIsWeb)
-        for (final id in {...ids, personal.single.id})
-          id: TimeSession(user, id, clients[id]!),
+      for (final id in ids)
+        if (sessionFactory(user, id, clients[id]!) case final session?)
+          id: session,
     };
     for (final entry in sessions.entries)
       clients[entry.key] = entry.value.client;
@@ -86,7 +92,7 @@ class TimeDomains extends AsyncNotifier<DomainWorkspace> {
       memberships: memberships,
       personalId: personal.single.id,
       selectedIds: ids,
-      needsSelection: saved == null && memberships.length > 1,
+      needsSelection: false,
       clients: clients,
       sessions: sessions,
     );
@@ -116,9 +122,9 @@ class TimeDomains extends AsyncNotifier<DomainWorkspace> {
 
   Future<void> select(Set<int> ids) async {
     final current = state.requireValue;
-    if (ids.isEmpty ||
+    if (ids.length != 1 ||
         ids.any((id) => !current.memberships.any((d) => d.id == id))) {
-      throw StateError('Select at least one accessible domain');
+      throw StateError('Select exactly one accessible domain');
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(
@@ -149,6 +155,7 @@ class DomainWorkspace {
   final List<DomainMembership> memberships;
   final int personalId;
   final Set<int> selectedIds;
+  int get selectedId => selectedIds.single;
   final Map<int, GraphQLClient> clients;
   final Map<int, int> origins = {};
   final Map<String, Future<ModelType>> _schemas = {};
@@ -189,9 +196,11 @@ class DomainWorkspace {
   }
 
   bool canWriteModel(int modelId) =>
+      selectedIds.contains(origins[modelId]) &&
       memberships.any((d) => d.id == origins[modelId] && d.writable);
   void writable(int id) {
-    if (!memberships.any((d) => d.id == id && d.writable)) {
+    if (!selectedIds.contains(id) ||
+        !memberships.any((d) => d.id == id && d.writable)) {
       throw StateError('This domain is read only');
     }
   }
@@ -199,7 +208,7 @@ class DomainWorkspace {
   Future<int> owner(int modelId, {bool write = false}) async {
     int? id = origins[modelId];
     if (id == null) {
-      for (final candidate in {...selectedIds, personalId}) {
+      for (final candidate in selectedIds) {
         final rows = await fetchKgqlModels(
           clients[candidate]!,
           domainId: candidate,
@@ -217,7 +226,7 @@ class DomainWorkspace {
         }
       }
     }
-    if (id == null) {
+    if (id == null || !selectedIds.contains(id)) {
       throw StateError('Record is not available in the selected domains');
     }
     if (write) writable(id);
@@ -261,3 +270,18 @@ final timeLocalChangesProvider = StreamProvider.autoDispose<void>((ref) async* {
   });
   yield* controller.stream;
 });
+
+/// Preserve a single saved choice; migrate combined selections to personal.
+int resolveSelectedTimeDomain({
+  required List<DomainMembership> memberships,
+  required int personalId,
+  required List<String>? saved,
+}) {
+  final available = memberships.map((d) => d.id).toSet();
+  final ids = (saved ?? [])
+      .map(int.tryParse)
+      .whereType<int>()
+      .where(available.contains)
+      .toSet();
+  return ids.length == 1 ? ids.single : personalId;
+}

@@ -63,6 +63,7 @@ class GoalEditViewModel {
 
   static Goal buildGoal({
     required int? id,
+    Goal? original,
     required String label,
     required bool active,
     required GoalCadence cadence,
@@ -90,6 +91,12 @@ class GoalEditViewModel {
     }
     return Goal(
       id: id,
+      routineId: original?.routineId,
+      routineName: original?.routineName,
+      routineGoalCount: original?.routineGoalCount ?? 1,
+      evaluation: original?.evaluation ?? 'aggregate',
+      conditionFilter: original?.conditionFilter,
+      restrictions: original?.restrictions,
       startDate: startDate,
       endDate: endDate,
       scheduleId: scheduleId,
@@ -111,6 +118,7 @@ class GoalEditViewModel {
     String? startDate,
     String? endDate,
   ) {
+    if (startDate == null) return 'Routine start date is required';
     for (final date in [startDate, endDate]) {
       if (date != null &&
           (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date) ||
@@ -119,9 +127,7 @@ class GoalEditViewModel {
         return 'Enter a valid YYYY-MM-DD date';
       }
     }
-    if (startDate != null &&
-        endDate != null &&
-        startDate.compareTo(endDate) > 0) {
+    if (endDate != null && startDate.compareTo(endDate) > 0) {
       return 'End date must not precede start date';
     }
     for (final e in entries) {

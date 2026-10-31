@@ -2,6 +2,7 @@
 library;
 
 import 'package:nx_time/data/domains/domain_appearance.dart';
+import 'package:nx_time/data/account/goal_order.dart';
 import '../_support/test_domains.dart';
 import '../_support/mock_graphql_client.dart';
 import 'package:nx_time/data/domains/domain_workspace.dart';
@@ -43,6 +44,7 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
+        goalOrderProvider.overrideWith((ref) async => []),
         domainAppearancesProvider.overrideWith((ref) async => {}),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
@@ -119,6 +121,7 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
+        goalOrderProvider.overrideWith((ref) async => []),
         domainAppearancesProvider.overrideWith((ref) async => {}),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),
@@ -169,6 +172,7 @@ void main() {
       tester,
       child: const GoalsPage(),
       overrides: [
+        goalOrderProvider.overrideWith((ref) async => []),
         domainAppearancesProvider.overrideWith((ref) async => {}),
         timeDomainsProvider.overrideWith(
           () => TestDomains(MockGraphQLClient()),

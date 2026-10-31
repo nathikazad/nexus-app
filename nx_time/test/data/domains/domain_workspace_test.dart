@@ -25,7 +25,7 @@ class TestAuth extends AuthController {
 }
 
 class Workspace extends DomainWorkspace {
-  Workspace(Map<int, GraphQLClient> clients, {Set<int> selected = const {1, 3}})
+  Workspace(Map<int, GraphQLClient> clients, {Set<int> selected = const {1}})
     : super(
         user: User(userId: '3', preset: BackendPreset.localhost),
         memberships: memberships,
@@ -124,49 +124,42 @@ void main() {
     for (final c in clients.values) c.link.dispose();
   });
   test(
-    'tasks combine selected domains and remember write destinations',
+    'tasks read only the active domain and retain its write destination',
     () async {
       final w = Workspace(clients);
       final repo = MultiTaskRepository(w);
-      expect((await repo.listAll()).map((t) => t.id).toSet(), {10, 30});
+      expect((await repo.listAll()).map((t) => t.id).toSet(), {10});
       await repo.updateStatus(id: 10, status: TaskStatus.done);
       final mutation = calls.last;
       expect(mutation.domain, 1);
       expect((mutation.request.variables['input'] as Map)['domainId'], 1);
     },
   );
-  test(
-    'Today and History action reads stay personal when only Home is selected',
-    () async {
-      final w = Workspace(clients, selected: {1});
-      final rows = await PersonalActionRepository(
-        w,
-      ).listForCalendarDay(DateTime(2026, 10, 3));
-      expect(rows.map((a) => a.id), [30]);
-      expect(calls.map((c) => c.domain).toSet(), {3});
-    },
-  );
-  test(
-    'uncached ownership probes each explicit domain before writing',
-    () async {
-      final w = Workspace(clients);
-      expect(await w.owner(30, write: true), 3);
-      expect(calls.map((c) => c.domain), [1, 3]);
-    },
-  );
-  test('read-only domains can load but cannot mutate', () async {
-    final w = Workspace(clients, selected: {2});
-    final repo = MultiTaskRepository(w);
-    expect((await repo.listAll()).single.id, 20);
-    await expectLater(
-      repo.updateStatus(id: 20, status: TaskStatus.done),
-      throwsStateError,
-    );
-    expect(
-      calls.where((c) => c.request.variables.containsKey('input')),
-      isEmpty,
-    );
+  test('Today and History action reads follow Home when selected', () async {
+    final w = Workspace(clients, selected: {1});
+    final rows = await PersonalActionRepository(
+      w,
+    ).listForCalendarDay(DateTime(2026, 10, 3));
+    expect(rows.map((a) => a.id), [10]);
+    expect(calls.map((c) => c.domain).toSet(), {1});
   });
+  test('ownership never probes outside the active domain', () async {
+    final w = Workspace(clients);
+    await expectLater(w.owner(30, write: true), throwsStateError);
+    expect(calls.map((c) => c.domain), [1]);
+  });
+  test(
+    'inactive domains cannot be written even when ownership is remembered',
+    () async {
+      final w = Workspace(clients)..remember(3, [30]);
+      expect(w.canWriteModel(30), isFalse);
+      await expectLater(
+        MultiTaskRepository(w).updateStatus(id: 30, status: TaskStatus.done),
+        throwsStateError,
+      );
+      expect(calls, isEmpty);
+    },
+  );
   test('cross-domain relationships are rejected before writing', () async {
     final w = Workspace(clients)
       ..remember(1, [10])
@@ -177,11 +170,11 @@ void main() {
     );
     expect(calls, isEmpty);
   });
-  test('goal summaries query each selected domain explicitly', () async {
+  test('goal summaries query only the selected domain', () async {
     await MultiGoalRepository(
       Workspace(clients),
     ).getActionGoalsWeek(weekStart: DateTime(2026, 9, 28));
-    expect(calls.map((c) => c.domain).toSet(), {1, 3});
+    expect(calls.map((c) => c.domain).toSet(), {1});
   });
   test(
     'saved selections persist and inaccessible domains are discarded',
@@ -192,6 +185,7 @@ void main() {
       final c = ProviderContainer(
         overrides: [
           authProvider.overrideWith(TestAuth.new),
+          timeSessionFactoryProvider.overrideWithValue((_, __, ___) => null),
           domainLoaderProvider.overrideWithValue((_) async => memberships),
           timeDomainClientFactoryProvider.overrideWithValue(
             (_, id) => clients[id]!,
@@ -200,24 +194,47 @@ void main() {
       );
       addTearDown(c.dispose);
       expect((await c.read(timeDomainsProvider.future)).selectedIds, {1});
-      await c.read(timeDomainsProvider.notifier).select({1, 3});
+      await expectLater(
+        c.read(timeDomainsProvider.notifier).select({1, 3}),
+        throwsStateError,
+      );
+      expect((await c.read(timeDomainsProvider.future)).clients.keys, [1]);
+      await c.read(timeDomainsProvider.notifier).select({3});
+      final switched = await c.read(timeDomainsProvider.future);
+      expect(switched.selectedId, 3);
+      expect(switched.clients.keys, [3]);
       expect(
         (await SharedPreferences.getInstance()).getStringList(
           'nx_time.domains.${BackendPreset.localhost.serverId}.3',
         ),
-        containsAll(['1', '3']),
+        equals(['3']),
       );
     },
   );
+  test(
+    'combined saved choices migrate to personal; single choices survive',
+    () {
+      int resolve(List<String>? saved) => resolveSelectedTimeDomain(
+        memberships: memberships,
+        personalId: 3,
+        saved: saved,
+      );
+      expect(resolve(['1', '3']), 3);
+      expect(resolve(['1']), 1);
+      expect(resolve(['999']), 3);
+      expect(resolve(['bad']), 3);
+      expect(resolve(null), 3);
+    },
+  );
   testWidgets(
-    'creation presents writable destinations and returns the chosen domain',
+    'creation uses the selected writable domain without another chooser',
     (tester) async {
       int? picked;
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             timeDomainsProvider.overrideWith(
-              () => FixedDomains(Workspace(clients, selected: {1, 2, 3})),
+              () => FixedDomains(Workspace(clients, selected: {1})),
             ),
           ],
           child: MaterialApp(
@@ -238,8 +255,7 @@ void main() {
       await tester.tap(find.text('Create'));
       await tester.pumpAndSettle();
       expect(find.text('Read only'), findsNothing);
-      await tester.tap(find.text('Home'));
-      await tester.pumpAndSettle();
+      expect(find.text('Create in which domain?'), findsNothing);
       expect(picked, 1);
     },
   );

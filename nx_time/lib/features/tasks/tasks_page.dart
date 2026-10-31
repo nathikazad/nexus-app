@@ -16,7 +16,9 @@ import 'package:nx_time/features/tasks/task_picker_page.dart';
 import 'package:nx_time/features/tasks/task_view_models.dart';
 
 class TasksPage extends ConsumerWidget {
-  const TasksPage({super.key});
+  const TasksPage({super.key, this.showHeader = true});
+
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,11 +28,12 @@ class TasksPage extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const NxTabHeader(
-          title: 'Tasks',
-          bottomBorder: true,
-          borderColor: AppColors.slate50,
-        ),
+        if (showHeader)
+          const NxTabHeader(
+            title: 'Tasks',
+            bottomBorder: true,
+            borderColor: AppColors.slate50,
+          ),
         tasksAsync.when(
           data: (tasks) {
             final crumbs = crumbsAsync.when(

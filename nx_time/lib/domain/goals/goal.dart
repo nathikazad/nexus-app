@@ -7,6 +7,12 @@ import 'package:nx_time/domain/goals/goal_threshold.dart';
 class Goal {
   const Goal({
     this.id,
+    this.routineId,
+    this.routineName,
+    this.routineGoalCount = 1,
+    this.evaluation = 'aggregate',
+    this.conditionFilter,
+    this.restrictions,
     this.startDate,
     this.endDate,
     this.scheduleId,
@@ -24,6 +30,11 @@ class Goal {
 
   /// `null` on create, set after insert or when editing.
   final int? id;
+  final int? routineId;
+  final String? routineName;
+  final int routineGoalCount;
+  final String evaluation;
+  final Map<String, dynamic>? conditionFilter, restrictions;
   final String? startDate;
   final String? endDate;
   final int? scheduleId;
@@ -87,6 +98,12 @@ class Goal {
   }) {
     return Goal(
       id: id ?? this.id,
+      routineId: routineId,
+      routineName: routineName,
+      routineGoalCount: routineGoalCount,
+      evaluation: evaluation,
+      conditionFilter: conditionFilter,
+      restrictions: restrictions,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       scheduleId: scheduleId ?? this.scheduleId,

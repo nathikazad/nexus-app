@@ -1,3 +1,5 @@
+import 'package:nx_time/data/providers.dart';
+import 'package:nx_time/features/goals/goal_detail/consumption_goal_results.dart';
 import 'package:nx_time/domain/goals/goal_evaluation.dart';
 import 'package:nx_time/features/goals/goal_detail/goal_evaluation_results.dart';
 import 'dart:async' show unawaited;
@@ -10,7 +12,6 @@ import 'package:solar_icon_pack/solar_icon_pack.dart';
 import 'package:nx_time/core/time/wall_clock_time.dart';
 import 'package:nx_time/core/theme/app_theme.dart';
 import 'package:nx_time/core/time/week_calendar.dart';
-import 'package:nx_time/data/providers.dart';
 import 'package:nx_time/domain/action/week_actions.dart';
 import 'package:nx_time/domain/goals/action_goal.dart';
 import 'package:nx_time/domain/goals/goal_day_state.dart';
@@ -194,19 +195,48 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage> {
       );
     } else if (_item != null && _weekStart != null) {
       final item = _item!;
+      final activityColor = modelTypeColorsOrFallback(
+        ref.watch(modelTypeColorsProvider),
+      ).forActivity(item.modelType, filter: item.filter);
       final ws = _weekStart!;
       final eff = goalDetailVariantFor(item);
-      content = item.evaluation != GoalEvaluation.aggregate
+      content = item.modelType == 'Consumption' && item.aggregation == 'count'
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   item.label,
-                  style: const TextStyle(
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: activityColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _GoalMonthCalendarSection(
+                  visibleMonth: _visibleMonth,
+                  month: _month,
+                  monthLoading: _monthLoading,
+                  monthError: _monthError,
+                  onPreviousMonth: () => _changeMonth(-1),
+                  onNextMonth: () => _changeMonth(1),
+                ),
+                const SizedBox(height: 24),
+                const _Kicker('THIS WEEK'),
+                ConsumptionGoalResults(item: item),
+              ],
+            )
+          : item.evaluation != GoalEvaluation.aggregate
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  item.label,
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
-                    color: AppColors.slate900,
+                    color: activityColor,
                   ),
                 ),
                 const SizedBox(height: 4),
